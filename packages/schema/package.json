@@ -31,6 +31,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "schema",
     "README.md",
     "LICENSE"
   ],
@@ -39,6 +40,7 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "schema:emit": "tsc -b && node scripts/emit-json-schema.mjs",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
@@ -46,6 +48,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

@@ -53,6 +53,13 @@ pnpm --filter @keepcv/core exec vitest run src/ordering/sort-key.test.ts
 pnpm --filter @keepcv/core exec vitest run -t "produces the first key"
 ```
 
+The published JSON Schema is generated, and a test fails when the committed
+copy has drifted. Re-emit it in the same commit as any schema change:
+
+```sh
+pnpm --filter @keepcv/schema schema:emit
+```
+
 ## Current state
 
 Only `packages/schema` and `packages/core` exist. `db`, `api`, `interop`,
