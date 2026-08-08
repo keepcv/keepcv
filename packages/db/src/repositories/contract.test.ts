@@ -16,6 +16,14 @@ import { openLocalStore, openServerStore, type Store } from "../store.js";
 // repository can be a thin adapter rather than a fork.
 const connectionString = process.env["DATABASE_URL"];
 
+// Locally the server half is opt-in. In CI it is not: a suite that quietly
+// tests one implementation and reports success for both is worse than no suite,
+// and it has already happened once - turbo runs tasks in a strict environment
+// and dropped DATABASE_URL before it reached vitest.
+if (connectionString === undefined && process.env["CI"] !== undefined) {
+  throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
+}
+
 const drivers: { name: string; open: () => Store }[] = [
   { name: "PGlite", open: () => openLocalStore() },
   ...(connectionString === undefined
