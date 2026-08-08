@@ -45,7 +45,7 @@ pnpm lint:types     # ESLint: type-aware rules only
 pnpm typecheck      # tsc across packages, including tests
 pnpm test           # Vitest across packages
 pnpm build          # tsc -b
-pnpm changeset      # required for any change to a published package
+pnpm changeset      # optional until the first publish; see CONTRIBUTING.md
 ```
 
 Single test file, or single test by name:

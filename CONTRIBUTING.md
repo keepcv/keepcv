@@ -17,9 +17,9 @@ There are no release phases and no partial features on `main`. Work is
 organised as capabilities broken into sub-features, and a sub-feature is either
 **not started** or **complete**.
 
-"Complete" means the checklist in the pull request template: schema, API,
-full UI including error and empty states, tests, accessibility, docs, and a
-changeset. Not most of it.
+"Complete" means the checklist in the pull request template: schema, API, full
+UI including error and empty states, tests, accessibility and docs. Not most of
+it.
 
 Every feature issue answers two questions:
 
@@ -82,6 +82,12 @@ Two boundaries are enforced rather than merely encouraged:
 
 ## Commits and releases
 
-Conventional commits. Any change to a published package needs a changeset.
-This is currently a review check rather than an automated one — there is no
-release pipeline yet, and nothing has been published.
+Conventional commits.
+
+Changesets are **not required yet**. Nothing here has been published, there is
+no release pipeline, and a checklist item nothing enforces only teaches people
+to tick boxes without reading them. Write one with `pnpm changeset` if a change
+is worth a line in the first changelog; skip it otherwise.
+
+At the first publish this becomes a real gate: a `changeset status` step in CI
+and the checklist row back in the pull request template.

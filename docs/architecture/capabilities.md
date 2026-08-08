@@ -18,9 +18,8 @@ A sub-feature is **not started** or **complete**. There is no partial state in
 - [ ] **Survives the export/import round-trip property test**
 - [ ] Unit + integration tests; at least one end-to-end path
 - [ ] Accessibility pass: keyboard navigation and screen-reader labels
-- [ ] Docs updated; an ADR added if an architectural choice was made
+- [ ] Docs updated; an architecture decision recorded if one was made
 - [ ] Zero TODOs, zero feature flags left enabled, zero commented-out code
-- [ ] Changeset added
 
 Every issue additionally declares:
 
