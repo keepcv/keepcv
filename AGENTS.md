@@ -199,6 +199,10 @@ Several of these look like bugs. They are not — do not "fix" them.
 - **Biome owns formatting and most linting.** `eslint.config.js` is
   deliberately thin — type-aware rules only. If a rule does not need type
   information, it belongs in `biome.json` or nowhere.
+- **`biome.json` takes no comments.** A `//` line does not fail loudly — Biome
+  discards the whole config and falls back to its defaults, so the next
+  `pnpm lint:fix` silently reformats the entire repository to tabs at 80
+  columns. This has happened once.
 - **Tests are typechecked but not built.** Each package's `tsconfig.json`
   excludes `*.test.ts`; a sibling `tsconfig.test.json` typechecks them with
   `noEmit`. Including tests in the build puts compiled copies in `dist`, and
