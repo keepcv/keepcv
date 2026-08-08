@@ -1,14 +1,5 @@
-/**
- * @keepcv/core
- *
- * Domain logic and invariants. Pure by construction: no filesystem, no
- * database, no network, no Node built-ins. It runs unchanged in Node and in
- * the browser, which is what lets the resume preview compile client-side from
- * cached data while the server compiles the same document for export
- * (application-structure.md §2).
- *
- * This constraint is enforced in CI. Do not import a driver here.
- */
+// This package must import no I/O of any kind — it runs unchanged in Node and
+// in the browser, and CI enforces it (application-structure.md §2).
 
 export {
   generateKeyBetween,

@@ -1,27 +1,12 @@
 import { z } from "zod";
 
-/**
- * Base-62 digits in ASCII order, so lexicographic string comparison and
- * numeric digit comparison agree. This is what lets the database sort by
- * `sort_key` with a plain `ORDER BY` and get the same order the application
- * computed.
- */
+// Must stay in ASCII order: `ORDER BY sort_key` in Postgres has to agree with
+// the digit arithmetic in @keepcv/core.
 export const SORT_KEY_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-/**
- * A fractional index (data-model.md §3.5).
- *
- * Ordering is user-controlled by drag-and-drop, so a move must write exactly
- * one row; integer positions would require renumbering everything after the
- * insertion point.
- *
- * This schema defines the **lexical** contract only: what storage accepts and
- * what crosses the wire. The structural rules — how the magnitude prefix
- * encodes the integer part, and why a fractional part may not end in the
- * smallest digit — belong to the generation algorithm and are enforced in
- * `@keepcv/core`. Keeping them apart means storage does not have to be
- * upgraded in lockstep with the algorithm.
- */
+// The lexical contract only (data-model.md §3.5). Structural rules — the
+// magnitude prefix, the trailing-digit restriction — belong to the generation
+// algorithm in @keepcv/core, so storage need not move in lockstep with it.
 export const sortKeySchema = z
   .string()
   .min(1, "a sort key must not be empty")
