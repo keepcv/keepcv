@@ -133,23 +133,54 @@ These are the point of the product, not preferences.
 
 ## Code style
 
-**Minimise in-code comments.** This repository carries an unusually heavy
-written record — `docs/PRODUCT.md`, 20 ADRs, five architecture specs. Rationale
-belongs there, where it is versioned, indexed and findable. Duplicating it in
-comment blocks means two copies that drift, and the code copy is the one nobody
-updates.
+**Write the shortest clear version of the thing.** Not the cleverest and not
+the most general — the most direct. Every line is a line someone has to read
+after a three-month gap.
+
+### Keep it minimal
+
+- **Solve the problem in front of you.** No speculative parameters, no
+  "we might need this later" hooks, no abstraction with a single
+  implementation. A second caller justifies an abstraction; anticipating one
+  does not.
+- **Take the direct route.** If a plain function, an early return, or a
+  language built-in does the job, use it. Indirection has to earn itself — a
+  layer nobody needs is a layer everybody reads. Do not add a wrapper, a
+  registry, a factory or an options object to avoid writing the obvious thing.
+- **One way to do each thing.** Two helpers that overlap will drift, and the
+  next reader has to work out which one is current. Extend the existing one.
+- **Delete rather than accumulate.** Dead branches, unused exports, leftover
+  helpers from a refactor, commented-out code. Git remembers; the file should
+  not.
+- **Name things so the code reads as a sentence.** A well-named helper beats a
+  comment explaining a badly-named one, and costs nothing at runtime.
+- **Let the types carry the weight.** Make illegal states unrepresentable
+  rather than validating them at every call site. Brand identifiers, narrow
+  unions, no `any`.
+
+Short is a consequence of being direct, not a target in itself. Do not
+compress by removing names, collapsing branches into ternaries, or golfing.
+
+### Comment only when a comment is load-bearing
+
+This repository carries an unusually heavy written record — `docs/PRODUCT.md`,
+20 ADRs, five architecture specs. Rationale belongs there, where it is
+versioned, indexed and findable. Duplicating it in comment blocks means two
+copies that drift, and the code copy is the one nobody updates.
 
 - Do not restate the code. If a comment paraphrases the line under it, delete
   it and name things better instead.
 - Do not explain a decision in a comment. Reference the ADR (`ADR-0009`) and
   let it carry the reasoning.
 - Do not write JSDoc for self-evident signatures. Types already say it.
-- Delete commented-out code rather than leaving it.
+- Do not leave section banners, `// eslint-disable` without a reason, or
+  scaffolding comments describing what you are about to write.
 
 Comment only where a reader would otherwise be misled or would reintroduce a
 bug: a non-obvious invariant, a deliberate deviation from the expected
-approach, or a subtle case the code cannot express. Those are worth a line —
-and a line is usually enough.
+approach, a subtle case the code cannot express, or a bug that was actually
+hit once. Name the concrete failure when there was one. Those are worth a line
+— and a line is usually enough.
 
 ## Toolchain constraints
 
