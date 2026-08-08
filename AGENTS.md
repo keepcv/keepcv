@@ -261,16 +261,22 @@ A commit message and a PR description are read by someone who has only that
 one thing in front of them - a `git log` line months later, a reviewer opening
 a diff cold, a bisect landing mid-history.
 
+- **Keep them short.** A subject line and two or three short paragraphs. What
+  changed, why, and anything a reviewer would otherwise have to reconstruct
+  from the diff - nothing else. No walkthrough of how the work went, no
+  restatement of what the diff already shows, no alternatives-considered
+  section. A long description does not get read, which makes the one
+  load-bearing sentence in it invisible.
 - **No cross-references to other commits or PRs.** Not "as in the previous
   PR", not "completes what #12 started", not "see the earlier commit". If
   context from elsewhere matters, restate it in a sentence. A reader following
   a link has already lost the thread, and the link rots the moment history is
   rewritten or a branch is squashed.
 - **No ADR numbers and no `PRODUCT.md`.** Both are gitignored, so the citation
-  resolves for nobody reading on GitHub. Write the reasoning out instead. Code
-  comments may point at `docs/architecture/`, which is tracked; a commit
-  message or PR body should still spell the reasoning out, because it is read
-  away from the repository.
+  resolves for nobody reading on GitHub. Give the conclusion and its reason in
+  a sentence; the full argument belongs in the ADR and in
+  `docs/architecture/`, not in a message read away from the repository.
 - **Describe this change and why, not the sequence it sits in.** Naming the
   capability it delivers (`F0.3`) is fine - that is a stable identifier, not a
   pointer at another artifact.
+- **ASCII only**, as everywhere else.
