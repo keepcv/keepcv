@@ -10,7 +10,7 @@ const MAX_MARK_DEPTH = 3;
 
 // A regex rather than a refinement so the restriction survives into the
 // published JSON Schema and a third-party validator enforces it too. The point
-// of the restriction is that `javascript:` never reaches a renderer (ADR-0011).
+// of the restriction is that `javascript:` never reaches a renderer.
 const HREF = /^(?:https?|mailto):\S+$/;
 
 const inlineSchema: z.ZodType<Inline> = z.lazy(() =>
@@ -39,8 +39,8 @@ function violation(nodes: Inline[], depth: number, insideLink: boolean): string 
   return null;
 }
 
-// One paragraph, no block constructs (ADR-0011). Merging adjacent text nodes is
-// canonicalisation, so it belongs to @keepcv/core, not to parsing.
+// One paragraph, no block constructs (data-model.md §3.6). Merging adjacent
+// text nodes is canonicalisation, so it belongs to @keepcv/core, not parsing.
 export const richTextSchema = z.array(inlineSchema).superRefine((nodes, ctx) => {
   const message = violation(nodes, 0, false);
   if (message !== null) ctx.addIssue({ code: "custom", message });

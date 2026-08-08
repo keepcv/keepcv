@@ -7,9 +7,9 @@ export const CURRENT_SCHEMA_VERSION = 1;
 // store, F4 points and phrasings. Empty today because no entity is modelled yet.
 export const storeSchema = z.object({});
 
-// The canonical, lossless career store format (ADR-0016) — not a resume.
-// `schemaVersion` is pinned to the current one because `migrateDocument` is the
-// only supported way in, and it brings older documents forward first.
+// The canonical, lossless career store format — not a resume. `schemaVersion`
+// is pinned to the current one because `migrateDocument` is the only supported
+// way in, and it brings older documents forward first.
 export const exportDocumentSchema = z
   .object({
     schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),

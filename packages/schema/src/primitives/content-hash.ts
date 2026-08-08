@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// SHA-256 over canonicalised JSON, lower-case hex (ADR-0008). Canonicalisation
-// and hashing live in @keepcv/core; this is the shape alone.
+// SHA-256 over canonicalised JSON, lower-case hex (data-model.md §5).
+// Canonicalisation and hashing live in @keepcv/core; this is the shape alone.
 export const contentHashSchema = z
   .string()
   .length(64)

@@ -142,7 +142,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-docs/
+# docs/architecture/ is tracked. Product context and the decision records stay
+# local: they are working material, and nothing pushed may cite them.
+docs/PRODUCT.md
+docs/adr/
 
 # Turborepo
 .turbo/
