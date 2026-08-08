@@ -20,9 +20,8 @@ split it instead.
 - [ ] Survives the export/import round-trip test
 - [ ] Unit and integration tests, plus one end-to-end path
 - [ ] Accessibility pass — keyboard and screen reader
-- [ ] Docs updated; ADR added if an architectural choice was made
+- [ ] Docs updated; an architecture decision recorded if one was made
 - [ ] No TODOs, no feature flags left enabled, no commented-out code
-- [ ] Changeset added
 
 <!-- Tick only what applies. Delete rows that genuinely do not apply to this
      change, rather than leaving them unchecked. -->

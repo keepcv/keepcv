@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/.turbo", "!**/coverage"]
+    "includes": ["**", "!**/dist", "!**/.turbo", "!**/coverage", "!packages/schema/schema/*.json"]
   },
   "formatter": {
     "enabled": true,

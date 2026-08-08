@@ -1,4 +1,4 @@
-// Deliberately thin (ADR-0017).
+// Deliberately thin.
 //
 // Biome owns formatting and the bulk of linting. ESLint exists here for one
 // reason: the type-aware rules whose full implementation still lives in
