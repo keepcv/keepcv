@@ -63,6 +63,26 @@
   },
   "overrides": [
     {
+      "includes": ["packages/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["node:*"],
+                    "message": "@keepcv/core runs unchanged in the browser, so it imports no host module. Put the I/O in @keepcv/db or @keepcv/api and pass the result in."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/*.test.ts", "**/*.test.tsx"],
       "linter": {
         "rules": {

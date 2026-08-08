@@ -96,7 +96,9 @@ exported file eventually disagree.
 - **`@keepcv/core` performs no I/O.** No filesystem, no network, no drivers, no
   Node built-ins. It runs unchanged in Node and the browser, which is what lets
   the resume preview compile client-side from cached data while the server
-  compiles the same document for export. Do not import a driver here.
+  compiles the same document for export. Do not import a driver here. This is
+  enforced by the compiler, not by review — see the `"types": []` note under
+  "Toolchain constraints".
 - **`@keepcv/schema` depends on nothing but Zod.** It is the single source of
   truth for every shared shape; TypeScript types, API validation, form
   validation, the export format and the published JSON Schema all derive from
@@ -211,6 +213,13 @@ Several of these look like bugs. They are not — do not "fix" them.
   excludes `*.test.ts`; a sibling `tsconfig.test.json` typechecks them with
   `noEmit`. Including tests in the build puts compiled copies in `dist`, and
   Vitest then discovers and runs every suite twice.
+- **`packages/core/tsconfig.json` sets `"types": []` on purpose.** With no
+  ambient type packages and no DOM library, `node:fs` does not resolve and
+  `process` is not declared, so the no-I/O boundary fails the build instead of
+  failing review. The resulting error suggests installing `@types/node` — that
+  is the wrong fix; move the I/O to `@keepcv/db` or `@keepcv/api`. Web Crypto's
+  `getRandomValues` is `declare`d locally in `identity/uuid.ts` for the same
+  reason.
 - **Dependency versions live in the `catalog:`**, one per dependency
   repo-wide. Add versions there, and reference `"catalog:"` in package
   manifests.

@@ -8,6 +8,7 @@ packages:
 catalog:
   "@biomejs/biome": ^2.5.7
   "@changesets/cli": ^2.31.1
+  "@noble/hashes": ^2.3.0
   "@types/node": ^26.1.2
   eslint: ^10.8.0
   fast-check: ^4.9.0
