@@ -1,20 +1,22 @@
 name: Feature
-description: Propose a sub-feature to build
+description: Propose something to build
 labels: ["feature"]
 body:
   - type: markdown
     attributes:
       value: |
-        KeepCV delivers features **complete**, one sub-feature at a time.
-        A sub-feature is either not started or done — there is no partial state
-        on `main`.
+        Work lands **complete**: either it delivers behaviour someone can use
+        end to end, or it does not merge. Size this by what makes a whole
+        behaviour, which may be one piece of a capability or several.
 
   - type: input
-    id: capability
+    id: area
     attributes:
-      label: Capability
-      description: Which capability and sub-feature is this? e.g. "F4.3"
-      placeholder: F4.3
+      label: What does this touch?
+      description: >
+        A capability from `docs/architecture/capabilities.md`, a package, a
+        screen, or whatever names it best. Free text.
+      placeholder: Phrasing editor, or packages/core, or the resume composer
     validations:
       required: true
 
@@ -24,7 +26,7 @@ body:
       label: Which felt pain does this trace to?
       description: >
         Not a hypothetical user, not a competitor's feature list, not "the
-        market expects it" — a pain someone has actually felt. A feature that
+        market expects it" - a pain someone has actually felt. A feature that
         cannot answer this is closed.
     validations:
       required: true
@@ -52,14 +54,16 @@ body:
     id: dod
     attributes:
       label: Definition of Complete
+      description: >
+        Tick what applies. Rows that genuinely do not apply to this work are
+        better deleted than left unticked.
       options:
         - label: Schema and migration, expand/contract compliant
         - label: API routes with validation and typed errors
-        - label: UI covers create, read, update, archive, restore — no dead ends
+        - label: UI covers create, read, update, archive, restore - no dead ends
         - label: Validation, error, loading and empty states
         - label: Survives the export/import round-trip test
         - label: Unit and integration tests, plus one end-to-end path
-        - label: Accessibility pass — keyboard and screen reader
-        - label: Docs updated; ADR added if an architectural choice was made
+        - label: Accessibility pass - keyboard and screen reader
+        - label: Docs updated; an architecture decision recorded if one was made
         - label: No TODOs, no feature flags left enabled
-        - label: Changeset added

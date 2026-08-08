@@ -4,7 +4,7 @@
 > layers and reach the screen. Read that document first.
 
 The data model is only half the design. This document defines *where each type
-lives*, *who is allowed to transform it*, and *what state the UI owns* — the
+lives*, *who is allowed to transform it*, and *what state the UI owns* - the
 decisions that determine whether feature code stays thin or turns into a
 tangle of ad-hoc mapping.
 
@@ -22,7 +22,7 @@ a codebase like this rots.
 | 3 | **DTO** | `@keepcv/schema` | the wire and file contract | `PointDTO`, Zod-defined, versioned |
 | 4 | **View model** | `apps/web` | one screen's needs | `PointCardView` with formatted dates, computed badges |
 
-There is a **fifth**, and it is not a layer — it is a destination:
+There is a **fifth**, and it is not a layer - it is a destination:
 `ResumeDocument`. It is uniform where the other four are
 kind-specific, and it is what every renderer binds to. See
 [`template-model.md`](template-model.md).
@@ -40,18 +40,18 @@ Rules, enforced by package boundaries:
   changelog. Formatting is presentation; it happens in layer 4.
 
 ```
-PGlite/Postgres ──row──▶ repository ──entity──▶ domain service ──DTO──▶ HTTP
-                                                                          │
+PGlite/Postgres --row--> repository --entity--> domain service --DTO--> HTTP
+                                                                          |
                                                                         DTO
-                                                                          ▼
-                                                    TanStack Query cache ──▶ selector ──▶ view model ──▶ component
+                                                                          v
+                                                    TanStack Query cache --> selector --> view model --> component
 ```
 
 **The one deliberate exception:** `ResumeDocument` crosses every
 layer unchanged. It is a contract in `@keepcv/schema`, produced by a pure
 function in `@keepcv/core`, and consumed identically by the browser preview
 and the server-side exporter. Duplicating it per layer would guarantee that
-the preview and the exported file eventually disagree — which would falsify
+the preview and the exported file eventually disagree - which would falsify
 the entire WYSIWYG premise.
 
 ---
@@ -71,7 +71,7 @@ the entire WYSIWYG premise.
                  - canonicalise(RichText) + contentHash
                  - projectPlainText(RichText)
                  - estimateLength(ResumeDocument, TemplateConfig)
-                       estimate only — Paged.js in the preview is authoritative
+                       estimate only - Paged.js in the preview is authoritative
                        for actual page count and overflow
                  - fractional sort-key arithmetic
                  - the Repository PORT (interfaces only)
@@ -89,7 +89,7 @@ the entire WYSIWYG premise.
 ```
 
 **Why `@keepcv/core` runs in the browser matters more than it looks.** It means
-the resume preview is compiled *client-side* from data already in the cache —
+the resume preview is compiled *client-side* from data already in the cache -
 no round trip, no debounced server call, instant feedback while dragging. The
 server runs the same function over a pinned manifest when creating a version
 or exporting. One implementation, two callers, and no possibility of the
@@ -115,7 +115,7 @@ everything navigable. A filtered view you can bookmark, share
 with yourself, and return to via browser history is worth more than one that
 resets on reload.
 
-**Drafts are persisted server-side** (`draft` table, data-model.md §5). In a
+**Drafts are persisted server-side** (`draft` table, data-model.md #5). In a
 product whose promise is that nothing written is lost, losing in-progress text
 to a closed tab is the founding failure in miniature.
 
@@ -139,15 +139,15 @@ to a closed tab is the founding failure in miniature.
 
 The store is kilobytes, so `['store']` is fetched once on boot
 with a long `staleTime` and most screens read from it via selectors. There is
-no sync engine and there will not be one — that is exactly the scope gravity
+no sync engine and there will not be one - that is exactly the scope gravity
 this project treats as its primary threat.
 
 | Mutation | Invalidates |
 |---|---|
 | Record created/updated/archived | `['records', kind, *]`, `['record', id]`, `['store']` |
-| Point changed | `['points', …]`, `['record', parentId]` |
+| Point changed | `['points', ...]`, `['record', parentId]` |
 | Phrasing revision committed | `['phrasingSet', id]`, any `['resume', *]` whose preview uses it |
-| Composition patched | `['resume', id]` only — **never** `['store']` |
+| Composition patched | `['resume', id]` only - **never** `['store']` |
 | Version created | `['resume', id, 'versions']`, `['resume', id]` |
 
 That last row is the one to get right: composition changes are frequent
@@ -158,7 +158,7 @@ wrong turns a drag-and-drop interaction into a full refetch.
 
 Every mutation is optimistic, and **UUIDv7 identifiers are generated on the
 client**. An entity therefore has its identity before the server
-has heard of it, so the optimistic row is the real row — no temporary-ID
+has heard of it, so the optimistic row is the real row - no temporary-ID
 reconciliation, no key churn when the response arrives.
 
 Conflicts use the `updated_at` token: a `409` returns current server state and
@@ -172,14 +172,14 @@ Silent last-write-wins is unacceptable in this product specifically.
 Designed together. A screen that needs data the model cannot serve cheaply is
 a modelling problem, not a query-optimisation problem.
 
-### 5.1 Store overview — the cold re-entry screen
+### 5.1 Store overview - the cold re-entry screen
 
 The most important screen in the product for cold re-entry, and the one most
 likely to be under-designed because it looks like a dashboard.
 
-Needs: counts per record type · what changed since `owner.last_opened_at` ·
-recently edited records · points with no tags or no metrics · records
-missing end dates · certifications expiring soon.
+Needs: counts per record type; what changed since `owner.last_opened_at`;
+recently edited records; points with no tags or no metrics; records
+missing end dates; certifications expiring soon.
 
 Served by `record (owner_id, updated_at desc)` plus cheap aggregate queries.
 Every one of these is a "you left something unfinished" affordance, which is
@@ -190,47 +190,47 @@ the antidote to returning after ninety days and not knowing where you were.
 Needs, per row: title, organisation name, date range, point count, tag
 chips, archived state.
 
-Served by `record_display` (data-model.md §11) plus a grouped count. The
-point count is why the view exists — computing it per row in application
+Served by `record_display` (data-model.md #11) plus a grouped count. The
+point count is why the view exists - computing it per row in application
 code is an N+1 on the most-visited list in the product.
 
 ### 5.3 Record detail
 
-Needs: subtype fields · ordered points, each with canonical current text
-and a phrasing count · tags · links · fields · summary phrasing set.
+Needs: subtype fields; ordered points, each with canonical current text
+and a phrasing count; tags; links; fields; summary phrasing set.
 
 Served by `point_display`, which resolves the four-level
-point → set → phrasing → revision chain into one join.
+point -> set -> phrasing -> revision chain into one join.
 
 Because points are uniform across every record kind, **this screen
 is built once** and serves experience, education, projects and everything
 else. Only the subtype field block above it differs.
 
-### 5.4 Point / phrasing editor — the highest-risk interface
+### 5.4 Point / phrasing editor - the highest-risk interface
 
 The highest-risk interface in the product: get it wrong and maintaining the
-data model becomes a chore. Its state machine is §6.
+data model becomes a chore. Its state machine is #6.
 
-Needs: all phrasings in the set with current text and char counts · which is
-canonical · revision history per phrasing · metrics · evidence (visibly marked
-private) · confidence · tags · **where this point is currently used**.
+Needs: all phrasings in the set with current text and char counts; which is
+canonical; revision history per phrasing; metrics; evidence (visibly marked
+private); confidence; tags; **where this point is currently used**.
 
-That last item is why `resume_content_ref` exists (data-model.md §9.2).
+That last item is why `resume_content_ref` exists (data-model.md #9.2).
 Editing a phrasing without knowing which resumes depend on it is exactly the
 anxiety this product exists to remove.
 
 ### 5.5 Resume composer
 
-Three panes: the store with in/out toggles · the resume structure, drag-and-drop
-· live preview.
+Three panes: the store with in/out toggles; the resume structure,
+drag-and-drop; live preview.
 
-Needs: the full store (already cached) · the working composition · a compiled
+Needs: the full store (already cached); the working composition; a compiled
 `ResumeDocument`. Mutations are single-row patches with a fractional
-`sort_key`, so a drag sends one small request (data-model.md §3.4).
+`sort_key`, so a drag sends one small request (data-model.md #3.4).
 
 ### 5.6 Version timeline and compare
 
-Needs: versions ordered by `seq desc` with trigger and snapshot label ·
+Needs: versions ordered by `seq desc` with trigger and snapshot label;
 a structural diff between any two.
 
 `diff(a, b)` is a pure function in `@keepcv/core` over two immutable
@@ -240,8 +240,8 @@ needs no history replay.
 
 ### 5.7 Export and data
 
-Needs: format list with explicit lossiness warnings · mirror status
-and location · restore.
+Needs: format list with explicit lossiness warnings; mirror status
+and location; restore.
 
 Export is never gated by any auth or entitlement state.
 
@@ -253,21 +253,21 @@ The single most consequential piece of interaction design in the product, and
 the reason phrasing revisions are immutable and append-only.
 
 ```
-                  ┌────────────────────────────────────────────┐
-                  ▼                                            │
-   ┌────────┐  focus   ┌─────────┐  content == current   ┌──────────┐
-   │  Idle  │─────────▶│ Editing │──────────────────────▶│ Discarded│
-   └────────┘          └─────────┘                       └──────────┘
-        ▲                   │  keystroke → debounce 800ms
-        │                   ▼
-        │            ┌────────────┐
-        │            │ DraftSaved │   persisted to `draft`, not history
-        │            └────────────┘
-        │                   │  blur │ explicit save │ about to be pinned │ idle 30s
-        │                   ▼
-        │            ┌────────────┐
-        └────────────│ Committing │──▶ append phrasing_revision, move pointer,
-             success └────────────┘    delete draft
+                  +--------------------------------------------+
+                  v                                            |
+   +--------+  focus   +---------+  content == current   +----------+
+   |  Idle  |--------->| Editing |---------------------->| Discarded|
+   +--------+          +---------+                       +----------+
+        ^                   |  keystroke -> debounce 800ms
+        |                   v
+        |            +------------+
+        |            | DraftSaved |   persisted to `draft`, not history
+        |            +------------+
+        |                   |  blur / explicit save / about to be pinned / idle 30s
+        |                   v
+        |            +------------+
+        +------------| Committing |--> append phrasing_revision, move pointer,
+             success +------------+    delete draft
 ```
 
 Rules that fall out of append-only revisions:
@@ -292,12 +292,12 @@ Rules that fall out of append-only revisions:
 
 ```
 composition change
-   └▶ debounce 250ms
-      └▶ core.compile(composition, store)  ──▶ ResumeDocument   [pure, client-side]
-         └▶ template.render(doc, config)   ──▶ React element
-            └▶ mount into isolated iframe
-               └▶ Paged.js paginate
-                  └▶ page count + overflow  ──▶ length budget indicator
+   +-> debounce 250ms
+      +-> core.compile(composition, store)  --> ResumeDocument   [pure, client-side]
+         +-> template.render(doc, config)   --> React element
+            +-> mount into isolated iframe
+               +-> Paged.js paginate
+                  +-> page count + overflow  --> length budget indicator
 ```
 
 - **The preview iframe is style-isolated.** App CSS cannot reach it. If it
@@ -308,7 +308,7 @@ composition change
 - **Export uses the same functions**, server-side, over a pinned manifest.
   One implementation, two callers.
 - **Page count feeds the length budget** rather than being discovered at
-  export time — warning *before* rendering rather than after.
+  export time - warning *before* rendering rather than after.
 
 ---
 
@@ -333,7 +333,7 @@ Rules:
 
 - A feature may not import another feature's internals. Shared logic moves to
   `@keepcv/core` if it is domain logic, or `lib/` if it is presentation.
-- DTO → view model mapping happens in `model/`, never inline in components.
+- DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - Route loaders prefetch into the Query cache; components read from the cache.
   No component fetches directly.

@@ -8,6 +8,7 @@ packages:
 catalog:
   "@biomejs/biome": ^2.5.7
   "@changesets/cli": ^2.31.1
+  "@noble/hashes": ^2.3.0
   "@types/node": ^26.1.2
   eslint: ^10.8.0
   fast-check: ^4.9.0
@@ -15,7 +16,7 @@ catalog:
   # Pinned to 6.x deliberately: typescript-eslint 8.x refuses to load against
   # TypeScript 7.0, and the type-aware rules are the entire reason ESLint is in
   # this repo at all. Revisit when typescript-eslint ships TS >=7.1
-  # support — see https://github.com/typescript-eslint/typescript-eslint/issues/10940
+  # support - see https://github.com/typescript-eslint/typescript-eslint/issues/10940
   typescript: ^6.0.3
   typescript-eslint: ^8.66.0
   vitest: ^4.1.10

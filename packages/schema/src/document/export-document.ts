@@ -3,11 +3,11 @@ import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-// The seam every content slice writes into: F1 adds the profile, F2 the record
-// store, F4 points and phrasings. Empty today because no entity is modelled yet.
+// The seam every content slice writes into: the profile, the record store,
+// then points and phrasings. Empty today because no entity is modelled yet.
 export const storeSchema = z.object({});
 
-// The canonical, lossless career store format — not a resume. `schemaVersion`
+// The canonical, lossless career store format - not a resume. `schemaVersion`
 // is pinned to the current one because `migrateDocument` is the only supported
 // way in, and it brings older documents forward first.
 export const exportDocumentSchema = z

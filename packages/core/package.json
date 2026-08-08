@@ -43,7 +43,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@keepcv/schema": "workspace:*"
+    "@keepcv/schema": "workspace:*",
+    "@noble/hashes": "catalog:"
   },
   "devDependencies": {
     "fast-check": "catalog:",

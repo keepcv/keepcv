@@ -26,12 +26,13 @@ describe("sortKeySchema", () => {
   });
 
   it("rejects digits outside base 62", () => {
-    for (const key of ["a-b", "a b", "a_b", "café", "a.b", "a/b"]) {
+    // Escaped rather than written literally so the source stays ASCII.
+    for (const key of ["a-b", "a b", "a_b", "caf\u00e9", "a.b", "a/b"]) {
       expect(sortKeySchema.safeParse(key).success).toBe(false);
     }
   });
 
-  it("does not enforce structural rules — those belong to @keepcv/core", () => {
+  it("does not enforce structural rules - those belong to @keepcv/core", () => {
     // "0" is lexically valid but structurally meaningless. Storage accepts it;
     // the ordering algorithm is what rejects it.
     expect(sortKeySchema.safeParse("0").success).toBe(true);

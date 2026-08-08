@@ -11,15 +11,15 @@
 `ResumeDocument` is the **only** thing a template, exporter, linter or
 portfolio renderer ever sees. It is:
 
-- **Uniform** — every entry has the same slots, whether it is a job, a degree,
+- **Uniform** - every entry has the same slots, whether it is a job, a degree,
   a certification or a custom row. Templates never branch on record kind
   unless they choose to.
-- **Frozen and self-contained** — no store identifiers, no lazy references,
+- **Frozen and self-contained** - no store identifiers, no lazy references,
   no queries. Text is already resolved from pinned revisions, dates already
   formatted, sections already ordered and filtered.
-- **Free of private data by construction** — there is no field that could hold
+- **Free of private data by construction** - there is no field that could hold
   evidence. Not a runtime filter; a type-level guarantee.
-- **Versioned** — `schemaVersion` on the document, so a template declares
+- **Versioned** - `schemaVersion` on the document, so a template declares
   which document versions it supports.
 
 The store stays typed and kind-specific. This document is where uniformity
@@ -60,9 +60,9 @@ type ResumeDocument = {
 ```ts
 type Section = {
   key: string;                    // opaque, stable within the document
-  kind: SectionKind;              // 'experience' | 'education' | … | 'custom'
+  kind: SectionKind;              // 'experience' | 'education' | ... | 'custom'
   heading: string;                // already resolved: override or template default
-  layout: SectionLayout;          // 'entries' | 'inline' | 'grouped'  — a hint
+  layout: SectionLayout;          // 'entries' | 'inline' | 'grouped'  - a hint
   groups?: Group[];               // present only when layout === 'grouped'
   entries: Entry[];
 };
@@ -78,14 +78,14 @@ type Group = {
 
 `layout` is a **hint, not an instruction**. A template may ignore it. It exists
 because some sections read better inline (Skills, Languages) and some benefit
-from grouping (multiple roles at one organisation) — and that judgement depends
+from grouping (multiple roles at one organisation) - and that judgement depends
 on the data, which the template does not have to re-derive.
 
 `groups` reference entries by key rather than nesting them, so a template that
 ignores grouping still renders every entry exactly once. Nesting would make
 ignoring the hint a data-loss bug.
 
-### Entry — the uniform envelope
+### Entry - the uniform envelope
 
 **Every entry in every section has this shape.** It is what lets templates
 never branch on record kind, and what makes adding a record kind touch no
@@ -101,7 +101,7 @@ type Entry = {
   organisation?: Organisation;
   period?: Period;
   location?: string;
-  mode?: string;                  // 'Remote' | 'Hybrid' | … | delivery mode
+  mode?: string;                  // 'Remote' | 'Hybrid' | ... | delivery mode
 
   summary?: RichText;             // the prose blurb, if any
   points: Point[];                // always present; may be empty
@@ -112,9 +112,9 @@ type Entry = {
 ```
 
 Absent slots are `undefined`. `points`, `tags`, `links` and `fields` are always
-arrays — possibly empty — so templates never guard against null before mapping.
-That asymmetry is deliberate: `{entry.period && …}` is the natural conditional
-for a scalar, and `entry.points.map(…)` is the natural expression for a list.
+arrays - possibly empty - so templates never guard against null before mapping.
+That asymmetry is deliberate: `{entry.period && ...}` is the natural conditional
+for a scalar, and `entry.points.map(...)` is the natural expression for a list.
 
 ### Point
 
@@ -138,7 +138,7 @@ type Period = {
   start?: string;                 // "2023-04"     raw partial date
   end?: string;
   isCurrent: boolean;
-  display: string;                // "Apr 2023 – Present"  pre-formatted
+  display: string;                // "Apr 2023 - Present"  pre-formatted
 };
 
 type Contact = {
@@ -146,7 +146,7 @@ type Contact = {
   kind: 'email'|'phone'|'website'|'linkedin'|'github'|'scholar'|'orcid'|'location'|'other';
   label?: string;
   value: string;                  // display text
-  href?: string;                  // mailto:/tel:/https: — absent if not linkable
+  href?: string;                  // mailto:/tel:/https: - absent if not linkable
 };
 
 type Link  = { key: string; kind: string; label: string; url: string };
@@ -163,7 +163,7 @@ type Organisation = { name: string; url?: string; location?: string };
 type Metric = {
   key: string;
   label: string;
-  display: string;                // "800ms → 120ms"  pre-formatted
+  display: string;                // "800ms -> 120ms"  pre-formatted
   value: number;
   unit?: string;
   baseline?: number;
@@ -173,15 +173,15 @@ type Metric = {
 
 **Both raw and formatted values are provided** (`Period.start` and
 `Period.display`, `Metric.value` and `Metric.display`). Locale-aware formatting
-is done once, centrally, so twelve templates cannot format dates twelve ways —
+is done once, centrally, so twelve templates cannot format dates twelve ways -
 but a template that wants its own format still can, without reparsing strings.
 
 ---
 
-## 3. `fields[]` — how kind-specific facts stay uniform
+## 3. `fields[]` - how kind-specific facts stay uniform
 
 A certification has a credential ID; a publication has a DOI; a degree has a
-grade. These are real, typed, queryable facts in the store — and they must
+grade. These are real, typed, queryable facts in the store - and they must
 still reach the page without every template knowing about them.
 
 They project into `fields[]` with a stable `key` and a display `label`:
@@ -211,7 +211,7 @@ field whose derived key collides with a presenter-generated one (a hand-typed
 suffixed key and its original label preserved. The presenter's value wins the
 canonical key, because specialised templates address it by key and must not
 receive user-entered data where they expect a typed column. The user's value is
-still rendered — nothing is dropped — it simply does not impersonate the typed
+still rendered - nothing is dropped - it simply does not impersonate the typed
 field.
 
 ---
@@ -225,7 +225,7 @@ That is what lets the preview map a rendered element back to the thing that
 produced it, which in turn makes these expressible:
 
 - *"This point is what pushed you onto page two."*
-- *"Drop these three lowest-tagged points to fit."* (capability F6.7)
+- *"Drop these three lowest-tagged points to fit."*
 
 Keys are **not** store identifiers. They resolve through the
 manifest, so templates never gain access to the store.
@@ -277,17 +277,17 @@ in `@keepcv/core`.
 |---|---|---|---|---|---|
 | experience | job title | team | employer | started/ended | employmentType |
 | education | degree | field of study | institution | started/ended | grade, thesis, honours |
-| project | project name | role | associated org | started/ended | — |
-| skill | skill name | proficiency | — | started/ended | category |
-| certification | certification | — | issuer | issued | credentialId, expiresOn |
+| project | project name | role | associated org | started/ended | - |
+| skill | skill name | proficiency | - | started/ended | category |
+| certification | certification | - | issuer | issued | credentialId, expiresOn |
 | publication | title | authors | venue | published | doi |
-| award | title | — | issuer | awarded | — |
-| language | language | proficiency | — | — | — |
-| volunteering | role | cause | organisation | started/ended | — |
-| speaking | talk title | event | host org | delivered | — |
-| custom entry | title | subtitle | — | started/ended | user-defined |
+| award | title | - | issuer | awarded | - |
+| language | language | proficiency | - | - | - |
+| volunteering | role | cause | organisation | started/ended | - |
+| speaking | talk title | event | host org | delivered | - |
+| custom entry | title | subtitle | - | started/ended | user-defined |
 
-`experience.mode` fills the `mode` **slot**, not a field — a slot and a field
+`experience.mode` fills the `mode` **slot**, not a field - a slot and a field
 are alternative destinations and nothing may occupy both. Verification,
 recording and repository URLs are `record_link` rows and reach the page through
 `links[]`, never `fields[]`. The rule: **anything that is a URL is a link;
@@ -295,18 +295,18 @@ anything that is a labelled value is a field.**
 
 Presenters are the **only** place kind-specific presentation knowledge is
 permitted. Adding a record kind means adding one presenter and one row to this
-table — no template, exporter, or linter changes.
+table - no template, exporter, or linter changes.
 
 ---
 
 ## 7. Compilation
 
 ```
-resume_version.manifest          ──▶  core.compile()  ──▶  ResumeDocument   (server: export)
-working composition + store      ──▶  core.compile()  ──▶  ResumeDocument   (browser: preview)
+resume_version.manifest          -->  core.compile()  -->  ResumeDocument   (server: export)
+working composition + store      -->  core.compile()  -->  ResumeDocument   (browser: preview)
 ```
 
-The same pure function, two callers (`application-structure.md` §7). Compile
+The same pure function, two callers (`application-structure.md` #7). Compile
 does, in order:
 
 1. resolve pinned phrasing revisions (manifest) or current ones (preview)
@@ -318,5 +318,5 @@ does, in order:
 7. assign keys and freeze
 
 Because compile is pure and deterministic, the same manifest always produces
-the same document — which is what makes render output content-addressable and
+the same document - which is what makes render output content-addressable and
 cacheable.

@@ -16,7 +16,7 @@ type Migration = {
   migrate: (document: Record<string, unknown>) => Record<string, unknown>;
 };
 
-// Ordered and contiguous, ending at CURRENT_SCHEMA_VERSION — asserted by test.
+// Ordered and contiguous, ending at CURRENT_SCHEMA_VERSION - asserted by test.
 // Empty until the format's first breaking change.
 export const migrations: Migration[] = [];
 

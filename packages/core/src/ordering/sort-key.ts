@@ -4,7 +4,7 @@ const SMALLEST_DIGIT = "0";
 const LARGEST_DIGIT = "z";
 
 // A key is a magnitude-prefixed integer part plus an optional fraction:
-// a0…az, b00…bzz, c000… — the head says how many digits follow, and
+// a0...az, b00...bzz, c000... - the head says how many digits follow, and
 // upper-case heads encode negative integers. Without the magnitude prefix an
 // append can only halve the remaining gap, so key length grows linearly: a
 // thousand appends produced two-hundred-character keys.
@@ -113,7 +113,7 @@ function midpoint(lower: string, upper: string | null): string {
   // Past its end `lower` is padded with the smallest digit, since a shorter
   // fraction equals itself followed by zeroes. Treating the missing digit as a
   // mismatch ends the walk early and yields a fraction ending in the smallest
-  // digit — midpoint("", "0V") returning "0" rather than "0G" — which is the
+  // digit - midpoint("", "0V") returning "0" rather than "0G" - which is the
   // one key shape nothing can be inserted before.
   if (upper !== null) {
     let shared = 0;
@@ -190,8 +190,8 @@ function keyWithin(lower: string, upper: string): SortKey {
   return validated(lowerInt + midpoint(lower.slice(lowerInt.length), null));
 }
 
-// A `null` bound means unbounded: start of the list, end of it, or — when both
-// are null — the first key in an empty one.
+// A `null` bound means unbounded: start of the list, end of it, or - when both
+// are null - the first key in an empty one.
 export function generateKeyBetween(
   lower: SortKey | string | null,
   upper: SortKey | string | null,
