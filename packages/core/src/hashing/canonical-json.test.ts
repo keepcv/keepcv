@@ -30,7 +30,9 @@ describe("canonicalJson", () => {
   });
 
   it("sorts keys by code unit rather than by locale", () => {
-    expect(canonicalJson({ a: 1, B: 2, å: 3, Z: 4 })).toBe('{"B":2,"Z":4,"a":1,"å":3}');
+    // Escaped so the source stays ASCII; the key is U+00E5, which sorts after
+    // every ASCII letter by code unit but before "b" in most locales.
+    expect(canonicalJson({ a: 1, B: 2, "\u00e5": 3, Z: 4 })).toBe('{"B":2,"Z":4,"a":1,"\u00e5":3}');
   });
 
   it("rejects numbers with no JSON representation", () => {

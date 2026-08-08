@@ -6,7 +6,7 @@ This package is the single source of truth for the wire format, the file
 format and the published JSON Schema. TypeScript types, API validation and
 form validation all derive from these definitions rather than restating them.
 
-It depends on nothing but Zod, and must never gain another dependency — it is
+It depends on nothing but Zod, and must never gain another dependency - it is
 imported by every other package, including ones that run in the browser.
 
 > **Status: early development.** The public API is unstable and there is no
@@ -37,7 +37,7 @@ is expected and vice versa. Parsing is the only way to obtain one.
 ## The export document
 
 `exportDocumentSchema` describes KeepCV's canonical, lossless career store
-format — the store, not a resume. Reading one always goes through
+format - the store, not a resume. Reading one always goes through
 `migrateDocument`, which brings an older `schemaVersion` forward before
 validating, so a document exported years ago still loads.
 
@@ -54,7 +54,7 @@ understand throws a `ZodError` instead, so the two are distinguishable.
 The JSON Schema for the format is emitted from the Zod definition and committed
 at [`schema/keepcv-v1.schema.json`](schema/keepcv-v1.schema.json), so a KeepCV
 export can be validated without running KeepCV. Regenerate it after any schema
-change — a test fails when the committed copy has drifted:
+change - a test fails when the committed copy has drifted:
 
 ```sh
 pnpm --filter @keepcv/schema schema:emit
@@ -62,4 +62,4 @@ pnpm --filter @keepcv/schema schema:emit
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

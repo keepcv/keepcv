@@ -9,7 +9,7 @@ them are unusual.
 append rather than overwrite, archive rather than remove. If a change makes it
 possible to lose content, it is wrong, however convenient it is.
 
-This is not a style preference — it is the entire reason the project exists.
+This is not a style preference - it is the entire reason the project exists.
 
 ## Features ship complete
 
@@ -38,16 +38,16 @@ corepack enable
 pnpm install
 ```
 
-On Windows, enable **Developer Mode** (Settings → System → For developers)
+On Windows, enable **Developer Mode** (Settings -> System -> For developers)
 before cloning, and set `git config core.symlinks true`. The repository
-contains a symlink — `CLAUDE.md` → `AGENTS.md` — and without both of those git
+contains a symlink - `CLAUDE.md` -> `AGENTS.md` - and without both of those git
 silently checks it out as a text file containing the target path.
 
 | Command | What it does |
 |---|---|
-| `pnpm lint` | Biome — formatting and the bulk of linting |
+| `pnpm lint` | Biome - formatting and the bulk of linting |
 | `pnpm lint:fix` | Biome, applying fixes |
-| `pnpm lint:types` | ESLint — the type-aware rules only |
+| `pnpm lint:types` | ESLint - the type-aware rules only |
 | `pnpm typecheck` | `tsc` across every package, including tests |
 | `pnpm test` | Vitest across every package |
 | `pnpm check` | All of the above |
@@ -58,7 +58,7 @@ All of these run in CI and all must pass.
 ## Repository layout
 
 ```
-packages/schema   Zod definitions — the single source of truth for shared shapes
+packages/schema   Zod definitions - the single source of truth for shared shapes
 packages/core     Domain logic. Pure: no I/O, no database, no network
 apps/             Applications
 ```

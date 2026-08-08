@@ -4,8 +4,8 @@ import { z } from "zod";
 // the digit arithmetic in @keepcv/core.
 export const SORT_KEY_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-// The lexical contract only (data-model.md §3.5). Structural rules — the
-// magnitude prefix, the trailing-digit restriction — belong to the generation
+// The lexical contract only (data-model.md #3.5). Structural rules - the
+// magnitude prefix, the trailing-digit restriction - belong to the generation
 // algorithm in @keepcv/core, so storage need not move in lockstep with it.
 export const sortKeySchema = z
   .string()

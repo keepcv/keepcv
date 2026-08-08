@@ -15,77 +15,77 @@ table.
 
 ## 1. Principles
 
-**P-A · Storage validates structure, not completeness.**
+**P-A; Storage validates structure, not completeness.**
 A record can be saved half-entered. Only identity, tenancy, timestamps and a
 single human label are `NOT NULL`. "This entry is missing an end date" is a
 *computed observation* surfaced by the UI, never a constraint that blocks a
 save. Data entry is the biggest UX risk in the product; a form that refuses to
 save is how that risk becomes real.
 
-**P-B · Nothing the user authored is destroyed.**
+**P-B; Nothing the user authored is destroyed.**
 Soft-delete everywhere, append-only phrasing revisions,
 append-only resume versions. Hard deletion is a separate, explicit
 operation.
 
-**P-C · Denormalise for reading, normalise for writing.**
+**P-C; Denormalise for reading, normalise for writing.**
 Working state the UI mutates constantly (resume composition) is normalised into
 rows. Immutable state always read whole (version manifests) is `jsonb`. Read
 paths that would need four joins get a view.
 
-**P-D · Rich domain, uniform presentation.**
-Storage stays typed and kind-specific — `certification.expires_on` and
+**P-D; Rich domain, uniform presentation.**
+Storage stays typed and kind-specific - `certification.expires_on` and
 `skill.proficiency` are real, queryable facts. Uniformity lives in
 `ResumeDocument` and is produced by presenters. Flattening storage
 to match the view would make queries lie.
 
-**P-E · Ordering is user-controlled and drag-and-drop driven.**
-Therefore ordering uses fractional keys, not integer positions. See §3.4.
+**P-E; Ordering is user-controlled and drag-and-drop driven.**
+Therefore ordering uses fractional keys, not integer positions. See #3.4.
 
 ---
 
 ## 2. Entity map
 
 ```
-owner ─┬─ profile ── contact_channel
-       │
-       ├─ organisation                     (companies, institutions, issuers, venues)
-       │
-       ├─ record ──┬─ experience  ── organisation
-       │           ├─ education   ── organisation
-       │           ├─ project     ── organisation?
-       │           ├─ skill
-       │           ├─ certification ── organisation
-       │           ├─ publication   ── organisation
-       │           ├─ award         ── organisation
-       │           ├─ language
-       │           ├─ volunteering  ── organisation
-       │           ├─ speaking      ── organisation
-       │           └─ custom_entry  ── custom_section
-       │              │
-       │              ├─ record_link     uniform links,  any kind
-       │              └─ record_field    uniform extras, any kind
-       │
-       ├─ point ──┬─ record                (primary parent)
-       │          ├─ point_record_link     (secondary parents, N:N)
-       │          ├─ metric
-       │          └─ evidence              PRIVATE — never rendered
-       │
-       ├─ phrasing_set ── phrasing ── phrasing_revision    immutable, append-only
-       │     ▲
-       │     └── owned by: point, profile.summary, and any record's summary
-       │
-       ├─ tag ──┬─ record_tag
-       │        └─ point_tag
-       │
-       ├─ draft                            uncommitted editor state
-       ├─ search_document                  derived; tsvector + trigram
-       │
-       └─ resume ──┬─ resume_contact_channel
-                   ├─ resume_section ── resume_entry ── resume_entry_point
-                   │        (mutable working composition)
-                   ├─ resume_version                    immutable manifest (jsonb)
-                   │     └─ resume_content_ref          derived usage index
-                   └─ resume_snapshot ── resume_version
+owner -+- profile -- contact_channel
+       |
+       +- organisation                     (companies, institutions, issuers, venues)
+       |
+       +- record --+- experience  -- organisation
+       |           +- education   -- organisation
+       |           +- project     -- organisation?
+       |           +- skill
+       |           +- certification -- organisation
+       |           +- publication   -- organisation
+       |           +- award         -- organisation
+       |           +- language
+       |           +- volunteering  -- organisation
+       |           +- speaking      -- organisation
+       |           +- custom_entry  -- custom_section
+       |              |
+       |              +- record_link     uniform links,  any kind
+       |              +- record_field    uniform extras, any kind
+       |
+       +- point --+- record                (primary parent)
+       |          +- point_record_link     (secondary parents, N:N)
+       |          +- metric
+       |          +- evidence              PRIVATE - never rendered
+       |
+       +- phrasing_set -- phrasing -- phrasing_revision    immutable, append-only
+       |     ^
+       |     +-- owned by: point, profile.summary, and any record's summary
+       |
+       +- tag --+- record_tag
+       |        +- point_tag
+       |
+       +- draft                            uncommitted editor state
+       +- search_document                  derived; tsvector + trigram
+       |
+       +- resume --+- resume_contact_channel
+                   +- resume_section -- resume_entry -- resume_entry_point
+                   |        (mutable working composition)
+                   +- resume_version                    immutable manifest (jsonb)
+                   |     +- resume_content_ref          derived usage index
+                   +- resume_snapshot -- resume_version
 ```
 
 **`point`, not `achievement`**. One primitive attaches to every
@@ -119,7 +119,7 @@ cross-type queries honest.
 
 | Name | Meaning | Used by |
 |---|---|---|
-| `title` | the entry's primary label | every subtype — never `name` |
+| `title` | the entry's primary label | every subtype - never `name` |
 | `subtitle` | secondary label | where one exists |
 | `organisation_id` | associated organisation | all org-bearing kinds |
 | `started_on` / `ended_on` / `is_current` | the period | every dated kind |
@@ -127,7 +127,7 @@ cross-type queries honest.
 | `summary_set_id` | prose blurb, as a phrasing set | any kind that has one |
 
 Genuinely different facts keep honest names. `certification.expires_on` is not
-`ended_on` — an expiry is not an ending, and conflating them would break
+`ended_on` - an expiry is not an ending, and conflating them would break
 "certifications expiring in 90 days". The presenter maps it to the `period`
 slot; storage stays truthful.
 
@@ -139,7 +139,7 @@ narrowed* by an ordinary migration, whereas a Postgres enum cannot drop a
 value without a type rewrite. Under expand/contract, evolving in
 both directions matters.
 
-### 3.4 `partial_date` — dates as users actually know them
+### 3.4 `partial_date` - dates as users actually know them
 
 Career dates are civil dates at inconsistent precision: "2019", "Mar 2019",
 occasionally a full date. They have no timezone and must never be a
@@ -166,14 +166,14 @@ Precision is derived from length, never stored. Ongoing periods use
 have not filled this in yet" are different facts the UI renders differently
 ("Present" vs an empty field with a nudge).
 
-### 3.5 `sort_key` — fractional ordering
+### 3.5 `sort_key` - fractional ordering
 
 Ordering is user-controlled by drag-and-drop in at least five places: records
 within a section, points within a record, phrasings within a set, sections
 within a resume, entries within a section.
 
 Integer positions require rewriting every row after the insertion point on each
-drag — a large mutation payload and a visible flicker under optimistic UI.
+drag - a large mutation payload and a visible flicker under optimistic UI.
 
 ```sql
 sort_key text not null       -- base-62 fractional index, e.g. "a0", "a0V", "a1"
@@ -207,8 +207,8 @@ formatting exists.
 ### `owner`
 
 The tenancy anchor. Local mode creates exactly one row at first launch. When
-accounts land (F11), `owner` gains a nullable link to Better Auth's user table
-— no other table changes.
+accounts land (F11), `owner` gains a nullable link to Better Auth's user
+table - no other table changes.
 
 ```sql
 owner (
@@ -218,11 +218,11 @@ owner (
 )
 ```
 
-### `profile` — one per owner
+### `profile` - one per owner
 
 ```sql
 profile (
-  …standard,
+  ...standard,
   full_name      text null,
   pronouns       text null,
   headline       text null,
@@ -239,7 +239,7 @@ same reasons a point is. It gets variants for free.
 
 ```sql
 contact_channel (
-  …standard,
+  ...standard,
   kind  text not null check (kind in
           ('email','phone','website','linkedin','github','scholar',
            'orcid','location','other')),
@@ -250,9 +250,9 @@ contact_channel (
 )
 ```
 
-Contact details are per-resume decisions — a public portfolio should not carry
+Contact details are per-resume decisions - a public portfolio should not carry
 a phone number. `is_default_visible` seeds new resumes;
-`resume_contact_channel` overrides per resume (§9.1).
+`resume_contact_channel` overrides per resume (#9.1).
 
 ---
 
@@ -262,13 +262,13 @@ The heart of the product, and its highest-risk interface.
 
 ```sql
 phrasing_set (
-  …standard,
+  ...standard,
   purpose text not null check (purpose in ('point','profile_summary','record_summary')),
   canonical_phrasing_id uuid null   -- nullable; set after the first phrasing exists
 )
 
 phrasing (
-  …standard,
+  ...standard,
   phrasing_set_id     uuid not null references phrasing_set(id) on delete cascade,
   variant             text not null check (variant in
                         ('canonical','short','long','angled')),
@@ -290,19 +290,19 @@ phrasing_revision (                 -- IMMUTABLE. Never updated. Never deleted.
 ```
 
 **Two circular foreign keys, both intentional.**
-`phrasing_set.canonical_phrasing_id` → `phrasing` → `phrasing_set`, and
-`phrasing.current_revision_id` → `phrasing_revision` → `phrasing`. Both are
+`phrasing_set.canonical_phrasing_id` -> `phrasing` -> `phrasing_set`, and
+`phrasing.current_revision_id` -> `phrasing_revision` -> `phrasing`. Both are
 broken by making the *forward* pointer nullable and populating it in a second
 statement inside the same transaction:
 
 ```
-insert phrasing_set → insert phrasing → insert phrasing_revision
-  → update phrasing.current_revision_id
-  → update phrasing_set.canonical_phrasing_id
+insert phrasing_set -> insert phrasing -> insert phrasing_revision
+  -> update phrasing.current_revision_id
+  -> update phrasing_set.canonical_phrasing_id
 ```
 
 This is why creating a point is a `UnitOfWork` operation
-(`api-contract.md` §4) and not five independent repository calls: a partial
+(`api-contract.md` #4) and not five independent repository calls: a partial
 failure would leave a point with no text.
 
 **Why `variant` and `label` are separate.** `variant` is structural and drives
@@ -312,7 +312,7 @@ alternate framings.
 
 **Why `current_revision_id` is denormalised onto `phrasing`.** Every list in
 the application shows current text. Without the pointer, each row needs a
-correlated subquery for the latest revision. With it, one join. See §11.
+correlated subquery for the latest revision. With it, one join. See #11.
 
 ```sql
 create index on phrasing (phrasing_set_id) where archived_at is null;
@@ -321,14 +321,14 @@ create unique index on phrasing_revision (phrasing_id, content_hash);
 ```
 
 The unique index makes "no revision unless content actually changed" a database
-guarantee rather than an application convention — retyping a word and undoing
+guarantee rather than an application convention - retyping a word and undoing
 it cannot pollute the history.
 
-### `draft` — uncommitted editor state
+### `draft` - uncommitted editor state
 
 ```sql
 draft (
-  …standard (no archived_at),
+  ...standard (no archived_at),
   target_kind text not null check (target_kind in ('phrasing','record','resume')),
   target_id   uuid not null,
   field       text not null,
@@ -343,7 +343,7 @@ in-progress edit to a closed tab is the founding failure in miniature.
 
 Drafts are persisted, overwritable, outside history, and deleted on commit or
 explicit discard. Reopening an editor with a draft present says so and offers
-restore or discard — it never silently resurrects text the user believed they
+restore or discard - it never silently resurrects text the user believed they
 had abandoned.
 
 ---
@@ -354,7 +354,7 @@ had abandoned.
 
 ```sql
 organisation (
-  …standard,
+  ...standard,
   name     text not null,
   kind     text not null check (kind in
              ('company','institution','issuer','publisher','venue','other')),
@@ -366,15 +366,15 @@ organisation (
 
 First-class rather than a string on each role, because two roles at one company
 is common and every well-made resume groups them under a single heading
-(`Section.groups`, template-model.md §2). It also lets certifications,
+(`Section.groups`, template-model.md #2). It also lets certifications,
 publications, awards and talks share one issuer identity instead of repeating a
 name inconsistently.
 
-### `record` — the supertype
+### `record` - the supertype
 
 ```sql
 record (
-  …standard,
+  ...standard,
   kind     text not null check (kind in
              ('experience','education','project','skill','certification',
               'publication','award','language','volunteering','speaking',
@@ -387,8 +387,8 @@ record (
 `record.title` is a denormalised copy of the subtype's `title`. It exists so
 cross-type lists, search results and the "recently edited" view render without
 fanning out to eleven subtype tables. It is maintained by the repository layer
-inside the same `UnitOfWork` as the subtype write — never by a trigger, so it
-stays testable — and a rebuild-and-compare test guards it from drifting.
+inside the same `UnitOfWork` as the subtype write - never by a trigger, so it
+stays testable - and a rebuild-and-compare test guards it from drifting.
 
 **Why a supertype rather than polymorphic foreign keys or one wide `jsonb`
 table:**
@@ -398,13 +398,13 @@ table:**
 - Global search, ordering, archival and the "recently edited" view are
   cross-type operations needing one table to query.
 - A single `jsonb` blob table would trade every constraint, index and type
-  guarantee for flexibility we do not need — the shapes are known (P-D).
+  guarantee for flexibility we do not need - the shapes are known (P-D).
 
-Cost: one extra join per read, hidden behind the views in §11.
+Cost: one extra join per read, hidden behind the views in #11.
 
 ### Subtypes
 
-Field names follow the standard vocabulary (§3.2).
+Field names follow the standard vocabulary (#3.2).
 
 ```sql
 experience (
@@ -461,14 +461,14 @@ volunteering (record_id pk, organisation_id, title, subtitle, started_on, ended_
               is_current, summary_set_id)
 speaking     (record_id pk, organisation_id, title, subtitle, delivered_on, location)
 
-custom_section (…standard, heading text not null, sort_key text not null)
+custom_section (...standard, heading text not null, sort_key text not null)
 custom_entry   (record_id pk, custom_section_id, title, subtitle,
                 started_on, ended_on, is_current, summary_set_id)
 ```
 
 Note how few `NOT NULL`s appear. That is principle P-A, deliberately.
 
-### `record_link` and `record_field` — uniform extras
+### `record_link` and `record_field` - uniform extras
 
 Rather than `project_link`, `certification.verification_url`, `publication.url`
 and `speaking.url` as four separate shapes, links are one table available to
@@ -477,7 +477,7 @@ every record kind. The same for user-defined fields, which were previously
 
 ```sql
 record_link (
-  …standard,
+  ...standard,
   record_id uuid not null references record(id) on delete cascade,
   kind  text not null check (kind in ('repo','demo','docs','verify','recording','other')),
   label text null,
@@ -486,7 +486,7 @@ record_link (
 )
 
 record_field (
-  …standard,
+  ...standard,
   record_id uuid not null references record(id) on delete cascade,
   key   text not null,           -- machine-readable; user fields derive it from label
   label text not null,
@@ -499,8 +499,8 @@ record_field (
 ```
 
 Both project directly into the `links[]` and `fields[]` slots of the template
-model (template-model.md §3). Typed subtype columns like `credential_id` and
-`doi` project into the *same* `fields[]` slot via their presenter — so
+model (template-model.md #3). Typed subtype columns like `credential_id` and
+`doi` project into the *same* `fields[]` slot via their presenter - so
 templates see one uniform list regardless of whether a fact came from a typed
 column or a user-defined field.
 
@@ -516,7 +516,7 @@ Renamed from `achievement`. Same facets; broader applicability.
 
 ```sql
 point (
-  …standard,
+  ...standard,
   record_id       uuid null references record(id) on delete cascade,  -- primary parent
   phrasing_set_id uuid not null references phrasing_set(id),
   confidence      text not null default 'unverified'
@@ -535,11 +535,11 @@ cannot answer "under which heading does this print", which every renderer
 needs. A single foreign key cannot express work spanning a role and a side
 project. The primary parent decides placement; secondary links drive discovery
 and selection. `record_id` is nullable so a point can be captured before
-deciding where it belongs — again P-A.
+deciding where it belongs - again P-A.
 
 ```sql
 metric (
-  …standard,
+  ...standard,
   point_id  uuid not null references point(id) on delete cascade,
   label     text not null,        -- "p95 latency"
   value     numeric not null,
@@ -552,12 +552,12 @@ metric (
 ```
 
 Structured rather than buried in prose, so numbers stay findable and comparable
-across a career — "show me everything where I moved a percentage" becomes a
+across a career - "show me everything where I moved a percentage" becomes a
 query rather than a memory exercise.
 
 ```sql
 evidence (                        -- PRIVATE. Never rendered.
-  …standard,
+  ...standard,
   point_id uuid not null references point(id) on delete cascade,
   kind  text not null check (kind in ('url','note','file')),
   value text not null,
@@ -569,9 +569,9 @@ Privacy is enforced *structurally*: `ResumeDocument` has no field that could
 hold evidence, so no renderer can leak it even by mistake. There is
 no runtime filter to forget.
 
-**"Private" means never rendered — not withheld from the user.** Evidence is
+**"Private" means never rendered - not withheld from the user.** Evidence is
 included in full in the native export, because invariant I10 requires
-`import(export(store)) ≡ store` and because it is the user's own data.
+`import(export(store)) == store` and because it is the user's own data.
 It is excluded from `ResumeDocument`, from every rendered
 output, and from the lossy interop adapters, which describe resumes rather than
 career stores. Confusing "not printed" with "not exported" would quietly break
@@ -583,7 +583,7 @@ the losslessness guarantee.
 
 ```sql
 tag (
-  …standard,
+  ...standard,
   slug     text not null,        -- normalised: lowercased, hyphenated
   label    text not null,        -- as the user typed it
   category text null             -- 'skill' | 'domain' | 'competency' | user-defined
@@ -622,7 +622,7 @@ over whole words, `pg_trgm` for search-as-you-type, since Postgres full-text
 search will not match `postg` against `postgresql`. Both are available in
 PGlite.
 
-Maintained on write by the repository layer, not by triggers — so it can be
+Maintained on write by the repository layer, not by triggers - so it can be
 rebuilt deterministically and is covered by ordinary tests.
 
 ---
@@ -634,14 +634,14 @@ normalised rows, and **immutable version manifests** in `jsonb`.
 
 ### 9.1 Working composition
 
-The composer mutates this continuously — toggling records in and out, dragging
+The composer mutates this continuously - toggling records in and out, dragging
 entries between sections, switching phrasings. Modelling it as `jsonb` would
 mean read-modify-write of the whole document on every toggle, with lost updates
 between panes and no way to patch a single row.
 
 ```sql
 resume (
-  …standard,
+  ...standard,
   name             text not null,
   target_company   text null,
   target_role      text null,
@@ -655,7 +655,7 @@ resume (
 )
 
 resume_section (
-  …standard,
+  ...standard,
   resume_id uuid not null references resume(id) on delete cascade,
   kind       text not null,
   custom_section_id uuid null references custom_section(id),  -- required iff kind='custom'
@@ -667,7 +667,7 @@ resume_section (
 )
 
 resume_entry (
-  …standard,
+  ...standard,
   resume_section_id uuid not null references resume_section(id) on delete cascade,
   record_id  uuid not null references record(id),
   sort_key   text not null,
@@ -676,7 +676,7 @@ resume_entry (
 )
 
 resume_entry_point (
-  …standard,
+  ...standard,
   resume_entry_id uuid not null references resume_entry(id) on delete cascade,
   point_id    uuid not null references point(id),
   phrasing_id uuid not null references phrasing(id),   -- LIVE, not pinned
@@ -695,7 +695,7 @@ resume_contact_channel (
 point_id)` only prevents duplication within one entry. Because a point can be
 linked to several records (`point_record_link`), it could otherwise be placed
 under two entries and print twice. A line appearing twice on a resume is always
-a mistake, so uniqueness is enforced per resume — and the composer shows where
+a mistake, so uniqueness is enforced per resume - and the composer shows where
 a point is already placed rather than silently refusing to add it.
 
 **Archiving a record does not remove it from a resume.** The composition row
@@ -711,7 +711,7 @@ the choice is frozen to a specific revision and can never change.
 
 `is_visible` rather than deleting rows: toggling a record out of a resume must
 not discard its phrasing choice and position, or every toggle would be
-destructive — the precise pattern the product exists to eliminate.
+destructive - the precise pattern the product exists to eliminate.
 
 ### 9.2 Versions, snapshots, and the usage index
 
@@ -720,7 +720,7 @@ resume_version (                  -- IMMUTABLE
   id uuid primary key,
   owner_id uuid not null,
   resume_id uuid not null references resume(id) on delete cascade,
-  seq int not null,               -- 1, 2, 3… per resume; user-facing
+  seq int not null,               -- 1, 2, 3... per resume; user-facing
   trigger text not null check (trigger in ('export','manual_save','restore')),
   restored_from_version_id uuid null references resume_version(id),
   manifest jsonb not null,
@@ -730,7 +730,7 @@ resume_version (                  -- IMMUTABLE
 )
 
 resume_snapshot (
-  …standard,
+  ...standard,
   resume_version_id uuid not null unique references resume_version(id),
   label text not null,            -- "Sent to Acme, March"
   note  text null,
@@ -749,7 +749,7 @@ create index on resume_content_ref (ref_kind, ref_id);
 
 `resume_content_ref` exists purely to serve the UI. Screens need to answer
 "which resumes used this point?" and "if I archive this record, what does it
-affect?" — questions that would otherwise mean scanning every manifest's
+affect?" - questions that would otherwise mean scanning every manifest's
 `jsonb`. It is written when a version is created and is fully rebuildable, so
 it can never be the cause of a correctness bug.
 
@@ -760,50 +760,50 @@ timeline records that a restore happened.
 **Identical exports do not create duplicate versions.** If a new manifest's
 `manifest_hash` equals the current version's, no version is written and the
 existing one is returned. Exporting the same resume three times to send to
-three companies must not produce three indistinguishable timeline entries —
+three companies must not produce three indistinguishable timeline entries -
 that is how a version list becomes unreadable after ninety days away.
 Distinguishing *those* three sends is what snapshots are for.
 
 ### 9.3 Manifest shape
 
 Stored as `jsonb`, validated by Zod on read. Immutable, always read
-whole, never queried by its parts — the justification for the exception to
+whole, never queried by its parts - the justification for the exception to
 normalisation.
 
 The manifest is **storage-shaped, not template-shaped**: it pins what was
 selected. `core.compile()` turns it into the uniform `ResumeDocument`
-(template-model.md §7).
+(template-model.md #7).
 
 ```jsonc
 {
   "schemaVersion": 1,
   "profile": {
-    "fullName": "…", "headline": "…",
-    "summaryPhrasingRevisionId": "…",
-    "contactChannels": [{ "id": "…", "kind": "email", "value": "…" }]
+    "fullName": "...", "headline": "...",
+    "summaryPhrasingRevisionId": "...",
+    "contactChannels": [{ "id": "...", "kind": "email", "value": "..." }]
   },
   "sections": [{
     "kind": "experience", "heading": "Experience", "layout": "grouped", "sortKey": "a0",
     "entries": [{
-      "recordId": "…", "sortKey": "a0",
+      "recordId": "...", "sortKey": "a0",
       "pinned": {
-        "kind": "experience", "title": "…", "subtitle": "…",
-        "organisation": { "name": "…" },
+        "kind": "experience", "title": "...", "subtitle": "...",
+        "organisation": { "name": "..." },
         "startedOn": "2023-04", "endedOn": null, "isCurrent": true,
-        "links":  [{ "kind": "repo", "label": "…", "url": "…" }],
-        "fields": [{ "key": "employmentType", "label": "…", "value": "…" }]
+        "links":  [{ "kind": "repo", "label": "...", "url": "..." }],
+        "fields": [{ "key": "employmentType", "label": "...", "value": "..." }]
       },
       "points": [
-        { "pointId": "…", "phrasingRevisionId": "…", "sortKey": "a0" }
+        { "pointId": "...", "phrasingRevisionId": "...", "sortKey": "a0" }
       ]
     }]
   }],
-  "template": { "id": "ats-strict", "version": "1.2.0", "config": { … } }
+  "template": { "id": "ats-strict", "version": "1.2.0", "config": { ... } }
 }
 ```
 
 **`pinned` freezes the record's structural fields too.** Pinning only phrasing
-revisions would leave job titles, dates, links and fields live — so correcting
+revisions would leave job titles, dates, links and fields live - so correcting
 a title in 2027 would silently rewrite what a 2026 snapshot claims you sent.
 The same reasoning as pinned phrasing revisions, applied to everything a
 phrasing revision does not cover.
@@ -825,7 +825,7 @@ Enforced by constraint where possible, by test where not.
 | I7 | `content_hash` is stable across serialisations | property test on canonicalisation |
 | I8 | `plain_text` always equals the projection of `body` | computed on write; property test |
 | I9 | `partial_date` values sort correctly within equal precision | domain `CHECK` |
-| I10 | `import(export(store)) ≡ store` | property test, required by every slice |
+| I10 | `import(export(store)) == store` | property test, required by every slice |
 | I11 | `sort_key` is unique within its parent scope | unique index per scope |
 | I12 | `resume_content_ref` is exactly derivable from manifests | rebuild-and-compare test |
 | I13 | A point appears at most once per resume | unique index across the resume |
@@ -851,7 +851,7 @@ select p.id, p.owner_id, p.record_id, p.confidence, p.occurred_on, p.sort_key,
   left join phrasing_revision r on r.id = ph.current_revision_id;
 
 -- One row per record with subtype display fields flattened.
-create view record_display as … ;
+create view record_display as ... ;
 ```
 
 `phrasing_count` is in the view because the point list shows a "3 wordings"
@@ -883,7 +883,7 @@ N+1 query on the most-visited screen in the product.
 
 Not blocking; recorded so they are decided deliberately.
 
-1. **Skill ↔ point linkage.** Skills should be "linked to demonstrating
+1. **Skill <-> point linkage.** Skills should be "linked to demonstrating
    points". Currently expressible via shared tags. A direct
    `skill_point` join would be more precise but adds a second way to express
    one relationship. Deferred until the skills UI is designed.

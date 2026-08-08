@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         KeepCV delivers features **complete**, one sub-feature at a time.
-        A sub-feature is either not started or done — there is no partial state
+        A sub-feature is either not started or done - there is no partial state
         on `main`.
 
   - type: input
@@ -24,7 +24,7 @@ body:
       label: Which felt pain does this trace to?
       description: >
         Not a hypothetical user, not a competitor's feature list, not "the
-        market expects it" — a pain someone has actually felt. A feature that
+        market expects it" - a pain someone has actually felt. A feature that
         cannot answer this is closed.
     validations:
       required: true
@@ -55,11 +55,10 @@ body:
       options:
         - label: Schema and migration, expand/contract compliant
         - label: API routes with validation and typed errors
-        - label: UI covers create, read, update, archive, restore — no dead ends
+        - label: UI covers create, read, update, archive, restore - no dead ends
         - label: Validation, error, loading and empty states
         - label: Survives the export/import round-trip test
         - label: Unit and integration tests, plus one end-to-end path
-        - label: Accessibility pass — keyboard and screen reader
-        - label: Docs updated; ADR added if an architectural choice was made
+        - label: Accessibility pass - keyboard and screen reader
+        - label: Docs updated; an architecture decision recorded if one was made
         - label: No TODOs, no feature flags left enabled
-        - label: Changeset added

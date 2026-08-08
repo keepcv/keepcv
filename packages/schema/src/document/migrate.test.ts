@@ -46,7 +46,7 @@ describe("migrateDocument", () => {
   });
 
   // A malformed body at a version we do understand is a validation failure, not
-  // a version problem — the caller has to be able to tell the two apart.
+  // a version problem - the caller has to be able to tell the two apart.
   it("reports a malformed current document as a validation error", () => {
     expect(() => migrateDocument({ ...current, exportedAt: "yesterday" })).not.toThrow(
       UnsupportedSchemaVersionError,

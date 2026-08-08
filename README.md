@@ -4,7 +4,7 @@
 
 An open-source career data store that compiles into resumes.
 
-You enter your career once — every role, project, point, skill, qualification —
+You enter your career once - every role, project, point, skill, qualification -
 and it stays there permanently. Resumes are *generated views* over that store:
 select what is relevant, choose a template, produce a document. Nothing you
 write is ever lost to make something fit.
@@ -24,7 +24,7 @@ KeepCV separates them. The store holds everything, forever. A resume is a
 selection over the store plus a template. Deleting a resume loses nothing, and
 ten resumes share one copy of the truth.
 
-The hard part was never *fitting* — it is *choosing*, because the choice is
+The hard part was never *fitting* - it is *choosing*, because the choice is
 destructive. So this is a tagging and prioritisation tool, not a typography
 tool.
 
@@ -61,4 +61,4 @@ threat model and how to report a vulnerability.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

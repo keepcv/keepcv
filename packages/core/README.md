@@ -2,7 +2,7 @@
 
 Domain logic and invariants for [KeepCV](https://github.com/keepcv/keepcv).
 
-This package performs **no I/O** — no filesystem, no network, no database
+This package performs **no I/O** - no filesystem, no network, no database
 driver, no Node built-ins. It runs unchanged in Node and in the browser, which
 is what lets the resume preview compile client-side from cached data while the
 server compiles the same document for export.
@@ -38,7 +38,7 @@ Pass `null` for either bound to insert at the start or end of a list.
 ### Identifiers
 
 Identifiers are UUIDv7 and are minted on whichever side is doing the work,
-usually the client — so a row has its identity before the server has heard of
+usually the client - so a row has its identity before the server has heard of
 it and an optimistic write is the real write.
 
 ```ts
@@ -67,7 +67,7 @@ const body = canonicaliseRichText([
 // the two bold runs are now one
 
 projectPlainText(body); // "Cut p95 latency to 180ms"
-contentHash(body); // "a712871a…"
+contentHash(body); // "a712871a..."
 ```
 
 **Store the canonical body, not the one you were handed.** Bodies that render
@@ -81,4 +81,4 @@ the same encoding.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

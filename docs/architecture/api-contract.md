@@ -1,6 +1,6 @@
 # API Contract
 
-> The boundary between `apps/web` and `@keepcv/api`, and — more importantly —
+> The boundary between `apps/web` and `@keepcv/api`, and - more importantly -
 > the boundary the private cloud repo implements.
 > Companion: [`data-model.md`](data-model.md),
 > [`application-structure.md`](application-structure.md).
@@ -11,7 +11,7 @@
 
 The public/private split works only if the private cloud repo can be a thin
 adapter rather than a fork. That requires a boundary that is documented,
-versioned and stable — which framework-internal RPC would not give us, and
+versioned and stable - which framework-internal RPC would not give us, and
 which self-hosters genuinely need.
 
 So the HTTP API is designed, not emitted as a side effect.
@@ -49,7 +49,7 @@ The client renders typed problems. No string parsing, ever.
 than discarding one side silently.
 
 **Idempotency.** Creates accept a client-generated UUIDv7 as the resource id,
-so a retried create is naturally idempotent — no idempotency-key header
+so a retried create is naturally idempotent - no idempotency-key header
 needed.
 
 **Partial updates.** `PATCH` with a sparse body. Absent means unchanged; an
@@ -61,7 +61,7 @@ UUIDv7's time ordering makes the cursor stable. Most endpoints will never
 paginate in practice, but the shape is fixed now so it never becomes breaking.
 
 **Archive vs purge.** `DELETE` archives. Purging is
-`POST /v1/{resource}/{id}/purge` with explicit confirmation — deliberately not
+`POST /v1/{resource}/{id}/purge` with explicit confirmation - deliberately not
 reachable by an accidental `DELETE`.
 
 **Authentication.** Local mode: the per-launch session token in a custom
@@ -73,7 +73,7 @@ either way and never accept an owner id from the caller.
 ## 3. Resources
 
 ```
-GET    /v1/store                       whole-store boot payload — CURRENT state only
+GET    /v1/store                       whole-store boot payload - CURRENT state only
 GET    /v1/store/summary               counts, recent activity, nudges
 
 GET    /v1/profile                     PATCH /v1/profile
@@ -95,7 +95,7 @@ CRUD   /v1/points/:id/evidence         never included in any render path
 
 GET    /v1/phrasing-sets/:id
 POST   /v1/phrasing-sets/:id/phrasings
-PATCH  /v1/phrasings/:id               label, variant, sortKey — not text
+PATCH  /v1/phrasings/:id               label, variant, sortKey - not text
 POST   /v1/phrasings/:id/revisions     append; the only way text changes
 GET    /v1/phrasings/:id/revisions     history
 POST   /v1/phrasing-sets/:id/canonical { phrasingId }
@@ -115,7 +115,7 @@ PATCH  /v1/resumes/:id/entries/:eid/points/:pid phrasingId, visibility, sortKey
 GET    /v1/resumes/:id/document        compiled ResumeDocument (server-side)
 
 GET    /v1/resumes/:id/versions
-POST   /v1/resumes/:id/versions        { trigger }  — commits open drafts first
+POST   /v1/resumes/:id/versions        { trigger }  - commits open drafts first
 GET    /v1/resumes/:id/versions/:vid
 GET    /v1/resumes/:id/versions/diff   ?a=&b=
 POST   /v1/resumes/:id/versions/:vid/restore
@@ -144,12 +144,12 @@ Notes on the non-obvious ones:
   and confirms (capability F9.6).
 - **`GET /v1/resumes/:id/document` exists for server-side export**, but the
   browser compiles its own preview locally from cached data via the same pure
-  function (`application-structure.md` §7). Both call identical code.
+  function (`application-structure.md` #7). Both call identical code.
 - **`/v1/export` is never gated** by auth or entitlement state.
 - **`GET /v1/resumes/:id/document` returns a uniform `ResumeDocument`**
   (template-model.md), not the manifest. The manifest is storage-shaped; the
   document is template-shaped, and only the latter is a public contract.
-- **`GET /v1/store` returns current state only** — no phrasing revision
+- **`GET /v1/store` returns current state only** - no phrasing revision
   history, no version manifests, no drafts. Those are fetched per subject on
   demand. The "the whole store is only kilobytes" assumption
   holds for current state; revision history grows without bound by design
@@ -191,7 +191,7 @@ Rules:
 - **Multi-table operations run inside `UnitOfWork`.** Creating a point writes
   `point`, `phrasing_set`, `phrasing`, `phrasing_revision` and
   `search_document`, and resolves two circular foreign keys along the way
-  (data-model.md §5); a partial failure would leave a point with no text.
+  (data-model.md #5); a partial failure would leave a point with no text.
 - **`@keepcv/core` depends only on these interfaces**, never on Drizzle, never
   on a driver. Enforced by a CI dependency check.
 
@@ -200,7 +200,7 @@ Rules:
 ## 5. Contract testing
 
 A single suite runs against every implementation of `Repositories`:
-`@keepcv/db` on PGlite, `@keepcv/db` on server PostgreSQL, and — once it
-exists — the cloud implementation. It asserts the invariants in
-`data-model.md` §10 rather than the queries, so a divergent implementation
+`@keepcv/db` on PGlite, `@keepcv/db` on server PostgreSQL, and - once it
+exists - the cloud implementation. It asserts the invariants in
+`data-model.md` #10 rather than the queries, so a divergent implementation
 fails loudly instead of subtly.

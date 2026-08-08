@@ -36,7 +36,7 @@ body:
     attributes:
       value: |
         If you ticked the box above, this is the highest-severity class of bug
-        in this project — please say so in the title.
+        in this project - please say so in the title.
 
   - type: input
     id: version

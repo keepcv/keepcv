@@ -2,7 +2,7 @@ import { type Uuid, uuidSchema } from "@keepcv/schema";
 import { bytesToHex } from "@noble/hashes/utils.js";
 
 // The one host API this package touches. Declared rather than pulled in from
-// @types/node, because core's tsconfig sets `"types": []` — that is what stops
+// @types/node, because core's tsconfig sets `"types": []` - that is what stops
 // a Node built-in reaching a package the browser also runs.
 declare const crypto: { getRandomValues<T extends ArrayBufferView>(array: T): T };
 
@@ -12,7 +12,7 @@ let lastMilliseconds = -1;
 let counter = 0;
 
 // Identifiers are minted before the server has heard of the row, so an
-// optimistic write is the real write (application-structure.md §4). Version 7
+// optimistic write is the real write (application-structure.md #4). Version 7
 // puts the timestamp first, which is what keeps insert locality and makes an
 // (updated_at, id) cursor stable.
 export function newUuid(): Uuid {

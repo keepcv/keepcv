@@ -39,7 +39,7 @@ function violation(nodes: Inline[], depth: number, insideLink: boolean): string 
   return null;
 }
 
-// One paragraph, no block constructs (data-model.md §3.6). Merging adjacent
+// One paragraph, no block constructs (data-model.md #3.6). Merging adjacent
 // text nodes is canonicalisation, so it belongs to @keepcv/core, not parsing.
 export const richTextSchema = z.array(inlineSchema).superRefine((nodes, ctx) => {
   const message = violation(nodes, 0, false);
