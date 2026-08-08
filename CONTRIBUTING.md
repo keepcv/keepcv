@@ -38,6 +38,11 @@ corepack enable
 pnpm install
 ```
 
+On Windows, enable **Developer Mode** (Settings → System → For developers)
+before cloning, and set `git config core.symlinks true`. The repository
+contains a symlink — `CLAUDE.md` → `AGENTS.md` — and without both of those git
+silently checks it out as a text file containing the target path.
+
 | Command | What it does |
 |---|---|
 | `pnpm lint` | Biome — formatting and the bulk of linting |
