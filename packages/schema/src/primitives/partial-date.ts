@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-// The `partial_date` domain in @keepcv/db interpolates this exact source, so
-// the CHECK and the wire contract cannot drift (data-model.md #3.4).
+// The `partial_date` domain in @keepcv/db repeats this exact source. A test
+// there feeds both the same values and fails if they disagree, so the CHECK and
+// the wire contract cannot drift (data-model.md #3.4).
 export const PARTIAL_DATE_PATTERN = String.raw`^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$`;
 
 // JavaScript's `$` also matches before a trailing newline; Postgres's `~` does

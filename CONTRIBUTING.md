@@ -60,6 +60,7 @@ All of these run in CI and all must pass.
 ```
 packages/schema   Zod definitions - the single source of truth for shared shapes
 packages/core     Domain logic. Pure: no I/O, no database, no network
+packages/db       Drizzle schema, migrations, repository implementations
 apps/             Applications
 ```
 

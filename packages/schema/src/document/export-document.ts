@@ -1,11 +1,17 @@
 import { z } from "zod";
+import { contactChannelSchema } from "../entities/contact-channel.js";
+import { profileSchema } from "../entities/profile.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-// The seam every content slice writes into: the profile, the record store,
-// then points and phrasings. Empty today because no entity is modelled yet.
-export const storeSchema = z.object({});
+// Every entity the store holds, archived rows included: `import(export(store))
+// == store` is a tested property, so anything omitted here is data the format
+// silently drops. Grows with each content slice - records, points, phrasings.
+export const storeSchema = z.object({
+  profile: profileSchema,
+  contactChannels: z.array(contactChannelSchema),
+});
 
 // The canonical, lossless career store format - not a resume. `schemaVersion`
 // is pinned to the current one because `migrateDocument` is the only supported
@@ -23,4 +29,5 @@ export const exportDocumentSchema = z
       "The canonical, lossless export of a KeepCV career store. Import runs forward migrations, so a document exported under an older schemaVersion still loads.",
   });
 
+export type Store = z.infer<typeof storeSchema>;
 export type ExportDocument = z.infer<typeof exportDocumentSchema>;

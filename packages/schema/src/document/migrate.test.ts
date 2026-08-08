@@ -5,7 +5,19 @@ import { migrateDocument, migrations, UnsupportedSchemaVersionError } from "./mi
 const current = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
   exportedAt: "2026-08-08T09:41:00Z",
-  store: {},
+  store: {
+    profile: {
+      id: "019891a4-6ac5-7000-8000-000000000001",
+      createdAt: "2026-08-08T09:41:00Z",
+      updatedAt: "2026-08-08T09:41:00Z",
+      archivedAt: null,
+      fullName: "Ada Lovelace",
+      pronouns: null,
+      headline: null,
+      location: null,
+    },
+    contactChannels: [],
+  },
 };
 
 describe("migrations", () => {

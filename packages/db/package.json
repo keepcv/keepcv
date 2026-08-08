@@ -1,0 +1,62 @@
+{
+  "name": "@keepcv/db",
+  "version": "0.0.0",
+  "description": "PostgreSQL persistence for KeepCV: Drizzle schema, migrations and repository implementations, on PGlite locally and server Postgres hosted.",
+  "keywords": [
+    "keepcv",
+    "postgres",
+    "pglite",
+    "drizzle",
+    "resume",
+    "cv"
+  ],
+  "license": "MIT",
+  "author": "nrautela",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keepcv/keepcv.git",
+    "directory": "packages/db"
+  },
+  "bugs": {
+    "url": "https://github.com/keepcv/keepcv/issues"
+  },
+  "homepage": "https://github.com/keepcv/keepcv/tree/main/packages/db#readme",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "migrations",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "db:generate": "drizzle-kit generate",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@keepcv/core": "workspace:*",
+    "@keepcv/schema": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

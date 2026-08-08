@@ -39,6 +39,13 @@ Rules, enforced by package boundaries:
   a DTO because one screen wants it is how the contract becomes a UI
   changelog. Formatting is presentation; it happens in layer 4.
 
+**An entity type is written only when it differs from the DTO.** `Point` carries
+its resolved current phrasing and `Record` resolves its subtype, so both earn a
+type of their own. A profile has no domain rule the wire shape does not already
+express, so it has one type rather than two identical ones and the repository
+port returns the DTO. Declaring every field twice with an identity mapping
+between them buys nothing and drifts the first time one side is edited.
+
 ```
 PGlite/Postgres --row--> repository --entity--> domain service --DTO--> HTTP
                                                                           |

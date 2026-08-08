@@ -13,5 +13,12 @@ export {
   generateNKeysBetween,
   SortKeyError,
 } from "./ordering/sort-key.js";
+export {
+  ConcurrencyConflictError,
+  NotFoundError,
+  type ProfileRepository,
+  type Repositories,
+  type UnitOfWork,
+} from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
