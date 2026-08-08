@@ -224,3 +224,23 @@ are the declared non-goals?* The second is where scope pressure gets absorbed �
 a good idea arriving mid-build becomes a new issue, not a bigger current one.
 
 `main` is the default branch; branch before committing.
+
+### Commits and pull requests stand alone
+
+A commit message and a PR description are read by someone who has only that
+one thing in front of them — a `git log` line months later, a reviewer opening
+a diff cold, a bisect landing mid-history.
+
+- **No cross-references to other commits or PRs.** Not "as in the previous
+  PR", not "completes what #12 started", not "see the earlier commit". If
+  context from elsewhere matters, restate it in a sentence. A reader following
+  a link has already lost the thread, and the link rots the moment history is
+  rewritten or a branch is squashed.
+- **No references to `docs/`.** It is gitignored, so ADR numbers and
+  architecture paths do not resolve for anyone reading on GitHub. Write the
+  reasoning out instead. This is the opposite of the rule for code comments
+  above, and deliberately so: a comment is read beside the repository, a PR
+  description is not.
+- **Describe this change and why, not the sequence it sits in.** Naming the
+  capability it delivers (`F0.3`) is fine — that is a stable identifier, not a
+  pointer at another artifact.
