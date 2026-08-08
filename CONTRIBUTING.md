@@ -82,5 +82,6 @@ Two boundaries are enforced rather than merely encouraged:
 
 ## Commits and releases
 
-Conventional commits. Any change to a published package needs a changeset;
-CI checks for one.
+Conventional commits. Any change to a published package needs a changeset.
+This is currently a review check rather than an automated one — there is no
+release pipeline yet, and nothing has been published.
