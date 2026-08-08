@@ -1,0 +1,15 @@
+# Normalise line endings in the repository to LF regardless of platform.
+# Without this, Windows checkouts commit CRLF, CI on Linux sees a diff, and
+# Biome's formatter and .editorconfig disagree with what is stored.
+* text=auto eol=lf
+
+# Generated; keep out of diffs and language statistics.
+pnpm-lock.yaml -diff linguist-generated=true
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

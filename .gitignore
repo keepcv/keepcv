@@ -141,3 +141,11 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+docs/
+
+# Turborepo
+.turbo/
+
+
+bash.exe.stackdump

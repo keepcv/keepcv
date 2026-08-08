@@ -1,0 +1,45 @@
+{
+  "name": "keepcv",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Career data store that compiles into resumes",
+  "license": "MIT",
+  "author": "nrautela",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keepcv/keepcv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/keepcv/keepcv/issues"
+  },
+  "homepage": "https://github.com/keepcv/keepcv#readme",
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "lint:types": "eslint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "turbo run typecheck test && pnpm lint && pnpm lint:types",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "release": "turbo run build && changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@changesets/cli": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}
