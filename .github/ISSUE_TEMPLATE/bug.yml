@@ -1,0 +1,46 @@
+name: Bug
+description: Something behaves incorrectly
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: data-loss
+    attributes:
+      label: Data
+      options:
+        - label: >
+            This bug lost, altered or hid content I had written.
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        If you ticked the box above, this is the highest-severity class of bug
+        in this project — please say so in the title.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+    validations:
+      required: true
