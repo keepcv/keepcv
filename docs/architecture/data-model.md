@@ -15,30 +15,30 @@ table.
 
 ## 1. Principles
 
-**P-A; Storage validates structure, not completeness.**
+**P-A - Storage validates structure, not completeness.**
 A record can be saved half-entered. Only identity, tenancy, timestamps and a
 single human label are `NOT NULL`. "This entry is missing an end date" is a
 *computed observation* surfaced by the UI, never a constraint that blocks a
 save. Data entry is the biggest UX risk in the product; a form that refuses to
 save is how that risk becomes real.
 
-**P-B; Nothing the user authored is destroyed.**
+**P-B - Nothing the user authored is destroyed.**
 Soft-delete everywhere, append-only phrasing revisions,
 append-only resume versions. Hard deletion is a separate, explicit
 operation.
 
-**P-C; Denormalise for reading, normalise for writing.**
+**P-C - Denormalise for reading, normalise for writing.**
 Working state the UI mutates constantly (resume composition) is normalised into
 rows. Immutable state always read whole (version manifests) is `jsonb`. Read
 paths that would need four joins get a view.
 
-**P-D; Rich domain, uniform presentation.**
+**P-D - Rich domain, uniform presentation.**
 Storage stays typed and kind-specific - `certification.expires_on` and
 `skill.proficiency` are real, queryable facts. Uniformity lives in
 `ResumeDocument` and is produced by presenters. Flattening storage
 to match the view would make queries lie.
 
-**P-E; Ordering is user-controlled and drag-and-drop driven.**
+**P-E - Ordering is user-controlled and drag-and-drop driven.**
 Therefore ordering uses fractional keys, not integer positions. See #3.4.
 
 ---
@@ -207,7 +207,7 @@ formatting exists.
 ### `owner`
 
 The tenancy anchor. Local mode creates exactly one row at first launch. When
-accounts land (F11), `owner` gains a nullable link to Better Auth's user
+accounts land, `owner` gains a nullable link to Better Auth's user
 table - no other table changes.
 
 ```sql
@@ -283,7 +283,7 @@ phrasing_revision (                 -- IMMUTABLE. Never updated. Never deleted.
   phrasing_id  uuid not null references phrasing(id) on delete cascade,
   body         jsonb not null,      -- RichText, validated by Zod on read
   plain_text   text  not null,      -- derived at write time
-  char_count   int   not null,      -- derived; feeds length estimation (F6.7)
+  char_count   int   not null,      -- derived; feeds length estimation
   content_hash char(64) not null,   -- SHA-256 over canonicalised body
   created_at   timestamptz not null default now()
 )
@@ -597,7 +597,7 @@ point_tag  (tag_id, point_id,  primary key (tag_id, point_id))
 ```
 
 A controlled vocabulary rather than free strings, so rename and merge are
-single operations and role profiles (F12) can be rules over a stable set. Two
+single operations and role profiles can be rules over a stable set. Two
 explicit join tables rather than one polymorphic table, so both sides keep
 referential integrity.
 

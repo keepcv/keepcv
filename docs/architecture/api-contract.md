@@ -141,7 +141,7 @@ Notes on the non-obvious ones:
 - **`POST /v1/import` returns a plan, not a result.** Parsers are lossy, and
   the data-entry cold start makes import survival-critical. Silently applying a
   mis-parsed resume over a real store would be unforgivable. The user reviews
-  and confirms (capability F9.6).
+  and confirms before anything is applied.
 - **`GET /v1/resumes/:id/document` exists for server-side export**, but the
   browser compiles its own preview locally from cached data via the same pure
   function (`application-structure.md` #7). Both call identical code.

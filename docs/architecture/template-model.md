@@ -225,7 +225,7 @@ That is what lets the preview map a rendered element back to the thing that
 produced it, which in turn makes these expressible:
 
 - *"This point is what pushed you onto page two."*
-- *"Drop these three lowest-tagged points to fit."* (capability F6.7)
+- *"Drop these three lowest-tagged points to fit."*
 
 Keys are **not** store identifiers. They resolve through the
 manifest, so templates never gain access to the store.

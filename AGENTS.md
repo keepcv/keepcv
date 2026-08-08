@@ -24,7 +24,7 @@ changing anything it describes.
 | `docs/architecture/template-model.md` | `ResumeDocument` - the uniform contract every renderer binds to |
 | `docs/architecture/application-structure.md` | Layering, state ownership, query keys, screen read models |
 | `docs/architecture/api-contract.md` | HTTP surface and the repository port |
-| `docs/architecture/capabilities.md` | Capability tree F0-F13 and the Definition of Complete |
+| `docs/architecture/capabilities.md` | What the product will contain, the build order, the Definition of Complete |
 
 `docs/PRODUCT.md` and `docs/adr/` are **gitignored on purpose** and are present
 on disk only. They hold the product context and the 20 architecture decision
@@ -245,9 +245,16 @@ Several of these look like bugs. They are not - do not "fix" them.
 
 ## How work is organised
 
-Features ship **complete**. A sub-feature is not started or done; there is no
-partial state on `main`. The Definition of Complete is in
-`docs/architecture/capabilities.md` and mirrored in the PR template.
+Work lands **complete**: either it delivers behaviour someone can use end to
+end, or it does not merge. There is no half-built state on `main`. The
+Definition of Complete is in `docs/architecture/capabilities.md` and mirrored
+in the PR template; rows that do not apply are deleted, not left unticked.
+
+`capabilities.md` is an inventory, not a work breakdown. Size a change by what
+makes a whole behaviour - often several of its bullets together, occasionally
+part of one. **Do not number features.** A numbering scheme reads as a plan
+with fixed boundaries, and the boundaries move as soon as you start building;
+name the work instead.
 
 Every feature issue answers: *which felt pain does this trace to?* and *what
 are the declared non-goals?* The second is where scope pressure gets absorbed -
@@ -276,7 +283,8 @@ a diff cold, a bisect landing mid-history.
   resolves for nobody reading on GitHub. Give the conclusion and its reason in
   a sentence; the full argument belongs in the ADR and in
   `docs/architecture/`, not in a message read away from the repository.
-- **Describe this change and why, not the sequence it sits in.** Naming the
-  capability it delivers (`F0.3`) is fine - that is a stable identifier, not a
-  pointer at another artifact.
+- **Describe this change and why, not the sequence it sits in.** Name what it
+  delivers in words - "content hashing", "the phrasing editor". Do not invent
+  or cite numbered feature identifiers; they imply an ordering that does not
+  survive contact with how the work actually splits.
 - **ASCII only**, as everywhere else.

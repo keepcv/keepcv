@@ -1,20 +1,22 @@
 name: Feature
-description: Propose a sub-feature to build
+description: Propose something to build
 labels: ["feature"]
 body:
   - type: markdown
     attributes:
       value: |
-        KeepCV delivers features **complete**, one sub-feature at a time.
-        A sub-feature is either not started or done - there is no partial state
-        on `main`.
+        Work lands **complete**: either it delivers behaviour someone can use
+        end to end, or it does not merge. Size this by what makes a whole
+        behaviour, which may be one piece of a capability or several.
 
   - type: input
-    id: capability
+    id: area
     attributes:
-      label: Capability
-      description: Which capability and sub-feature is this? e.g. "F4.3"
-      placeholder: F4.3
+      label: What does this touch?
+      description: >
+        A capability from `docs/architecture/capabilities.md`, a package, a
+        screen, or whatever names it best. Free text.
+      placeholder: Phrasing editor, or packages/core, or the resume composer
     validations:
       required: true
 
@@ -52,6 +54,9 @@ body:
     id: dod
     attributes:
       label: Definition of Complete
+      description: >
+        Tick what applies. Rows that genuinely do not apply to this work are
+        better deleted than left unticked.
       options:
         - label: Schema and migration, expand/contract compliant
         - label: API routes with validation and typed errors

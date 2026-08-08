@@ -1,6 +1,9 @@
 <!--
-KeepCV ships sub-features complete. If this PR leaves something half-built,
-split it instead.
+Work lands complete: either it delivers behaviour someone can use end to end,
+or it does not merge. If this PR leaves something half-built, split it instead.
+
+Keep this description short - what changed, why, and anything a reviewer would
+otherwise have to reconstruct from the diff.
 -->
 
 ## What this does
