@@ -64,8 +64,8 @@ twice. F10 before any future template builder.
 | F0.1 | pnpm + Turborepo workspace, catalogs, Changesets, package skeletons |
 | F0.2 | Biome + typescript-eslint + strict tsconfig + CI pipeline |
 | F0.3 | `@keepcv/schema`: Zod base, schema versioning, JSON Schema emit |
-| F0.4 | `@keepcv/db`: Drizzle setup, PGlite + Postgres drivers, migration runner |
-| F0.5 | `@keepcv/core`: repository port, sort-key arithmetic, canonicalisation, hashing |
+| F0.4 | `@keepcv/db`: Drizzle setup, PGlite + Postgres drivers, migration runner, and the repository port it implements |
+| F0.5 | `@keepcv/core`: sort-key arithmetic, rich-text canonicalisation, content hashing, identifier generation |
 | F0.6 | `@keepcv/api`: Hono app, validation, `problem+json`, typed client, OpenAPI |
 | F0.7 | `apps/web`: Vite, Router, Query, shadcn/Base UI, theming, error boundaries |
 | F0.8 | `apps/local`: `npx keepcv` launcher, PGlite wiring, security controls |
@@ -75,6 +75,11 @@ twice. F10 before any future template builder.
 
 > F0.9 is in the foundation deliberately. Once the round-trip test exists,
 > every later slice inherits a test proving it did not break portability.
+
+> The repository port is defined in `@keepcv/core` (`api-contract.md` §4) but
+> delivered with F0.4, because its interfaces are shaped by the implementation
+> that has to satisfy them. Interfaces with no implementor cannot be reviewed
+> and cannot fail a test.
 
 **Non-goals:** no auth, no hosted deployment, no telemetry.
 
