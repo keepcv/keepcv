@@ -14,8 +14,11 @@ export {
   SortKeyError,
 } from "./ordering/sort-key.js";
 export {
+  CareerRecordKindMismatchError,
+  type CareerRecordRepository,
   ConcurrencyConflictError,
   NotFoundError,
+  type OrganisationRepository,
   type ProfileRepository,
   type Repositories,
   type UnitOfWork,

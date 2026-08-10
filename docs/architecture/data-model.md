@@ -50,20 +50,13 @@ owner -+- profile -- contact_channel
        |
        +- organisation                     (companies, institutions, issuers, venues)
        |
-       +- record --+- experience  -- organisation
-       |           +- education   -- organisation
-       |           +- project     -- organisation?
-       |           +- skill
-       |           +- certification -- organisation
-       |           +- publication   -- organisation
-       |           +- award         -- organisation
-       |           +- language
-       |           +- volunteering  -- organisation
-       |           +- speaking      -- organisation
-       |           +- custom_entry  -- custom_section
-       |              |
-       |              +- record_link     uniform links,  any kind
-       |              +- record_field    uniform extras, any kind
+       +- record -- organisation?
+       |     |     kind: experience | education | project | skill | certification
+       |     |         | publication | award | language | volunteering | speaking
+       |     |         | custom_entry -- custom_section
+       |     |
+       |     +- record_link     uniform links,  any kind
+       |     +- record_field    uniform extras, any kind
        |
        +- point --+- record                (primary parent)
        |          +- point_record_link     (secondary parents, N:N)
@@ -113,18 +106,24 @@ Immutable tables (`phrasing_revision`, `resume_version`) omit `updated_at` and
 
 ### 3.2 Standard field vocabulary
 
-Fields meaning the same thing are named the same thing across every subtype.
+Fields meaning the same thing are named the same thing for every record kind.
 This is what lets presenters be near-mechanical and keeps
 cross-type queries honest.
 
 | Name | Meaning | Used by |
 |---|---|---|
-| `title` | the entry's primary label | every subtype - never `name` |
+| `title` | the entry's primary label | every kind - never `name` |
 | `subtitle` | secondary label | where one exists |
 | `organisation_id` | associated organisation | all org-bearing kinds |
 | `started_on` / `ended_on` / `is_current` | the period | every dated kind |
 | `location` | place | where meaningful |
 | `summary_set_id` | prose blurb, as a phrasing set | any kind that has one |
+
+Because this vocabulary is genuinely identical across kinds, it lives on
+`record` itself (#6). A single-moment kind uses `started_on` alone: a
+certification is issued, an award is given and a talk is delivered on a date, and
+all four reach the page through the same `period` slot anyway
+(template-model.md #6).
 
 Genuinely different facts keep honest names. `certification.expires_on` is not
 `ended_on` - an expiry is not an ending, and conflating them would break
@@ -180,7 +179,13 @@ sort_key text not null       -- base-62 fractional index, e.g. "a0", "a0V", "a1"
 ```
 
 A move writes **one row**: the client computes a key strictly between its two
-new neighbours and sends a single patch. Uniqueness is per parent scope.
+new neighbours and sends a single patch.
+
+Uniqueness (I11) is per parent scope, and the scope is the list the key is
+dragged within - not the owner. That is `(owner_id, kind)` for a record,
+`(record_id)` for its links and fields, and `(owner_id)` for a contact channel.
+Scoping wider than the list would reject a legitimate move because some unrelated
+list happened to use the same key.
 
 ### 3.6 `RichText`
 
@@ -370,7 +375,7 @@ is common and every well-made resume groups them under a single heading
 publications, awards and talks share one issuer identity instead of repeating a
 name inconsistently.
 
-### `record` - the supertype
+### `record` - one table, discriminated by `kind`
 
 ```sql
 record (
@@ -379,94 +384,85 @@ record (
              ('experience','education','project','skill','certification',
               'publication','award','language','volunteering','speaking',
               'custom_entry')),
-  title    text null,          -- denormalised display label for lists and search
-  sort_key text not null
+
+  -- the shared vocabulary (#3.2)
+  title           text null,
+  subtitle        text null,
+  organisation_id uuid null,
+  started_on      partial_date null,
+  ended_on        partial_date null,
+  is_current      boolean not null default false,
+  location        text null,
+  sort_key        text not null,
+  summary_set_id  uuid null references phrasing_set(id),
+
+  -- kind-specific, null on every other kind
+  employment_type text null,                      -- experience
+  mode            text null,                      -- experience
+  grade           text null,                      -- education
+  grade_scale     text null,                      -- education
+  thesis_title    text null,                      -- education
+  honours         text null,                      -- education
+  category        text null,                      -- skill
+  proficiency     text null,                      -- skill | language
+  credential_id   text null,                      -- certification
+  expires_on      partial_date null,              -- certification
+  doi             text null,                      -- publication
+
+  check (mode is null or mode in ('onsite','hybrid','remote')),
+  check (kind in ('skill','language') or proficiency is null),
+  check (kind <> 'skill' or proficiency is null
+           or proficiency in ('familiar','working','proficient','expert')),
+  check (kind = 'experience' or (employment_type is null and mode is null)),
+  check (kind = 'education'  or (grade is null and grade_scale is null
+                                 and thesis_title is null and honours is null)),
+  check (kind = 'skill'         or category is null),
+  check (kind = 'certification' or (credential_id is null and expires_on is null)),
+  check (kind = 'publication'   or doi is null),
+
+  -- composite, so a record cannot point at another owner's organisation
+  foreign key (owner_id, organisation_id) references organisation (owner_id, id),
+  unique (owner_id, kind, sort_key)
 )
 ```
 
-`record.title` is a denormalised copy of the subtype's `title`. It exists so
-cross-type lists, search results and the "recently edited" view render without
-fanning out to eleven subtype tables. It is maintained by the repository layer
-inside the same `UnitOfWork` as the subtype write - never by a trigger, so it
-stays testable - and a rebuild-and-compare test guards it from drifting.
+Note how few `NOT NULL`s appear. That is principle P-A, deliberately: a record
+saves half-entered, and `title` being empty is an observation the UI makes.
 
-**Why a supertype rather than polymorphic foreign keys or one wide `jsonb`
-table:**
+**Why one table rather than a supertype plus eleven subtypes.** The vocabulary
+in #3.2 is identical for every kind by design, so lifting it onto `record` leaves
+only eleven kind-specific columns - and leaves `project`, `award`,
+`volunteering` and `speaking` with nothing at all. Tables that exist to hold
+nothing are not worth the join.
+
+The alternative also needed `record.title` denormalised from the subtype, so that
+cross-kind lists and search would not fan out to eleven tables. A hand-maintained
+second copy of a fact, guarded by a rebuild-and-compare test, is exactly the
+design smell that survives until it drifts. Here the title is simply the title.
+
+This is not the "one wide `jsonb` blob" that was rejected. That trades away every
+constraint, index and type guarantee; a wide *typed* table keeps all three. The
+`CHECK`s above do in SQL what eleven tables would have done with the type system,
+and Zod does the same at the boundary with a discriminated union on `kind`.
+
+**Why a single table rather than polymorphic foreign keys:**
 
 - Points, tags, links and fields attach to *records* generally. A polymorphic
-  `(kind, id)` pair cannot be enforced by a foreign key; the supertype can.
+  `(kind, id)` pair cannot be enforced by a foreign key; one table can.
 - Global search, ordering, archival and the "recently edited" view are
-  cross-type operations needing one table to query.
-- A single `jsonb` blob table would trade every constraint, index and type
-  guarantee for flexibility we do not need - the shapes are known (P-D).
+  cross-kind operations that want one table to query.
 
-Cost: one extra join per read, hidden behind the views in #11.
+**`kind` is immutable.** Turning an experience into a project would discard that
+kind's facts, which is a destructive edit. A patch carries `kind` as a
+discriminator, checked against the stored row, and a mismatch is reported as
+exactly that - not as a missing row and not as a stale token.
 
-### Subtypes
-
-Field names follow the standard vocabulary (#3.2).
+`custom_entry` is the one kind that needs a parent: `custom_section_id`, with
+`check ((kind = 'custom_entry') = (custom_section_id is not null))`.
 
 ```sql
-experience (
-  record_id uuid pk references record(id) on delete cascade,
-  organisation_id uuid null references organisation(id),
-  title text null,                    -- job title
-  subtitle text null,                 -- team
-  employment_type text null,
-  location text null,
-  mode text null check (mode in ('onsite','hybrid','remote')),
-  started_on partial_date null, ended_on partial_date null,
-  is_current boolean not null default false,
-  summary_set_id uuid null references phrasing_set(id)
-)
-
-education (
-  record_id pk, organisation_id,
-  title text null,                    -- degree
-  subtitle text null,                 -- field of study
-  grade text null, grade_scale text null,
-  thesis_title text null, honours text null,
-  started_on, ended_on, is_current, location, summary_set_id
-)
-
-project (
-  record_id pk, organisation_id null,
-  title text null,                    -- project name
-  subtitle text null,                 -- role
-  started_on, ended_on, is_current, summary_set_id
-)
-
-skill (
-  record_id pk,
-  title text null,                    -- skill name
-  category text null,
-  proficiency text null check (proficiency in
-    ('familiar','working','proficient','expert')),
-  started_on partial_date null,       -- first used
-  ended_on   partial_date null        -- last used
-)
-
-certification (
-  record_id pk, organisation_id,      -- issuer
-  title text null,
-  credential_id text null,
-  issued_on partial_date null,
-  expires_on partial_date null        -- NOT ended_on; an expiry is not an ending
-)
-
-publication  (record_id pk, organisation_id, title, subtitle, published_on, doi, authors text[])
-award        (record_id pk, organisation_id, title, awarded_on, summary_set_id)
-language     (record_id pk, title, proficiency)
-volunteering (record_id pk, organisation_id, title, subtitle, started_on, ended_on,
-              is_current, summary_set_id)
-speaking     (record_id pk, organisation_id, title, subtitle, delivered_on, location)
-
 custom_section (...standard, heading text not null, sort_key text not null)
-custom_entry   (record_id pk, custom_section_id, title, subtitle,
-                started_on, ended_on, is_current, summary_set_id)
 ```
-
-Note how few `NOT NULL`s appear. That is principle P-A, deliberately.
 
 ### `record_link` and `record_field` - uniform extras
 
@@ -499,14 +495,20 @@ record_field (
 ```
 
 Both project directly into the `links[]` and `fields[]` slots of the template
-model (template-model.md #3). Typed subtype columns like `credential_id` and
-`doi` project into the *same* `fields[]` slot via their presenter - so
-templates see one uniform list regardless of whether a fact came from a typed
-column or a user-defined field.
+model (template-model.md #3). Typed columns like `credential_id` and `doi`
+project into the *same* `fields[]` slot via their presenter - so templates see
+one uniform list regardless of whether a fact came from a typed column or a
+user-defined field.
 
 The dividing rule: **a URL is a link; a labelled value is a field.** A
 certification's verification URL and a talk's recording are `record_link` rows,
-not fields, which is why the subtype tables above carry no `*_url` columns.
+not fields, which is why `record` carries no `*_url` columns.
+
+Both reach their record through the same composite key
+`(owner_id, record_id) -> record (owner_id, id)`, for the reason `record` reaches
+`organisation` that way: a cross-owner reference stops being possible rather than
+merely being untested. Sort keys are unique per `(record_id, sort_key)` - the
+parent scope is the record.
 
 ---
 
@@ -835,7 +837,8 @@ Enforced by constraint where possible, by test where not.
 
 ## 11. Read views
 
-Feature code should not repeat the supertype and phrasing joins.
+Feature code should not repeat the phrasing joins. Records need no view: they are
+one table, so a cross-kind list is a plain select.
 
 ```sql
 -- One row per point, with its canonical current text already resolved.
@@ -849,9 +852,6 @@ select p.id, p.owner_id, p.record_id, p.confidence, p.occurred_on, p.sort_key,
   join phrasing_set ps on ps.id = p.phrasing_set_id
   left join phrasing ph on ph.id = ps.canonical_phrasing_id
   left join phrasing_revision r on r.id = ph.current_revision_id;
-
--- One row per record with subtype display fields flattened.
-create view record_display as ... ;
 ```
 
 `phrasing_count` is in the view because the point list shows a "3 wordings"
@@ -864,9 +864,9 @@ N+1 query on the most-visited screen in the product.
 
 | Access path | Index |
 |---|---|
-| Records of a kind, ordered, live | `record (owner_id, kind, sort_key) where archived_at is null` |
-| Recently edited across all types | `record (owner_id, updated_at desc)` |
-| Timeline ordering | subtype: `(partial_date_floor(started_on) desc)` |
+| Records of a kind, ordered | `record (owner_id, kind, sort_key)` - the I11 unique index serves the list read too |
+| Recently edited across all kinds | `record (owner_id, updated_at desc)` |
+| Timeline ordering | `record (owner_id, partial_date_floor(started_on) desc)` |
 | Points of a record | `point (record_id, sort_key) where archived_at is null` |
 | Phrasings of a set | `phrasing (phrasing_set_id, sort_key) where archived_at is null` |
 | Latest revision | `phrasing_revision (phrasing_id, created_at desc)` |

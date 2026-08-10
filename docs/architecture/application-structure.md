@@ -40,11 +40,12 @@ Rules, enforced by package boundaries:
   changelog. Formatting is presentation; it happens in layer 4.
 
 **An entity type is written only when it differs from the DTO.** `Point` carries
-its resolved current phrasing and `Record` resolves its subtype, so both earn a
-type of their own. A profile has no domain rule the wire shape does not already
-express, so it has one type rather than two identical ones and the repository
-port returns the DTO. Declaring every field twice with an identity mapping
-between them buys nothing and drifts the first time one side is edited.
+its resolved current phrasing, which the wire shape does not have, so it earns a
+type of its own. A profile, an organisation and a career record have no domain
+rule the wire shape does not already express, so each has one type rather than
+two identical ones and the repository port returns the DTO. Declaring every field
+twice with an identity mapping between them buys nothing and drifts the first
+time one side is edited.
 
 ```
 PGlite/Postgres --row--> repository --entity--> domain service --DTO--> HTTP
@@ -197,13 +198,13 @@ the antidote to returning after ninety days and not knowing where you were.
 Needs, per row: title, organisation name, date range, point count, tag
 chips, archived state.
 
-Served by `record_display` (data-model.md #11) plus a grouped count. The
-point count is why the view exists - computing it per row in application
-code is an N+1 on the most-visited list in the product.
+Served by a select over `record` plus a grouped point count. The count is the
+part that needs care - computing it per row in application code is an N+1 on the
+most-visited list in the product.
 
 ### 5.3 Record detail
 
-Needs: subtype fields; ordered points, each with canonical current text
+Needs: the kind's own fields; ordered points, each with canonical current text
 and a phrasing count; tags; links; fields; summary phrasing set.
 
 Served by `point_display`, which resolves the four-level
@@ -211,7 +212,7 @@ point -> set -> phrasing -> revision chain into one join.
 
 Because points are uniform across every record kind, **this screen
 is built once** and serves experience, education, projects and everything
-else. Only the subtype field block above it differs.
+else. Only the kind-specific field block above it differs.
 
 ### 5.4 Point / phrasing editor - the highest-risk interface
 

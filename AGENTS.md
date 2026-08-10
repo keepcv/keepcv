@@ -85,10 +85,17 @@ deliberately **not scaffolded** - empty packages are noise, and a sub-feature is
 either not started or complete. Create each one when its capability is built,
 and add it to the root `tsconfig.json` references then.
 
-The database holds `owner`, `profile` and `contact_channel`, and the repository
-port has one repository. Most of the data model in `docs/architecture/`
-describes tables that do not exist yet; do not assume otherwise. There is no API
-and no UI.
+The database holds `owner`, `profile`, `contact_channel`, `organisation`,
+`record`, `record_link` and `record_field`, and the repository port has three
+repositories. Most of the data model in `docs/architecture/` describes tables
+that do not exist yet - phrasings, points, tags, resumes, versions; do not assume
+otherwise. `custom_section` and `custom_entry` are the one part of the record
+store still missing. There is no API and no UI.
+
+**Native export and import do not exist.** `storeSchema` in `@keepcv/schema`
+describes the format and is kept current, but nothing reads or writes it, so the
+round-trip property test that `capabilities.md` places in Foundation is not there
+to inherit yet.
 
 ## Architecture
 

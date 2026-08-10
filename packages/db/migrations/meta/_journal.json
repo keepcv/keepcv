@@ -15,6 +15,13 @@
       "when": 1786201617332,
       "tag": "0001_partial_date_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786384926261,
+      "tag": "0002_career_records",
+      "breakpoints": true
     }
   ]
 }
