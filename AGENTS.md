@@ -62,16 +62,33 @@ copy has drifted. Re-emit it in the same commit as any schema change:
 pnpm --filter @keepcv/schema schema:emit
 ```
 
+Migrations are generated from the Drizzle schema and CI fails when the two
+disagree. Regenerate in the same commit as any schema change, and read the SQL
+before committing it - a destructive step does not merge:
+
+```sh
+pnpm --filter @keepcv/db db:generate
+```
+
+The repository contract suite runs against PGlite by default. Point it at a
+server PostgreSQL as well to run it against both, which is what CI does:
+
+```sh
+DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
+```
+
 ## Current state
 
-Only `packages/schema` and `packages/core` exist. `db`, `api`, `interop`,
-`templates`, `render`, `ats-lint` and `apps/` are specified but deliberately
-**not scaffolded** - empty packages are noise, and a sub-feature is either not
-started or complete. Create each one when its capability is built, and add it
-to the root `tsconfig.json` references then.
+Only `packages/schema`, `packages/core` and `packages/db` exist. `api`,
+`interop`, `templates`, `render`, `ats-lint` and `apps/` are specified but
+deliberately **not scaffolded** - empty packages are noise, and a sub-feature is
+either not started or complete. Create each one when its capability is built,
+and add it to the root `tsconfig.json` references then.
 
-No database, no API, no UI yet. The data model in `docs/architecture/`
-describes tables that do not exist. Do not assume otherwise.
+The database holds `owner`, `profile` and `contact_channel`, and the repository
+port has one repository. Most of the data model in `docs/architecture/`
+describes tables that do not exist yet; do not assume otherwise. There is no API
+and no UI.
 
 ## Architecture
 
@@ -242,6 +259,15 @@ Several of these look like bugs. They are not - do not "fix" them.
   manifests.
 - **PostgreSQL is the only dialect**, local and hosted. Local uses PGlite
   (real Postgres in WASM, no Docker). Do not introduce SQLite.
+- **Timestamp columns are `precision: 3`, not the Postgres default.**
+  `updated_at` is the optimistic-concurrency token: it goes to the client as an
+  ISO string and comes back to be compared against the column. A JavaScript
+  `Date` holds milliseconds, so at microsecond precision that comparison never
+  matches and every second write looks like a conflict.
+- **`drizzle-kit` loads the schema through a CJS require**, so files under
+  `packages/db/src/schema/` cannot import `@keepcv/schema` - the migration
+  generator fails to resolve it. Where a vocabulary has to appear on both sides,
+  write it out and add a test that feeds both the same values.
 
 ## How work is organised
 

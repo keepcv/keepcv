@@ -2,16 +2,27 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# esbuild's install script links the platform binary it ships with. drizzle-kit
+# loads drizzle.config.ts through esbuild, so without this the migration
+# generator cannot start.
+allowBuilds:
+  esbuild: true
+
 # One version per dependency across the whole repo.
 # Packages reference these with "catalog:" instead of a literal range, so an
 # upgrade is a single-line change here and drift is impossible by construction.
 catalog:
   "@biomejs/biome": ^2.5.7
   "@changesets/cli": ^2.31.1
+  "@electric-sql/pglite": ^0.5.4
   "@noble/hashes": ^2.3.0
   "@types/node": ^26.1.2
+  "@types/pg": ~8.20.0
+  drizzle-kit: ^0.31.10
+  drizzle-orm: ^0.45.2
   eslint: ^10.8.0
   fast-check: ^4.9.0
+  pg: ^8.22.0
   turbo: ^2.10.8
   # Pinned to 6.x deliberately: typescript-eslint 8.x refuses to load against
   # TypeScript 7.0, and the type-aware rules are the entire reason ESLint is in

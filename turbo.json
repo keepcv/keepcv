@@ -12,7 +12,11 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      // Turbo runs tasks in a strict environment, so an undeclared variable
+      // never reaches them. Without this the repository contract suite silently
+      // skips the server PostgreSQL half and still reports success.
+      "env": ["DATABASE_URL"]
     },
     "dev": {
       "cache": false,

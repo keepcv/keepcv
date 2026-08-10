@@ -19,6 +19,25 @@ jobs:
     name: Lint, typecheck and test
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    # The repository contract suite runs against every implementation of the
+    # port. PGlite is real Postgres in WASM and needs nothing, but it is not the
+    # build that hosted deployments run, so the same suite runs against a server
+    # PostgreSQL here as well.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: keepcv
+          POSTGRES_DB: keepcv
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v5
 
@@ -47,5 +66,16 @@ jobs:
       - name: Lint (type-aware)
         run: pnpm lint:types
 
+      # A Drizzle schema edited without regenerating leaves the migrations
+      # describing a database nobody has. `generate` writes nothing when the two
+      # already agree.
+      - name: Check migrations match the schema
+        run: |
+          pnpm --filter @keepcv/db db:generate
+          test -z "$(git status --porcelain packages/db/migrations)" ||
+            { git status --porcelain packages/db/migrations; exit 1; }
+
       - name: Test
         run: pnpm test
+        env:
+          DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv

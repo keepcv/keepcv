@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786201603436,
+      "tag": "0000_store_bootstrap",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786201617332,
+      "tag": "0001_partial_date_domain",
+      "breakpoints": true
+    }
+  ]
+}
