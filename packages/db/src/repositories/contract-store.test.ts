@@ -12,16 +12,51 @@ import {
   eachDriver,
   fieldInput,
   linkInput,
+  newPhrasing,
   organisationInput,
+  phrasingInput,
+  phrasingSetInput,
   type Run,
   recordInput,
 } from "./contract.harness.js";
 
 // Everything the format can carry: every record kind with its own columns, both
 // halves of every nullable pair, archived rows beside live ones, all three
-// partial-date precisions, and a name no ASCII round trip survives.
+// partial-date precisions, wording with markup and more than one revision behind
+// it, and a name no ASCII round trip survives.
 async function fill(run: Run): Promise<void> {
   await run(async (r) => {
+    const summary = await r.phrasings.createSet(
+      phrasingSetInput(
+        "profile_summary",
+        newPhrasing("a0", "Designs engines that outlive their authors"),
+      ),
+    );
+    const roleSummary = await r.phrasings.createSet(
+      phrasingSetInput("record_summary", newPhrasing("a0", "Ran the engine team")),
+    );
+    const retired = await r.phrasings.createSet(
+      phrasingSetInput("point", newPhrasing("a0", "Kept for later")),
+    );
+    await r.phrasings.archiveSet(retired.id, retired.updatedAt);
+
+    const angled = await r.phrasings.create(
+      phrasingInput(summary.id, "a1", "Platform-focused framing", {
+        variant: "angled",
+        label: "for platform roles",
+      }),
+    );
+    const dropped = await r.phrasings.create(
+      phrasingInput(summary.id, "a2", "An older framing", { variant: "short" }),
+    );
+    await r.phrasings.archive(dropped.id, dropped.updatedAt);
+
+    await r.phrasings.addRevision(angled.id, [
+      { t: "text", v: "Platform-focused framing, " },
+      { t: "b", c: [{ t: "text", v: "rewritten" }] },
+      { t: "a", href: "https://example.com/caf\u00e9", c: [{ t: "text", v: " with a link" }] },
+    ]);
+
     const profile = await r.profile.get();
     await r.profile.update(
       {
@@ -29,6 +64,7 @@ async function fill(run: Run): Promise<void> {
         pronouns: "they/them",
         headline: "Engine designer",
         location: "London",
+        summarySetId: summary.id,
       },
       profile.updatedAt,
     );
@@ -61,6 +97,7 @@ async function fill(run: Run): Promise<void> {
         endedOn: "2020-06-01",
         isCurrent: true,
         location: "Remote",
+        summarySetId: roleSummary.id,
       }),
     );
     const shelved = await r.records.create(recordInput("project", "a1"));
@@ -88,6 +125,9 @@ function reversed(store: Store): Store {
     records: [...store.records].reverse(),
     recordLinks: [...store.recordLinks].reverse(),
     recordFields: [...store.recordFields].reverse(),
+    phrasingSets: [...store.phrasingSets].reverse(),
+    phrasings: [...store.phrasings].reverse(),
+    phrasingRevisions: [...store.phrasingRevisions].reverse(),
   };
 }
 
@@ -126,12 +166,13 @@ eachDriver(({ run, otherOwner }) => {
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
       for (const [collection, value] of Object.entries(exported)) {
-        if (Array.isArray(value)) {
-          expect(
-            value.some((entry) => entry.archivedAt !== null),
-            collection,
-          ).toBe(true);
-        }
+        // Revisions are the one collection with no `archivedAt`: they are
+        // immutable, so a superseded wording is superseded, never archived.
+        if (!Array.isArray(value) || collection === "phrasingRevisions") continue;
+        expect(
+          value.some((entry) => "archivedAt" in entry && entry.archivedAt !== null),
+          collection,
+        ).toBe(true);
       }
     });
 
@@ -167,6 +208,27 @@ eachDriver(({ run, otherOwner }) => {
 
       const other = await otherOwner();
       await other(async (r) => await r.store.load(reversed(exported)));
+
+      expect(await other(async (r) => await r.store.read())).toEqual(exported);
+    });
+
+    // I8: a revision's plain text is derived from its body, so a file whose
+    // derived fields disagree with the body it carries loads with the body's own
+    // projection rather than the file's claim about it.
+    it("derives revision text from the body rather than trusting the document", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const tampered = {
+        ...exported,
+        phrasingRevisions: exported.phrasingRevisions.map((revision) => ({
+          ...revision,
+          plainText: "not what the body says",
+          charCount: 0,
+        })),
+      };
+
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(tampered));
 
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });

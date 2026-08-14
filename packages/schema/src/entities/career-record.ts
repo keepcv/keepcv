@@ -41,6 +41,7 @@ const recordBase = z.object({
   isCurrent: z.boolean(),
   location: nullableText,
   sortKey: sortKeySchema,
+  summarySetId: uuidSchema.nullable(),
 });
 
 const inputBase = recordBase.omit({ createdAt: true, updatedAt: true, archivedAt: true });

@@ -15,12 +15,16 @@ const current = {
       pronouns: null,
       headline: null,
       location: null,
+      summarySetId: null,
     },
     contactChannels: [],
     organisations: [],
     records: [],
     recordLinks: [],
     recordFields: [],
+    phrasingSets: [],
+    phrasings: [],
+    phrasingRevisions: [],
   },
 };
 

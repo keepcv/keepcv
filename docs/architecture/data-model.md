@@ -198,7 +198,8 @@ new neighbours and sends a single patch.
 
 Uniqueness (I11) is per parent scope, and the scope is the list the key is
 dragged within - not the owner. That is `(owner_id, kind)` for a record,
-`(record_id)` for its links and fields, and `(owner_id)` for a contact channel.
+`(owner_id, record_id)` for its links and fields, `(owner_id, phrasing_set_id)`
+for a phrasing, and `(owner_id)` for a contact channel.
 Scoping wider than the list would reject a legitimate move because some unrelated
 list happened to use the same key.
 
@@ -247,7 +248,8 @@ profile (
   pronouns       text null,
   headline       text null,
   location       text null,
-  summary_set_id uuid null references phrasing_set(id)
+  summary_set_id uuid null,
+  foreign key (owner_id, summary_set_id) references phrasing_set (owner_id, id)
 )
 ```
 
@@ -284,29 +286,45 @@ The heart of the product, and its highest-risk interface.
 phrasing_set (
   ...standard,
   purpose text not null check (purpose in ('point','profile_summary','record_summary')),
-  canonical_phrasing_id uuid null   -- nullable; set after the first phrasing exists
+  canonical_phrasing_id uuid null,  -- nullable; set after the first phrasing exists
+
+  -- this set's own id travels into the reference, so the canonical phrasing has
+  -- to be one of this set's own
+  foreign key (owner_id, canonical_phrasing_id, id)
+    references phrasing (owner_id, id, phrasing_set_id)
 )
 
 phrasing (
   ...standard,
-  phrasing_set_id     uuid not null references phrasing_set(id) on delete cascade,
+  phrasing_set_id     uuid not null,
   variant             text not null check (variant in
-                        ('canonical','short','long','angled')),
+                        ('standard','short','long','angled')),
   label               text null,    -- user's own name: "for platform roles"
   sort_key            text not null,
-  current_revision_id uuid null references phrasing_revision(id)
+  current_revision_id uuid null,
+
+  foreign key (owner_id, phrasing_set_id)
+    references phrasing_set (owner_id, id) on delete cascade,
+  -- same trick: a phrasing's current revision has to be one of its own
+  foreign key (owner_id, current_revision_id, id)
+    references phrasing_revision (owner_id, id, phrasing_id),
+  unique (owner_id, id, phrasing_set_id)
 )
 
 phrasing_revision (                 -- IMMUTABLE. Never updated. Never deleted.
   id           uuid not null,
   owner_id     uuid not null,
   primary key (owner_id, id),
-  phrasing_id  uuid not null references phrasing(id) on delete cascade,
+  phrasing_id  uuid not null,
   body         jsonb not null,      -- RichText, validated by Zod on read
   plain_text   text  not null,      -- derived at write time
   char_count   int   not null,      -- derived; feeds length estimation
   content_hash char(64) not null,   -- SHA-256 over canonicalised body
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+
+  foreign key (owner_id, phrasing_id)
+    references phrasing (owner_id, id) on delete cascade,
+  unique (owner_id, id, phrasing_id)
 )
 ```
 
@@ -324,26 +342,49 @@ insert phrasing_set -> insert phrasing -> insert phrasing_revision
 
 This is why creating a point is a `UnitOfWork` operation
 (`api-contract.md` #4) and not five independent repository calls: a partial
-failure would leave a point with no text.
+failure would leave a point with no text. A native import restores the subsystem
+in the same order, for the same reason.
+
+Both cycles also defeat TypeScript's inference, so all three tables live in one
+Drizzle file and every extras callback there is annotated
+`PgTableExtraConfigValue[]`; without it each table's type is inferred through the
+callback naming the next one and the compiler gives up.
 
 **Why `variant` and `label` are separate.** `variant` is structural and drives
 selection logic and length estimation; `label` is the user's own words. Merging
 them would force users into our vocabulary, when the value lies in *their*
 alternate framings.
 
+**Why `canonical` is not one of the variants.** Which wording is the default is a
+pointer on the set, not a label on the wording, so promoting one is a single
+write and the demoted one does not have to be relabelled to something it is not.
+The neutral variant is `standard`. Two representations of the same fact would be
+one to keep in step by hand.
+
 **Why `current_revision_id` is denormalised onto `phrasing`.** Every list in
 the application shows current text. Without the pointer, each row needs a
-correlated subquery for the latest revision. With it, one join. See #11.
+correlated subquery for the latest revision. With it, one join. See #11. It is
+not merely a cache for "the newest": reverting to an earlier wording moves the
+pointer back, so the newest revision and the current one are different rows.
 
 ```sql
-create index on phrasing (phrasing_set_id) where archived_at is null;
-create index on phrasing_revision (phrasing_id, created_at desc);
-create unique index on phrasing_revision (phrasing_id, content_hash);
+create index on phrasing (owner_id, phrasing_set_id, sort_key) where archived_at is null;
+create index on phrasing_revision (owner_id, phrasing_id, created_at);
+create unique index on phrasing_revision (owner_id, phrasing_id, content_hash);
 ```
 
 The unique index makes "no revision unless content actually changed" a database
 guarantee rather than an application convention - retyping a word and undoing
-it cannot pollute the history.
+it cannot pollute the history. Appending text that a phrasing already holds is
+therefore not an error: it moves the pointer to the revision that already says
+it. History is the set of distinct wordings plus a pointer, not a log, and
+`created_at` is when a wording was first written rather than when it last became
+current.
+
+**Appending takes no concurrency token**, unlike every other write (`updated_at`
+is not bumped either). Two people appending different wordings at once must both
+keep their text - rejecting the second is precisely the loss append-only exists
+to prevent - and the pointer is derived state that no rename actually races.
 
 ### `draft` - uncommitted editor state
 
@@ -410,7 +451,7 @@ record (
   is_current      boolean not null default false,
   location        text null,
   sort_key        text not null,
-  summary_set_id  uuid null references phrasing_set(id),
+  summary_set_id  uuid null,
 
   -- kind-specific, null on every other kind
   employment_type text null,                      -- experience
@@ -438,6 +479,7 @@ record (
 
   -- composite, so a record cannot point at another owner's organisation
   foreign key (owner_id, organisation_id) references organisation (owner_id, id),
+  foreign key (owner_id, summary_set_id) references phrasing_set (owner_id, id),
   unique (owner_id, kind, sort_key)
 )
 ```
@@ -839,18 +881,19 @@ Enforced by constraint where possible, by test where not.
 |---|---|---|
 | I1 | No row is visible outside its `owner_id` scope | repository scoping + test |
 | I2 | `phrasing_revision` rows are never updated, and never deleted except by explicit purge | no update path; trigger + test |
-| I3 | Two revisions of one phrasing never share a `content_hash` | unique index |
+| I3 | Two revisions of one phrasing never share a `content_hash` | unique index; appending text a phrasing already holds moves its pointer instead |
 | I4 | `resume_version.manifest` references only existing, pinned revisions | validation on write + test |
 | I5 | `ResumeDocument` can never contain `evidence` | type has no such field |
 | I6 | Archived content never appears in a rendered resume | repository default filter + test |
 | I7 | `content_hash` is stable across serialisations | property test on canonicalisation |
-| I8 | `plain_text` always equals the projection of `body` | computed on write; property test |
+| I8 | `plain_text` always equals the projection of `body` | derived on write, and derived again on import rather than trusted; property test |
 | I9 | `partial_date` values sort correctly within equal precision | domain `CHECK` |
 | I10 | `import(export(store)) == store` | round-trip test over a covering store, required by every slice |
 | I11 | `sort_key` is unique within its parent scope | unique index per scope |
 | I12 | `resume_content_ref` is exactly derivable from manifests | rebuild-and-compare test |
 | I13 | A point appears at most once per resume | unique index across the resume |
 | I14 | Every record kind has exactly one presenter | exhaustiveness check + test |
+| I15 | A canonical phrasing belongs to its set, and a current revision to its phrasing | composite foreign key carrying the parent's own id |
 
 ---
 
@@ -865,12 +908,16 @@ create view point_display as
 select p.id, p.owner_id, p.record_id, p.confidence, p.occurred_on, p.sort_key,
        p.archived_at, r.plain_text, r.body, r.char_count, r.id as revision_id,
        (select count(*) from phrasing ph2
-         where ph2.phrasing_set_id = p.phrasing_set_id
+         where ph2.owner_id = p.owner_id
+           and ph2.phrasing_set_id = p.phrasing_set_id
            and ph2.archived_at is null) as phrasing_count
   from point p
-  join phrasing_set ps on ps.id = p.phrasing_set_id
-  left join phrasing ph on ph.id = ps.canonical_phrasing_id
-  left join phrasing_revision r on r.id = ph.current_revision_id;
+  join phrasing_set ps
+    on ps.owner_id = p.owner_id and ps.id = p.phrasing_set_id
+  left join phrasing ph
+    on ph.owner_id = ps.owner_id and ph.id = ps.canonical_phrasing_id
+  left join phrasing_revision r
+    on r.owner_id = ph.owner_id and r.id = ph.current_revision_id;
 ```
 
 `phrasing_count` is in the view because the point list shows a "3 wordings"
@@ -887,8 +934,8 @@ N+1 query on the most-visited screen in the product.
 | Recently edited across all kinds | `record (owner_id, updated_at desc)` |
 | Timeline ordering | `record (owner_id, partial_date_floor(started_on) desc)` |
 | Points of a record | `point (record_id, sort_key) where archived_at is null` |
-| Phrasings of a set | `phrasing (phrasing_set_id, sort_key) where archived_at is null` |
-| Latest revision | `phrasing_revision (phrasing_id, created_at desc)` |
+| Phrasings of a set | `phrasing (owner_id, phrasing_set_id, sort_key) where archived_at is null` |
+| Revision history | `phrasing_revision (owner_id, phrasing_id, created_at)` |
 | Links / fields of a record | `record_link (owner_id, record_id, sort_key)`, `record_field (owner_id, record_id, sort_key)` |
 | Global search | `search_document` GIN on `tsv` |
 | Type-ahead search | `search_document` GIN trigram on `title` |

@@ -3,7 +3,10 @@ import type {
   CareerRecordInput,
   CareerRecordKind,
   ContactChannelInput,
+  NewPhrasing,
   OrganisationInput,
+  PhrasingInput,
+  PhrasingSetInput,
   RecordFieldInput,
   RecordLinkInput,
   Uuid,
@@ -81,6 +84,7 @@ export function recordInput(
     isCurrent: false,
     location: null,
     sortKey,
+    summarySetId: null,
     ...extrasByKind[kind],
     ...overrides,
   } as CareerRecordInput;
@@ -130,6 +134,30 @@ export function fieldInput(
     sortKey,
     ...overrides,
   } as RecordFieldInput;
+}
+
+export function newPhrasing(sortKey: string, text: string, overrides: Partial<NewPhrasing> = {}) {
+  return {
+    id: newUuid(),
+    variant: "standard",
+    label: null,
+    sortKey,
+    body: [{ t: "text", v: text }],
+    ...overrides,
+  } as NewPhrasing;
+}
+
+export function phrasingSetInput(purpose: string, first: NewPhrasing) {
+  return { id: newUuid(), purpose, phrasing: first } as PhrasingSetInput;
+}
+
+export function phrasingInput(
+  phrasingSetId: Uuid,
+  sortKey: string,
+  text: string,
+  overrides: Partial<NewPhrasing> = {},
+) {
+  return { ...newPhrasing(sortKey, text, overrides), phrasingSetId } as PhrasingInput;
 }
 
 export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;

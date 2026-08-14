@@ -10,6 +10,7 @@ const profile = {
   pronouns: null,
   headline: null,
   location: null,
+  summarySetId: null,
 };
 
 describe("profileSchema", () => {

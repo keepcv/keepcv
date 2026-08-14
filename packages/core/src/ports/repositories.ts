@@ -9,6 +9,13 @@ import type {
   Organisation,
   OrganisationInput,
   OrganisationPatch,
+  Phrasing,
+  PhrasingInput,
+  PhrasingPatch,
+  PhrasingRevision,
+  PhrasingSet,
+  PhrasingSetInput,
+  PhrasingSetPatch,
   Profile,
   ProfilePatch,
   RecordField,
@@ -17,6 +24,7 @@ import type {
   RecordLink,
   RecordLinkInput,
   RecordLinkPatch,
+  RichText,
   Store,
   Timestamp,
   Uuid,
@@ -126,6 +134,34 @@ export interface CareerRecordRepository {
   restoreField(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RecordField>;
 }
 
+// A set and its first phrasing are created together, and the phrasing is created
+// with the text it exists to hold, so none of the three tables is ever written
+// alone. `addRevision` is the only way text changes: "editing" appends a row and
+// moves `currentRevisionId`, which is what stops a resume version pinned in March
+// from silently acquiring June's wording.
+export interface PhrasingRepository {
+  listSets(options?: { includeArchived?: boolean }): Promise<PhrasingSet[]>;
+  getSet(id: Uuid): Promise<PhrasingSet>;
+  createSet(input: PhrasingSetInput): Promise<PhrasingSet>;
+  updateSet(id: Uuid, patch: PhrasingSetPatch, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
+  archiveSet(id: Uuid, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
+  restoreSet(id: Uuid, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
+
+  list(options?: { phrasingSetId?: Uuid; includeArchived?: boolean }): Promise<Phrasing[]>;
+  get(id: Uuid): Promise<Phrasing>;
+  create(input: PhrasingInput): Promise<Phrasing>;
+  update(id: Uuid, patch: PhrasingPatch, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
+
+  // No concurrency token, unlike every other write. Two people appending
+  // different wordings at once must both keep their text - rejecting the second
+  // one is the loss the append-only design exists to prevent - and identical text
+  // is the revision that already exists, so it makes the pointer point there.
+  addRevision(phrasingId: Uuid, body: RichText): Promise<PhrasingRevision>;
+  listRevisions(options?: { phrasingId?: Uuid }): Promise<PhrasingRevision[]>;
+}
+
 // Import loads a whole store or nothing. Merging two stores is the Import
 // capability's job and needs a review step in front of it, so this refuses
 // rather than guessing which side of a clash to keep.
@@ -156,6 +192,7 @@ export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
   records: CareerRecordRepository;
+  phrasings: PhrasingRepository;
   store: StoreRepository;
 }
 

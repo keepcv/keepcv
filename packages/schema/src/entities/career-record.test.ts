@@ -20,6 +20,7 @@ const shared = {
   isCurrent: true,
   location: null,
   sortKey: "a0",
+  summarySetId: null,
 };
 
 const extrasByKind: Record<CareerRecordKind, Record<string, unknown>> = {

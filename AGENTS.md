@@ -19,7 +19,7 @@ changing anything it describes.
 
 | File | What it is |
 |---|---|
-| `data-model.md` | Tables, invariants I1-I14, indexing plan |
+| `data-model.md` | Tables, invariants I1-I15, indexing plan |
 | `template-model.md` | `ResumeDocument` - the uniform contract every renderer binds to |
 | `application-structure.md` | Layering, state ownership, query keys, screen read models |
 | `api-contract.md` | HTTP surface and the repository port |
@@ -115,11 +115,11 @@ either not started or complete. Create each one when its capability is built, an
 add it to the root `tsconfig.json` references then.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
-`record`, `record_link` and `record_field`, and the port has four repositories.
-Much of the data model describes tables that do not exist yet - phrasings,
-points, tags, resumes, versions; do not assume otherwise. `custom_section` and
-`custom_entry` are the one part of the record store still missing. There is no
-API and no UI.
+`record`, `record_link`, `record_field`, `phrasing_set`, `phrasing` and
+`phrasing_revision`, and the port has five repositories. Much of the data model
+describes tables that do not exist yet - points, metrics, evidence, drafts, tags,
+resumes, versions; do not assume otherwise. `custom_section` and `custom_entry`
+are the one part of the record store still missing. There is no API and no UI.
 
 Native export and import exist as `repositories.store`, and the round-trip test
 in `contract-store.test.ts` runs over a store built to cover every collection the
@@ -302,6 +302,16 @@ Several of these look like bugs. They are not - do not "fix" them.
   `packages/db/src/schema/` cannot import `@keepcv/schema` - the migration
   generator fails to resolve it. Where a vocabulary has to appear on both sides,
   write it out and add a test that feeds both the same values.
+- **Tables in a foreign-key cycle share one file and annotate their extras
+  callback** `(table): PgTableExtraConfigValue[] => [...]`. Without the
+  annotation TypeScript infers each table's type through the callback that names
+  the next one and fails with TS7022. `drizzle-kit` itself handles the cycle
+  fine, emitting the constraints as `ALTER TABLE` after every `CREATE TABLE`.
+- **`drizzle-kit` does not manage triggers.** The one the model needs -
+  `phrasing_revision` refusing an update - is hand-written at the end of the
+  migration that creates the table. A trigger is invisible to the snapshot, so
+  `db:generate` stays clean; it is also invisible in the Drizzle schema, so the
+  table that has one says so in a comment.
 
 ## How work is organised
 

@@ -68,12 +68,30 @@ export function openLocalStore(options: { dataDir?: string } = {}): LocalStore {
   };
 }
 
+// Any constant; it only has to be the same one in every process that migrates.
+const MIGRATION_LOCK = 4460371;
+
 export function openServerStore(options: { connectionString: string }): Store {
   const pool = new Pool({ connectionString: options.connectionString });
   const db = drizzleNodePostgres(pool);
   return {
     unitOfWork: unitOfWork(db),
-    migrate: async () => await migrateNodePostgres(db, { migrationsFolder: MIGRATIONS_FOLDER }),
+
+    // Behind an advisory lock, because two processes migrating one database at
+    // once is normal - a rolling deploy, or the test suite running its files in
+    // parallel - and drizzle's `create table if not exists` for its own
+    // bookkeeping table is not safe against a concurrent one. It fails on
+    // pg_type's unique index, which reads as nothing to do with migrations.
+    migrate: async () => {
+      const client = await pool.connect();
+      try {
+        await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
+        await migrateNodePostgres(db, { migrationsFolder: MIGRATIONS_FOLDER });
+      } finally {
+        await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]);
+        client.release();
+      }
+    },
     createOwner: async (id) => await db.transaction(async (tx) => await insertOwner(tx, id)),
     close: async () => await pool.end(),
   };

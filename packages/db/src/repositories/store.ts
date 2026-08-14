@@ -1,10 +1,19 @@
-import { type Repositories, StoreNotEmptyError, type StoreRepository } from "@keepcv/core";
+import {
+  deriveRevision,
+  type Repositories,
+  StoreNotEmptyError,
+  type StoreRepository,
+} from "@keepcv/core";
 import type { CareerRecord, Store, Timestamp, Uuid } from "@keepcv/schema";
+import { and, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
   contactChannel,
   organisation,
+  phrasing,
+  phrasingRevision,
+  phrasingSet,
   profile,
   record,
   recordField,
@@ -65,7 +74,63 @@ export function createStoreRepository(
       records: await repositories.records.list(everything),
       recordLinks: await repositories.records.listLinks(everything),
       recordFields: await repositories.records.listFields(everything),
+      phrasingSets: await repositories.phrasings.listSets(everything),
+      phrasings: await repositories.phrasings.list(everything),
+      // Every revision, not just the current one. Superseded wordings are things
+      // the user wrote, and an export that drops them is a delete.
+      phrasingRevisions: await repositories.phrasings.listRevisions(),
     };
+  }
+
+  // In the order the subsystem is created in: each of the three tables references
+  // the next, so the pointers back are filled once every row exists
+  // (data-model.md #5). It runs before the profile and the records because both
+  // can point at a set.
+  async function loadPhrasings(store: Store, ownerId: Uuid): Promise<void> {
+    if (store.phrasingSets.length > 0) {
+      await db.insert(phrasingSet).values(
+        store.phrasingSets.map((row) => ({
+          ...row,
+          ...standardRow(row, ownerId),
+          canonicalPhrasingId: null,
+        })),
+      );
+    }
+    if (store.phrasings.length > 0) {
+      await db.insert(phrasing).values(
+        store.phrasings.map((row) => ({
+          ...row,
+          ...standardRow(row, ownerId),
+          currentRevisionId: null,
+        })),
+      );
+    }
+    if (store.phrasingRevisions.length > 0) {
+      // Derived again rather than trusted: a hand-edited file whose plain text
+      // disagrees with its body would otherwise make I8 false in the store.
+      await db.insert(phrasingRevision).values(
+        store.phrasingRevisions.map((row) => ({
+          id: row.id,
+          ownerId,
+          phrasingId: row.phrasingId,
+          createdAt: new Date(row.createdAt),
+          ...deriveRevision(row.body),
+        })),
+      );
+    }
+
+    for (const row of store.phrasings.filter((p) => p.currentRevisionId !== null)) {
+      await db
+        .update(phrasing)
+        .set({ currentRevisionId: row.currentRevisionId })
+        .where(and(owned(phrasing), eq(phrasing.id, row.id)));
+    }
+    for (const row of store.phrasingSets.filter((p) => p.canonicalPhrasingId !== null)) {
+      await db
+        .update(phrasingSet)
+        .set({ canonicalPhrasingId: row.canonicalPhrasingId })
+        .where(and(owned(phrasingSet), eq(phrasingSet.id, row.id)));
+    }
   }
 
   // Reading the whole store to decide costs kilobytes and covers a collection
@@ -89,6 +154,8 @@ export function createStoreRepository(
     async load(store) {
       await requireEmpty();
       const ownerId = currentOwnerId();
+
+      await loadPhrasings(store, ownerId);
 
       // The profile row is created with the owner, so it is overwritten rather
       // than inserted - id included, since the export carries one.
