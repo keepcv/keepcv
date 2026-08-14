@@ -1,4 +1,4 @@
-import { pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { standardColumns } from "./owner.js";
 
 // Everything but the standard columns is nullable: a profile can be saved
@@ -13,5 +13,8 @@ export const profile = pgTable(
     headline: text("headline"),
     location: text("location"),
   },
-  (table) => [uniqueIndex("profile_owner_unique").on(table.ownerId)],
+  (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
+    uniqueIndex("profile_owner_unique").on(table.ownerId),
+  ],
 );

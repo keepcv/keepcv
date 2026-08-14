@@ -7,7 +7,6 @@ import {
 } from "@keepcv/core";
 import {
   CAREER_RECORD_KINDS,
-  type CareerRecordInput,
   type CareerRecordKind,
   ORGANISATION_KINDS,
   type OrganisationInput,
@@ -20,48 +19,14 @@ import {
   WORK_MODES,
 } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
-import { eachDriver } from "./contract.harness.js";
-
-// One distinctive value per kind-specific column, so a round trip that drops or
-// misplaces one is visible rather than merely null.
-const extrasByKind: Record<CareerRecordKind, Record<string, unknown>> = {
-  experience: { employmentType: "Full-time", mode: "remote" },
-  education: {
-    grade: "First",
-    gradeScale: "UK",
-    thesisTitle: "On engines",
-    honours: "Distinction",
-  },
-  project: {},
-  skill: { category: "Languages", proficiency: "expert" },
-  certification: { credentialId: "AWS-1234", expiresOn: "2027-03" },
-  publication: { doi: "10.1000/182" },
-  award: {},
-  language: { proficiency: "C1" },
-  volunteering: {},
-  speaking: {},
-};
-
-function recordInput(
-  kind: CareerRecordKind,
-  sortKey: string,
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    id: newUuid(),
-    kind,
-    title: `a ${kind}`,
-    subtitle: null,
-    organisationId: null,
-    startedOn: null,
-    endedOn: null,
-    isCurrent: false,
-    location: null,
-    sortKey,
-    ...extrasByKind[kind],
-    ...overrides,
-  } as CareerRecordInput;
-}
+import {
+  eachDriver,
+  extrasByKind,
+  fieldInput,
+  linkInput,
+  organisationInput,
+  recordInput,
+} from "./contract.harness.js";
 
 // Drizzle wraps a driver error and keeps the original as the cause, where both
 // drivers report which constraint refused the row. Naming it in the assertion is
@@ -72,42 +37,6 @@ async function violatedConstraint(work: Promise<unknown>): Promise<string | unde
     (error: unknown) => error,
   );
   return (thrown as { cause?: { constraint?: string } } | undefined)?.cause?.constraint;
-}
-
-function organisationInput(name: string, overrides: Partial<OrganisationInput> = {}) {
-  return {
-    id: newUuid(),
-    name,
-    kind: "company",
-    website: null,
-    industry: null,
-    location: null,
-    ...overrides,
-  } as OrganisationInput;
-}
-
-function linkInput(recordId: Uuid, sortKey: string, overrides: Partial<RecordLinkInput> = {}) {
-  return {
-    id: newUuid(),
-    recordId,
-    kind: "repo",
-    label: null,
-    url: "https://example.com/engine",
-    sortKey,
-    ...overrides,
-  } as RecordLinkInput;
-}
-
-function fieldInput(recordId: Uuid, key: string, sortKey: string) {
-  return {
-    id: newUuid(),
-    recordId,
-    key,
-    label: "Credential ID",
-    value: "AWS-1234",
-    valueKind: "text",
-    sortKey,
-  } as RecordFieldInput;
 }
 
 eachDriver(({ run, otherOwner }) => {

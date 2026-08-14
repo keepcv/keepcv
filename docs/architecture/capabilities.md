@@ -14,7 +14,8 @@ either delivers behaviour someone can use end to end, or it does not merge.
 - [ ] Repository methods implemented and covered by the contract suite
 - [ ] UI covers create, read, update, archive and restore - no dead ends
 - [ ] Validation, error, loading and empty states all designed and built
-- [ ] **Survives the export/import round-trip property test**
+- [ ] **Survives the export/import round trip** - anything it adds to the store
+      is in `storeSchema` and in the covering fixture that test runs over
 - [ ] Unit + integration tests; at least one end-to-end path
 - [ ] Accessibility pass: keyboard navigation and screen-reader labels
 - [ ] Docs updated; an architecture decision recorded if one was made
@@ -76,9 +77,10 @@ generation; the Hono API with validation, `problem+json` and a typed client;
 the web app shell; the `npx keepcv` local launcher; the JSON mirror and
 `keepcv restore`; and the test harness.
 
-**Native export and import, with the round-trip property test, belong here**
-rather than later. Once that test exists, everything built afterwards inherits
-a test proving it did not break portability.
+**Native export and import, with the round-trip test, belong here** rather than
+later. Once that test exists, everything built afterwards inherits a test proving
+it did not break portability. It is a whole-store read and write rather than an
+adapter, so it lives on the repository port and not in `@keepcv/interop`.
 
 **Non-goals:** no auth, no hosted deployment, no telemetry.
 

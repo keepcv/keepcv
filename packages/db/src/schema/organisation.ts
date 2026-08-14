@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { check, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { standardColumns } from "./owner.js";
 
 // Repeated from `organisationKindSchema` rather than imported: drizzle-kit loads
@@ -22,11 +22,7 @@ export const organisation = pgTable(
     location: text("location"),
   },
   (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
     check("organisation_kind_check", sql.raw(`kind in (${KINDS.map((k) => `'${k}'`).join(", ")})`)),
-    // Redundant against the primary key, and there to be the target of the
-    // composite foreign key on `record`: that is what stops a record pointing at
-    // another owner's organisation. A constraint rather than an index so it is
-    // declared inside CREATE TABLE, before the migration adds the key to it.
-    unique("organisation_owner_id_unique").on(table.ownerId, table.id),
   ],
 );

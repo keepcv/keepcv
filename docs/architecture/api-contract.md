@@ -177,6 +177,9 @@ interface Repositories {
   resumes:      ResumeRepository;
   versions:     ResumeVersionRepository;
   drafts:       DraftRepository;
+  // The native export, whole: `read` returns every row the owner has including
+  // archived ones, `load` puts one back with its ids and timestamps intact.
+  store:        StoreRepository;
 }
 
 interface UnitOfWork {
@@ -197,6 +200,25 @@ Rules:
   (data-model.md #5); a partial failure would leave a point with no text.
 - **`@keepcv/core` depends only on these interfaces**, never on Drizzle, never
   on a driver. Enforced by a CI dependency check.
+- **Every `list` returns a total order.** Two reads of unchanged data give the
+  same list, so a round trip can compare whole stores and a UI list does not
+  reshuffle under the cursor. Where the natural sort is not unique - an
+  organisation's name - the id breaks the tie.
+- **`store.load` is the one write that bypasses the concurrency token.** It has
+  to: restoring `id`, `created_at` and `updated_at` verbatim is what makes I10
+  hold. It is safe because it refuses anything but an empty store.
+
+**Native import loads a whole store or nothing.** It requires the target to be
+empty - no rows in any collection, and a profile nobody has filled in - and
+raises `StoreNotEmptyError` otherwise. Merging two stores is the Import
+capability's job, and `POST /v1/import` returning a plan rather than a result is
+where that review step lives; guessing which side of a clash to keep is exactly
+the unforgivable behaviour that route exists to prevent.
+
+The envelope is not the repository's business: `schemaVersion` and `exportedAt`
+belong to the file, so the caller wraps a `Store` in an `ExportDocument` on the
+way out and runs `migrateDocument` on the way in. Both are two lines with no
+logic worth hiding behind a helper.
 
 ---
 

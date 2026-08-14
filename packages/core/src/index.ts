@@ -21,6 +21,8 @@ export {
   type OrganisationRepository,
   type ProfileRepository,
   type Repositories,
+  StoreNotEmptyError,
+  type StoreRepository,
   type UnitOfWork,
 } from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";

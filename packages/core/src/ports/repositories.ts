@@ -17,6 +17,7 @@ import type {
   RecordLink,
   RecordLinkInput,
   RecordLinkPatch,
+  Store,
   Timestamp,
   Uuid,
 } from "@keepcv/schema";
@@ -85,6 +86,8 @@ export interface ProfileRepository {
   restoreContactChannel(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ContactChannel>;
 }
 
+// Every `list` returns a total order, so two reads of unchanged data are the
+// same list. The export leans on it: a round trip compares two whole stores.
 export interface OrganisationRepository {
   list(options?: { includeArchived?: boolean }): Promise<Organisation[]>;
   get(id: Uuid): Promise<Organisation>;
@@ -123,6 +126,28 @@ export interface CareerRecordRepository {
   restoreField(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RecordField>;
 }
 
+// Import loads a whole store or nothing. Merging two stores is the Import
+// capability's job and needs a review step in front of it, so this refuses
+// rather than guessing which side of a clash to keep.
+export class StoreNotEmptyError extends Error {
+  override readonly name = "StoreNotEmptyError";
+  readonly collection: string;
+
+  constructor(collection: string) {
+    super(`an import needs an empty store, and this one already holds ${collection}`);
+    this.collection = collection;
+  }
+}
+
+// The native export, whole and lossless. `read` returns every row the owner has,
+// archived ones included; `load` restores them with their ids and timestamps
+// intact, which is what makes data-model.md I10 hold and is why this is the one
+// write that bypasses the concurrency token.
+export interface StoreRepository {
+  read(): Promise<Store>;
+  load(store: Store): Promise<void>;
+}
+
 // One repository per aggregate, added as the capability that needs it is built
 // (api-contract.md #4 lists the full set). No method takes an owner id: the
 // implementation reads it from ambient request scope, so forgetting to scope a
@@ -131,6 +156,7 @@ export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
   records: CareerRecordRepository;
+  store: StoreRepository;
 }
 
 // The only way to reach a repository. Creating a point will write five tables
