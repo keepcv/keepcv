@@ -29,6 +29,7 @@ function toProfile(row: ProfileRow): Profile {
     pronouns: row.pronouns,
     headline: row.headline,
     location: row.location,
+    summarySetId: row.summarySetId,
   });
 }
 

@@ -13,18 +13,22 @@ const MAX_MARK_DEPTH = 3;
 // of the restriction is that `javascript:` never reaches a renderer.
 const HREF = /^(?:https?|mailto):\S+$/;
 
-const inlineSchema: z.ZodType<Inline> = z.lazy(() =>
-  z.union([
-    z.object({ t: z.literal("text"), v: z.string() }),
-    z.object({ t: z.literal("b"), c: z.array(inlineSchema) }),
-    z.object({ t: z.literal("i"), c: z.array(inlineSchema) }),
-    z.object({
-      t: z.literal("a"),
-      href: z.string().regex(HREF, "a link must be http, https or mailto"),
-      c: z.array(inlineSchema),
-    }),
-  ]),
-);
+// Named because it recurses: without an id the published JSON Schema calls the
+// node `__schema0`, and third parties read that file.
+const inlineSchema: z.ZodType<Inline> = z
+  .lazy(() =>
+    z.union([
+      z.object({ t: z.literal("text"), v: z.string() }),
+      z.object({ t: z.literal("b"), c: z.array(inlineSchema) }),
+      z.object({ t: z.literal("i"), c: z.array(inlineSchema) }),
+      z.object({
+        t: z.literal("a"),
+        href: z.string().regex(HREF, "a link must be http, https or mailto"),
+        c: z.array(inlineSchema),
+      }),
+    ]),
+  )
+  .meta({ id: "Inline", title: "Inline node" });
 
 function violation(nodes: Inline[], depth: number, insideLink: boolean): string | null {
   for (const node of nodes) {

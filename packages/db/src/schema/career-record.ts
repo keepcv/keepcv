@@ -12,6 +12,7 @@ import {
 import { organisation } from "./organisation.js";
 import { standardColumns } from "./owner.js";
 import { partialDate } from "./partial-date.js";
+import { phrasingSet } from "./phrasing.js";
 
 // Repeated from the schemas in @keepcv/schema rather than imported: drizzle-kit
 // loads this file through a CJS require, which cannot resolve the package. The
@@ -65,6 +66,7 @@ export const record = pgTable(
     isCurrent: boolean("is_current").notNull().default(false),
     location: text("location"),
     sortKey: text("sort_key").notNull(),
+    summarySetId: uuid("summary_set_id"),
 
     employmentType: text("employment_type"),
     mode: text("mode"),
@@ -113,6 +115,11 @@ export const record = pgTable(
       name: "record_organisation_fk",
       columns: [table.ownerId, table.organisationId],
       foreignColumns: [organisation.ownerId, organisation.id],
+    }),
+    foreignKey({
+      name: "record_summary_set_fk",
+      columns: [table.ownerId, table.summarySetId],
+      foreignColumns: [phrasingSet.ownerId, phrasingSet.id],
     }),
   ],
 );

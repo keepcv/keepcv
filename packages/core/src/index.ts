@@ -19,6 +19,7 @@ export {
   ConcurrencyConflictError,
   NotFoundError,
   type OrganisationRepository,
+  type PhrasingRepository,
   type ProfileRepository,
   type Repositories,
   StoreNotEmptyError,
@@ -27,3 +28,4 @@ export {
 } from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
+export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";

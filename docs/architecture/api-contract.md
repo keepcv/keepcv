@@ -92,11 +92,11 @@ CRUD   /v1/points/:id/metrics
 CRUD   /v1/points/:id/evidence         never included in any render path
 
 GET    /v1/phrasing-sets/:id
+PATCH  /v1/phrasing-sets/:id           canonicalPhrasingId - not purpose
 POST   /v1/phrasing-sets/:id/phrasings
 PATCH  /v1/phrasings/:id               label, variant, sortKey - not text
 POST   /v1/phrasings/:id/revisions     append; the only way text changes
 GET    /v1/phrasings/:id/revisions     history
-POST   /v1/phrasing-sets/:id/canonical { phrasingId }
 
 PUT    /v1/drafts/:targetKind/:targetId/:field
 DELETE /v1/drafts/:targetKind/:targetId/:field
@@ -139,6 +139,12 @@ Notes on the non-obvious ones:
 - **`PATCH /v1/phrasings/:id` cannot change text.** Text changes only via
   `POST .../revisions`. The route shape makes the append-only rule
   structural rather than a convention someone can forget.
+- **`POST /v1/phrasings/:id/revisions` carries no `If-Match`**, and is the only
+  write that does not. Appending cannot conflict: two people appending different
+  wordings at once must both keep their text, and posting text the phrasing
+  already holds returns the revision that already says it.
+- **Which phrasing is canonical is a `PATCH` of the set.** There is no
+  `.../canonical` route, for the reason there is no `move` route.
 - **`POST /v1/import` returns a plan, not a result.** Parsers are lossy, and
   the data-entry cold start makes import survival-critical. Silently applying a
   mis-parsed resume over a real store would be unforgivable. The user reviews
@@ -154,7 +160,9 @@ Notes on the non-obvious ones:
   history, no version manifests, no drafts. Those are fetched per subject on
   demand. The "the whole store is only kilobytes" assumption
   holds for current state; revision history grows without bound by design
-  and must never be in the boot payload.
+  and must never be in the boot payload. `GET /v1/export` is the opposite and
+  carries everything, history included: an export that drops superseded wordings
+  is a delete, and I10 would not hold.
 
 ---
 
@@ -171,6 +179,8 @@ interface Repositories {
   // file that imports it. The table is still `record`.
   records:      CareerRecordRepository;
   points:       PointRepository;
+  // Sets, phrasings and revisions together: a set is created with its first
+  // phrasing and that phrasing's first text, so none is ever written alone.
   phrasings:    PhrasingRepository;
   tags:         TagRepository;
   search:       SearchRepository;
@@ -207,6 +217,10 @@ Rules:
 - **`store.load` is the one write that bypasses the concurrency token.** It has
   to: restoring `id`, `created_at` and `updated_at` verbatim is what makes I10
   hold. It is safe because it refuses anything but an empty store.
+- **`phrasings.addRevision` takes no token and does not bump one.** Appending is
+  conflict-free by construction, and moving `current_revision_id` is derived
+  state that no rename actually races - bumping `updated_at` there would reject
+  an edit that was never in conflict.
 
 **Native import loads a whole store or nothing.** It requires the target to be
 empty - no rows in any collection, and a profile nobody has filled in - and

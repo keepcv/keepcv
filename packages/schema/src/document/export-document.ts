@@ -2,6 +2,7 @@ import { z } from "zod";
 import { careerRecordSchema } from "../entities/career-record.js";
 import { contactChannelSchema } from "../entities/contact-channel.js";
 import { organisationSchema } from "../entities/organisation.js";
+import { phrasingRevisionSchema, phrasingSchema, phrasingSetSchema } from "../entities/phrasing.js";
 import { profileSchema } from "../entities/profile.js";
 import { recordFieldSchema } from "../entities/record-field.js";
 import { recordLinkSchema } from "../entities/record-link.js";
@@ -23,6 +24,9 @@ export const storeSchema = z.object({
   records: z.array(careerRecordSchema),
   recordLinks: z.array(recordLinkSchema),
   recordFields: z.array(recordFieldSchema),
+  phrasingSets: z.array(phrasingSetSchema),
+  phrasings: z.array(phrasingSchema),
+  phrasingRevisions: z.array(phrasingRevisionSchema),
 });
 
 // The canonical, lossless career store format - not a resume. `schemaVersion`
