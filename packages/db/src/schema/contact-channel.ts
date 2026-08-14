@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, index, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { standardColumns } from "./owner.js";
 
 // A `text` column with a CHECK rather than a Postgres enum type, because a CHECK
@@ -33,6 +33,7 @@ export const contactChannel = pgTable(
     sortKey: text("sort_key").notNull(),
   },
   (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
     check(
       "contact_channel_kind_check",
       sql.raw(`kind in (${KINDS.map((k) => `'${k}'`).join(", ")})`),

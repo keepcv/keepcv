@@ -43,12 +43,13 @@ export function createOrganisationRepository(db: Database): OrganisationReposito
   return {
     // By name, not by a sort key: an organisation is something you look up, not
     // something you arrange. Ordering belongs to the records that reference it.
+    // Two can share a name, so the id breaks the tie and the order is total.
     async list(options) {
       const rows = await db
         .select()
         .from(organisation)
         .where(and(owned(organisation), live(organisation, options?.includeArchived)))
-        .orderBy(asc(organisation.name));
+        .orderBy(asc(organisation.name), asc(organisation.id));
       return rows.map(toOrganisation);
     },
 

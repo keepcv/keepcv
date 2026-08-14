@@ -3,11 +3,13 @@ import type { Database } from "../database.js";
 import { createCareerRecordRepository } from "./career-record.js";
 import { createOrganisationRepository } from "./organisation.js";
 import { createProfileRepository } from "./profile.js";
+import { createStoreRepository } from "./store.js";
 
 export function createRepositories(db: Database): Repositories {
-  return {
+  const repositories = {
     profile: createProfileRepository(db),
     organisations: createOrganisationRepository(db),
     records: createCareerRecordRepository(db),
   };
+  return { ...repositories, store: createStoreRepository(db, repositories) };
 }

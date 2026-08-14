@@ -20,10 +20,12 @@ export const owner = pgTable("owner", {
 });
 
 // data-model.md #3.1. Immutable tables omit `updated_at` and `archived_at`, so
-// they do not use this.
+// they do not use this. The primary key is `(owner_id, id)` and each table
+// declares it: identity is owner-scoped, so restoring an export never collides
+// with a store some other owner already imported.
 export function standardColumns() {
   return {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").notNull(),
     ownerId: uuid("owner_id")
       .notNull()
       .references(() => owner.id, { onDelete: "cascade" }),

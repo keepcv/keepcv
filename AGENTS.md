@@ -115,16 +115,16 @@ either not started or complete. Create each one when its capability is built, an
 add it to the root `tsconfig.json` references then.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
-`record`, `record_link` and `record_field`, and the port has three repositories.
+`record`, `record_link` and `record_field`, and the port has four repositories.
 Much of the data model describes tables that do not exist yet - phrasings,
 points, tags, resumes, versions; do not assume otherwise. `custom_section` and
 `custom_entry` are the one part of the record store still missing. There is no
 API and no UI.
 
-**Native export and import do not exist.** `storeSchema` in `@keepcv/schema`
-describes the format and is kept current, but nothing reads or writes it, so the
-round-trip property test that `capabilities.md` places in Foundation is not there
-to inherit yet.
+Native export and import exist as `repositories.store`, and the round-trip test
+in `contract-store.test.ts` runs over a store built to cover every collection the
+format declares. **A slice that adds a table adds it to `storeSchema` and to that
+fixture**, or it ships a format that silently drops the user's data.
 
 ## Architecture
 
@@ -241,24 +241,29 @@ names, collapsing branches into ternaries, or golfing.
 
 ### Comment only when a comment is load-bearing
 
-Rationale belongs in the written record - the specs, the product context, the
-ADRs - where it is versioned, indexed and findable. A copy in a comment block is
-a second copy, and it is the one nobody updates.
+**The default is no comment.** Rationale belongs in the written record - the
+specs, the product context, the ADRs - where it is versioned, indexed and
+findable. A copy in a comment block is a second copy, and it is the one nobody
+updates.
 
+Write one only where a reader would otherwise be misled or reintroduce a bug: a
+non-obvious invariant, a deliberate deviation, a subtle case the code cannot
+express, a bug actually hit once. Name the concrete failure when there was one.
+
+- **One line. Two if the case really needs it.** Longer means it is spec
+  material: put it there and leave a pointer (`data-model.md #3.6`). Never cite
+  an ADR number or `PRODUCT.md` - those files are not pushed, so the reference
+  resolves for nobody but you.
+- **Not on every export.** A file annotated throughout is a file where the one
+  load-bearing comment is invisible. Most declarations need none.
 - Do not restate the code. If a comment paraphrases the line under it, delete it
   and name things better instead.
-- Do not explain a decision in a comment. Point at the architecture spec that
-  carries it (`data-model.md #3.6`) and let it do the work. Never cite an ADR
-  number or `PRODUCT.md` - those files are not pushed, so the reference resolves
-  for nobody but you.
 - Do not write JSDoc for self-evident signatures. Types already say it.
 - Do not leave section banners, `// eslint-disable` without a reason, or
   scaffolding comments describing what you are about to write.
 
-Comment only where a reader would otherwise be misled or reintroduce a bug: a
-non-obvious invariant, a deliberate deviation, a subtle case the code cannot
-express, a bug actually hit once. Name the concrete failure when there was one. A
-line is usually enough.
+When you touch a file, the same bar applies to the comments already in it: an
+over-long or now-redundant one gets cut down, not preserved out of politeness.
 
 ## Toolchain constraints
 

@@ -1,5 +1,13 @@
 import { newUuid, type Repositories } from "@keepcv/core";
-import type { Uuid } from "@keepcv/schema";
+import type {
+  CareerRecordInput,
+  CareerRecordKind,
+  ContactChannelInput,
+  OrganisationInput,
+  RecordFieldInput,
+  RecordLinkInput,
+  Uuid,
+} from "@keepcv/schema";
 import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 import { runAsOwner } from "../owner-scope.js";
 import { openLocalStore, openServerStore, type Store } from "../store.js";
@@ -24,6 +32,105 @@ const drivers: { name: string; open: () => Store }[] = [
     ? []
     : [{ name: "PostgreSQL", open: () => openServerStore({ connectionString }) }]),
 ];
+
+export function channelInput(sortKey: string, overrides: Partial<ContactChannelInput> = {}) {
+  return {
+    id: newUuid(),
+    kind: "email",
+    label: null,
+    value: "ada@example.com",
+    isDefaultVisible: true,
+    sortKey,
+    ...overrides,
+  } as ContactChannelInput;
+}
+
+// One distinctive value per kind-specific column, so a write that drops or
+// misplaces one is visible rather than merely null.
+export const extrasByKind: Record<CareerRecordKind, Record<string, unknown>> = {
+  experience: { employmentType: "Full-time", mode: "remote" },
+  education: {
+    grade: "First",
+    gradeScale: "UK",
+    thesisTitle: "On engines",
+    honours: "Distinction",
+  },
+  project: {},
+  skill: { category: "Languages", proficiency: "expert" },
+  certification: { credentialId: "AWS-1234", expiresOn: "2027-03" },
+  publication: { doi: "10.1000/182" },
+  award: {},
+  language: { proficiency: "C1" },
+  volunteering: {},
+  speaking: {},
+};
+
+export function recordInput(
+  kind: CareerRecordKind,
+  sortKey: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: newUuid(),
+    kind,
+    title: `a ${kind}`,
+    subtitle: null,
+    organisationId: null,
+    startedOn: null,
+    endedOn: null,
+    isCurrent: false,
+    location: null,
+    sortKey,
+    ...extrasByKind[kind],
+    ...overrides,
+  } as CareerRecordInput;
+}
+
+export function organisationInput(name: string, overrides: Partial<OrganisationInput> = {}) {
+  return {
+    id: newUuid(),
+    name,
+    kind: "company",
+    website: null,
+    industry: null,
+    location: null,
+    ...overrides,
+  } as OrganisationInput;
+}
+
+export function linkInput(
+  recordId: Uuid,
+  sortKey: string,
+  overrides: Partial<RecordLinkInput> = {},
+) {
+  return {
+    id: newUuid(),
+    recordId,
+    kind: "repo",
+    label: null,
+    url: "https://example.com/engine",
+    sortKey,
+    ...overrides,
+  } as RecordLinkInput;
+}
+
+export function fieldInput(
+  recordId: Uuid,
+  key: string,
+  sortKey: string,
+  overrides: Partial<RecordFieldInput> = {},
+) {
+  return {
+    id: newUuid(),
+    recordId,
+    key,
+    label: "Credential ID",
+    value: "AWS-1234",
+    valueKind: "text",
+    sortKey,
+    ...overrides,
+  } as RecordFieldInput;
+}
 
 export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;
 

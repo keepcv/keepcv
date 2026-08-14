@@ -4,8 +4,8 @@ import {
   check,
   foreignKey,
   pgTable,
+  primaryKey,
   text,
-  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -79,6 +79,7 @@ export const record = pgTable(
     doi: text("doi"),
   },
   (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
     check("record_kind_check", sql.raw(`kind in (${quoted(KINDS)})`)),
     check("record_mode_check", sql.raw(`mode is null or mode in (${quoted(MODES)})`)),
     check(
@@ -103,9 +104,6 @@ export const record = pgTable(
     // Records are dragged within their kind's list, so that is the scope the key
     // has to be unique in (data-model.md #3.5).
     uniqueIndex("record_sort_key_unique").on(table.ownerId, table.kind, table.sortKey),
-    // The target of the composite key on record_link and record_field; see the
-    // matching one on organisation.
-    unique("record_owner_id_unique").on(table.ownerId, table.id),
 
     // Composite rather than a plain reference to organisation(id): it makes
     // pointing at another owner's organisation impossible rather than merely

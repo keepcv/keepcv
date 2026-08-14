@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { record } from "./career-record.js";
 import { standardColumns } from "./owner.js";
 
@@ -20,11 +28,12 @@ export const recordLink = pgTable(
     sortKey: text("sort_key").notNull(),
   },
   (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
     check(
       "record_link_kind_check",
       sql.raw(`kind in (${KINDS.map((kind) => `'${kind}'`).join(", ")})`),
     ),
-    uniqueIndex("record_link_sort_key_unique").on(table.recordId, table.sortKey),
+    uniqueIndex("record_link_sort_key_unique").on(table.ownerId, table.recordId, table.sortKey),
     foreignKey({
       name: "record_link_record_fk",
       columns: [table.ownerId, table.recordId],

@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { record } from "./career-record.js";
 import { standardColumns } from "./owner.js";
 
@@ -22,12 +30,16 @@ export const recordField = pgTable(
     sortKey: text("sort_key").notNull(),
   },
   (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
     check(
       "record_field_value_kind_check",
       sql.raw(`value_kind in (${VALUE_KINDS.map((kind) => `'${kind}'`).join(", ")})`),
     ),
-    uniqueIndex("record_field_key_unique").on(table.recordId, table.key),
-    uniqueIndex("record_field_sort_key_unique").on(table.recordId, table.sortKey),
+    // Owner-scoped like every other uniqueness rule here: record ids repeat
+    // across owners once a store has been imported, so a rule keyed on record_id
+    // alone would make one owner's import collide with another's.
+    uniqueIndex("record_field_key_unique").on(table.ownerId, table.recordId, table.key),
+    uniqueIndex("record_field_sort_key_unique").on(table.ownerId, table.recordId, table.sortKey),
     foreignKey({
       name: "record_field_record_fk",
       columns: [table.ownerId, table.recordId],

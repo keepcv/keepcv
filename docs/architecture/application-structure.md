@@ -92,7 +92,9 @@ the entire WYSIWYG premise.
 
 @keepcv/render   ResumeDocument -> HTML -> paginated -> PDF.
 @keepcv/templates  Template implementations + config schemas.
-@keepcv/interop  Native export/import + lossy adapters.
+@keepcv/interop  The lossy adapters - JSON Resume, RenderCV, PDF and DOCX
+                 parsing. Native export/import is not here: it is a whole-store
+                 read and write, so it is the store repository.
 @keepcv/ats-lint ResumeDocument + rendered output -> lint report.
 ```
 

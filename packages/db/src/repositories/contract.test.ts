@@ -7,19 +7,7 @@ import {
 import { CONTACT_CHANNEL_KINDS, type ContactChannelInput } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { openLocalStore } from "../store.js";
-import { eachDriver } from "./contract.harness.js";
-
-function channel(sortKey: string, overrides: Partial<ContactChannelInput> = {}) {
-  return {
-    id: newUuid(),
-    kind: "email",
-    label: null,
-    value: "ada@example.com",
-    isDefaultVisible: true,
-    sortKey,
-    ...overrides,
-  } as ContactChannelInput;
-}
+import { channelInput, eachDriver } from "./contract.harness.js";
 
 eachDriver(({ run, otherOwner, store }) => {
   describe("bootstrap", () => {
@@ -42,7 +30,7 @@ eachDriver(({ run, otherOwner, store }) => {
       const asIntruder = await otherOwner();
 
       const mine = await run(
-        async (r) => await r.profile.createContactChannel(channel("a0", { value: "mine" })),
+        async (r) => await r.profile.createContactChannel(channelInput("a0", { value: "mine" })),
       );
 
       const theirs = await asIntruder(async (r) => await r.profile.listContactChannels());
@@ -101,9 +89,9 @@ eachDriver(({ run, otherOwner, store }) => {
     it("returns them in sort-key order regardless of insertion order", async () => {
       const [first, second, third] = generateNKeysBetween(null, null, 3);
       await run(async (r) => {
-        await r.profile.createContactChannel(channel(third ?? "", { value: "third" }));
-        await r.profile.createContactChannel(channel(first ?? "", { value: "first" }));
-        await r.profile.createContactChannel(channel(second ?? "", { value: "second" }));
+        await r.profile.createContactChannel(channelInput(third ?? "", { value: "third" }));
+        await r.profile.createContactChannel(channelInput(first ?? "", { value: "first" }));
+        await r.profile.createContactChannel(channelInput(second ?? "", { value: "second" }));
       });
 
       const channels = await run(async (r) => await r.profile.listContactChannels());
@@ -111,16 +99,16 @@ eachDriver(({ run, otherOwner, store }) => {
     });
 
     it("keeps sort keys unique within the owner", async () => {
-      await run(async (r) => await r.profile.createContactChannel(channel("a0")));
+      await run(async (r) => await r.profile.createContactChannel(channelInput("a0")));
       await expect(
-        run(async (r) => await r.profile.createContactChannel(channel("a0"))),
+        run(async (r) => await r.profile.createContactChannel(channelInput("a0"))),
       ).rejects.toThrow();
     });
 
     it("archives without destroying, and restores", async () => {
       const created = await run(
         async (r) =>
-          await r.profile.createContactChannel(channel("a0", { value: "ada@example.com" })),
+          await r.profile.createContactChannel(channelInput("a0", { value: "ada@example.com" })),
       );
 
       const archived = await run(
@@ -142,7 +130,9 @@ eachDriver(({ run, otherOwner, store }) => {
     });
 
     it("distinguishes an unknown id from a stale one", async () => {
-      const created = await run(async (r) => await r.profile.createContactChannel(channel("a0")));
+      const created = await run(
+        async (r) => await r.profile.createContactChannel(channelInput("a0")),
+      );
       const updated = await run(
         async (r) =>
           await r.profile.updateContactChannel(created.id, { label: "Work" }, created.updatedAt),
@@ -165,8 +155,8 @@ eachDriver(({ run, otherOwner, store }) => {
     it("rolls the whole unit back when any part of it fails", async () => {
       await expect(
         run(async (r) => {
-          await r.profile.createContactChannel(channel("a0"));
-          await r.profile.createContactChannel(channel("a0"));
+          await r.profile.createContactChannel(channelInput("a0"));
+          await r.profile.createContactChannel(channelInput("a0"));
         }),
       ).rejects.toThrow();
 
@@ -181,7 +171,7 @@ eachDriver(({ run, otherOwner, store }) => {
       await Promise.all(
         keys.map(
           async (sortKey) =>
-            await run(async (r) => await r.profile.createContactChannel(channel(sortKey))),
+            await run(async (r) => await r.profile.createContactChannel(channelInput(sortKey))),
         ),
       );
 
@@ -197,7 +187,7 @@ eachDriver(({ run, otherOwner, store }) => {
       const keys = generateNKeysBetween(null, null, CONTACT_CHANNEL_KINDS.length);
       await run(async (r) => {
         for (const [index, kind] of CONTACT_CHANNEL_KINDS.entries()) {
-          await r.profile.createContactChannel(channel(keys[index] ?? "", { kind }));
+          await r.profile.createContactChannel(channelInput(keys[index] ?? "", { kind }));
         }
       });
 
@@ -208,7 +198,7 @@ eachDriver(({ run, otherOwner, store }) => {
         run(
           async (r) =>
             await r.profile.createContactChannel({
-              ...channel("z0"),
+              ...channelInput("z0"),
               kind: "mastodon" as ContactChannelInput["kind"],
             }),
         ),
