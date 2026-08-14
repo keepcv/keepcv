@@ -3,33 +3,11 @@ import {
   generateNKeysBetween,
   NotFoundError,
   newUuid,
-  type Repositories,
 } from "@keepcv/core";
-import { CONTACT_CHANNEL_KINDS, type ContactChannelInput, type Uuid } from "@keepcv/schema";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { runAsOwner } from "../owner-scope.js";
-import { openLocalStore, openServerStore, type Store } from "../store.js";
-
-// One suite, every implementation of the port. It asserts the invariants in
-// data-model.md #10 rather than the queries, so an implementation that diverges
-// fails loudly instead of subtly - which is the whole reason the private cloud
-// repository can be a thin adapter rather than a fork.
-const connectionString = process.env["DATABASE_URL"];
-
-// Locally the server half is opt-in. In CI it is not: a suite that quietly
-// tests one implementation and reports success for both is worse than no suite,
-// and it has already happened once - turbo runs tasks in a strict environment
-// and dropped DATABASE_URL before it reached vitest.
-if (connectionString === undefined && process.env["CI"] !== undefined) {
-  throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
-}
-
-const drivers: { name: string; open: () => Store }[] = [
-  { name: "PGlite", open: () => openLocalStore() },
-  ...(connectionString === undefined
-    ? []
-    : [{ name: "PostgreSQL", open: () => openServerStore({ connectionString }) }]),
-];
+import { CONTACT_CHANNEL_KINDS, type ContactChannelInput } from "@keepcv/schema";
+import { describe, expect, it } from "vitest";
+import { openLocalStore } from "../store.js";
+import { eachDriver } from "./contract.harness.js";
 
 function channel(sortKey: string, overrides: Partial<ContactChannelInput> = {}) {
   return {
@@ -43,33 +21,7 @@ function channel(sortKey: string, overrides: Partial<ContactChannelInput> = {}) 
   } as ContactChannelInput;
 }
 
-describe.each(drivers)("$name", ({ open }) => {
-  let store: Store;
-  let run: <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;
-
-  function asOwner(ownerId: Uuid) {
-    return async <T>(work: (repositories: Repositories) => Promise<T>) =>
-      await runAsOwner(ownerId, async () => await store.unitOfWork.run(work));
-  }
-
-  beforeAll(async () => {
-    store = open();
-    await store.migrate();
-  });
-
-  afterAll(async () => {
-    await store.close();
-  });
-
-  // Every test gets its own owner rather than a truncated database. Owner
-  // scoping is what isolates them, so the isolation under test is the isolation
-  // the suite relies on.
-  beforeEach(async () => {
-    const ownerId = newUuid();
-    await store.createOwner(ownerId);
-    run = asOwner(ownerId);
-  });
-
+eachDriver(({ run, otherOwner, store }) => {
   describe("bootstrap", () => {
     it("gives a new owner an empty profile", async () => {
       const profile = await run(async (repositories) => await repositories.profile.get());
@@ -79,7 +31,7 @@ describe.each(drivers)("$name", ({ open }) => {
     });
 
     it("refuses a repository call with no owner in scope", async () => {
-      await expect(store.unitOfWork.run(async (r) => await r.profile.get())).rejects.toThrow(
+      await expect(store().unitOfWork.run(async (r) => await r.profile.get())).rejects.toThrow(
         /no owner is in scope/,
       );
     });
@@ -87,9 +39,7 @@ describe.each(drivers)("$name", ({ open }) => {
 
   describe("owner scoping", () => {
     it("hides another owner's rows entirely", async () => {
-      const intruderId = newUuid();
-      await store.createOwner(intruderId);
-      const asIntruder = asOwner(intruderId);
+      const asIntruder = await otherOwner();
 
       const mine = await run(
         async (r) => await r.profile.createContactChannel(channel("a0", { value: "mine" })),
@@ -158,30 +108,6 @@ describe.each(drivers)("$name", ({ open }) => {
 
       const channels = await run(async (r) => await r.profile.listContactChannels());
       expect(channels.map((c) => c.value)).toEqual(["first", "second", "third"]);
-    });
-
-    // The CHECK is written out in the Drizzle schema and the vocabulary lives in
-    // @keepcv/schema. This is what stops the two drifting.
-    it("accepts exactly the declared kinds", async () => {
-      const keys = generateNKeysBetween(null, null, CONTACT_CHANNEL_KINDS.length);
-      await run(async (r) => {
-        for (const [index, kind] of CONTACT_CHANNEL_KINDS.entries()) {
-          await r.profile.createContactChannel(channel(keys[index] ?? "", { kind }));
-        }
-      });
-
-      const channels = await run(async (r) => await r.profile.listContactChannels());
-      expect(channels.map((c) => c.kind).sort()).toEqual([...CONTACT_CHANNEL_KINDS].sort());
-
-      await expect(
-        run(
-          async (r) =>
-            await r.profile.createContactChannel({
-              ...channel("z0"),
-              kind: "mastodon" as ContactChannelInput["kind"],
-            }),
-        ),
-      ).rejects.toThrow();
     });
 
     it("keeps sort keys unique within the owner", async () => {
@@ -260,6 +186,33 @@ describe.each(drivers)("$name", ({ open }) => {
       );
 
       expect(await run(async (r) => await r.profile.listContactChannels())).toHaveLength(5);
+    });
+  });
+
+  // The CHECK constraints are written out in the Drizzle schema because
+  // drizzle-kit cannot resolve @keepcv/schema. This is what stops the two lists
+  // drifting: one test for every vocabulary the store declares.
+  describe("vocabularies", () => {
+    it("accepts exactly the contact channel kinds the schema declares", async () => {
+      const keys = generateNKeysBetween(null, null, CONTACT_CHANNEL_KINDS.length);
+      await run(async (r) => {
+        for (const [index, kind] of CONTACT_CHANNEL_KINDS.entries()) {
+          await r.profile.createContactChannel(channel(keys[index] ?? "", { kind }));
+        }
+      });
+
+      const channels = await run(async (r) => await r.profile.listContactChannels());
+      expect(channels.map((c) => c.kind).sort()).toEqual([...CONTACT_CHANNEL_KINDS].sort());
+
+      await expect(
+        run(
+          async (r) =>
+            await r.profile.createContactChannel({
+              ...channel("z0"),
+              kind: "mastodon" as ContactChannelInput["kind"],
+            }),
+        ),
+      ).rejects.toThrow();
     });
   });
 });

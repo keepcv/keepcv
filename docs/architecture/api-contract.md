@@ -82,13 +82,11 @@ CRUD   /v1/organisations
 
 CRUD   /v1/records                     ?kind=&tag=&archived=&q=
 GET    /v1/records/:id
-POST   /v1/records/:id/move            { sortKey }
 
 CRUD   /v1/records/:id/links           uniform, any record kind
 CRUD   /v1/records/:id/fields          uniform, any record kind
 
 CRUD   /v1/points                      ?recordId=&tag=&confidence=
-POST   /v1/points/:id/move
 GET    /v1/points/:id/usage            which resume versions reference it
 CRUD   /v1/points/:id/metrics
 CRUD   /v1/points/:id/evidence         never included in any render path
@@ -135,6 +133,9 @@ POST   /v1/backup/restore
 
 Notes on the non-obvious ones:
 
+- **There is no `move` route.** A move is a `PATCH` of `sortKey`, which the
+  sparse-patch rule above already covers, and a second way to do it would be a
+  second thing to keep correct.
 - **`PATCH /v1/phrasings/:id` cannot change text.** Text changes only via
   `POST .../revisions`. The route shape makes the append-only rule
   structural rather than a convention someone can forget.
@@ -165,8 +166,10 @@ and by the private cloud repo against server PostgreSQL.
 ```ts
 interface Repositories {
   profile:      ProfileRepository;
-  organisations:OrganisationRepository;
-  records:      RecordRepository;
+  organisations: OrganisationRepository;
+  // CareerRecord, not Record: the latter shadows TypeScript's built-in in every
+  // file that imports it. The table is still `record`.
+  records:      CareerRecordRepository;
   points:       PointRepository;
   phrasings:    PhrasingRepository;
   tags:         TagRepository;

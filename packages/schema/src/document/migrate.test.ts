@@ -17,6 +17,10 @@ const current = {
       location: null,
     },
     contactChannels: [],
+    organisations: [],
+    records: [],
+    recordLinks: [],
+    recordFields: [],
   },
 };
 

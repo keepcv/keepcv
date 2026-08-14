@@ -7,17 +7,14 @@ import {
   type Timestamp,
   type Uuid,
 } from "@keepcv/schema";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { contactChannel, profile } from "../schema/index.js";
+import { type Changes, live, owned, toTimestamp, updateOwned } from "./owned-row.js";
 
 type ProfileRow = typeof profile.$inferSelect;
 type ContactChannelRow = typeof contactChannel.$inferSelect;
-
-function toTimestamp(value: Date): Timestamp {
-  return value.toISOString() as Timestamp;
-}
 
 // Parsing rather than casting: this is the row -> DTO boundary, and a column
 // that drifts from the contract - a widened CHECK, a dropped NOT NULL - should
@@ -49,12 +46,6 @@ function toContactChannel(row: ContactChannelRow): ContactChannel {
   });
 }
 
-// An absent key leaves the column alone; an explicit null clears it. Drizzle
-// drops undefined values from a `set`, which is what makes a sparse patch work,
-// and `updatedAt` is always present so a patch of nothing is still a valid
-// statement rather than an empty one.
-type Changes<Row> = { [Column in keyof Row]?: Row[Column] | undefined };
-
 export function createProfileRepository(db: Database): ProfileRepository {
   async function get(): Promise<Profile> {
     const ownerId = currentOwnerId();
@@ -65,53 +56,33 @@ export function createProfileRepository(db: Database): ProfileRepository {
     return toProfile(row);
   }
 
-  // A miss means one of two very different things, and the caller has to be
-  // able to tell them apart: a 404 is a dead link, a 409 is two edits racing and
-  // needs the user to compare rather than one side to be dropped silently.
-  async function rejectChannelWrite(id: Uuid): Promise<never> {
-    const [row] = await db
-      .select({ updatedAt: contactChannel.updatedAt })
-      .from(contactChannel)
-      .where(and(eq(contactChannel.ownerId, currentOwnerId()), eq(contactChannel.id, id)))
-      .limit(1);
-    if (row === undefined) {
-      throw new NotFoundError("contactChannel", id);
-    }
-    throw new ConcurrencyConflictError("contactChannel", id, toTimestamp(row.updatedAt));
-  }
-
   async function setChannel(
     id: Uuid,
     expectedUpdatedAt: Timestamp,
     changes: Changes<ContactChannelRow>,
   ): Promise<ContactChannel> {
-    const [row] = await db
-      .update(contactChannel)
-      .set({ ...changes, updatedAt: new Date() })
-      .where(
-        and(
-          eq(contactChannel.ownerId, currentOwnerId()),
-          eq(contactChannel.id, id),
-          eq(contactChannel.updatedAt, new Date(expectedUpdatedAt)),
-        ),
-      )
-      .returning();
-    return row === undefined ? await rejectChannelWrite(id) : toContactChannel(row);
+    return toContactChannel(
+      await updateOwned<ContactChannelRow>(
+        db,
+        contactChannel,
+        "contactChannel",
+        id,
+        expectedUpdatedAt,
+        changes,
+      ),
+    );
   }
 
   return {
     get,
 
+    // The profile is the one table with no id in its key: there is exactly one
+    // per owner, so the owner is the predicate and a miss can only be staleness.
     async update(patch, expectedUpdatedAt) {
       const [row] = await db
         .update(profile)
         .set({ ...patch, updatedAt: new Date() })
-        .where(
-          and(
-            eq(profile.ownerId, currentOwnerId()),
-            eq(profile.updatedAt, new Date(expectedUpdatedAt)),
-          ),
-        )
+        .where(and(owned(profile), eq(profile.updatedAt, new Date(expectedUpdatedAt))))
         .returning();
       if (row !== undefined) {
         return toProfile(row);
@@ -121,13 +92,10 @@ export function createProfileRepository(db: Database): ProfileRepository {
     },
 
     async listContactChannels(options) {
-      const owned = eq(contactChannel.ownerId, currentOwnerId());
       const rows = await db
         .select()
         .from(contactChannel)
-        .where(
-          options?.includeArchived === true ? owned : and(owned, isNull(contactChannel.archivedAt)),
-        )
+        .where(and(owned(contactChannel), live(contactChannel, options?.includeArchived)))
         .orderBy(asc(contactChannel.sortKey));
       return rows.map(toContactChannel);
     },
