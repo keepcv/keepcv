@@ -18,7 +18,15 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { evidence, metric, point, pointRecordLink } from "../schema/index.js";
-import { type Changes, live, owned, requireOwned, toTimestamp, updateOwned } from "./owned-row.js";
+import {
+  type Changes,
+  insertOwned,
+  live,
+  owned,
+  requireOwned,
+  standardDto,
+  updateOwned,
+} from "./owned-row.js";
 
 type PointRow = typeof point.$inferSelect;
 type MetricRow = typeof metric.$inferSelect;
@@ -26,10 +34,7 @@ type EvidenceRow = typeof evidence.$inferSelect;
 
 function toPoint(row: PointRow): Point {
   return pointSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     recordId: row.recordId,
     phrasingSetId: row.phrasingSetId,
     confidence: row.confidence,
@@ -40,10 +45,7 @@ function toPoint(row: PointRow): Point {
 
 function toMetric(row: MetricRow): Metric {
   return metricSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     pointId: row.pointId,
     label: row.label,
     value: row.value,
@@ -57,10 +59,7 @@ function toMetric(row: MetricRow): Metric {
 
 function toEvidence(row: EvidenceRow): Evidence {
   return evidenceSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     pointId: row.pointId,
     kind: row.kind,
     value: row.value,
@@ -142,14 +141,7 @@ export function createPointRepository(
       const { phrasing, ...columns } = input;
       await phrasings.createSet({ id: input.phrasingSetId, purpose: "point", phrasing });
 
-      const [row] = await db
-        .insert(point)
-        .values({ ...columns, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into point returned no row");
-      }
-      return toPoint(row);
+      return toPoint(await insertOwned(db, point, "point", columns));
     },
 
     // Making a linked record the primary one drops the link: the primary already
@@ -224,14 +216,7 @@ export function createPointRepository(
     },
 
     async createMetric(input) {
-      const [row] = await db
-        .insert(metric)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into metric returned no row");
-      }
-      return toMetric(row);
+      return toMetric(await insertOwned(db, metric, "metric", input));
     },
 
     async updateMetric(id, patch, expectedUpdatedAt) {
@@ -264,14 +249,7 @@ export function createPointRepository(
     },
 
     async createEvidence(input) {
-      const [row] = await db
-        .insert(evidence)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into evidence returned no row");
-      }
-      return toEvidence(row);
+      return toEvidence(await insertOwned(db, evidence, "evidence", input));
     },
 
     async updateEvidence(id, patch, expectedUpdatedAt) {

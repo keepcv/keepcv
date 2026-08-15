@@ -1,7 +1,7 @@
 import { ConcurrencyConflictError, NotFoundError } from "@keepcv/core";
 import type { Timestamp, Uuid } from "@keepcv/schema";
 import { and, eq, isNull, type SQL } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { PgColumn, PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 
@@ -23,6 +23,23 @@ export interface OwnedRow {
 
 export function toTimestamp(value: Date): Timestamp {
   return value.toISOString() as Timestamp;
+}
+
+// The four columns every owned table shares, converted once so ten mappers do
+// not each spell out the archived_at ternary. `phrasing_revision` is immutable
+// and has neither `updated_at` nor `archived_at`, so it does not use this.
+export function standardDto(row: {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  archivedAt: Date | null;
+}) {
+  return {
+    id: row.id,
+    createdAt: toTimestamp(row.createdAt),
+    updatedAt: toTimestamp(row.updatedAt),
+    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+  };
 }
 
 // An absent key leaves the column alone; an explicit null clears it. Drizzle
@@ -63,6 +80,28 @@ export async function requireOwned<Row extends OwnedRow>(
   const row = await findOwned<Row>(db, table, id);
   if (row === undefined) {
     throw new NotFoundError(entity, id);
+  }
+  return row;
+}
+
+// The owner comes from ambient scope rather than the values, which is what makes
+// inserting into somebody else's store impossible rather than merely untested.
+// Unlike the read helpers this stays generic in the table, so the row type comes
+// back inferred and the caller needs no cast; only re-adding `ownerId` to the
+// narrowed values needs one, since TypeScript cannot see that it reconstitutes
+// the full insert type.
+export async function insertOwned<T extends OwnedTable>(
+  db: Database,
+  table: T,
+  entity: string,
+  values: Omit<PgInsertValue<T>, "ownerId">,
+): Promise<T["$inferSelect"]> {
+  const [row] = await db
+    .insert(table)
+    .values({ ...values, ownerId: currentOwnerId() } as PgInsertValue<T>)
+    .returning();
+  if (row === undefined) {
+    throw new Error(`insert into ${entity} returned no row`);
   }
   return row;
 }

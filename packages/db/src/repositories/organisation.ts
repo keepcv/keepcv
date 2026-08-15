@@ -2,18 +2,22 @@ import type { OrganisationRepository } from "@keepcv/core";
 import { type Organisation, organisationSchema, type Timestamp, type Uuid } from "@keepcv/schema";
 import { and, asc } from "drizzle-orm";
 import type { Database } from "../database.js";
-import { currentOwnerId } from "../owner-scope.js";
 import { organisation } from "../schema/index.js";
-import { type Changes, live, owned, requireOwned, toTimestamp, updateOwned } from "./owned-row.js";
+import {
+  type Changes,
+  insertOwned,
+  live,
+  owned,
+  requireOwned,
+  standardDto,
+  updateOwned,
+} from "./owned-row.js";
 
 type OrganisationRow = typeof organisation.$inferSelect;
 
 function toOrganisation(row: OrganisationRow): Organisation {
   return organisationSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     name: row.name,
     kind: row.kind,
     website: row.website,
@@ -60,14 +64,7 @@ export function createOrganisationRepository(db: Database): OrganisationReposito
     },
 
     async create(input) {
-      const [row] = await db
-        .insert(organisation)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into organisation returned no row");
-      }
-      return toOrganisation(row);
+      return toOrganisation(await insertOwned(db, organisation, "organisation", input));
     },
 
     async update(id, patch, expectedUpdatedAt) {

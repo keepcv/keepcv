@@ -11,7 +11,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { contactChannel, profile } from "../schema/index.js";
-import { type Changes, live, owned, toTimestamp, updateOwned } from "./owned-row.js";
+import { type Changes, insertOwned, live, owned, standardDto, updateOwned } from "./owned-row.js";
 
 type ProfileRow = typeof profile.$inferSelect;
 type ContactChannelRow = typeof contactChannel.$inferSelect;
@@ -21,10 +21,7 @@ type ContactChannelRow = typeof contactChannel.$inferSelect;
 // fail here rather than reach the wire.
 function toProfile(row: ProfileRow): Profile {
   return profileSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     fullName: row.fullName,
     pronouns: row.pronouns,
     headline: row.headline,
@@ -35,10 +32,7 @@ function toProfile(row: ProfileRow): Profile {
 
 function toContactChannel(row: ContactChannelRow): ContactChannel {
   return contactChannelSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     kind: row.kind,
     label: row.label,
     value: row.value,
@@ -102,14 +96,7 @@ export function createProfileRepository(db: Database): ProfileRepository {
     },
 
     async createContactChannel(input) {
-      const [row] = await db
-        .insert(contactChannel)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into contact_channel returned no row");
-      }
-      return toContactChannel(row);
+      return toContactChannel(await insertOwned(db, contactChannel, "contactChannel", input));
     },
 
     async updateContactChannel(id, patch, expectedUpdatedAt) {
