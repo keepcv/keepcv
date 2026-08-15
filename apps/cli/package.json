@@ -40,7 +40,8 @@
     "@hono/node-server": "catalog:",
     "@keepcv/api": "workspace:*",
     "@keepcv/db": "workspace:*",
-    "@keepcv/schema": "workspace:*"
+    "@keepcv/schema": "workspace:*",
+    "@keepcv/web": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

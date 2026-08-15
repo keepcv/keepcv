@@ -77,10 +77,18 @@ pnpm build          # tsc -b
 pnpm changeset      # optional until the first publish; see CONTRIBUTING.md
 ```
 
-Run the store and its API on this machine, against a throwaway data directory:
+Run the whole thing on this machine - store, API and web app - against a
+throwaway data directory. It prints a URL with the launch token in the fragment;
+open that one, because the app has no other way to get a token:
 
 ```sh
 pnpm build && node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
+```
+
+The web app on its own, against a launcher already running on 4319:
+
+```sh
+pnpm --filter @keepcv/web dev
 ```
 
 Single test file, or single test by name:
@@ -114,12 +122,16 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 ## Current state
 
-`packages/schema`, `packages/core`, `packages/db` and `packages/api` exist, and
-`apps/cli` is the `keepcv` launcher. `interop`, `templates`, `render`,
-`ats-lint` and the web app are specified but deliberately **not scaffolded** -
-empty packages are noise, and a sub-feature is either not started or complete.
-Create each one when its capability is built, and add it to the root
-`tsconfig.json` references then.
+`packages/schema`, `packages/core`, `packages/db` and `packages/api` exist,
+`apps/cli` is the `keepcv` launcher and `apps/web` is the browser app.
+`interop`, `templates`, `render` and `ats-lint` are specified but deliberately
+**not scaffolded** - empty packages are noise, and a sub-feature is either not
+started or complete. Create each one when its capability is built, and add it to
+the root `tsconfig.json` references then.
+
+`apps/web` is the one workspace project **not** in those references: it emits no
+declarations for anything to reference, so it is a `noEmit` project that Vite
+builds and `tsc` only checks.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
@@ -134,9 +146,15 @@ eleven owned collections: `/v1/contact-channels`, `/v1/organisations`,
 `/v1/custom-sections`, `/v1/records`, `/v1/record-links`, `/v1/record-fields`,
 `/v1/points`, `/v1/metrics`, `/v1/evidence`, `/v1/phrasing-sets` and
 `/v1/phrasings`. That is the whole record store; tags, search, resumes and
-versions are unbuilt, and there is no UI. `createApi` takes the port, an owner
-scope and an `authenticate` function and knows nothing else - no driver, no token
-store, no port number.
+versions are unbuilt. `createApi` takes the port, an owner scope and an
+`authenticate` function and knows nothing else - no driver, no token store, no
+port number.
+
+The web app is **read-only so far**: the shell, the store overview and the record
+list, both fed by one `GET /v1/store` on boot. Nothing in it writes, so there are
+no mutations, no optimistic updates and no conflict UI yet. React, TanStack
+Router and Query, Tailwind v4, Vite. Routes are declared in code rather than
+generated from filenames.
 
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each
@@ -144,6 +162,19 @@ phrasing currently says, because history grows without bound and is fetched on
 every open. There is deliberately no summary route: counts, recent activity and
 nudges are pure functions of that payload and belong in `@keepcv/core`, which
 runs in the browser, rather than being derived a second time in SQL.
+
+**The launcher serves the app and the API on one origin.** Everything outside
+`/v1` is the built web app, so the client never learns where its store is and
+there is no CORS surface. The launch token travels in the URL **fragment**, which
+no browser sends to a server, and the app moves it into `sessionStorage` and
+clears the address bar. A token in a query string would be in every log between
+here and nowhere.
+
+**Screens read the cached store through selectors in `@keepcv/core`**, never
+through a request of their own. Counting, filtering and every incompleteness
+nudge is a pure function there, so the same answer serves the browser, the CLI
+and anything server-side. Formatting is the opposite and lives in the web app's
+`model/`: a DTO is a contract, not a UI changelog.
 
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request

@@ -35,3 +35,17 @@ export {
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
 export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
+export {
+  archived,
+  live,
+  organisationOf,
+  overview,
+  pointsOfRecord,
+  type RecordCount,
+  recordCounts,
+  type StoreOverview,
+  textOfPhrasingSet,
+  textOfPoint,
+  type Unfinished,
+  unplacedPoints,
+} from "./store/selectors.js";
