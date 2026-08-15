@@ -26,6 +26,7 @@ import type {
   PhrasingSetInput,
   PhrasingSetPatch,
   Point,
+  PointConfidence,
   PointInput,
   PointPatch,
   PointRecordLink,
@@ -116,7 +117,9 @@ export interface ProfileRepository {
   get(): Promise<Profile>;
   update(patch: ProfilePatch, expectedUpdatedAt: Timestamp): Promise<Profile>;
 
-  listContactChannels(options?: { includeArchived?: boolean }): Promise<ContactChannel[]>;
+  listContactChannels(options?: {
+    includeArchived?: boolean | undefined;
+  }): Promise<ContactChannel[]>;
   getContactChannel(id: Uuid): Promise<ContactChannel>;
   createContactChannel(input: ContactChannelInput): Promise<ContactChannel>;
   updateContactChannel(
@@ -131,7 +134,7 @@ export interface ProfileRepository {
 // Every `list` returns a total order, so two reads of unchanged data are the
 // same list. The export leans on it: a round trip compares two whole stores.
 export interface OrganisationRepository {
-  list(options?: { includeArchived?: boolean }): Promise<Organisation[]>;
+  list(options?: { includeArchived?: boolean | undefined }): Promise<Organisation[]>;
   get(id: Uuid): Promise<Organisation>;
   create(input: OrganisationInput): Promise<Organisation>;
   update(id: Uuid, patch: OrganisationPatch, expectedUpdatedAt: Timestamp): Promise<Organisation>;
@@ -144,7 +147,7 @@ export interface OrganisationRepository {
 // the reason an organisation has one: a section outlives every entry in it and
 // has an ordering and a lifecycle of its own.
 export interface CustomSectionRepository {
-  list(options?: { includeArchived?: boolean }): Promise<CustomSection[]>;
+  list(options?: { includeArchived?: boolean | undefined }): Promise<CustomSection[]>;
   get(id: Uuid): Promise<CustomSection>;
   create(input: CustomSectionInput): Promise<CustomSection>;
   update(id: Uuid, patch: CustomSectionPatch, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
@@ -157,20 +160,31 @@ export interface CustomSectionRepository {
 // `move`, because a move is a patch of `sortKey` and one way to do a thing beats
 // two.
 export interface CareerRecordRepository {
-  list(options?: { kind?: CareerRecordKind; includeArchived?: boolean }): Promise<CareerRecord[]>;
+  list(options?: {
+    kind?: CareerRecordKind | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<CareerRecord[]>;
   get(id: Uuid): Promise<CareerRecord>;
   create(input: CareerRecordInput): Promise<CareerRecord>;
   update(id: Uuid, patch: CareerRecordPatch, expectedUpdatedAt: Timestamp): Promise<CareerRecord>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CareerRecord>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CareerRecord>;
 
-  listLinks(options?: { recordId?: Uuid; includeArchived?: boolean }): Promise<RecordLink[]>;
+  listLinks(options?: {
+    recordId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<RecordLink[]>;
+  getLink(id: Uuid): Promise<RecordLink>;
   createLink(input: RecordLinkInput): Promise<RecordLink>;
   updateLink(id: Uuid, patch: RecordLinkPatch, expectedUpdatedAt: Timestamp): Promise<RecordLink>;
   archiveLink(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RecordLink>;
   restoreLink(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RecordLink>;
 
-  listFields(options?: { recordId?: Uuid; includeArchived?: boolean }): Promise<RecordField[]>;
+  listFields(options?: {
+    recordId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<RecordField[]>;
+  getField(id: Uuid): Promise<RecordField>;
   createField(input: RecordFieldInput): Promise<RecordField>;
   updateField(
     id: Uuid,
@@ -187,14 +201,17 @@ export interface CareerRecordRepository {
 // moves `currentRevisionId`, which is what stops a resume version pinned in March
 // from silently acquiring June's wording.
 export interface PhrasingRepository {
-  listSets(options?: { includeArchived?: boolean }): Promise<PhrasingSet[]>;
+  listSets(options?: { includeArchived?: boolean | undefined }): Promise<PhrasingSet[]>;
   getSet(id: Uuid): Promise<PhrasingSet>;
   createSet(input: PhrasingSetInput): Promise<PhrasingSet>;
   updateSet(id: Uuid, patch: PhrasingSetPatch, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
   archiveSet(id: Uuid, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
   restoreSet(id: Uuid, expectedUpdatedAt: Timestamp): Promise<PhrasingSet>;
 
-  list(options?: { phrasingSetId?: Uuid; includeArchived?: boolean }): Promise<Phrasing[]>;
+  list(options?: {
+    phrasingSetId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<Phrasing[]>;
   get(id: Uuid): Promise<Phrasing>;
   create(input: PhrasingInput): Promise<Phrasing>;
   update(id: Uuid, patch: PhrasingPatch, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
@@ -206,7 +223,7 @@ export interface PhrasingRepository {
   // one is the loss the append-only design exists to prevent - and identical text
   // is the revision that already exists, so it makes the pointer point there.
   addRevision(phrasingId: Uuid, body: RichText): Promise<PhrasingRevision>;
-  listRevisions(options?: { phrasingId?: Uuid }): Promise<PhrasingRevision[]>;
+  listRevisions(options?: { phrasingId?: Uuid | undefined }): Promise<PhrasingRevision[]>;
 }
 
 // A point's primary record decides where it prints; a secondary link says it
@@ -230,7 +247,11 @@ export class DuplicatePointRecordLinkError extends Error {
 // so five tables are written before `create` returns and none of them is ever
 // written alone.
 export interface PointRepository {
-  list(options?: { recordId?: Uuid; includeArchived?: boolean }): Promise<Point[]>;
+  list(options?: {
+    recordId?: Uuid | undefined;
+    confidence?: PointConfidence | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<Point[]>;
   get(id: Uuid): Promise<Point>;
   create(input: PointInput): Promise<Point>;
   update(id: Uuid, patch: PointPatch, expectedUpdatedAt: Timestamp): Promise<Point>;
@@ -240,17 +261,25 @@ export interface PointRepository {
   // No concurrency token and no archive: a link holds nothing of its own, so
   // removing one destroys nothing and both ends of it survive. Making a linked
   // record the primary one drops the link, since the primary already says it.
-  listRecordLinks(options?: { pointId?: Uuid }): Promise<PointRecordLink[]>;
+  listRecordLinks(options?: { pointId?: Uuid | undefined }): Promise<PointRecordLink[]>;
   linkRecord(pointId: Uuid, recordId: Uuid): Promise<PointRecordLink>;
   unlinkRecord(pointId: Uuid, recordId: Uuid): Promise<void>;
 
-  listMetrics(options?: { pointId?: Uuid; includeArchived?: boolean }): Promise<Metric[]>;
+  listMetrics(options?: {
+    pointId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<Metric[]>;
+  getMetric(id: Uuid): Promise<Metric>;
   createMetric(input: MetricInput): Promise<Metric>;
   updateMetric(id: Uuid, patch: MetricPatch, expectedUpdatedAt: Timestamp): Promise<Metric>;
   archiveMetric(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Metric>;
   restoreMetric(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Metric>;
 
-  listEvidence(options?: { pointId?: Uuid; includeArchived?: boolean }): Promise<Evidence[]>;
+  listEvidence(options?: {
+    pointId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<Evidence[]>;
+  getEvidence(id: Uuid): Promise<Evidence>;
   createEvidence(input: EvidenceInput): Promise<Evidence>;
   updateEvidence(id: Uuid, patch: EvidencePatch, expectedUpdatedAt: Timestamp): Promise<Evidence>;
   archiveEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
@@ -282,7 +311,10 @@ export interface StoreRepository {
 // One repository per aggregate, added as the capability that needs it is built
 // (api-contract.md #4 lists the full set). No method takes an owner id: the
 // implementation reads it from ambient request scope, so forgetting to scope a
-// query is not something a caller can do.
+// query is not something a caller can do. Every key of a `list` option bag is
+// `| undefined` as well as optional: under `exactOptionalPropertyTypes` those are
+// different types, and a route handler forwarding a query parameter the request
+// did not carry has the second one.
 export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;

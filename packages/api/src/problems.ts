@@ -1,7 +1,9 @@
 import {
+  CareerRecordKindMismatchError,
   ConcurrencyConflictError,
   type ConstraintKind,
   ConstraintViolationError,
+  DuplicatePointRecordLinkError,
   NotFoundError,
   StoreNotEmptyError,
 } from "@keepcv/core";
@@ -120,6 +122,29 @@ export function problemFor(error: unknown, instance: string): Problem {
       detail: error.message,
       instance,
       constraint: error.constraint,
+    };
+  }
+  // The point already prints under that record, so a secondary link would be the
+  // same relationship written twice. The caller resolves it by re-reading.
+  if (error instanceof DuplicatePointRecordLinkError) {
+    return {
+      type: PROBLEM_TYPES.constraintViolated,
+      title: "The store refused the write",
+      status: 409,
+      detail: error.message,
+      instance,
+    };
+  }
+  // Not a 409: the record did not change under the caller, and re-reading would
+  // not help. A patch naming the wrong kind was wrong when it was sent.
+  if (error instanceof CareerRecordKindMismatchError) {
+    return {
+      type: PROBLEM_TYPES.validationFailed,
+      title: "Validation failed",
+      status: 422,
+      detail: error.message,
+      instance,
+      errors: [{ path: "patch.kind", code: "wrong_record_kind" }],
     };
   }
   if (error instanceof StoreNotEmptyError) {

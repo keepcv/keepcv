@@ -48,6 +48,21 @@ The client renders typed problems. No string parsing, ever.
 *with the current server state*, so the UI can present a comparison rather
 than discarding one side silently.
 
+It travels beside the changes rather than among them:
+
+```jsonc
+{ "expectedUpdatedAt": "2026-03-01T09:12:44.317Z", "patch": { "title": "Engine" } }
+```
+
+Merging it into the patch would not survive a record, whose patch is a union
+discriminated on `kind` and so has no single object to add a key to; and a
+resource that ever gained a field of that name would shadow it. `DELETE` and
+`restore` carry the token alone, since they have nothing to patch.
+
+The header is deliberately not used. `If-Unmodified-Since` has second
+granularity and `updated_at` is milliseconds, so half of every comparison would
+match a write it should have refused.
+
 **Idempotency.** Creates accept a client-generated UUIDv7 as the resource id, so
 a retried create cannot duplicate a row - no idempotency-key header needed. It is
 not silently idempotent: the second one is refused by the primary key and comes
@@ -106,19 +121,20 @@ CRUD   /v1/custom-sections             headings the built-in kinds do not cover
 CRUD   /v1/records                     ?kind=&tag=&archived=&q=
 GET    /v1/records/:id
 
-CRUD   /v1/records/:id/links           uniform, any record kind
-CRUD   /v1/records/:id/fields          uniform, any record kind
+CRUD   /v1/record-links                ?recordId=&archived=  uniform, any kind
+CRUD   /v1/record-fields               ?recordId=&archived=  uniform, any kind
 
-CRUD   /v1/points                      ?recordId=&tag=&confidence=
+CRUD   /v1/points                      ?recordId=&tag=&confidence=&archived=
+GET    /v1/points/:id/records          the records it also relates to
 PUT    /v1/points/:id/records/:recordId   secondary parent; idempotent
 DELETE /v1/points/:id/records/:recordId
 GET    /v1/points/:id/usage            which resume versions reference it
-CRUD   /v1/points/:id/metrics
-CRUD   /v1/points/:id/evidence         never included in any render path
+CRUD   /v1/metrics                     ?pointId=&archived=
+CRUD   /v1/evidence                    ?pointId=&archived=  never rendered
 
-GET    /v1/phrasing-sets/:id
+CRUD   /v1/phrasing-sets               created holding their first wording
 PATCH  /v1/phrasing-sets/:id           canonicalPhrasingId - not purpose
-POST   /v1/phrasing-sets/:id/phrasings
+CRUD   /v1/phrasings                   ?phrasingSetId=&archived=
 PATCH  /v1/phrasings/:id               label, variant, sortKey - not text
 POST   /v1/phrasings/:id/revisions     append; the only way text changes
 GET    /v1/phrasings/:id/revisions     history
@@ -163,9 +179,26 @@ Notes on the non-obvious ones:
   heading is a `record` of kind `custom_entry`, so it is created and listed
   through `/v1/records` like every other kind; the section id is a field of the
   record, and moving an entry between headings is a `PATCH` of it.
+- **Metrics, evidence, links and fields are flat collections** narrowed by
+  `?pointId` or `?recordId`, not nested under their parent. The store keys one
+  by its own id alone, so a parent in the path would be an identifier no query
+  reads and the row could contradict - `/v1/records/A/links/L` where `L` belongs
+  to `B` has to mean something, and every answer is worse than not being able to
+  ask. It also keeps one path family per resource instead of a nested one for the
+  collection and a flat one for the item.
+- **Nesting is reserved for what has no id of its own.**
+  `PUT /v1/points/:id/records/:recordId` is nested because the pair *is* the row,
+  and `.../revisions` because a revision is appended to a phrasing rather than
+  created in a collection. Both of those nested lists answer `404` for a parent
+  that does not exist: an empty list would read as "this point relates to
+  nothing" or "this phrasing has never said anything", and neither is a state the
+  store can be in.
 - **There is no `move` route.** A move is a `PATCH` of `sortKey`, which the
   sparse-patch rule above already covers, and a second way to do it would be a
   second thing to keep correct.
+- **A record patch naming the wrong kind is a `422`, not a `409`.** A kind never
+  changes, so the request was already wrong when it was sent and re-reading would
+  not help; the error points at `patch.kind`.
 - **`PATCH /v1/phrasings/:id` cannot change text.** Text changes only via
   `POST .../revisions`. The route shape makes the append-only rule
   structural rather than a convention someone can forget.
@@ -175,6 +208,12 @@ Notes on the non-obvious ones:
   already holds returns the revision that already says it.
 - **Which phrasing is canonical is a `PATCH` of the set.** There is no
   `.../canonical` route, for the reason there is no `move` route.
+- **Phrasing sets and phrasings are ordinary collections.** A set is created
+  holding its first wording - `POST /v1/phrasing-sets` carries it - so there is
+  no `POST /v1/phrasing-sets/:id/phrasings`; a further wording is a
+  `POST /v1/phrasings` naming the set, like any other owned row. Creating a point
+  writes its set and first wording in the same transaction, so a client never
+  creates one for a point itself.
 - **`PUT /v1/points/:id/records/:recordId` carries no body and no `If-Match`.**
   The pair is the whole row, so a repeat has nothing to change; `DELETE` on a
   pair that is not linked is a 204 for the same reason. Linking the record the
@@ -264,7 +303,14 @@ Rules:
   whether it was a uniqueness, foreign-key or check failure, which is all the
   caller can act on; the SQL that provoked it is not.
 - **Reading one row by id ignores `archived_at`.** Only lists filter. A link to
-  an archived row has to resolve, or "where did it go" has no answer.
+  an archived row has to resolve, or "where did it go" has no answer. Every
+  collection therefore has a read-one method, including the parts that hang off
+  an aggregate - `getLink`, `getField`, `getContactChannel` - which a `409` also
+  needs, since re-reading the current state is the whole point of that answer.
+- **Every key of a `list` option bag is `| undefined` as well as optional.**
+  Under `exactOptionalPropertyTypes` those are different types, and the caller
+  that forwards a filter it may not have - a route handler passing on a query
+  parameter the request did not carry - has the second one.
 - **`@keepcv/core` depends only on these interfaces**, never on Drizzle, never
   on a driver. Enforced by a CI dependency check.
 - **Every `list` returns a total order.** Two reads of unchanged data give the

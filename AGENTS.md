@@ -128,15 +128,28 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 much of the data model describes tables that do not exist yet - drafts, tags,
 search, resumes, versions; do not assume otherwise.
 
-The API serves `/v1/profile`, `/v1/contact-channels`, `/v1/export`, `/v1/import`
-and `/v1/openapi.json`. The rest of `api-contract.md` #3 is unbuilt, and there is
-no UI. `createApi` takes the port, an owner scope and an `authenticate` function
-and knows nothing else - no driver, no token store, no port number.
+The API serves `/v1/profile`, `/v1/export`, `/v1/import`, `/v1/openapi.json`, the
+point's secondary records and phrasing revisions, and eleven owned collections:
+`/v1/contact-channels`, `/v1/organisations`, `/v1/custom-sections`, `/v1/records`,
+`/v1/record-links`, `/v1/record-fields`, `/v1/points`, `/v1/metrics`,
+`/v1/evidence`, `/v1/phrasing-sets` and `/v1/phrasings`. That is the whole record
+store; `GET /v1/store`, tags, search, resumes and versions are unbuilt, and there
+is no UI. `createApi` takes the port, an owner scope and an `authenticate`
+function and knows nothing else - no driver, no token store, no port number.
 
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
 validator cannot describe different shapes. A route added any other way is
 invisible to the document.
+
+**An owned collection answers six routes, and their declarations come from
+`collectionRoutes`** in `routes/collection.ts` - path, tag, noun and four
+schemas in, six `createRoute` values out. Handlers stay in the resource's own
+file: Hono derives a handler's types through conditionals on the schema type,
+which TypeScript defers while the schema is a type parameter, so a builder that
+mounted the handlers too would have to cast away the checking that declaring
+routes this way exists to provide. Add a resource by calling it, not by copying
+another resource's declarations.
 
 Native export and import exist as `repositories.store`, and the round-trip test
 in `contract-store.test.ts` runs over a store built to cover every collection the
