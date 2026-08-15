@@ -16,7 +16,10 @@ export {
 export {
   CareerRecordKindMismatchError,
   type CareerRecordRepository,
+  CONSTRAINT_KINDS,
   ConcurrencyConflictError,
+  type ConstraintKind,
+  ConstraintViolationError,
   type CustomSectionRepository,
   DuplicatePointRecordLinkError,
   NotFoundError,

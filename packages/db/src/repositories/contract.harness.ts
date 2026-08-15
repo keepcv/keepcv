@@ -1,4 +1,4 @@
-import { newUuid, type Repositories } from "@keepcv/core";
+import { ConstraintViolationError, newUuid, type Repositories } from "@keepcv/core";
 import type {
   CareerRecordInput,
   CareerRecordKind,
@@ -33,12 +33,24 @@ if (connectionString === undefined && process.env["CI"] !== undefined) {
   throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
 }
 
+const BOOTS_A_STORE = 60_000;
+
 const drivers: { name: string; open: () => Store }[] = [
   { name: "PGlite", open: () => openLocalStore() },
   ...(connectionString === undefined
     ? []
     : [{ name: "PostgreSQL", open: () => openServerStore({ connectionString }) }]),
 ];
+
+// Naming the constraint is what stops a test passing because the write failed
+// for some other reason - a typo in a column name refuses the row just as well.
+export async function violatedConstraint(work: Promise<unknown>): Promise<string | undefined> {
+  const thrown = await work.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  return thrown instanceof ConstraintViolationError ? thrown.constraint : undefined;
+}
 
 export function channelInput(sortKey: string, overrides: Partial<ContactChannelInput> = {}) {
   return {
@@ -247,10 +259,13 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       return asOwner(ownerId);
     }
 
+    // A WebAssembly start plus every migration, once per file, and CI runs this
+    // suite alongside the API package's. The default hook budget is not enough
+    // for that many stores booting at once.
     beforeAll(async () => {
       store = open();
       await store.migrate();
-    });
+    }, BOOTS_A_STORE);
 
     afterAll(async () => {
       await store.close();

@@ -1,5 +1,6 @@
 import {
   ConcurrencyConflictError,
+  ConstraintViolationError,
   generateNKeysBetween,
   NotFoundError,
   newUuid,
@@ -7,7 +8,7 @@ import {
 import { CONTACT_CHANNEL_KINDS, type ContactChannelInput } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { openLocalStore } from "../store.js";
-import { channelInput, eachDriver } from "./contract.harness.js";
+import { channelInput, eachDriver, violatedConstraint } from "./contract.harness.js";
 
 eachDriver(({ run, otherOwner, store }) => {
   describe("bootstrap", () => {
@@ -38,6 +39,9 @@ eachDriver(({ run, otherOwner, store }) => {
 
       // Not a 403: a row outside the scope does not exist as far as the caller
       // is concerned, and saying "forbidden" would confirm that it does.
+      await expect(
+        asIntruder(async (r) => await r.profile.getContactChannel(mine.id)),
+      ).rejects.toBeInstanceOf(NotFoundError);
       await expect(
         asIntruder(async (r) => await r.profile.archiveContactChannel(mine.id, mine.updatedAt)),
       ).rejects.toBeInstanceOf(NotFoundError);
@@ -98,11 +102,22 @@ eachDriver(({ run, otherOwner, store }) => {
       expect(channels.map((c) => c.value)).toEqual(["first", "second", "third"]);
     });
 
+    // A refused write reaches the API as a domain error or it is answered as a
+    // server fault, and two clients dragging at once is a caller mistake.
     it("keeps sort keys unique within the owner", async () => {
       await run(async (r) => await r.profile.createContactChannel(channelInput("a0")));
-      await expect(
-        run(async (r) => await r.profile.createContactChannel(channelInput("a0"))),
-      ).rejects.toThrow();
+
+      const thrown = await run(
+        async (r) => await r.profile.createContactChannel(channelInput("a0")),
+      ).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      expect(thrown).toBeInstanceOf(ConstraintViolationError);
+      expect((thrown as ConstraintViolationError).kind).toBe("unique");
+      expect((thrown as ConstraintViolationError).constraint).toBe(
+        "contact_channel_sort_key_unique",
+      );
     });
 
     it("archives without destroying, and restores", async () => {
@@ -127,6 +142,29 @@ eachDriver(({ run, otherOwner, store }) => {
       );
       expect(restored.archivedAt).toBeNull();
       expect(await run(async (r) => await r.profile.listContactChannels())).toHaveLength(1);
+    });
+
+    it("reads one back by id, archived or not", async () => {
+      const created = await run(
+        async (r) =>
+          await r.profile.createContactChannel(channelInput("a0", { value: "ada@e.com" })),
+      );
+      expect(await run(async (r) => await r.profile.getContactChannel(created.id))).toEqual(
+        created,
+      );
+
+      const archived = await run(
+        async (r) => await r.profile.archiveContactChannel(created.id, created.updatedAt),
+      );
+      // Reading one by id ignores `archived_at`, unlike listing: a link to an
+      // archived channel must resolve, or "where did it go" has no answer.
+      expect(await run(async (r) => await r.profile.getContactChannel(created.id))).toEqual(
+        archived,
+      );
+
+      await expect(
+        run(async (r) => await r.profile.getContactChannel(newUuid())),
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it("distinguishes an unknown id from a stale one", async () => {
@@ -194,15 +232,17 @@ eachDriver(({ run, otherOwner, store }) => {
       const channels = await run(async (r) => await r.profile.listContactChannels());
       expect(channels.map((c) => c.kind).sort()).toEqual([...CONTACT_CHANNEL_KINDS].sort());
 
-      await expect(
-        run(
-          async (r) =>
-            await r.profile.createContactChannel({
-              ...channelInput("z0"),
-              kind: "mastodon" as ContactChannelInput["kind"],
-            }),
+      expect(
+        await violatedConstraint(
+          run(
+            async (r) =>
+              await r.profile.createContactChannel({
+                ...channelInput("z0"),
+                kind: "mastodon" as ContactChannelInput["kind"],
+              }),
+          ),
         ),
-      ).rejects.toThrow();
+      ).toBe("contact_channel_kind_check");
     });
   });
 });

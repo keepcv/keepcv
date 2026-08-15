@@ -1,6 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
-import { newUuid, type UnitOfWork } from "@keepcv/core";
+import {
+  type ConstraintKind,
+  ConstraintViolationError,
+  newUuid,
+  type UnitOfWork,
+} from "@keepcv/core";
 import { type Uuid, uuidSchema } from "@keepcv/schema";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate as migrateNodePostgres } from "drizzle-orm/node-postgres/migrator";
@@ -24,9 +29,37 @@ export interface LocalStore extends Store {
   ensureLocalOwner(): Promise<Uuid>;
 }
 
+// Postgres reports a refused write as a SQLSTATE, and Drizzle keeps the driver's
+// error as the cause. Both drivers name the constraint there, which is the only
+// part worth carrying upwards - the rest is a query the caller cannot act on.
+const CONSTRAINT_KIND_BY_SQLSTATE: Record<string, ConstraintKind | undefined> = {
+  "23505": "unique",
+  "23503": "foreignKey",
+  "23514": "check",
+};
+
+function asDomainError(error: unknown): unknown {
+  const cause = (error as { cause?: { code?: string; constraint?: string } }).cause;
+  const kind = CONSTRAINT_KIND_BY_SQLSTATE[cause?.code ?? ""];
+  if (kind === undefined || cause?.constraint === undefined) {
+    return error;
+  }
+  return new ConstraintViolationError(kind, cause.constraint, { cause: error });
+}
+
+// The one place a driver error becomes a domain one. Every write in the package
+// runs inside a unit, so putting the translation here covers repositories that
+// do not exist yet - and a violation reaching the API as a driver error would be
+// answered as a server fault when it is nothing of the kind.
 function unitOfWork(db: Database): UnitOfWork {
   return {
-    run: async (work) => await db.transaction(async (tx) => await work(createRepositories(tx))),
+    run: async (work) => {
+      try {
+        return await db.transaction(async (tx) => await work(createRepositories(tx)));
+      } catch (error) {
+        throw asDomainError(error);
+      }
+    },
   };
 }
 

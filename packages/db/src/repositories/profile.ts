@@ -11,7 +11,15 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { contactChannel, profile } from "../schema/index.js";
-import { type Changes, insertOwned, live, owned, standardDto, updateOwned } from "./owned-row.js";
+import {
+  type Changes,
+  insertOwned,
+  live,
+  owned,
+  requireOwned,
+  standardDto,
+  updateOwned,
+} from "./owned-row.js";
 
 type ProfileRow = typeof profile.$inferSelect;
 type ContactChannelRow = typeof contactChannel.$inferSelect;
@@ -93,6 +101,12 @@ export function createProfileRepository(db: Database): ProfileRepository {
         .where(and(owned(contactChannel), live(contactChannel, options?.includeArchived)))
         .orderBy(asc(contactChannel.sortKey));
       return rows.map(toContactChannel);
+    },
+
+    async getContactChannel(id) {
+      return toContactChannel(
+        await requireOwned<ContactChannelRow>(db, contactChannel, "contactChannel", id),
+      );
     },
 
     async createContactChannel(input) {

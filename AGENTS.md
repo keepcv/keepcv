@@ -77,6 +77,12 @@ pnpm build          # tsc -b
 pnpm changeset      # optional until the first publish; see CONTRIBUTING.md
 ```
 
+Run the store and its API on this machine, against a throwaway data directory:
+
+```sh
+pnpm build && node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
+```
+
 Single test file, or single test by name:
 
 ```sh
@@ -108,18 +114,29 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 ## Current state
 
-Only `packages/schema`, `packages/core` and `packages/db` exist. `api`,
-`interop`, `templates`, `render`, `ats-lint` and `apps/` are specified but
-deliberately **not scaffolded** - empty packages are noise, and a sub-feature is
-either not started or complete. Create each one when its capability is built, and
-add it to the root `tsconfig.json` references then.
+`packages/schema`, `packages/core`, `packages/db` and `packages/api` exist, and
+`apps/cli` is the `keepcv` launcher. `interop`, `templates`, `render`,
+`ats-lint` and the web app are specified but deliberately **not scaffolded** -
+empty packages are noise, and a sub-feature is either not started or complete.
+Create each one when its capability is built, and add it to the root
+`tsconfig.json` references then.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric` and
 `evidence`, and the port has seven repositories. That is the whole record store;
 much of the data model describes tables that do not exist yet - drafts, tags,
-search, resumes, versions; do not assume otherwise. There is no API and no UI.
+search, resumes, versions; do not assume otherwise.
+
+The API serves `/v1/profile`, `/v1/contact-channels`, `/v1/export`, `/v1/import`
+and `/v1/openapi.json`. The rest of `api-contract.md` #3 is unbuilt, and there is
+no UI. `createApi` takes the port, an owner scope and an `authenticate` function
+and knows nothing else - no driver, no token store, no port number.
+
+**Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
+schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
+validator cannot describe different shapes. A route added any other way is
+invisible to the document.
 
 Native export and import exist as `repositories.store`, and the round-trip test
 in `contract-store.test.ts` runs over a store built to cover every collection the

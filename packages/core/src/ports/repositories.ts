@@ -55,6 +55,26 @@ export class NotFoundError extends Error {
   }
 }
 
+export const CONSTRAINT_KINDS = ["unique", "foreignKey", "check"] as const;
+
+export type ConstraintKind = (typeof CONSTRAINT_KINDS)[number];
+
+// The store refuses writes no type can rule out: a sort key already taken, a
+// parent that was archived away, a column the row's kind may not carry. The port
+// raises this rather than letting a driver error through, so the caller can tell
+// a caller mistake from a server fault and answer with the right status.
+export class ConstraintViolationError extends Error {
+  override readonly name = "ConstraintViolationError";
+  readonly kind: ConstraintKind;
+  readonly constraint: string;
+
+  constructor(kind: ConstraintKind, constraint: string, options?: { cause?: unknown }) {
+    super(`the store refused the write: ${constraint}`, options);
+    this.kind = kind;
+    this.constraint = constraint;
+  }
+}
+
 // Carries the timestamp the row actually has so the caller can re-read the
 // current state and show a comparison. Silently taking the later write is not
 // an option in a product whose promise is that nothing written is lost.
@@ -97,6 +117,7 @@ export interface ProfileRepository {
   update(patch: ProfilePatch, expectedUpdatedAt: Timestamp): Promise<Profile>;
 
   listContactChannels(options?: { includeArchived?: boolean }): Promise<ContactChannel[]>;
+  getContactChannel(id: Uuid): Promise<ContactChannel>;
   createContactChannel(input: ContactChannelInput): Promise<ContactChannel>;
   updateContactChannel(
     id: Uuid,

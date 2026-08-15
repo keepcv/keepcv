@@ -15,6 +15,8 @@ catalog:
   "@biomejs/biome": ^2.5.7
   "@changesets/cli": ^2.31.1
   "@electric-sql/pglite": ^0.5.4
+  "@hono/node-server": ^2.1.1
+  "@hono/zod-openapi": ^1.6.0
   "@noble/hashes": ^2.3.0
   "@types/node": ^26.1.2
   "@types/pg": ~8.20.0
@@ -22,6 +24,7 @@ catalog:
   drizzle-orm: ^0.45.2
   eslint: ^10.8.0
   fast-check: ^4.9.0
+  hono: ^4.13.2
   pg: ^8.22.0
   turbo: ^2.10.8
   # Pinned to 6.x deliberately: typescript-eslint 8.x refuses to load against
