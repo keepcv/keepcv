@@ -30,12 +30,19 @@
       },
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsole": { "level": "error", "options": { "allow": ["error", "warn"] } }
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["error", "warn"]
+          }
+        }
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": {
           "level": "warn",
-          "options": { "maxAllowedComplexity": 15 }
+          "options": {
+            "maxAllowedComplexity": 15
+          }
         }
       }
     }
@@ -92,5 +99,10 @@
         }
       }
     }
-  ]
+  ],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
 }

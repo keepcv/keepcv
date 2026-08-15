@@ -191,9 +191,12 @@ Needs: counts per record type; what changed since `owner.last_opened_at`;
 recently edited records; points with no tags or no metrics; records
 missing end dates; certifications expiring soon.
 
-Served by `record (owner_id, updated_at desc)` plus cheap aggregate queries.
-Every one of these is a "you left something unfinished" affordance, which is
-the antidote to returning after ninety days and not knowing where you were.
+Served by selectors over the cached `['store']` payload, not by a summary
+endpoint: every one of them is a pure function of current state, and deriving
+them in SQL as well would be the same numbers computed twice
+(`api-contract.md` #3). Every one is a "you left something unfinished"
+affordance, which is the antidote to returning after ninety days and not
+knowing where you were.
 
 ### 5.2 Record list
 
@@ -345,6 +348,28 @@ Rules:
   `@keepcv/core` if it is domain logic, or `lib/` if it is presentation.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
+- **Directories arrive with something in them.** `components/ui/` appears with
+  the first shadcn primitive a screen actually needs; a `routes/` directory
+  appears when a feature has more than one route to put in it. An empty folder
+  is a claim about where code will go that the code has not agreed to yet.
+- **Routes are declared in code, not generated from filenames.** The generator
+  is a build step and a watcher for a route table that fits on a screen, and the
+  search-parameter schemas are Zod objects from `@keepcv/schema` either way.
+
+### The session token
+
+Local mode mints a token per launch and never writes it to disk. The launcher
+prints a URL carrying it in the **fragment**, which no browser sends to any
+server: a page on another origin that fetches this one gets the entry document
+with no token in it, and nothing lands in a proxy log. The app claims it once,
+keeps it in `sessionStorage` for the tab, and removes it from the address bar so
+a screenshot or a pasted URL does not carry it. A fragment on a later launch
+wins over whatever the tab remembered, because the older token has stopped
+working.
+
+The web app and the API share an origin - the launcher serves the built app for
+everything outside `/v1` - so the client never has to be told where its store
+is, and there is no CORS surface at all.
 - Route loaders prefetch into the Query cache; components read from the cache.
   No component fetches directly.
 

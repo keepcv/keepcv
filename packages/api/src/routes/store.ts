@@ -5,6 +5,7 @@ import {
   type ExportDocument,
   exportDocumentSchema,
   migrateDocument,
+  storeSchema,
   timestampSchema,
 } from "@keepcv/schema";
 import { z } from "zod";
@@ -18,6 +19,23 @@ const formatQuery = z.object({ format: z.enum(["native"]).default("native") });
 // document written by an older build is exactly what import exists to accept,
 // and `migrateDocument` brings it forward before anything is validated.
 const anyVersion = z.looseObject({ schemaVersion: z.number().int() });
+
+// The whole store is kilobytes, so the client fetches this once on boot and
+// reads most screens out of it with selectors rather than a request per list.
+// Archived rows come too: filtering them is the client's to do, and refetching
+// to answer "where did my old entry go" is what hiding them would cost.
+const readStore = createRoute({
+  method: "get",
+  path: "/v1/store",
+  tags: ["store"],
+  summary: "Read the whole store as it stands",
+  description:
+    "Current state, so `phrasingRevisions` carries only the revision each phrasing points at now. Superseded wordings are fetched per phrasing, and are all in the export.",
+  responses: {
+    ...sessionRequired,
+    200: jsonResponse(storeSchema, "every row this owner has, history excluded"),
+  },
+});
 
 const exportStore = createRoute({
   method: "get",
@@ -55,6 +73,9 @@ const importStore = createRoute({
 
 export function storeRoutes(unitOfWork: UnitOfWork) {
   return router()
+    .openapi(readStore, async (c) => {
+      return c.json(await unitOfWork.run(async (r) => await r.store.readCurrent()), 200);
+    })
     .openapi(exportStore, async (c) => {
       const store = await unitOfWork.run(async (r) => await r.store.read());
       // The envelope belongs to the file rather than the repository: the store

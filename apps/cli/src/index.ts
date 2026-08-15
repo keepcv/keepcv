@@ -11,21 +11,29 @@ const USAGE = `
 
 `;
 
+// The token travels in the fragment, which no browser sends to any server: a
+// page on another origin that fetches this one gets HTML with the token nowhere
+// in it, and nothing lands in a proxy log. The app claims it once and keeps it
+// for the tab.
 function banner(port: number, token: string, dataDir: string): string {
+  const origin = `http://127.0.0.1:${String(port)}`;
   return [
     "",
     "  KeepCV is running.",
     "",
-    `    URL     http://127.0.0.1:${port}`,
+    "  Open this, token and all:",
+    "",
+    `    ${origin}/#token=${token}`,
+    "",
     `    Store   ${dataDir}`,
     `    Token   ${token}`,
     "",
-    "  Every request carries the token:",
+    "  Every API request carries the token:",
     "",
     `    curl -H "${SESSION_TOKEN_HEADER}: ${token}" \\`,
-    `      http://127.0.0.1:${port}/v1/profile`,
+    `      ${origin}/v1/profile`,
     "",
-    `  The contract is at http://127.0.0.1:${port}/v1/openapi.json`,
+    `  The contract is at ${origin}/v1/openapi.json`,
     "",
     "",
   ].join("\n");

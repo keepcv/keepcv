@@ -29,6 +29,18 @@ describe("keepcv serve", () => {
           headers: { [SESSION_TOKEN_HEADER]: running.token },
         });
         expect(profileSchema.parse(await response.json()).fullName).toBeNull();
+
+        // The app and the API share an origin, so the browser never needs to be
+        // told where the store is. A client route resolves to the entry document
+        // while /v1 keeps answering the API.
+        const app = await fetch(url("/records"));
+        expect(app.status).toBe(200);
+        expect(app.headers.get("content-type")).toContain("text/html");
+        expect(await app.text()).toContain('<div id="root">');
+
+        // The token is in the fragment the launcher prints, which the browser
+        // keeps to itself: the document it serves carries no token at all.
+        expect((await (await fetch(url("/"))).text()).includes(running.token)).toBe(false);
       } finally {
         await running.stop();
         await rm(dataDir, { recursive: true, force: true });

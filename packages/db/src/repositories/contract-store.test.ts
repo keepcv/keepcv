@@ -292,6 +292,49 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
+    // The boot payload is the export minus history and nothing else: stating it
+    // as a difference rather than listing the collections again means a
+    // collection added to the format is covered here without anyone remembering.
+    it("reads current state as the export with the superseded wordings dropped", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const current = await run(async (r) => await r.store.readCurrent());
+
+      const pointsAt = new Set(exported.phrasings.map((entry) => entry.currentRevisionId));
+      expect(current).toEqual({
+        ...exported,
+        phrasingRevisions: exported.phrasingRevisions.filter((entry) => pointsAt.has(entry.id)),
+      });
+      // Otherwise the assertion above holds for a store that had no history to
+      // drop, which is every store until somebody edits a wording twice.
+      expect(current.phrasingRevisions.length).toBeLessThan(exported.phrasingRevisions.length);
+    });
+
+    // Identity is owner-scoped, so two stores hold the same revision ids the
+    // moment a backup is restored beside its original. Current state is read by
+    // joining a revision to the phrasing pointing at it, and a join that left
+    // the owner out would match across both and double every row.
+    it("reads current state unchanged when another owner holds the same rows", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const before = await run(async (r) => await r.store.readCurrent());
+
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(exported));
+
+      expect(await run(async (r) => await r.store.readCurrent())).toEqual(before);
+    });
+
+    // "Where did my old entry go" is answered by a filter the client already has
+    // the rows for, not by a second request.
+    it("carries archived rows in current state too", async () => {
+      await fill(run);
+      const current = await run(async (r) => await r.store.readCurrent());
+
+      expect(current.records.some((entry) => entry.archivedAt !== null)).toBe(true);
+      expect(current.points.some((entry) => entry.archivedAt !== null)).toBe(true);
+    });
+
     it("refuses to load over a store that already holds anything", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());

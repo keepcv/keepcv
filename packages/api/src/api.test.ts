@@ -108,6 +108,7 @@ describe("the OpenAPI document", () => {
       "/v1/records",
       "/v1/records/{id}",
       "/v1/records/{id}/restore",
+      "/v1/store",
     ]);
     expect(Object.keys(document.paths["/v1/contact-channels/{id}"] ?? {}).sort()).toEqual([
       "delete",

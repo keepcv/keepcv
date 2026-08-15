@@ -111,7 +111,6 @@ handed a token yet.
 
 ```
 GET    /v1/store                       whole-store boot payload - CURRENT state only
-GET    /v1/store/summary               counts, recent activity, nudges
 
 GET    /v1/profile                     PATCH /v1/profile
 CRUD   /v1/contact-channels
@@ -246,6 +245,24 @@ Notes on the non-obvious ones:
   and must never be in the boot payload. `GET /v1/export` is the opposite and
   carries everything, history included: an export that drops superseded wordings
   is a delete, and I10 would not hold.
+
+  It answers the same `Store` shape the export wraps, with `phrasingRevisions`
+  narrowed to the revision each phrasing currently points at - so every point
+  arrives with the words it says, and none of the words it used to say. One
+  schema until versions and drafts join the export, which is where the two
+  shapes genuinely diverge.
+
+  **Archived rows are in it.** "Current" means "not history", not "not
+  archived": the archived filter is a client-side toggle over rows it already
+  holds, and making it a second request would put a network round trip in front
+  of "where did my old entry go".
+- **There is no `/v1/store/summary`.** Counts, recent activity and every
+  incompleteness nudge are pure functions of the payload above, which the client
+  already has cached. Computing them again in SQL would be the same numbers
+  derived twice, drifting the first time a rule changed on one side only. They
+  live as selectors in `@keepcv/core`, which runs in the browser, so the store
+  overview screen and anything server-side asking the same question call one
+  implementation.
 
 ---
 

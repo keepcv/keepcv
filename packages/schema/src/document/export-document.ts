@@ -21,24 +21,28 @@ export const CURRENT_SCHEMA_VERSION = 1;
 // Flat arrays rather than links and fields nested inside their records: the
 // export is storage-shaped, and a shape that mirrors the rows is one that can be
 // written back without deciding what belongs where.
-export const storeSchema = z.object({
-  profile: profileSchema,
-  contactChannels: z.array(contactChannelSchema),
-  organisations: z.array(organisationSchema),
-  customSections: z.array(customSectionSchema),
-  records: z.array(careerRecordSchema),
-  recordLinks: z.array(recordLinkSchema),
-  recordFields: z.array(recordFieldSchema),
-  phrasingSets: z.array(phrasingSetSchema),
-  phrasings: z.array(phrasingSchema),
-  phrasingRevisions: z.array(phrasingRevisionSchema),
-  points: z.array(pointSchema),
-  pointRecordLinks: z.array(pointRecordLinkSchema),
-  metrics: z.array(metricSchema),
-  // Private, and exported anyway: never printed is not the same as withheld from
-  // the user, and an export that dropped it would not round-trip.
-  evidence: z.array(evidenceSchema),
-});
+export const storeSchema = z
+  .object({
+    profile: profileSchema,
+    contactChannels: z.array(contactChannelSchema),
+    organisations: z.array(organisationSchema),
+    customSections: z.array(customSectionSchema),
+    records: z.array(careerRecordSchema),
+    recordLinks: z.array(recordLinkSchema),
+    recordFields: z.array(recordFieldSchema),
+    phrasingSets: z.array(phrasingSetSchema),
+    phrasings: z.array(phrasingSchema),
+    phrasingRevisions: z.array(phrasingRevisionSchema),
+    points: z.array(pointSchema),
+    pointRecordLinks: z.array(pointRecordLinkSchema),
+    metrics: z.array(metricSchema),
+    // Private, and exported anyway: never printed is not the same as withheld
+    // from the user, and an export that dropped it would not round-trip.
+    evidence: z.array(evidenceSchema),
+  })
+  // Named, because two routes answer this shape and an anonymous one would be
+  // inlined into the OpenAPI document twice.
+  .meta({ id: "Store", title: "Career store" });
 
 // The canonical, lossless career store format - not a resume. `schemaVersion`
 // is pinned to the current one because `migrateDocument` is the only supported
