@@ -10,12 +10,15 @@ import { describe, expect, it } from "vitest";
 import {
   channelInput,
   eachDriver,
+  evidenceInput,
   fieldInput,
   linkInput,
+  metricInput,
   newPhrasing,
   organisationInput,
   phrasingInput,
   phrasingSetInput,
+  pointInput,
   type Run,
   recordInput,
 } from "./contract.harness.js";
@@ -114,6 +117,41 @@ async function fill(run: Run): Promise<void> {
       fieldInput(senior.id, "team", "a1", { label: "Team", value: "Platform" }),
     );
     await r.records.archiveField(superseded.id, superseded.updatedAt);
+
+    const placed = await r.points.create(
+      pointInput(senior.id, "a0", "Cut p95 latency from 800ms to 120ms", {
+        confidence: "verified",
+        occurredOn: "2019-11-04",
+      }),
+    );
+    const captured = await r.points.create(pointInput(null, "a0", "Somewhere, eventually"));
+    const cut = await r.points.create(pointInput(senior.id, "a1", "A point that did not land"));
+    await r.points.archive(cut.id, cut.updatedAt);
+    await r.points.linkRecord(placed.id, shelved.id);
+    await r.points.linkRecord(captured.id, senior.id);
+
+    await r.points.createMetric(metricInput(placed.id, "a0"));
+    const oldNumber = await r.points.createMetric(
+      metricInput(placed.id, "a1", {
+        label: "Cost",
+        value: 0.125,
+        unit: "%",
+        baseline: null,
+        direction: null,
+        period: "per quarter",
+      }),
+    );
+    await r.points.archiveMetric(oldNumber.id, oldNumber.updatedAt);
+
+    await r.points.createEvidence(evidenceInput(placed.id));
+    const staleNote = await r.points.createEvidence(
+      evidenceInput(placed.id, {
+        kind: "note",
+        value: "Confirmed by the platform team",
+        note: "from the incident review",
+      }),
+    );
+    await r.points.archiveEvidence(staleNote.id, staleNote.updatedAt);
   });
 }
 
@@ -128,6 +166,10 @@ function reversed(store: Store): Store {
     phrasingSets: [...store.phrasingSets].reverse(),
     phrasings: [...store.phrasings].reverse(),
     phrasingRevisions: [...store.phrasingRevisions].reverse(),
+    points: [...store.points].reverse(),
+    pointRecordLinks: [...store.pointRecordLinks].reverse(),
+    metrics: [...store.metrics].reverse(),
+    evidence: [...store.evidence].reverse(),
   };
 }
 
@@ -165,10 +207,12 @@ eachDriver(({ run, otherOwner }) => {
       expect(exported.records.map((entry) => entry.kind)).toEqual(
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
+      // The two collections with no `archivedAt`: a revision is immutable, so a
+      // superseded wording is superseded and never archived, and a point's record
+      // link holds nothing of its own to archive.
+      const unarchivable = ["phrasingRevisions", "pointRecordLinks"];
       for (const [collection, value] of Object.entries(exported)) {
-        // Revisions are the one collection with no `archivedAt`: they are
-        // immutable, so a superseded wording is superseded, never archived.
-        if (!Array.isArray(value) || collection === "phrasingRevisions") continue;
+        if (!Array.isArray(value) || unarchivable.includes(collection)) continue;
         expect(
           value.some((entry) => "archivedAt" in entry && entry.archivedAt !== null),
           collection,

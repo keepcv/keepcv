@@ -25,6 +25,10 @@ const current = {
     phrasingSets: [],
     phrasings: [],
     phrasingRevisions: [],
+    points: [],
+    pointRecordLinks: [],
+    metrics: [],
+    evidence: [],
   },
 };
 

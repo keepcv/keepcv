@@ -115,11 +115,12 @@ either not started or complete. Create each one when its capability is built, an
 add it to the root `tsconfig.json` references then.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
-`record`, `record_link`, `record_field`, `phrasing_set`, `phrasing` and
-`phrasing_revision`, and the port has five repositories. Much of the data model
-describes tables that do not exist yet - points, metrics, evidence, drafts, tags,
-resumes, versions; do not assume otherwise. `custom_section` and `custom_entry`
-are the one part of the record store still missing. There is no API and no UI.
+`record`, `record_link`, `record_field`, `phrasing_set`, `phrasing`,
+`phrasing_revision`, `point`, `point_record_link`, `metric` and `evidence`, and
+the port has six repositories. Much of the data model describes tables that do
+not exist yet - drafts, tags, search, resumes, versions; do not assume otherwise.
+`custom_section` and `custom_entry` are the one part of the record store still
+missing. There is no API and no UI.
 
 Native export and import exist as `repositories.store`, and the round-trip test
 in `contract-store.test.ts` runs over a store built to cover every collection the

@@ -10,10 +10,14 @@ import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
   contactChannel,
+  evidence,
+  metric,
   organisation,
   phrasing,
   phrasingRevision,
   phrasingSet,
+  point,
+  pointRecordLink,
   profile,
   record,
   recordField,
@@ -79,6 +83,10 @@ export function createStoreRepository(
       // Every revision, not just the current one. Superseded wordings are things
       // the user wrote, and an export that drops them is a delete.
       phrasingRevisions: await repositories.phrasings.listRevisions(),
+      points: await repositories.points.list(everything),
+      pointRecordLinks: await repositories.points.listRecordLinks(),
+      metrics: await repositories.points.listMetrics(everything),
+      evidence: await repositories.points.listEvidence(everything),
     };
   }
 
@@ -130,6 +138,31 @@ export function createStoreRepository(
         .update(phrasingSet)
         .set({ canonicalPhrasingId: row.canonicalPhrasingId })
         .where(and(owned(phrasingSet), eq(phrasingSet.id, row.id)));
+    }
+  }
+
+  // Last, because a point references both a record and a phrasing set, and its
+  // metrics and evidence reference it.
+  async function loadPoints(store: Store, ownerId: Uuid): Promise<void> {
+    if (store.points.length > 0) {
+      await db
+        .insert(point)
+        .values(store.points.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
+    }
+    if (store.pointRecordLinks.length > 0) {
+      await db
+        .insert(pointRecordLink)
+        .values(store.pointRecordLinks.map((row) => ({ ...row, ownerId })));
+    }
+    if (store.metrics.length > 0) {
+      await db
+        .insert(metric)
+        .values(store.metrics.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
+    }
+    if (store.evidence.length > 0) {
+      await db
+        .insert(evidence)
+        .values(store.evidence.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
     }
   }
 
@@ -187,6 +220,8 @@ export function createStoreRepository(
           .insert(recordField)
           .values(store.recordFields.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
       }
+
+      await loadPoints(store, ownerId);
     },
   };
 }
