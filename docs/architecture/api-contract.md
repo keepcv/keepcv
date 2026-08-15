@@ -87,6 +87,8 @@ CRUD   /v1/records/:id/links           uniform, any record kind
 CRUD   /v1/records/:id/fields          uniform, any record kind
 
 CRUD   /v1/points                      ?recordId=&tag=&confidence=
+PUT    /v1/points/:id/records/:recordId   secondary parent; idempotent
+DELETE /v1/points/:id/records/:recordId
 GET    /v1/points/:id/usage            which resume versions reference it
 CRUD   /v1/points/:id/metrics
 CRUD   /v1/points/:id/evidence         never included in any render path
@@ -145,6 +147,13 @@ Notes on the non-obvious ones:
   already holds returns the revision that already says it.
 - **Which phrasing is canonical is a `PATCH` of the set.** There is no
   `.../canonical` route, for the reason there is no `move` route.
+- **`PUT /v1/points/:id/records/:recordId` carries no body and no `If-Match`.**
+  The pair is the whole row, so a repeat has nothing to change; `DELETE` on a
+  pair that is not linked is a 204 for the same reason. Linking the record the
+  point already prints under is a 409: the primary already says it
+  (data-model.md I16).
+- **A point's primary parent is a `PATCH` of the point.** Setting it to a record
+  that is currently a secondary link removes the link in the same transaction.
 - **`POST /v1/import` returns a plan, not a result.** Parsers are lossy, and
   the data-entry cold start makes import survival-critical. Silently applying a
   mis-parsed resume over a real store would be unforgivable. The user reviews
@@ -205,9 +214,12 @@ Rules:
 - **Read methods filter `archived_at is null` by default.** Including archived
   rows is an explicit option, never the default.
 - **Multi-table operations run inside `UnitOfWork`.** Creating a point writes
-  `point`, `phrasing_set`, `phrasing`, `phrasing_revision` and
+  `point`, `phrasing_set`, `phrasing`, `phrasing_revision` and later
   `search_document`, and resolves two circular foreign keys along the way
   (data-model.md #5); a partial failure would leave a point with no text.
+- **Metrics and evidence hang off `PointRepository`**, for the reason links and
+  fields hang off `CareerRecordRepository`: nothing holds one without holding
+  the point it belongs to.
 - **`@keepcv/core` depends only on these interfaces**, never on Drizzle, never
   on a driver. Enforced by a CI dependency check.
 - **Every `list` returns a total order.** Two reads of unchanged data give the

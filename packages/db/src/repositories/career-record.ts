@@ -12,9 +12,16 @@ import {
 } from "@keepcv/schema";
 import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
-import { currentOwnerId } from "../owner-scope.js";
 import { record, recordField, recordLink } from "../schema/index.js";
-import { type Changes, live, owned, requireOwned, toTimestamp, updateOwned } from "./owned-row.js";
+import {
+  type Changes,
+  insertOwned,
+  live,
+  owned,
+  requireOwned,
+  standardDto,
+  updateOwned,
+} from "./owned-row.js";
 
 type RecordRow = typeof record.$inferSelect;
 type RecordLinkRow = typeof recordLink.$inferSelect;
@@ -25,21 +32,13 @@ type RecordFieldRow = typeof recordField.$inferSelect;
 // drops them. That is what keeping ten kinds in one table costs, and it is one
 // function rather than a ten-branch switch.
 function toCareerRecord(row: RecordRow): CareerRecord {
-  const { ownerId: _ownerId, createdAt, updatedAt, archivedAt, ...rest } = row;
-  return careerRecordSchema.parse({
-    ...rest,
-    createdAt: toTimestamp(createdAt),
-    updatedAt: toTimestamp(updatedAt),
-    archivedAt: archivedAt === null ? null : toTimestamp(archivedAt),
-  });
+  const { ownerId: _ownerId, ...rest } = row;
+  return careerRecordSchema.parse({ ...rest, ...standardDto(row) });
 }
 
 function toRecordLink(row: RecordLinkRow): RecordLink {
   return recordLinkSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     recordId: row.recordId,
     kind: row.kind,
     label: row.label,
@@ -50,10 +49,7 @@ function toRecordLink(row: RecordLinkRow): RecordLink {
 
 function toRecordField(row: RecordFieldRow): RecordField {
   return recordFieldSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     recordId: row.recordId,
     key: row.key,
     label: row.label,
@@ -131,14 +127,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
     },
 
     async create(input) {
-      const [row] = await db
-        .insert(record)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into record returned no row");
-      }
-      return toCareerRecord(row);
+      return toCareerRecord(await insertOwned(db, record, "record", input));
     },
 
     // The kind is read back rather than added to the update's predicate, so a
@@ -181,14 +170,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
     },
 
     async createLink(input) {
-      const [row] = await db
-        .insert(recordLink)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into record_link returned no row");
-      }
-      return toRecordLink(row);
+      return toRecordLink(await insertOwned(db, recordLink, "recordLink", input));
     },
 
     async updateLink(id, patch, expectedUpdatedAt) {
@@ -221,14 +203,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
     },
 
     async createField(input) {
-      const [row] = await db
-        .insert(recordField)
-        .values({ ...input, ownerId: currentOwnerId() })
-        .returning();
-      if (row === undefined) {
-        throw new Error("insert into record_field returned no row");
-      }
-      return toRecordField(row);
+      return toRecordField(await insertOwned(db, recordField, "recordField", input));
     },
 
     async updateField(id, patch, expectedUpdatedAt) {

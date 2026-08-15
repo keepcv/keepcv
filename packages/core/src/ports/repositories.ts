@@ -6,6 +6,12 @@ import type {
   ContactChannel,
   ContactChannelInput,
   ContactChannelPatch,
+  Evidence,
+  EvidenceInput,
+  EvidencePatch,
+  Metric,
+  MetricInput,
+  MetricPatch,
   Organisation,
   OrganisationInput,
   OrganisationPatch,
@@ -16,6 +22,10 @@ import type {
   PhrasingSet,
   PhrasingSetInput,
   PhrasingSetPatch,
+  Point,
+  PointInput,
+  PointPatch,
+  PointRecordLink,
   Profile,
   ProfilePatch,
   RecordField,
@@ -162,6 +172,54 @@ export interface PhrasingRepository {
   listRevisions(options?: { phrasingId?: Uuid }): Promise<PhrasingRevision[]>;
 }
 
+// A point's primary record decides where it prints; a secondary link says it
+// also relates to a record. Recording both for one record says nothing the
+// primary does not, so it is refused rather than stored and then deduplicated on
+// every read that wants "the records this point relates to".
+export class DuplicatePointRecordLinkError extends Error {
+  override readonly name = "DuplicatePointRecordLinkError";
+  readonly pointId: Uuid;
+  readonly recordId: Uuid;
+
+  constructor(pointId: Uuid, recordId: Uuid) {
+    super(`point ${pointId} already prints under record ${recordId}`);
+    this.pointId = pointId;
+    this.recordId = recordId;
+  }
+}
+
+// Metrics and evidence hang off points for the reason links and fields hang off
+// records. A point is created with its phrasing set and that set's first wording,
+// so five tables are written before `create` returns and none of them is ever
+// written alone.
+export interface PointRepository {
+  list(options?: { recordId?: Uuid; includeArchived?: boolean }): Promise<Point[]>;
+  get(id: Uuid): Promise<Point>;
+  create(input: PointInput): Promise<Point>;
+  update(id: Uuid, patch: PointPatch, expectedUpdatedAt: Timestamp): Promise<Point>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Point>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Point>;
+
+  // No concurrency token and no archive: a link holds nothing of its own, so
+  // removing one destroys nothing and both ends of it survive. Making a linked
+  // record the primary one drops the link, since the primary already says it.
+  listRecordLinks(options?: { pointId?: Uuid }): Promise<PointRecordLink[]>;
+  linkRecord(pointId: Uuid, recordId: Uuid): Promise<PointRecordLink>;
+  unlinkRecord(pointId: Uuid, recordId: Uuid): Promise<void>;
+
+  listMetrics(options?: { pointId?: Uuid; includeArchived?: boolean }): Promise<Metric[]>;
+  createMetric(input: MetricInput): Promise<Metric>;
+  updateMetric(id: Uuid, patch: MetricPatch, expectedUpdatedAt: Timestamp): Promise<Metric>;
+  archiveMetric(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Metric>;
+  restoreMetric(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Metric>;
+
+  listEvidence(options?: { pointId?: Uuid; includeArchived?: boolean }): Promise<Evidence[]>;
+  createEvidence(input: EvidenceInput): Promise<Evidence>;
+  updateEvidence(id: Uuid, patch: EvidencePatch, expectedUpdatedAt: Timestamp): Promise<Evidence>;
+  archiveEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
+  restoreEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
+}
+
 // Import loads a whole store or nothing. Merging two stores is the Import
 // capability's job and needs a review step in front of it, so this refuses
 // rather than guessing which side of a clash to keep.
@@ -192,13 +250,14 @@ export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
   records: CareerRecordRepository;
+  points: PointRepository;
   phrasings: PhrasingRepository;
   store: StoreRepository;
 }
 
-// The only way to reach a repository. Creating a point will write five tables
-// and resolve two circular foreign keys (data-model.md #5); a partial failure
-// there leaves a point with no text, so there is no non-transactional path.
+// The only way to reach a repository. Creating a point writes five tables and
+// resolves two circular foreign keys (data-model.md #5); a partial failure there
+// leaves a point with no text, so there is no non-transactional path.
 export interface UnitOfWork {
   run<T>(work: (repositories: Repositories) => Promise<T>): Promise<T>;
 }

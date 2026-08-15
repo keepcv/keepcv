@@ -198,10 +198,16 @@ new neighbours and sends a single patch.
 
 Uniqueness (I11) is per parent scope, and the scope is the list the key is
 dragged within - not the owner. That is `(owner_id, kind)` for a record,
-`(owner_id, record_id)` for its links and fields, `(owner_id, phrasing_set_id)`
-for a phrasing, and `(owner_id)` for a contact channel.
+`(owner_id, record_id)` for its links and fields and for a point,
+`(owner_id, phrasing_set_id)` for a phrasing, `(owner_id, point_id)` for a
+metric, and `(owner_id)` for a contact channel.
 Scoping wider than the list would reject a legitimate move because some unrelated
 list happened to use the same key.
+
+A point's `record_id` is nullable, and Postgres treats nulls as distinct in a
+unique index by default - which would put every unplaced point in a scope of its
+own and make I11 hold vacuously over the list the user actually drags within. So
+that one constraint is declared `unique nulls not distinct`.
 
 ### 3.6 `RichText`
 
@@ -579,16 +585,29 @@ Renamed from `achievement`. Same facets; broader applicability.
 ```sql
 point (
   ...standard,
-  record_id       uuid null references record(id) on delete cascade,  -- primary parent
-  phrasing_set_id uuid not null references phrasing_set(id),
+  record_id       uuid null,      -- primary parent
+  phrasing_set_id uuid not null,
   confidence      text not null default 'unverified'
                     check (confidence in ('verified','estimated','unverified')),
   occurred_on     partial_date null,
-  sort_key        text not null
+  sort_key        text not null,
+  constraint point_sort_key_unique
+    unique nulls not distinct (owner_id, record_id, sort_key),
+  constraint point_record_fk
+    foreign key (owner_id, record_id) references record (owner_id, id),
+  constraint point_phrasing_set_fk
+    foreign key (owner_id, phrasing_set_id) references phrasing_set (owner_id, id)
 )
 
-point_record_link (              -- secondary associations, N:N
-  point_id uuid, record_id uuid, primary key (point_id, record_id)
+point_record_link (               -- secondary associations, N:N
+  owner_id uuid not null references owner(id) on delete cascade,
+  point_id uuid not null,
+  record_id uuid not null,
+  primary key (owner_id, point_id, record_id),
+  constraint point_record_link_point_fk
+    foreign key (owner_id, point_id) references point (owner_id, id) on delete cascade,
+  constraint point_record_link_record_fk
+    foreign key (owner_id, record_id) references record (owner_id, id) on delete cascade
 )
 ```
 
@@ -599,17 +618,38 @@ project. The primary parent decides placement; secondary links drive discovery
 and selection. `record_id` is nullable so a point can be captured before
 deciding where it belongs - again P-A.
 
+**A point is created with its words.** `phrasing_set_id` is not null, so
+`create` writes `phrasing_set`, `phrasing`, `phrasing_revision` and `point` in
+one transaction, and a point with nothing to say is not a state anyone can reach.
+Text afterwards changes only by appending a revision (#5), never by pointing the
+point at a different set.
+
+**A point's primary record is not also one of its secondary links.** Recording
+both for one record says nothing the primary does not, and would make "which
+records does this relate to" a read that has to deduplicate. It cannot be a
+constraint - the comparison crosses two tables - so the repository refuses the
+link, and making an already-linked record the primary one drops the link in the
+same write.
+
+**`point_record_link` carries `owner_id` like every other table**, and has no
+standard columns beyond it: the pair is the whole row. Unlinking therefore
+deletes rather than archives, which does not violate "nothing the user wrote is
+destroyed" - the row holds nothing the user wrote, and both ends of it survive.
+
 ```sql
 metric (
   ...standard,
-  point_id  uuid not null references point(id) on delete cascade,
+  point_id  uuid not null,
   label     text not null,        -- "p95 latency"
-  value     numeric not null,
+  value     double precision not null,
   unit      text null,            -- "ms", "%", "USD"
-  baseline  numeric null,         -- "from 800ms"
+  baseline  double precision null, -- "from 800ms"
   direction text null check (direction in ('increase','decrease','neutral')),
   period    text null,            -- "per quarter"
-  sort_key  text not null
+  sort_key  text not null,
+  unique (owner_id, point_id, sort_key),
+  constraint metric_point_fk
+    foreign key (owner_id, point_id) references point (owner_id, id) on delete cascade
 )
 ```
 
@@ -617,15 +657,26 @@ Structured rather than buried in prose, so numbers stay findable and comparable
 across a career - "show me everything where I moved a percentage" becomes a
 query rather than a memory exercise.
 
+`double precision` and not `numeric`. The only writer is a JavaScript number and
+the only transport is JSON, so a `numeric` column would accept values no caller
+can send and no export can carry; a column that holds exactly what its DTO can
+express cannot drift from it. Nothing aggregates metrics in SQL, which is the
+case that would argue the other way.
+
 ```sql
 evidence (                        -- PRIVATE. Never rendered.
   ...standard,
-  point_id uuid not null references point(id) on delete cascade,
+  point_id uuid not null,
   kind  text not null check (kind in ('url','note','file')),
   value text not null,
-  note  text null
+  note  text null,
+  constraint evidence_point_fk
+    foreign key (owner_id, point_id) references point (owner_id, id) on delete cascade
 )
 ```
+
+No sort key: evidence backs a point up, it is not a list anyone arranges. Reads
+order it by `id`, which is enough for a total order because ids are UUIDv7.
 
 Privacy is enforced *structurally*: `ResumeDocument` has no field that could
 hold evidence, so no renderer can leak it even by mistake. There is
@@ -894,6 +945,7 @@ Enforced by constraint where possible, by test where not.
 | I13 | A point appears at most once per resume | unique index across the resume |
 | I14 | Every record kind has exactly one presenter | exhaustiveness check + test |
 | I15 | A canonical phrasing belongs to its set, and a current revision to its phrasing | composite foreign key carrying the parent's own id |
+| I16 | A point's primary record is not also one of its secondary links | repository refuses the link and drops it on promotion + test |
 
 ---
 
@@ -933,7 +985,9 @@ N+1 query on the most-visited screen in the product.
 | Records of a kind, ordered | `record (owner_id, kind, sort_key)` - the I11 unique index serves the list read too |
 | Recently edited across all kinds | `record (owner_id, updated_at desc)` |
 | Timeline ordering | `record (owner_id, partial_date_floor(started_on) desc)` |
-| Points of a record | `point (record_id, sort_key) where archived_at is null` |
+| Points of a record | `point (owner_id, record_id, sort_key) where archived_at is null` |
+| Secondary parents of a record | `point_record_link (owner_id, record_id)` |
+| Metrics / evidence of a point | `metric (owner_id, point_id, sort_key)` - the I11 unique index serves the list read too; `evidence (owner_id, point_id)` |
 | Phrasings of a set | `phrasing (owner_id, phrasing_set_id, sort_key) where archived_at is null` |
 | Revision history | `phrasing_revision (owner_id, phrasing_id, created_at)` |
 | Links / fields of a record | `record_link (owner_id, record_id, sort_key)`, `record_field (owner_id, record_id, sort_key)` |

@@ -36,6 +36,28 @@ export {
   contactChannelSchema,
 } from "./entities/contact-channel.js";
 export {
+  EVIDENCE_KINDS,
+  type Evidence,
+  type EvidenceInput,
+  type EvidenceKind,
+  type EvidencePatch,
+  evidenceInputSchema,
+  evidenceKindSchema,
+  evidencePatchSchema,
+  evidenceSchema,
+} from "./entities/evidence.js";
+export {
+  METRIC_DIRECTIONS,
+  type Metric,
+  type MetricDirection,
+  type MetricInput,
+  type MetricPatch,
+  metricDirectionSchema,
+  metricInputSchema,
+  metricPatchSchema,
+  metricSchema,
+} from "./entities/metric.js";
+export {
   ORGANISATION_KINDS,
   type Organisation,
   type OrganisationInput,
@@ -70,6 +92,19 @@ export {
   phrasingSetSchema,
   phrasingVariantSchema,
 } from "./entities/phrasing.js";
+export {
+  POINT_CONFIDENCES,
+  type Point,
+  type PointConfidence,
+  type PointInput,
+  type PointPatch,
+  type PointRecordLink,
+  pointConfidenceSchema,
+  pointInputSchema,
+  pointPatchSchema,
+  pointRecordLinkSchema,
+  pointSchema,
+} from "./entities/point.js";
 export {
   type Profile,
   type ProfilePatch,

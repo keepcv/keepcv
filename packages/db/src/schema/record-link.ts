@@ -10,8 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { record } from "./career-record.js";
 import { standardColumns } from "./owner.js";
+import { quoted } from "./vocabulary.js";
 
-// Repeated from `recordLinkKindSchema`; see the note in career-record.ts.
 const KINDS = ["repo", "demo", "docs", "verify", "recording", "other"];
 
 // One link table for every record kind rather than a `verification_url` here and
@@ -29,10 +29,7 @@ export const recordLink = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
-    check(
-      "record_link_kind_check",
-      sql.raw(`kind in (${KINDS.map((kind) => `'${kind}'`).join(", ")})`),
-    ),
+    check("record_link_kind_check", sql.raw(`kind in (${quoted(KINDS)})`)),
     uniqueIndex("record_link_sort_key_unique").on(table.ownerId, table.recordId, table.sortKey),
     foreignKey({
       name: "record_link_record_fk",

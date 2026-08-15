@@ -15,21 +15,15 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { instant, owner, standardColumns } from "./owner.js";
+import { quoted } from "./vocabulary.js";
 
 // All three tables live in one file because they reference each other in a cycle,
 // and every extras callback here is annotated `PgTableExtraConfigValue[]` for the
 // same reason: without it TypeScript infers each table's type through the
 // callback that names the next one and gives up with TS7022.
 
-// Repeated from the schemas in @keepcv/schema rather than imported: drizzle-kit
-// loads this file through a CJS require, which cannot resolve the package. The
-// vocabulary drift test feeds both sides the same values.
 const PURPOSES = ["point", "profile_summary", "record_summary"];
 const VARIANTS = ["standard", "short", "long", "angled"];
-
-function quoted(values: string[]): string {
-  return values.map((value) => `'${value}'`).join(", ");
-}
 
 // One set per thing that can be worded more than one way - a point, a profile
 // summary, a record summary. `canonical_phrasing_id` is nullable so the set can

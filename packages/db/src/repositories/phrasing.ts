@@ -13,7 +13,16 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { phrasing, phrasingRevision, phrasingSet } from "../schema/index.js";
-import { type Changes, live, owned, requireOwned, toTimestamp, updateOwned } from "./owned-row.js";
+import {
+  type Changes,
+  insertOwned,
+  live,
+  owned,
+  requireOwned,
+  standardDto,
+  toTimestamp,
+  updateOwned,
+} from "./owned-row.js";
 
 type PhrasingSetRow = typeof phrasingSet.$inferSelect;
 type PhrasingRow = typeof phrasing.$inferSelect;
@@ -21,10 +30,7 @@ type PhrasingRevisionRow = typeof phrasingRevision.$inferSelect;
 
 function toPhrasingSet(row: PhrasingSetRow): PhrasingSet {
   return phrasingSetSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     purpose: row.purpose,
     canonicalPhrasingId: row.canonicalPhrasingId,
   });
@@ -32,10 +38,7 @@ function toPhrasingSet(row: PhrasingSetRow): PhrasingSet {
 
 function toPhrasing(row: PhrasingRow): Phrasing {
   return phrasingSchema.parse({
-    id: row.id,
-    createdAt: toTimestamp(row.createdAt),
-    updatedAt: toTimestamp(row.updatedAt),
-    archivedAt: row.archivedAt === null ? null : toTimestamp(row.archivedAt),
+    ...standardDto(row),
     phrasingSetId: row.phrasingSetId,
     variant: row.variant,
     label: row.label,
@@ -126,20 +129,13 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
   }
 
   async function insertPhrasing(input: PhrasingInput): Promise<Phrasing> {
-    const [row] = await db
-      .insert(phrasing)
-      .values({
-        id: input.id,
-        ownerId: currentOwnerId(),
-        phrasingSetId: input.phrasingSetId,
-        variant: input.variant,
-        label: input.label,
-        sortKey: input.sortKey,
-      })
-      .returning();
-    if (row === undefined) {
-      throw new Error("insert into phrasing returned no row");
-    }
+    const row = await insertOwned(db, phrasing, "phrasing", {
+      id: input.id,
+      phrasingSetId: input.phrasingSetId,
+      variant: input.variant,
+      label: input.label,
+      sortKey: input.sortKey,
+    });
     const revision = await append(input.id, input.body);
     return toPhrasing({ ...row, currentRevisionId: revision.id });
   }
@@ -173,7 +169,7 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
         .where(and(owned(phrasingSet), eq(phrasingSet.id, input.id)))
         .returning();
       if (row === undefined) {
-        throw new Error("insert into phrasing_set returned no row");
+        throw new Error("setting the canonical phrasing on phrasing_set matched no row");
       }
       return toPhrasingSet(row);
     },

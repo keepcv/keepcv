@@ -3,10 +3,13 @@ import type {
   CareerRecordInput,
   CareerRecordKind,
   ContactChannelInput,
+  EvidenceInput,
+  MetricInput,
   NewPhrasing,
   OrganisationInput,
   PhrasingInput,
   PhrasingSetInput,
+  PointInput,
   RecordFieldInput,
   RecordLinkInput,
   Uuid,
@@ -158,6 +161,50 @@ export function phrasingInput(
   overrides: Partial<NewPhrasing> = {},
 ) {
   return { ...newPhrasing(sortKey, text, overrides), phrasingSetId } as PhrasingInput;
+}
+
+export function pointInput(
+  recordId: Uuid | null,
+  sortKey: string,
+  text: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: newUuid(),
+    recordId,
+    phrasingSetId: newUuid(),
+    confidence: "unverified",
+    occurredOn: null,
+    sortKey,
+    phrasing: newPhrasing("a0", text),
+    ...overrides,
+  } as PointInput;
+}
+
+export function metricInput(pointId: Uuid, sortKey: string, overrides: Partial<MetricInput> = {}) {
+  return {
+    id: newUuid(),
+    pointId,
+    label: "p95 latency",
+    value: 120,
+    unit: "ms",
+    baseline: 800,
+    direction: "decrease",
+    period: null,
+    sortKey,
+    ...overrides,
+  } as MetricInput;
+}
+
+export function evidenceInput(pointId: Uuid, overrides: Partial<EvidenceInput> = {}) {
+  return {
+    id: newUuid(),
+    pointId,
+    kind: "url",
+    value: "https://example.com/dashboard",
+    note: null,
+    ...overrides,
+  } as EvidenceInput;
 }
 
 export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;

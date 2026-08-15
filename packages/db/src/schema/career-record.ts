@@ -13,10 +13,8 @@ import { organisation } from "./organisation.js";
 import { standardColumns } from "./owner.js";
 import { partialDate } from "./partial-date.js";
 import { phrasingSet } from "./phrasing.js";
+import { quoted } from "./vocabulary.js";
 
-// Repeated from the schemas in @keepcv/schema rather than imported: drizzle-kit
-// loads this file through a CJS require, which cannot resolve the package. The
-// vocabulary drift test feeds both sides the same values.
 const KINDS = [
   "experience",
   "education",
@@ -31,10 +29,6 @@ const KINDS = [
 ];
 const MODES = ["onsite", "hybrid", "remote"];
 const SKILL_PROFICIENCIES = ["familiar", "working", "proficient", "expert"];
-
-function quoted(values: string[]): string {
-  return values.map((value) => `'${value}'`).join(", ");
-}
 
 // The columns a kind owns are null on every other kind. This is what keeps one
 // table honest where eleven subtype tables would have used the type system: an
