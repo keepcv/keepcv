@@ -6,6 +6,11 @@ import { type Api, createApi, SESSION_TOKEN_HEADER, sessionTokenAuth } from "./i
 
 export const SESSION_TOKEN = "a-token-minted-for-this-launch";
 
+// A WebAssembly start plus every migration, and CI runs this package's files
+// alongside the repository suite's, so a two-core runner has ten PGlite
+// instances booting at once. The default hook budget is not enough for that.
+const BOOTS_A_STORE = 60_000;
+
 export type Send = (method: string, path: string, body?: unknown) => Promise<Response>;
 
 export interface ApiHarness {
@@ -48,7 +53,7 @@ export function withApi(): ApiHarness {
   beforeAll(async () => {
     store = openLocalStore();
     await store.migrate();
-  });
+  }, BOOTS_A_STORE);
 
   afterAll(async () => {
     await store.close();

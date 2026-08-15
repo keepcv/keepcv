@@ -33,6 +33,8 @@ if (connectionString === undefined && process.env["CI"] !== undefined) {
   throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
 }
 
+const BOOTS_A_STORE = 60_000;
+
 const drivers: { name: string; open: () => Store }[] = [
   { name: "PGlite", open: () => openLocalStore() },
   ...(connectionString === undefined
@@ -257,10 +259,13 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       return asOwner(ownerId);
     }
 
+    // A WebAssembly start plus every migration, once per file, and CI runs this
+    // suite alongside the API package's. The default hook budget is not enough
+    // for that many stores booting at once.
     beforeAll(async () => {
       store = open();
       await store.migrate();
-    });
+    }, BOOTS_A_STORE);
 
     afterAll(async () => {
       await store.close();
