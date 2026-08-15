@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   channelInput,
+  customSectionInput,
   eachDriver,
   evidenceInput,
   fieldInput,
@@ -16,6 +17,7 @@ import {
   metricInput,
   newPhrasing,
   organisationInput,
+  parentSection,
   phrasingInput,
   phrasingSetInput,
   pointInput,
@@ -89,8 +91,12 @@ async function fill(run: Run): Promise<void> {
     );
     await r.organisations.archive(institute.id, institute.updatedAt);
 
+    const patents = await r.customSections.create(customSectionInput("Patents", "a0"));
+    const press = await r.customSections.create(customSectionInput("Press", "a1"));
+    await r.customSections.archive(press.id, press.updatedAt);
+
     for (const kind of CAREER_RECORD_KINDS) {
-      await r.records.create(recordInput(kind, "a0"));
+      await r.records.create(recordInput(kind, "a0", parentSection(kind, patents.id)));
     }
     const senior = await r.records.create(
       recordInput("experience", "a1", {
@@ -160,6 +166,7 @@ function reversed(store: Store): Store {
     profile: store.profile,
     contactChannels: [...store.contactChannels].reverse(),
     organisations: [...store.organisations].reverse(),
+    customSections: [...store.customSections].reverse(),
     records: [...store.records].reverse(),
     recordLinks: [...store.recordLinks].reverse(),
     recordFields: [...store.recordFields].reverse(),

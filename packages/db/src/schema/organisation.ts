@@ -1,10 +1,8 @@
 import { sql } from "drizzle-orm";
 import { check, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { standardColumns } from "./owner.js";
+import { quoted } from "./vocabulary.js";
 
-// Repeated from `organisationKindSchema` rather than imported: drizzle-kit loads
-// this file through a CJS require, which cannot resolve @keepcv/schema. The
-// vocabulary drift test feeds both lists the same values.
 const KINDS = ["company", "institution", "issuer", "publisher", "venue", "other"];
 
 // First-class rather than a string on each record, because two roles at one
@@ -23,6 +21,6 @@ export const organisation = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
-    check("organisation_kind_check", sql.raw(`kind in (${KINDS.map((k) => `'${k}'`).join(", ")})`)),
+    check("organisation_kind_check", sql.raw(`kind in (${quoted(KINDS)})`)),
   ],
 );

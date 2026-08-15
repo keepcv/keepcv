@@ -6,6 +6,9 @@ import type {
   ContactChannel,
   ContactChannelInput,
   ContactChannelPatch,
+  CustomSection,
+  CustomSectionInput,
+  CustomSectionPatch,
   Evidence,
   EvidenceInput,
   EvidencePatch,
@@ -113,6 +116,19 @@ export interface OrganisationRepository {
   update(id: Uuid, patch: OrganisationPatch, expectedUpdatedAt: Timestamp): Promise<Organisation>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Organisation>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Organisation>;
+}
+
+// A heading the built-in kinds do not cover, and the parent of the records that
+// print under it. Its own repository rather than a part of the record one, for
+// the reason an organisation has one: a section outlives every entry in it and
+// has an ordering and a lifecycle of its own.
+export interface CustomSectionRepository {
+  list(options?: { includeArchived?: boolean }): Promise<CustomSection[]>;
+  get(id: Uuid): Promise<CustomSection>;
+  create(input: CustomSectionInput): Promise<CustomSection>;
+  update(id: Uuid, patch: CustomSectionPatch, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
 }
 
 // Links and fields hang off records for the reason contact channels hang off the
@@ -249,6 +265,7 @@ export interface StoreRepository {
 export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
+  customSections: CustomSectionRepository;
   records: CareerRecordRepository;
   points: PointRepository;
   phrasings: PhrasingRepository;

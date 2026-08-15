@@ -36,6 +36,14 @@ export {
   contactChannelSchema,
 } from "./entities/contact-channel.js";
 export {
+  type CustomSection,
+  type CustomSectionInput,
+  type CustomSectionPatch,
+  customSectionInputSchema,
+  customSectionPatchSchema,
+  customSectionSchema,
+} from "./entities/custom-section.js";
+export {
   EVIDENCE_KINDS,
   type Evidence,
   type EvidenceInput,

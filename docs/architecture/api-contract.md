@@ -79,6 +79,7 @@ GET    /v1/store/summary               counts, recent activity, nudges
 GET    /v1/profile                     PATCH /v1/profile
 CRUD   /v1/contact-channels
 CRUD   /v1/organisations
+CRUD   /v1/custom-sections             headings the built-in kinds do not cover
 
 CRUD   /v1/records                     ?kind=&tag=&archived=&q=
 GET    /v1/records/:id
@@ -135,6 +136,10 @@ POST   /v1/backup/restore
 
 Notes on the non-obvious ones:
 
+- **There is no `/v1/custom-sections/:id/entries`.** What prints under a custom
+  heading is a `record` of kind `custom_entry`, so it is created and listed
+  through `/v1/records` like every other kind; the section id is a field of the
+  record, and moving an entry between headings is a `PATCH` of it.
 - **There is no `move` route.** A move is a `PATCH` of `sortKey`, which the
   sparse-patch rule above already covers, and a second way to do it would be a
   second thing to keep correct.
@@ -184,6 +189,9 @@ and by the private cloud repo against server PostgreSQL.
 interface Repositories {
   profile:      ProfileRepository;
   organisations: OrganisationRepository;
+  // A heading the built-in kinds do not cover. Its own repository, not a part of
+  // the record one: a section outlives every entry in it.
+  customSections: CustomSectionRepository;
   // CareerRecord, not Record: the latter shadows TypeScript's built-in in every
   // file that imports it. The table is still `record`.
   records:      CareerRecordRepository;
