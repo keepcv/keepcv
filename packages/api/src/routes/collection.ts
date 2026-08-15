@@ -29,6 +29,12 @@ export const archivedQuery = z.object({
   archived: z.enum(["exclude", "include"]).default("exclude"),
 });
 
+// Good enough for the nouns this API has, which are all ordinary words: there is
+// no "hour" or "university" among them to break the vowel rule.
+function article(noun: string): string {
+  return "aeiou".includes(noun[0] ?? "") ? "an" : "a";
+}
+
 export interface CollectionSpec<
   Path extends string,
   Dto extends z.ZodType,
@@ -47,9 +53,10 @@ export interface CollectionSpec<
   query: Query;
 }
 
-// Six resources answer the same six routes, so the declarations are written once
-// and handed their schemas. Only the declarations: a handler's argument and
-// return types are derived through conditionals on the schema type, and a bare
+// Every owned collection answers the same six routes, so the declarations are
+// written once and handed their schemas. Only the declarations: a handler's
+// argument and return types are derived through conditionals on the schema type,
+// and a bare
 // type parameter defers every one of them, so nothing generic over a schema can
 // typecheck a handler body against the route it belongs to.
 export function collectionRoutes<
@@ -62,6 +69,7 @@ export function collectionRoutes<
   const { path, tag, noun, dto, input, patch, query } = spec;
   const item = `${path}/{id}` as const;
   const tags = [tag];
+  const a = article(noun);
   const notFound = problemResponse(`no ${noun} of this owner has that id`);
   const stale = problemResponse(`the ${noun} changed after it was read`);
 
@@ -83,7 +91,7 @@ export function collectionRoutes<
       method: "post",
       path,
       tags,
-      summary: `Add a ${noun}`,
+      summary: `Add ${a} ${noun}`,
       description: "The id comes from the client, so a retried create cannot duplicate a row.",
       request: { body: jsonBody(input) },
       responses: {
@@ -107,7 +115,7 @@ export function collectionRoutes<
       method: "patch",
       path: item,
       tags,
-      summary: `Update a ${noun}`,
+      summary: `Update ${a} ${noun}`,
       description: "Absent leaves a field alone; an explicit null clears it.",
       request: { params: idParam, body: jsonBody(patchBody(patch)) },
       responses: {
@@ -123,7 +131,7 @@ export function collectionRoutes<
       method: "delete",
       path: item,
       tags,
-      summary: `Archive a ${noun}`,
+      summary: `Archive ${a} ${noun}`,
       description: "Archives it. Nothing the user wrote is destroyed and the row stays readable.",
       request: { params: idParam, body: jsonBody(basedOn) },
       responses: {

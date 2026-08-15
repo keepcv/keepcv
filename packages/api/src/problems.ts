@@ -3,6 +3,7 @@ import {
   ConcurrencyConflictError,
   type ConstraintKind,
   ConstraintViolationError,
+  DuplicatePointRecordLinkError,
   NotFoundError,
   StoreNotEmptyError,
 } from "@keepcv/core";
@@ -121,6 +122,17 @@ export function problemFor(error: unknown, instance: string): Problem {
       detail: error.message,
       instance,
       constraint: error.constraint,
+    };
+  }
+  // The point already prints under that record, so a secondary link would be the
+  // same relationship written twice. The caller resolves it by re-reading.
+  if (error instanceof DuplicatePointRecordLinkError) {
+    return {
+      type: PROBLEM_TYPES.constraintViolated,
+      title: "The store refused the write",
+      status: 409,
+      detail: error.message,
+      instance,
     };
   }
   // Not a 409: the record did not change under the caller, and re-reading would

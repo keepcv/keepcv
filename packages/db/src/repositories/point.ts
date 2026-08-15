@@ -123,6 +123,9 @@ export function createPointRepository(
           and(
             owned(point),
             options?.recordId === undefined ? undefined : eq(point.recordId, options.recordId),
+            options?.confidence === undefined
+              ? undefined
+              : eq(point.confidence, options.confidence),
             live(point, options?.includeArchived),
           ),
         )
@@ -215,6 +218,10 @@ export function createPointRepository(
       return rows.map(toMetric);
     },
 
+    async getMetric(id) {
+      return toMetric(await requireOwned<MetricRow>(db, metric, "metric", id));
+    },
+
     async createMetric(input) {
       return toMetric(await insertOwned(db, metric, "metric", input));
     },
@@ -246,6 +253,10 @@ export function createPointRepository(
         )
         .orderBy(asc(evidence.pointId), asc(evidence.id));
       return rows.map(toEvidence);
+    },
+
+    async getEvidence(id) {
+      return toEvidence(await requireOwned<EvidenceRow>(db, evidence, "evidence", id));
     },
 
     async createEvidence(input) {

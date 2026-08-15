@@ -6,6 +6,8 @@ import { problemFor, UnauthorizedError } from "./problems.js";
 import { router } from "./router.js";
 import { customSectionRoutes } from "./routes/custom-sections.js";
 import { organisationRoutes } from "./routes/organisations.js";
+import { phrasingRoutes } from "./routes/phrasings.js";
+import { pointRoutes } from "./routes/points.js";
 import { profileRoutes } from "./routes/profile.js";
 import { recordRoutes } from "./routes/records.js";
 import { storeRoutes } from "./routes/store.js";
@@ -82,6 +84,8 @@ export function createApi(options: ApiOptions) {
     .route("/", organisationRoutes(options.unitOfWork))
     .route("/", customSectionRoutes(options.unitOfWork))
     .route("/", recordRoutes(options.unitOfWork))
+    .route("/", pointRoutes(options.unitOfWork))
+    .route("/", phrasingRoutes(options.unitOfWork))
     .route("/", storeRoutes(options.unitOfWork));
 }
 

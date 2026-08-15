@@ -10,9 +10,10 @@ implements, so it is designed, versioned and stable - which framework-internal
 RPC would not be.
 
 > **Status: early development.** The public API is unstable and there is no
-> release yet. Today it serves the profile, the record store - contact channels,
-> organisations, custom sections, records and their links and fields - and the
-> native export and import; points and phrasings follow.
+> release yet. Today it serves the whole record store - the profile, contact
+> channels, organisations, custom sections, records, points, phrasings and
+> everything hanging off them - plus the native export and import. Tags, search,
+> resumes and versions follow.
 
 ## Installation
 
@@ -73,6 +74,11 @@ const response = await client.v1.profile.$get();
   wrong place.
 - **`DELETE` archives.** Nothing the user wrote is destroyed, the row stays
   readable by id, and `?archived=include` brings it back into a list.
+- **Phrasing text is append-only.** `PATCH /v1/phrasings/{id}` has no field that
+  could carry text; changing what a phrasing says is
+  `POST /v1/phrasings/{id}/revisions`, which keeps the superseded wording and
+  moves a pointer. It is the one write with no concurrency token, because two
+  people writing different wordings at once must both keep their text.
 - **Export is never gated.** Not by an account, not by a licence, not by any
   entitlement state.
 - **The OpenAPI document comes from the same Zod schemas** that validate the

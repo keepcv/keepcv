@@ -26,6 +26,7 @@ import type {
   PhrasingSetInput,
   PhrasingSetPatch,
   Point,
+  PointConfidence,
   PointInput,
   PointPatch,
   PointRecordLink,
@@ -248,6 +249,7 @@ export class DuplicatePointRecordLinkError extends Error {
 export interface PointRepository {
   list(options?: {
     recordId?: Uuid | undefined;
+    confidence?: PointConfidence | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<Point[]>;
   get(id: Uuid): Promise<Point>;
@@ -267,6 +269,7 @@ export interface PointRepository {
     pointId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<Metric[]>;
+  getMetric(id: Uuid): Promise<Metric>;
   createMetric(input: MetricInput): Promise<Metric>;
   updateMetric(id: Uuid, patch: MetricPatch, expectedUpdatedAt: Timestamp): Promise<Metric>;
   archiveMetric(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Metric>;
@@ -276,6 +279,7 @@ export interface PointRepository {
     pointId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<Evidence[]>;
+  getEvidence(id: Uuid): Promise<Evidence>;
   createEvidence(input: EvidenceInput): Promise<Evidence>;
   updateEvidence(id: Uuid, patch: EvidencePatch, expectedUpdatedAt: Timestamp): Promise<Evidence>;
   archiveEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;

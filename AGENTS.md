@@ -128,12 +128,14 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 much of the data model describes tables that do not exist yet - drafts, tags,
 search, resumes, versions; do not assume otherwise.
 
-The API serves `/v1/profile`, `/v1/export`, `/v1/import`, `/v1/openapi.json` and
-six owned collections: `/v1/contact-channels`, `/v1/organisations`,
-`/v1/custom-sections`, `/v1/records`, `/v1/record-links` and `/v1/record-fields`.
-Points, phrasings, tags, resumes and versions are unbuilt, and there is no UI.
-`createApi` takes the port, an owner scope and an `authenticate` function and
-knows nothing else - no driver, no token store, no port number.
+The API serves `/v1/profile`, `/v1/export`, `/v1/import`, `/v1/openapi.json`, the
+point's secondary records and phrasing revisions, and eleven owned collections:
+`/v1/contact-channels`, `/v1/organisations`, `/v1/custom-sections`, `/v1/records`,
+`/v1/record-links`, `/v1/record-fields`, `/v1/points`, `/v1/metrics`,
+`/v1/evidence`, `/v1/phrasing-sets` and `/v1/phrasings`. That is the whole record
+store; `GET /v1/store`, tags, search, resumes and versions are unbuilt, and there
+is no UI. `createApi` takes the port, an owner scope and an `authenticate`
+function and knows nothing else - no driver, no token store, no port number.
 
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request

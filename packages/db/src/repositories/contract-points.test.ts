@@ -94,6 +94,17 @@ eachDriver(({ run, otherOwner }) => {
     // Postgres treats nulls as distinct in a unique index by default, which would
     // have left every unplaced point in a scope of its own and I11 holding
     // vacuously over the list the user actually drags within.
+    it("narrows a list to one confidence", async () => {
+      await run(async (r) => {
+        await r.points.create(pointInput(null, "a0", "Measured", { confidence: "verified" }));
+        await r.points.create(pointInput(null, "a1", "Guessed", { confidence: "estimated" }));
+      });
+
+      const verified = await run(async (r) => await r.points.list({ confidence: "verified" }));
+      expect(verified.map((point) => point.confidence)).toEqual(["verified"]);
+      expect(await run(async (r) => await r.points.list())).toHaveLength(2);
+    });
+
     it("refuses two unplaced points the same sort key", async () => {
       await run(async (r) => await r.points.create(pointInput(null, "a0", "Captured")));
 
@@ -354,6 +365,45 @@ eachDriver(({ run, otherOwner }) => {
         async (r) => await r.points.restoreEvidence(archived.id, archived.updatedAt),
       );
       expect(restored.note).toBeNull();
+    });
+
+    it("read one back by id, archived or not", async () => {
+      const { metric, evidence } = await run(async (r) => {
+        const point = await r.points.create(pointInput(null, "a0", "Words"));
+        return {
+          metric: await r.points.createMetric(metricInput(point.id, "a0")),
+          evidence: await r.points.createEvidence(evidenceInput(point.id)),
+        };
+      });
+
+      expect(await run(async (r) => await r.points.getMetric(metric.id))).toEqual(metric);
+      expect(await run(async (r) => await r.points.getEvidence(evidence.id))).toEqual(evidence);
+
+      // Reading one by id ignores `archived_at`, unlike listing: a link to an
+      // archived row must resolve, or "where did it go" has no answer.
+      const archived = await run(
+        async (r) => await r.points.archiveMetric(metric.id, metric.updatedAt),
+      );
+      expect(await run(async (r) => await r.points.getMetric(metric.id))).toEqual(archived);
+
+      await expect(run(async (r) => await r.points.getMetric(newUuid()))).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      await expect(run(async (r) => await r.points.getEvidence(newUuid()))).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    });
+
+    it("are invisible to another owner who knows the id", async () => {
+      const evidence = await run(async (r) => {
+        const point = await r.points.create(pointInput(null, "a0", "Words"));
+        return await r.points.createEvidence(evidenceInput(point.id));
+      });
+      const asIntruder = await otherOwner();
+
+      await expect(
+        asIntruder(async (r) => await r.points.getEvidence(evidence.id)),
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
     // Soft delete, not cascade: archiving the point it hangs off says nothing
