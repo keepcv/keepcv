@@ -12,8 +12,8 @@ RPC would not be.
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact
 > channels, organisations, custom sections, records, points, phrasings and
-> everything hanging off them - plus the native export and import. Tags, search,
-> resumes and versions follow.
+> everything hanging off them - plus the boot payload and the native export and
+> import. Tags, search, resumes and versions follow.
 
 ## Installation
 
@@ -79,6 +79,10 @@ const response = await client.v1.profile.$get();
   `POST /v1/phrasings/{id}/revisions`, which keeps the superseded wording and
   moves a pointer. It is the one write with no concurrency token, because two
   people writing different wordings at once must both keep their text.
+- **One request boots a client.** `GET /v1/store` answers the whole store,
+  archived rows included, so filters and counts are selectors over cached data
+  rather than requests. It carries the wording each phrasing says now and not the
+  ones it used to; `GET /v1/export` carries every wording ever written.
 - **Export is never gated.** Not by an account, not by a licence, not by any
   entitlement state.
 - **The OpenAPI document comes from the same Zod schemas** that validate the

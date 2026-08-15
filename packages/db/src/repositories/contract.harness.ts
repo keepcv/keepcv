@@ -33,7 +33,7 @@ if (connectionString === undefined && process.env["CI"] !== undefined) {
   throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
 }
 
-const BOOTS_A_STORE = 60_000;
+export const BOOTS_A_STORE = 60_000;
 
 const drivers: { name: string; open: () => Store }[] = [
   { name: "PGlite", open: () => openLocalStore() },

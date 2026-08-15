@@ -8,7 +8,7 @@ import {
 import { CONTACT_CHANNEL_KINDS, type ContactChannelInput } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { openLocalStore } from "../store.js";
-import { channelInput, eachDriver, violatedConstraint } from "./contract.harness.js";
+import { BOOTS_A_STORE, channelInput, eachDriver, violatedConstraint } from "./contract.harness.js";
 
 eachDriver(({ run, otherOwner, store }) => {
   describe("bootstrap", () => {
@@ -248,14 +248,22 @@ eachDriver(({ run, otherOwner, store }) => {
 });
 
 describe("local store", () => {
-  it("returns the same owner on every launch", async () => {
-    const store = openLocalStore();
-    await store.migrate();
-    try {
-      const first = await store.ensureLocalOwner();
-      expect(await store.ensureLocalOwner()).toBe(first);
-    } finally {
-      await store.close();
-    }
-  });
+  // The one test that boots its own store in the body rather than a hook, so it
+  // needs the hook's budget: the default five seconds is not enough for a
+  // WebAssembly start and every migration while the rest of the repo's suites
+  // are running beside it.
+  it(
+    "returns the same owner on every launch",
+    async () => {
+      const store = openLocalStore();
+      await store.migrate();
+      try {
+        const first = await store.ensureLocalOwner();
+        expect(await store.ensureLocalOwner()).toBe(first);
+      } finally {
+        await store.close();
+      }
+    },
+    BOOTS_A_STORE,
+  );
 });

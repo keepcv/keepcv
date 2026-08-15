@@ -223,7 +223,12 @@ export interface PhrasingRepository {
   // one is the loss the append-only design exists to prevent - and identical text
   // is the revision that already exists, so it makes the pointer point there.
   addRevision(phrasingId: Uuid, body: RichText): Promise<PhrasingRevision>;
-  listRevisions(options?: { phrasingId?: Uuid | undefined }): Promise<PhrasingRevision[]>;
+  listRevisions(options?: {
+    phrasingId?: Uuid | undefined;
+    // Only the revision each phrasing currently points at, which is what a
+    // reader wanting text rather than history needs.
+    currentOnly?: boolean | undefined;
+  }): Promise<PhrasingRevision[]>;
 }
 
 // A point's primary record decides where it prints; a secondary link says it
@@ -305,6 +310,11 @@ export class StoreNotEmptyError extends Error {
 // write that bypasses the concurrency token.
 export interface StoreRepository {
   read(): Promise<Store>;
+  // The same shape carrying current state only: every row, archived ones
+  // included, but of the phrasing revisions just the one each phrasing points
+  // at. Revision history grows without bound and the boot payload must not
+  // (api-contract.md #3).
+  readCurrent(): Promise<Store>;
   load(store: Store): Promise<void>;
 }
 

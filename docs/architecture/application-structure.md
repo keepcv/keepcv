@@ -191,9 +191,12 @@ Needs: counts per record type; what changed since `owner.last_opened_at`;
 recently edited records; points with no tags or no metrics; records
 missing end dates; certifications expiring soon.
 
-Served by `record (owner_id, updated_at desc)` plus cheap aggregate queries.
-Every one of these is a "you left something unfinished" affordance, which is
-the antidote to returning after ninety days and not knowing where you were.
+Served by selectors over the cached `['store']` payload, not by a summary
+endpoint: every one of them is a pure function of current state, and deriving
+them in SQL as well would be the same numbers computed twice
+(`api-contract.md` #3). Every one is a "you left something unfinished"
+affordance, which is the antidote to returning after ninety days and not
+knowing where you were.
 
 ### 5.2 Record list
 

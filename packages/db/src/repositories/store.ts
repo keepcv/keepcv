@@ -72,7 +72,7 @@ export function createStoreRepository(
   db: Database,
   repositories: Omit<Repositories, "store">,
 ): StoreRepository {
-  async function read(): Promise<Store> {
+  async function read(currentOnly = false): Promise<Store> {
     return {
       profile: await repositories.profile.get(),
       contactChannels: await repositories.profile.listContactChannels(everything),
@@ -83,9 +83,11 @@ export function createStoreRepository(
       recordFields: await repositories.records.listFields(everything),
       phrasingSets: await repositories.phrasings.listSets(everything),
       phrasings: await repositories.phrasings.list(everything),
-      // Every revision, not just the current one. Superseded wordings are things
-      // the user wrote, and an export that drops them is a delete.
-      phrasingRevisions: await repositories.phrasings.listRevisions(),
+      // The export takes every revision, not just the current one: superseded
+      // wordings are things the user wrote, and dropping them is a delete. The
+      // boot payload takes the current ones, because history grows without bound
+      // and it is fetched on every open.
+      phrasingRevisions: await repositories.phrasings.listRevisions({ currentOnly }),
       points: await repositories.points.list(everything),
       pointRecordLinks: await repositories.points.listRecordLinks(),
       metrics: await repositories.points.listMetrics(everything),
@@ -185,7 +187,9 @@ export function createStoreRepository(
   }
 
   return {
-    read,
+    read: async () => await read(),
+
+    readCurrent: async () => await read(true),
 
     async load(store) {
       await requireEmpty();

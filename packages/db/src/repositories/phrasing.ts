@@ -230,10 +230,21 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
 
     // Two revisions can share a millisecond, so the id breaks the tie and the
     // history is a total order.
+    // `currentOnly` joins through the pointer rather than filtering on it, so a
+    // phrasing that has no revision yet contributes nothing instead of a null.
     async listRevisions(options) {
-      const rows = await db
-        .select()
-        .from(phrasingRevision)
+      const base = db.select({ revision: phrasingRevision }).from(phrasingRevision);
+      const selected = options?.currentOnly
+        ? base.innerJoin(
+            phrasing,
+            and(
+              eq(phrasing.ownerId, phrasingRevision.ownerId),
+              eq(phrasing.currentRevisionId, phrasingRevision.id),
+            ),
+          )
+        : base;
+
+      const rows = await selected
         .where(
           and(
             eq(phrasingRevision.ownerId, currentOwnerId()),
@@ -247,7 +258,7 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
           asc(phrasingRevision.createdAt),
           asc(phrasingRevision.id),
         );
-      return rows.map(toPhrasingRevision);
+      return rows.map((row) => toPhrasingRevision(row.revision));
     },
   };
 }
