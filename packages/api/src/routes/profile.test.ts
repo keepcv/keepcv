@@ -42,8 +42,8 @@ describe("the profile", () => {
     expect(before.fullName).toBeNull();
 
     const response = await send("PATCH", "/v1/profile", {
-      fullName: "Ada Lovelace",
       expectedUpdatedAt: before.updatedAt,
+      patch: { fullName: "Ada Lovelace" },
     });
     expect(response.status).toBe(200);
 
@@ -55,15 +55,14 @@ describe("the profile", () => {
   it("clears a field on an explicit null and leaves an absent one alone", async () => {
     const named = await profile();
     await send("PATCH", "/v1/profile", {
-      pronouns: "she/her",
-      headline: "Mathematician",
       expectedUpdatedAt: named.updatedAt,
+      patch: { pronouns: "she/her", headline: "Mathematician" },
     });
 
     const withPronouns = await profile();
     const cleared = await send("PATCH", "/v1/profile", {
-      pronouns: null,
       expectedUpdatedAt: withPronouns.updatedAt,
+      patch: { pronouns: null },
     });
 
     const after = profileSchema.parse(await cleared.json());
@@ -75,11 +74,14 @@ describe("the profile", () => {
   // them being dropped by whichever write landed second.
   it("answers a stale write with the state the server actually holds", async () => {
     const before = await profile();
-    await send("PATCH", "/v1/profile", { fullName: "first", expectedUpdatedAt: before.updatedAt });
+    await send("PATCH", "/v1/profile", {
+      expectedUpdatedAt: before.updatedAt,
+      patch: { fullName: "first" },
+    });
 
     const response = await send("PATCH", "/v1/profile", {
-      fullName: "second",
       expectedUpdatedAt: before.updatedAt,
+      patch: { fullName: "second" },
     });
     expect(response.status).toBe(409);
 
@@ -104,14 +106,14 @@ describe("contact channels", () => {
     const created = await addChannel("a0", "ada@example.com");
 
     const updated = await send("PATCH", `/v1/contact-channels/${created.id}`, {
-      label: "Work",
       expectedUpdatedAt: created.updatedAt,
+      patch: { label: "Work" },
     });
     expect(contactChannelSchema.parse(await updated.json()).label).toBe("Work");
 
     const stale = await send("PATCH", `/v1/contact-channels/${created.id}`, {
-      label: "Home",
       expectedUpdatedAt: created.updatedAt,
+      patch: { label: "Home" },
     });
     expect(stale.status).toBe(409);
     expect(contactChannelSchema.parse((await problemOf(stale)).current).label).toBe("Work");
@@ -143,8 +145,8 @@ describe("contact channels", () => {
     const created = await addChannel("a0", "ada@example.com");
 
     const missing = await send("PATCH", `/v1/contact-channels/${newUuid()}`, {
-      label: "Work",
       expectedUpdatedAt: created.updatedAt,
+      patch: { label: "Work" },
     });
     expect((await problemOf(missing)).status).toBe(404);
   });

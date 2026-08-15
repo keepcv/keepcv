@@ -72,9 +72,24 @@ describe("the OpenAPI document", () => {
       "/v1/contact-channels",
       "/v1/contact-channels/{id}",
       "/v1/contact-channels/{id}/restore",
+      "/v1/custom-sections",
+      "/v1/custom-sections/{id}",
+      "/v1/custom-sections/{id}/restore",
       "/v1/export",
       "/v1/import",
+      "/v1/organisations",
+      "/v1/organisations/{id}",
+      "/v1/organisations/{id}/restore",
       "/v1/profile",
+      "/v1/record-fields",
+      "/v1/record-fields/{id}",
+      "/v1/record-fields/{id}/restore",
+      "/v1/record-links",
+      "/v1/record-links/{id}",
+      "/v1/record-links/{id}/restore",
+      "/v1/records",
+      "/v1/records/{id}",
+      "/v1/records/{id}/restore",
     ]);
     expect(Object.keys(document.paths["/v1/contact-channels/{id}"] ?? {}).sort()).toEqual([
       "delete",
@@ -86,5 +101,9 @@ describe("the OpenAPI document", () => {
     // validator can never describe different shapes.
     expect(document.components.schemas).toHaveProperty("ContactChannel");
     expect(document.components.schemas).toHaveProperty("Problem");
+    // One component per record kind rather than one for the union: the kinds do
+    // not share a shape, and a template binds to the kind it is given.
+    expect(document.components.schemas).toHaveProperty("ExperienceRecord");
+    expect(document.components.schemas).toHaveProperty("CustomEntryRecord");
   });
 });

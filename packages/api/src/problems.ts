@@ -1,4 +1,5 @@
 import {
+  CareerRecordKindMismatchError,
   ConcurrencyConflictError,
   type ConstraintKind,
   ConstraintViolationError,
@@ -120,6 +121,18 @@ export function problemFor(error: unknown, instance: string): Problem {
       detail: error.message,
       instance,
       constraint: error.constraint,
+    };
+  }
+  // Not a 409: the record did not change under the caller, and re-reading would
+  // not help. A patch naming the wrong kind was wrong when it was sent.
+  if (error instanceof CareerRecordKindMismatchError) {
+    return {
+      type: PROBLEM_TYPES.validationFailed,
+      title: "Validation failed",
+      status: 422,
+      detail: error.message,
+      instance,
+      errors: [{ path: "patch.kind", code: "wrong_record_kind" }],
     };
   }
   if (error instanceof StoreNotEmptyError) {

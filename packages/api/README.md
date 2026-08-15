@@ -10,8 +10,9 @@ implements, so it is designed, versioned and stable - which framework-internal
 RPC would not be.
 
 > **Status: early development.** The public API is unstable and there is no
-> release yet. Today it serves the profile, contact channels and the native
-> export and import; the record store, points and phrasings follow.
+> release yet. Today it serves the profile, the record store - contact channels,
+> organisations, custom sections, records and their links and fields - and the
+> native export and import; points and phrasings follow.
 
 ## Installation
 
@@ -62,8 +63,14 @@ const response = await client.v1.profile.$get();
 - **Every error is a typed problem.** One shape, `application/problem+json`,
   with a `type` the client switches on. Nothing downstream parses prose.
 - **A stale write answers with the state the server holds.** Mutations carry the
-  `updated_at` they were based on, and a mismatch returns `409` with the current
+  `updated_at` they were based on - as `{ expectedUpdatedAt, patch }`, beside the
+  changes rather than among them - and a mismatch returns `409` with the current
   row attached, so the UI can show both sides instead of discarding one.
+- **A refused write names the constraint.** A taken sort key is a `409`, because
+  the caller resolves it by re-reading; a parent that does not exist, or a column
+  the record's kind may not carry, is a `422`. A driver error never reaches the
+  client, since a caller mistake reported as `500` sends everybody looking in the
+  wrong place.
 - **`DELETE` archives.** Nothing the user wrote is destroyed, the row stays
   readable by id, and `?archived=include` brings it back into a list.
 - **Export is never gated.** Not by an account, not by a licence, not by any

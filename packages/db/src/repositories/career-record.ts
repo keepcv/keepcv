@@ -169,6 +169,10 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
       return rows.map(toRecordLink);
     },
 
+    async getLink(id) {
+      return toRecordLink(await requireOwned<RecordLinkRow>(db, recordLink, "recordLink", id));
+    },
+
     async createLink(input) {
       return toRecordLink(await insertOwned(db, recordLink, "recordLink", input));
     },
@@ -200,6 +204,10 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
         )
         .orderBy(asc(recordField.recordId), asc(recordField.sortKey));
       return rows.map(toRecordField);
+    },
+
+    async getField(id) {
+      return toRecordField(await requireOwned<RecordFieldRow>(db, recordField, "recordField", id));
     },
 
     async createField(input) {

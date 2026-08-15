@@ -1,0 +1,151 @@
+import { createRoute } from "@hono/zod-openapi";
+import { timestampSchema, uuidSchema } from "@keepcv/schema";
+import { z } from "zod";
+import { jsonResponse, problemResponse, sessionRequired } from "../router.js";
+
+// The concurrency token travels in the body rather than `If-Unmodified-Since`.
+// That header has second granularity and `updated_at` is milliseconds, so half
+// of every comparison would match a write it should have refused.
+const expectedUpdatedAt = timestampSchema;
+
+export const basedOn = z.object({ expectedUpdatedAt });
+
+// Beside the patch rather than merged into it: a record's patch is a union
+// discriminated on `kind`, which has no key to extend, and a token sitting among
+// the fields is one a patch key could shadow.
+export function patchBody<Schema extends z.ZodType>(schema: Schema) {
+  return z.object({ expectedUpdatedAt, patch: schema });
+}
+
+export const idParam = z.object({ id: uuidSchema });
+
+export function jsonBody<Schema extends z.ZodType>(schema: Schema) {
+  return { content: { "application/json": { schema } } };
+}
+
+// Archived rows stay reachable: "where did my old entry go" must always have an
+// answer, so this is a filter and never a hiding place.
+export const archivedQuery = z.object({
+  archived: z.enum(["exclude", "include"]).default("exclude"),
+});
+
+export interface CollectionSpec<
+  Path extends string,
+  Dto extends z.ZodType,
+  Input extends z.ZodType,
+  Patch extends z.ZodType,
+  Query extends z.ZodObject,
+> {
+  path: Path;
+  // Plural: it is the OpenAPI tag, and it reads as the list route's summary.
+  tag: string;
+  noun: string;
+  dto: Dto;
+  input: Input;
+  patch: Patch;
+  // `archivedQuery`, extended where a collection narrows by more than that.
+  query: Query;
+}
+
+// Six resources answer the same six routes, so the declarations are written once
+// and handed their schemas. Only the declarations: a handler's argument and
+// return types are derived through conditionals on the schema type, and a bare
+// type parameter defers every one of them, so nothing generic over a schema can
+// typecheck a handler body against the route it belongs to.
+export function collectionRoutes<
+  Path extends string,
+  Dto extends z.ZodType,
+  Input extends z.ZodType,
+  Patch extends z.ZodType,
+  Query extends z.ZodObject,
+>(spec: CollectionSpec<Path, Dto, Input, Patch, Query>) {
+  const { path, tag, noun, dto, input, patch, query } = spec;
+  const item = `${path}/{id}` as const;
+  const tags = [tag];
+  const notFound = problemResponse(`no ${noun} of this owner has that id`);
+  const stale = problemResponse(`the ${noun} changed after it was read`);
+
+  return {
+    list: createRoute({
+      method: "get",
+      path,
+      tags,
+      summary: `List ${tag}`,
+      request: { query },
+      responses: {
+        ...sessionRequired,
+        200: jsonResponse(z.object({ items: z.array(dto) }), `the ${tag}, in a stable order`),
+        422: problemResponse("a filter names something this collection cannot be narrowed by"),
+      },
+    }),
+
+    create: createRoute({
+      method: "post",
+      path,
+      tags,
+      summary: `Add a ${noun}`,
+      description: "The id comes from the client, so a retried create cannot duplicate a row.",
+      request: { body: jsonBody(input) },
+      responses: {
+        ...sessionRequired,
+        201: jsonResponse(dto, `the ${noun} as stored`),
+        409: problemResponse("the id or the sort key is already taken"),
+        422: problemResponse(`the body is not a valid ${noun}`),
+      },
+    }),
+
+    read: createRoute({
+      method: "get",
+      path: item,
+      tags,
+      summary: `Read one ${noun}, archived or not`,
+      request: { params: idParam },
+      responses: { ...sessionRequired, 200: jsonResponse(dto, `the ${noun}`), 404: notFound },
+    }),
+
+    update: createRoute({
+      method: "patch",
+      path: item,
+      tags,
+      summary: `Update a ${noun}`,
+      description: "Absent leaves a field alone; an explicit null clears it.",
+      request: { params: idParam, body: jsonBody(patchBody(patch)) },
+      responses: {
+        ...sessionRequired,
+        200: jsonResponse(dto, `the ${noun} as stored`),
+        404: notFound,
+        409: problemResponse(`the ${noun} changed after it was read, or the sort key is taken`),
+        422: problemResponse(`the body is not a valid ${noun} patch`),
+      },
+    }),
+
+    archive: createRoute({
+      method: "delete",
+      path: item,
+      tags,
+      summary: `Archive a ${noun}`,
+      description: "Archives it. Nothing the user wrote is destroyed and the row stays readable.",
+      request: { params: idParam, body: jsonBody(basedOn) },
+      responses: {
+        ...sessionRequired,
+        200: jsonResponse(dto, `the ${noun}, now archived`),
+        404: notFound,
+        409: stale,
+      },
+    }),
+
+    restore: createRoute({
+      method: "post",
+      path: `${item}/restore`,
+      tags,
+      summary: `Restore an archived ${noun}`,
+      request: { params: idParam, body: jsonBody(basedOn) },
+      responses: {
+        ...sessionRequired,
+        200: jsonResponse(dto, `the ${noun}, no longer archived`),
+        404: notFound,
+        409: stale,
+      },
+    }),
+  };
+}

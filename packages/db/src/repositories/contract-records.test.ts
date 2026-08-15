@@ -460,6 +460,39 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.records.listLinks({ recordId }))).toHaveLength(1);
     });
 
+    it("read one back by id, archived or not", async () => {
+      const recordId = await aRecord();
+      const link = await run(async (r) => await r.records.createLink(linkInput(recordId, "a0")));
+      const field = await run(
+        async (r) => await r.records.createField(fieldInput(recordId, "grade", "a0")),
+      );
+
+      expect(await run(async (r) => await r.records.getLink(link.id))).toEqual(link);
+      expect(await run(async (r) => await r.records.getField(field.id))).toEqual(field);
+
+      // Reading one by id ignores `archived_at`, unlike listing: a link to an
+      // archived row must resolve, or "where did it go" has no answer.
+      const archived = await run(async (r) => await r.records.archiveLink(link.id, link.updatedAt));
+      expect(await run(async (r) => await r.records.getLink(link.id))).toEqual(archived);
+
+      await expect(run(async (r) => await r.records.getLink(newUuid()))).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      await expect(run(async (r) => await r.records.getField(newUuid()))).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    });
+
+    it("are invisible to another owner who knows the id", async () => {
+      const recordId = await aRecord();
+      const link = await run(async (r) => await r.records.createLink(linkInput(recordId, "a0")));
+      const asIntruder = await otherOwner();
+
+      await expect(
+        asIntruder(async (r) => await r.records.getLink(link.id)),
+      ).rejects.toBeInstanceOf(NotFoundError);
+    });
+
     it("distinguish an unknown id from a stale one", async () => {
       const recordId = await aRecord();
       const field = await run(

@@ -4,7 +4,10 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Authenticate } from "./auth.js";
 import { problemFor, UnauthorizedError } from "./problems.js";
 import { router } from "./router.js";
+import { customSectionRoutes } from "./routes/custom-sections.js";
+import { organisationRoutes } from "./routes/organisations.js";
 import { profileRoutes } from "./routes/profile.js";
+import { recordRoutes } from "./routes/records.js";
 import { storeRoutes } from "./routes/store.js";
 
 export const OPENAPI_PATH = "/v1/openapi.json";
@@ -76,6 +79,9 @@ export function createApi(options: ApiOptions) {
   // from this return type, and Hono accumulates route types only along a chain.
   return app
     .route("/", profileRoutes(options.unitOfWork))
+    .route("/", organisationRoutes(options.unitOfWork))
+    .route("/", customSectionRoutes(options.unitOfWork))
+    .route("/", recordRoutes(options.unitOfWork))
     .route("/", storeRoutes(options.unitOfWork));
 }
 
