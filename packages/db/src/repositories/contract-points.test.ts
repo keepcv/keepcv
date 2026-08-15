@@ -19,15 +19,8 @@ import {
   metricInput,
   pointInput,
   recordInput,
+  violatedConstraint,
 } from "./contract.harness.js";
-
-async function violatedConstraint(work: Promise<unknown>): Promise<string | undefined> {
-  const thrown = await work.then(
-    () => undefined,
-    (error: unknown) => error,
-  );
-  return (thrown as { cause?: { constraint?: string } } | undefined)?.cause?.constraint;
-}
 
 eachDriver(({ run, otherOwner }) => {
   describe("points", () => {

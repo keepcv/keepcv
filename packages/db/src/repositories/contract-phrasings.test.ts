@@ -7,15 +7,13 @@ import {
 } from "@keepcv/core";
 import { PHRASING_PURPOSES, PHRASING_VARIANTS, type RichText } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
-import { eachDriver, newPhrasing, phrasingInput, phrasingSetInput } from "./contract.harness.js";
-
-async function violatedConstraint(work: Promise<unknown>): Promise<string | undefined> {
-  const thrown = await work.then(
-    () => undefined,
-    (error: unknown) => error,
-  );
-  return (thrown as { cause?: { constraint?: string } } | undefined)?.cause?.constraint;
-}
+import {
+  eachDriver,
+  newPhrasing,
+  phrasingInput,
+  phrasingSetInput,
+  violatedConstraint,
+} from "./contract.harness.js";
 
 const rewritten: RichText = [
   { t: "text", v: "Designs engines that " },

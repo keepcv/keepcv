@@ -1,3 +1,4 @@
+export { PROBLEM_TYPES, type Problem, problemSchema } from "./api/problem.js";
 export {
   CURRENT_SCHEMA_VERSION,
   type ExportDocument,

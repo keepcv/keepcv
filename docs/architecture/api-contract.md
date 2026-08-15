@@ -48,9 +48,20 @@ The client renders typed problems. No string parsing, ever.
 *with the current server state*, so the UI can present a comparison rather
 than discarding one side silently.
 
-**Idempotency.** Creates accept a client-generated UUIDv7 as the resource id,
-so a retried create is naturally idempotent - no idempotency-key header
-needed.
+**Idempotency.** Creates accept a client-generated UUIDv7 as the resource id, so
+a retried create cannot duplicate a row - no idempotency-key header needed. It is
+not silently idempotent: the second one is refused by the primary key and comes
+back as a `constraint-violated` problem, because a client reusing an id with
+different data is a bug, and answering it with the row that is already there
+would hide the bug and lose the write.
+
+**Refused writes.** Some rules only the store can enforce - a sort key already
+taken, a parent that does not exist, a column a record kind may not carry. These
+come back as `constraint-violated` naming the constraint: `409` when it is a
+uniqueness clash, since the caller resolves it by re-reading, and `422`
+otherwise, since the request was already wrong when it was sent. A driver error
+must never reach the client, because a caller mistake reported as `500` sends
+everybody looking in the wrong place.
 
 **Partial updates.** `PATCH` with a sparse body. Absent means unchanged; an
 explicit `null` clears. This distinction is load-bearing given how many
@@ -58,15 +69,26 @@ nullable fields the model has by design (data-model.md P-A).
 
 **Pagination.** Cursor-based on `(sort_key, id)` or `(updated_at, id)`.
 UUIDv7's time ordering makes the cursor stable. Most endpoints will never
-paginate in practice, but the shape is fixed now so it never becomes breaking.
+paginate in practice, but the shape is fixed now so it never becomes breaking:
+a list is `{ "items": [...] }` from the first version, so `nextCursor` arrives
+alongside it rather than replacing a bare array.
 
-**Archive vs purge.** `DELETE` archives. Purging is
-`POST /v1/{resource}/{id}/purge` with explicit confirmation - deliberately not
-reachable by an accidental `DELETE`.
+**Archive vs purge.** `DELETE` archives, and `POST /v1/{resource}/{id}/restore`
+undoes it - restoring is not a `PATCH`, because `archived_at` belongs to the
+store and no patch body may name it. Archived rows are a filter and never a
+hiding place: `?archived=include` puts them back in a list, and reading one by
+id ignores the flag entirely, so a link to an archived row always resolves.
+
+Purging is `POST /v1/{resource}/{id}/purge` with explicit confirmation -
+deliberately not reachable by an accidental `DELETE`.
 
 **Authentication.** Local mode: the per-launch session token in a custom
 header. Hosted: Better Auth session. Route handlers see an ambient owner scope
 either way and never accept an owner id from the caller.
+
+`/v1/openapi.json` is the one route outside the guard. It describes the contract
+rather than exposing any of the store, and the tooling that reads it has not been
+handed a token yet.
 
 ---
 
@@ -126,7 +148,8 @@ POST   /v1/render                      ResumeDocument -> PDF/HTML
 POST   /v1/lint                        ResumeDocument -> lint report
 
 GET    /v1/export                      ?format=native|jsonresume|...
-POST   /v1/import                      returns a reconciliation plan, not a result
+POST   /v1/import                      ?format=native - all or nothing, into an empty store
+POST   /v1/import?format=jsonresume    returns a reconciliation plan, not a result
 POST   /v1/import/:planId/apply
 
 GET    /v1/backup/status               mirror location, last written
@@ -159,10 +182,17 @@ Notes on the non-obvious ones:
   (data-model.md I16).
 - **A point's primary parent is a `PATCH` of the point.** Setting it to a record
   that is currently a secondary link removes the link in the same transaction.
-- **`POST /v1/import` returns a plan, not a result.** Parsers are lossy, and
-  the data-entry cold start makes import survival-critical. Silently applying a
-  mis-parsed resume over a real store would be unforgivable. The user reviews
+- **A lossy `POST /v1/import` returns a plan, not a result.** Parsers are lossy,
+  and the data-entry cold start makes import survival-critical. Silently applying
+  a mis-parsed resume over a real store would be unforgivable. The user reviews
   and confirms before anything is applied.
+- **The native format is the exception, and applies directly.** It is not parsed
+  and it does not merge: it requires the target to be empty and refuses with
+  `store-not-empty` otherwise, so there is no clash for a review step to resolve
+  and nothing a plan would say beyond "add all of it". A document written by an
+  older build is migrated forward first; one written by a newer build is refused,
+  because a mismatched pair of builds is the normal state of self-hosted software
+  and half-reading a file is worse than not reading it.
 - **`GET /v1/resumes/:id/document` exists for server-side export**, but the
   browser compiles its own preview locally from cached data via the same pure
   function (`application-structure.md` #7). Both call identical code.
@@ -228,6 +258,13 @@ Rules:
 - **Metrics and evidence hang off `PointRepository`**, for the reason links and
   fields hang off `CareerRecordRepository`: nothing holds one without holding
   the point it belongs to.
+- **A refused write raises `ConstraintViolationError`, never a driver error.**
+  The translation happens once, at `UnitOfWork.run`, so it covers every
+  repository including ones not written yet. It carries the constraint name and
+  whether it was a uniqueness, foreign-key or check failure, which is all the
+  caller can act on; the SQL that provoked it is not.
+- **Reading one row by id ignores `archived_at`.** Only lists filter. A link to
+  an archived row has to resolve, or "where did it go" has no answer.
 - **`@keepcv/core` depends only on these interfaces**, never on Drizzle, never
   on a driver. Enforced by a CI dependency check.
 - **Every `list` returns a total order.** Two reads of unchanged data give the

@@ -29,18 +29,8 @@ import {
   organisationInput,
   parentSection,
   recordInput,
+  violatedConstraint,
 } from "./contract.harness.js";
-
-// Drizzle wraps a driver error and keeps the original as the cause, where both
-// drivers report which constraint refused the row. Naming it in the assertion is
-// what stops a test passing because the write failed for some other reason.
-async function violatedConstraint(work: Promise<unknown>): Promise<string | undefined> {
-  const thrown = await work.then(
-    () => undefined,
-    (error: unknown) => error,
-  );
-  return (thrown as { cause?: { constraint?: string } } | undefined)?.cause?.constraint;
-}
 
 eachDriver(({ run, otherOwner }) => {
   describe("organisations", () => {

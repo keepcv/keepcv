@@ -1,4 +1,4 @@
-import { newUuid, type Repositories } from "@keepcv/core";
+import { ConstraintViolationError, newUuid, type Repositories } from "@keepcv/core";
 import type {
   CareerRecordInput,
   CareerRecordKind,
@@ -39,6 +39,16 @@ const drivers: { name: string; open: () => Store }[] = [
     ? []
     : [{ name: "PostgreSQL", open: () => openServerStore({ connectionString }) }]),
 ];
+
+// Naming the constraint is what stops a test passing because the write failed
+// for some other reason - a typo in a column name refuses the row just as well.
+export async function violatedConstraint(work: Promise<unknown>): Promise<string | undefined> {
+  const thrown = await work.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  return thrown instanceof ConstraintViolationError ? thrown.constraint : undefined;
+}
 
 export function channelInput(sortKey: string, overrides: Partial<ContactChannelInput> = {}) {
   return {

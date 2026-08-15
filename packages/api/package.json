@@ -1,0 +1,58 @@
+{
+  "name": "@keepcv/api",
+  "version": "0.0.0",
+  "description": "The KeepCV HTTP boundary: Hono routes, Zod validation, problem+json errors and a typed client.",
+  "keywords": [
+    "keepcv",
+    "hono",
+    "openapi",
+    "resume",
+    "cv"
+  ],
+  "license": "MIT",
+  "author": "nrautela",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keepcv/keepcv.git",
+    "directory": "packages/api"
+  },
+  "bugs": {
+    "url": "https://github.com/keepcv/keepcv/issues"
+  },
+  "homepage": "https://github.com/keepcv/keepcv/tree/main/packages/api#readme",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "catalog:",
+    "@keepcv/core": "workspace:*",
+    "@keepcv/schema": "workspace:*",
+    "hono": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@keepcv/db": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

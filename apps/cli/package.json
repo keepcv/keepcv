@@ -1,0 +1,50 @@
+{
+  "name": "keepcv",
+  "version": "0.0.0",
+  "description": "Run KeepCV locally: a career data store that compiles into resumes.",
+  "keywords": [
+    "keepcv",
+    "resume",
+    "cv",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "nrautela",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keepcv/keepcv.git",
+    "directory": "apps/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/keepcv/keepcv/issues"
+  },
+  "homepage": "https://github.com/keepcv/keepcv/tree/main/apps/cli#readme",
+  "type": "module",
+  "bin": {
+    "keepcv": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "@keepcv/api": "workspace:*",
+    "@keepcv/db": "workspace:*",
+    "@keepcv/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

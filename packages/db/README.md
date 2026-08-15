@@ -10,8 +10,9 @@ and hosted it is a server PostgreSQL. One schema, one migration set, one set of
 queries, so there is no dialect drift to manage.
 
 > **Status: early development.** The public API is unstable and there is no
-> release yet. Today the store holds the profile and its contact channels; the
-> record store, points and phrasings follow.
+> release yet. The whole record store is here - profile, organisations, records,
+> custom sections, points, phrasings and the native export; resumes, versions,
+> tags and search follow.
 
 ## Installation
 
