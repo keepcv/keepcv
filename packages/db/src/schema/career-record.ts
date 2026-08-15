@@ -6,9 +6,10 @@ import {
   pgTable,
   primaryKey,
   text,
-  uniqueIndex,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { customSection } from "./custom-section.js";
 import { organisation } from "./organisation.js";
 import { standardColumns } from "./owner.js";
 import { partialDate } from "./partial-date.js";
@@ -26,6 +27,7 @@ const KINDS = [
   "language",
   "volunteering",
   "speaking",
+  "custom_entry",
 ];
 const MODES = ["onsite", "hybrid", "remote"];
 const SKILL_PROFICIENCIES = ["familiar", "working", "proficient", "expert"];
@@ -61,6 +63,7 @@ export const record = pgTable(
     location: text("location"),
     sortKey: text("sort_key").notNull(),
     summarySetId: uuid("summary_set_id"),
+    customSectionId: uuid("custom_section_id"),
 
     employmentType: text("employment_type"),
     mode: text("mode"),
@@ -97,9 +100,20 @@ export const record = pgTable(
     onlyOn("certification", ["credential_id", "expires_on"]),
     onlyOn("publication", ["doi"]),
 
-    // Records are dragged within their kind's list, so that is the scope the key
-    // has to be unique in (data-model.md #3.5).
-    uniqueIndex("record_sort_key_unique").on(table.ownerId, table.kind, table.sortKey),
+    // Both directions, where `onlyOn` gives one: a custom entry has to name the
+    // heading it prints under, and no other kind may name one at all.
+    check(
+      "record_custom_section_check",
+      sql.raw(`(kind = 'custom_entry') = (custom_section_id is not null)`),
+    ),
+
+    // Records are dragged within their kind's list - except custom entries, whose
+    // list is one section (data-model.md #3.5). NULLS NOT DISTINCT is what lets
+    // one constraint say both: `custom_section_id` is null on every other kind, so
+    // nulls comparing equal collapses this back to (owner, kind, sort_key) there.
+    unique("record_sort_key_unique")
+      .on(table.ownerId, table.kind, table.customSectionId, table.sortKey)
+      .nullsNotDistinct(),
 
     // Composite rather than a plain reference to organisation(id): it makes
     // pointing at another owner's organisation impossible rather than merely
@@ -114,6 +128,11 @@ export const record = pgTable(
       name: "record_summary_set_fk",
       columns: [table.ownerId, table.summarySetId],
       foreignColumns: [phrasingSet.ownerId, phrasingSet.id],
+    }),
+    foreignKey({
+      name: "record_custom_section_fk",
+      columns: [table.ownerId, table.customSectionId],
+      foreignColumns: [customSection.ownerId, customSection.id],
     }),
   ],
 );

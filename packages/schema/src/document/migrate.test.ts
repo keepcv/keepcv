@@ -19,6 +19,7 @@ const current = {
     },
     contactChannels: [],
     organisations: [],
+    customSections: [],
     records: [],
     recordLinks: [],
     recordFields: [],

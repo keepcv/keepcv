@@ -1,5 +1,6 @@
 export { record } from "./career-record.js";
 export { contactChannel } from "./contact-channel.js";
+export { customSection } from "./custom-section.js";
 export { evidence } from "./evidence.js";
 export { metric } from "./metric.js";
 export { organisation } from "./organisation.js";

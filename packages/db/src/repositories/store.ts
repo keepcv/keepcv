@@ -10,6 +10,7 @@ import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
   contactChannel,
+  customSection,
   evidence,
   metric,
   organisation,
@@ -60,6 +61,7 @@ const kindColumns = {
   credentialId: null,
   expiresOn: null,
   doi: null,
+  customSectionId: null,
 };
 
 function toRecordRow(entry: CareerRecord, ownerId: Uuid) {
@@ -75,6 +77,7 @@ export function createStoreRepository(
       profile: await repositories.profile.get(),
       contactChannels: await repositories.profile.listContactChannels(everything),
       organisations: await repositories.organisations.list(everything),
+      customSections: await repositories.customSections.list(everything),
       records: await repositories.records.list(everything),
       recordLinks: await repositories.records.listLinks(everything),
       recordFields: await repositories.records.listFields(everything),
@@ -206,6 +209,12 @@ export function createStoreRepository(
         await db
           .insert(organisation)
           .values(store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
+      }
+      // Before the records, which is the only table that references one.
+      if (store.customSections.length > 0) {
+        await db
+          .insert(customSection)
+          .values(store.customSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
       }
       if (store.records.length > 0) {
         await db.insert(record).values(store.records.map((row) => toRecordRow(row, ownerId)));

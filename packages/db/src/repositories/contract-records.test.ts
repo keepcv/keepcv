@@ -7,6 +7,7 @@ import {
 } from "@keepcv/core";
 import {
   CAREER_RECORD_KINDS,
+  type CareerRecordInput,
   type CareerRecordKind,
   ORGANISATION_KINDS,
   type OrganisationInput,
@@ -20,11 +21,13 @@ import {
 } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import {
+  customSectionInput,
   eachDriver,
   extrasByKind,
   fieldInput,
   linkInput,
   organisationInput,
+  parentSection,
   recordInput,
 } from "./contract.harness.js";
 
@@ -102,7 +105,10 @@ eachDriver(({ run, otherOwner }) => {
 
   describe("records", () => {
     it.each(CAREER_RECORD_KINDS)("stores a %s with the fields only that kind has", async (kind) => {
-      const input = recordInput(kind, "a0");
+      const section = await run(
+        async (r) => await r.customSections.create(customSectionInput("Patents", "a0")),
+      );
+      const input = recordInput(kind, "a0", parentSection(kind, section.id));
       const created = await run(async (r) => await r.records.create(input));
       expect(created).toMatchObject(extrasByKind[kind]);
 
@@ -259,6 +265,166 @@ eachDriver(({ run, otherOwner }) => {
     });
   });
 
+  describe("custom sections", () => {
+    async function aSection(heading: string, sortKey: string): Promise<Uuid> {
+      const created = await run(
+        async (r) => await r.customSections.create(customSectionInput(heading, sortKey)),
+      );
+      return created.id;
+    }
+
+    function entry(sectionId: Uuid, sortKey: string, title: string) {
+      return recordInput("custom_entry", sortKey, { customSectionId: sectionId, title });
+    }
+
+    it("lists headings in the order they print, and archives without destroying", async () => {
+      const [first, second] = generateNKeysBetween(null, null, 2);
+      await aSection("Press", second ?? "");
+      const patents = await aSection("Patents", first ?? "");
+
+      const listed = await run(async (r) => await r.customSections.list());
+      expect(listed.map((section) => section.heading)).toEqual(["Patents", "Press"]);
+
+      const read = await run(async (r) => await r.customSections.get(patents));
+      const archived = await run(
+        async (r) => await r.customSections.archive(read.id, read.updatedAt),
+      );
+      expect(archived.heading).toBe("Patents");
+      expect(await run(async (r) => await r.customSections.list())).toHaveLength(1);
+      expect(
+        await run(async (r) => await r.customSections.list({ includeArchived: true })),
+      ).toHaveLength(2);
+
+      const restored = await run(
+        async (r) => await r.customSections.restore(archived.id, archived.updatedAt),
+      );
+      expect(restored.archivedAt).toBeNull();
+    });
+
+    // The headings are one list per owner, so that is the scope their own key is
+    // unique in (I11).
+    it("gives one owner at most one heading per sort key", async () => {
+      await aSection("Patents", "a0");
+
+      expect(
+        await violatedConstraint(
+          run((r) => r.customSections.create(customSectionInput("Press", "a0"))),
+        ),
+      ).toBe("custom_section_sort_key_unique");
+    });
+
+    // A custom entry is an ordinary record, so it carries links, fields and points
+    // like any other and nothing downstream learns a second shape.
+    it("holds records that behave like every other kind", async () => {
+      const sectionId = await aSection("Patents", "a0");
+      const created = await run(
+        async (r) => await r.records.create(entry(sectionId, "a0", "A folding wing")),
+      );
+      await run(async (r) => await r.records.createLink(linkInput(created.id, "a0")));
+
+      expect(created.kind).toBe("custom_entry");
+      expect(await run(async (r) => await r.records.get(created.id))).toEqual(created);
+      expect(
+        await run(async (r) => await r.records.listLinks({ recordId: created.id })),
+      ).toHaveLength(1);
+    });
+
+    // The list an entry is dragged within is one section, not every custom entry
+    // the owner has. Scoping it to the kind would reject a legitimate move in the
+    // second heading because the first happened to use the same key.
+    it("scopes an entry's sort key to its section", async () => {
+      const patents = await aSection("Patents", "a0");
+      const press = await aSection("Press", "a1");
+      await run(async (r) => {
+        await r.records.create(entry(patents, "a0", "A folding wing"));
+        await r.records.create(entry(press, "a0", "Interviewed on engines"));
+      });
+
+      expect(
+        await violatedConstraint(run((r) => r.records.create(entry(patents, "a0", "A clash")))),
+      ).toBe("record_sort_key_unique");
+    });
+
+    it("requires a section on a custom entry and refuses one on any other kind", async () => {
+      const sectionId = await aSection("Patents", "a0");
+
+      expect(
+        await violatedConstraint(run((r) => r.records.create(recordInput("custom_entry", "a0")))),
+      ).toBe("record_custom_section_check");
+      expect(
+        await violatedConstraint(
+          run((r) =>
+            r.records.create(recordInput("project", "a0", { customSectionId: sectionId })),
+          ),
+        ),
+      ).toBe("record_custom_section_check");
+    });
+
+    it("moves an entry to another heading", async () => {
+      const patents = await aSection("Patents", "a0");
+      const press = await aSection("Press", "a1");
+      const created = await run(
+        async (r) => await r.records.create(entry(patents, "a0", "A folding wing")),
+      );
+
+      const moved = await run(
+        async (r) =>
+          await r.records.update(
+            created.id,
+            { kind: "custom_entry", customSectionId: press },
+            created.updatedAt,
+          ),
+      );
+      expect(moved).toMatchObject({ customSectionId: press, title: "A folding wing" });
+    });
+
+    // Archiving a heading hides it and leaves its entries alone, so restoring it
+    // does not have to guess which of them the user had archived beforehand.
+    it("leaves its entries alone when it is archived", async () => {
+      const sectionId = await aSection("Patents", "a0");
+      await run(async (r) => await r.records.create(entry(sectionId, "a0", "A folding wing")));
+
+      const section = await run(async (r) => await r.customSections.get(sectionId));
+      await run(async (r) => await r.customSections.archive(section.id, section.updatedAt));
+
+      expect(await run(async (r) => await r.records.list({ kind: "custom_entry" }))).toHaveLength(
+        1,
+      );
+    });
+
+    it("cannot be borrowed from another owner", async () => {
+      const asIntruder = await otherOwner();
+      const theirs = await asIntruder(
+        async (r) => await r.customSections.create(customSectionInput("Their Patents", "a0")),
+      );
+
+      expect(await run(async (r) => await r.customSections.list())).toEqual([]);
+      expect(
+        await violatedConstraint(run((r) => r.records.create(entry(theirs.id, "a0", "Borrowed")))),
+      ).toBe("record_custom_section_fk");
+    });
+
+    it("distinguishes an unknown id from a stale one", async () => {
+      const sectionId = await aSection("Patents", "a0");
+      const section = await run(async (r) => await r.customSections.get(sectionId));
+      await run(
+        async (r) =>
+          await r.customSections.update(section.id, { heading: "Patents held" }, section.updatedAt),
+      );
+
+      await expect(
+        run(async (r) => await r.customSections.update(newUuid(), {}, section.updatedAt)),
+      ).rejects.toBeInstanceOf(NotFoundError);
+
+      await expect(
+        run(
+          async (r) =>
+            await r.customSections.update(section.id, { heading: "Patents" }, section.updatedAt),
+        ),
+      ).rejects.toBeInstanceOf(ConcurrencyConflictError);
+    });
+  });
+
   describe("links and fields", () => {
     async function aRecord(): Promise<Uuid> {
       const created = await run(async (r) => await r.records.create(recordInput("project", "a0")));
@@ -350,11 +516,20 @@ eachDriver(({ run, otherOwner }) => {
   // drizzle-kit cannot resolve @keepcv/schema. These are what stop the two sides
   // drifting: every declared value has to insert, and an undeclared one must not.
   describe("vocabularies", () => {
-    const cases = [
+    const cases: {
+      name: string;
+      declared: string[];
+      create: (value: string, sortKey: string, sectionId: Uuid) => CareerRecordInput;
+    }[] = [
       {
         name: "record kinds",
         declared: [...CAREER_RECORD_KINDS],
-        create: (value: string, sortKey: string) => recordInput(value as CareerRecordKind, sortKey),
+        create: (value: string, sortKey: string, sectionId: Uuid) =>
+          recordInput(
+            value as CareerRecordKind,
+            sortKey,
+            parentSection(value as CareerRecordKind, sectionId),
+          ),
       },
       {
         name: "work modes",
@@ -373,15 +548,20 @@ eachDriver(({ run, otherOwner }) => {
     it.each(cases)(
       "accepts exactly the $name the schema declares",
       async ({ declared, create }) => {
+        const section = await run(
+          async (r) => await r.customSections.create(customSectionInput("Patents", "a0")),
+        );
         const keys = generateNKeysBetween(null, null, declared.length);
         await run(async (r) => {
           for (const [index, value] of declared.entries()) {
-            await r.records.create(create(value, keys[index] ?? ""));
+            await r.records.create(create(value, keys[index] ?? "", section.id));
           }
         });
 
         await expect(
-          run(async (r) => await r.records.create(create("not-a-declared-value", "z0"))),
+          run(
+            async (r) => await r.records.create(create("not-a-declared-value", "z0", section.id)),
+          ),
         ).rejects.toThrow();
       },
     );

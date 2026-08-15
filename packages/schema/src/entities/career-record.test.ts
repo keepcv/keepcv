@@ -34,6 +34,7 @@ const extrasByKind: Record<CareerRecordKind, Record<string, unknown>> = {
   language: { proficiency: "C1" },
   volunteering: {},
   speaking: {},
+  custom_entry: { customSectionId: "019891a4-6ac5-7000-8000-000000000004" },
 };
 
 describe("careerRecordSchema", () => {
@@ -44,6 +45,15 @@ describe("careerRecordSchema", () => {
 
   it("rejects an undeclared kind", () => {
     expect(careerRecordSchema.safeParse({ ...shared, kind: "patent" }).success).toBe(false);
+  });
+
+  // The one kind whose parent is required, and the one column no other kind may
+  // carry - a heading nothing prints under is not a state worth reaching.
+  it("refuses a custom entry with no section, and a section on any other kind", () => {
+    expect(careerRecordSchema.safeParse({ ...shared, kind: "custom_entry" }).success).toBe(false);
+    expect(
+      careerRecordSchema.parse({ ...shared, kind: "award", ...extrasByKind.custom_entry }),
+    ).not.toHaveProperty("customSectionId");
   });
 
   // Reading relies on this: the repository hands every column of the one `record`

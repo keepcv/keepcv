@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { careerRecordSchema } from "../entities/career-record.js";
 import { contactChannelSchema } from "../entities/contact-channel.js";
+import { customSectionSchema } from "../entities/custom-section.js";
 import { evidenceSchema } from "../entities/evidence.js";
 import { metricSchema } from "../entities/metric.js";
 import { organisationSchema } from "../entities/organisation.js";
@@ -24,6 +25,7 @@ export const storeSchema = z.object({
   profile: profileSchema,
   contactChannels: z.array(contactChannelSchema),
   organisations: z.array(organisationSchema),
+  customSections: z.array(customSectionSchema),
   records: z.array(careerRecordSchema),
   recordLinks: z.array(recordLinkSchema),
   recordFields: z.array(recordFieldSchema),

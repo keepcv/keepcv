@@ -197,17 +197,24 @@ A move writes **one row**: the client computes a key strictly between its two
 new neighbours and sends a single patch.
 
 Uniqueness (I11) is per parent scope, and the scope is the list the key is
-dragged within - not the owner. That is `(owner_id, kind)` for a record,
-`(owner_id, record_id)` for its links and fields and for a point,
+dragged within - not the owner. That is `(owner_id, kind, custom_section_id)` for
+a record, `(owner_id, record_id)` for its links and fields and for a point,
 `(owner_id, phrasing_set_id)` for a phrasing, `(owner_id, point_id)` for a
-metric, and `(owner_id)` for a contact channel.
+metric, and `(owner_id)` for a contact channel and for a custom section.
 Scoping wider than the list would reject a legitimate move because some unrelated
 list happened to use the same key.
 
-A point's `record_id` is nullable, and Postgres treats nulls as distinct in a
-unique index by default - which would put every unplaced point in a scope of its
-own and make I11 hold vacuously over the list the user actually drags within. So
-that one constraint is declared `unique nulls not distinct`.
+Two of those scopes contain a nullable column, and Postgres treats nulls as
+distinct in a unique index by default - which puts every row with a null there in
+a scope of its own and makes I11 hold vacuously over the list the user actually
+drags within. So both are declared `unique nulls not distinct`:
+
+- A point's `record_id` is null until it is placed, and the points nobody has
+  placed yet are a list dragged within like any other.
+- A record's `custom_section_id` is null on every kind but `custom_entry`. Nulls
+  comparing equal is what lets one constraint say both things: it collapses back
+  to `(owner_id, kind, sort_key)` for the ten built-in kinds, and scopes custom
+  entries to the one heading they print under.
 
 ### 3.6 `RichText`
 
@@ -447,6 +454,7 @@ record (
              ('experience','education','project','skill','certification',
               'publication','award','language','volunteering','speaking',
               'custom_entry')),
+  custom_section_id uuid null,                    -- required iff kind='custom_entry'
 
   -- the shared vocabulary (#3.2)
   title           text null,
@@ -482,11 +490,13 @@ record (
   check (kind = 'skill'         or category is null),
   check (kind = 'certification' or (credential_id is null and expires_on is null)),
   check (kind = 'publication'   or doi is null),
+  check ((kind = 'custom_entry') = (custom_section_id is not null)),
 
   -- composite, so a record cannot point at another owner's organisation
   foreign key (owner_id, organisation_id) references organisation (owner_id, id),
   foreign key (owner_id, summary_set_id) references phrasing_set (owner_id, id),
-  unique (owner_id, kind, sort_key)
+  foreign key (owner_id, custom_section_id) references custom_section (owner_id, id),
+  unique nulls not distinct (owner_id, kind, custom_section_id, sort_key)
 )
 ```
 
@@ -521,12 +531,31 @@ kind's facts, which is a destructive edit. A patch carries `kind` as a
 discriminator, checked against the stored row, and a mismatch is reported as
 exactly that - not as a missing row and not as a stale token.
 
-`custom_entry` is the one kind that needs a parent: `custom_section_id`, with
-`check ((kind = 'custom_entry') = (custom_section_id is not null))`.
+### `custom_section`
 
 ```sql
-custom_section (...standard, heading text not null, sort_key text not null)
+custom_section (
+  ...standard,
+  heading  text not null,
+  sort_key text not null,
+  unique (owner_id, sort_key)
+)
 ```
+
+A heading the built-in kinds do not cover - "Patents", "Press", "Grants". What
+prints under it is a `record` of kind `custom_entry`, not a table of its own, so
+a custom row carries links, fields and points like every other record, appears in
+cross-kind search and ordering, and needs no presenter or template branch of its
+own. `custom_entry` is the one kind whose parent is required, which is the one
+place the `check` is a biconditional rather than the one-directional
+"null on every other kind" the kind-specific columns use.
+
+The entries under one heading are a list of their own, which is why
+`custom_section_id` is in the record sort-key scope (#3.5).
+
+**Archiving a section leaves its entries alone.** A cascade would have to guess,
+on restore, which of them the user had archived beforehand - and archiving is a
+hide, not a delete, so there is nothing to protect them from.
 
 ### `record_link` and `record_field` - uniform extras
 
@@ -982,7 +1011,8 @@ N+1 query on the most-visited screen in the product.
 
 | Access path | Index |
 |---|---|
-| Records of a kind, ordered | `record (owner_id, kind, sort_key)` - the I11 unique index serves the list read too |
+| Records of a kind, ordered | `record (owner_id, kind, custom_section_id, sort_key)` - the I11 unique index serves the list read too, and prefixes on `(owner_id, kind)` |
+| Custom headings, ordered | `custom_section (owner_id, sort_key)` - the I11 unique index again |
 | Recently edited across all kinds | `record (owner_id, updated_at desc)` |
 | Timeline ordering | `record (owner_id, partial_date_floor(started_on) desc)` |
 | Points of a record | `point (owner_id, record_id, sort_key) where archived_at is null` |

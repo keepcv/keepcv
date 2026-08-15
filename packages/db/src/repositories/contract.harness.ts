@@ -3,6 +3,7 @@ import type {
   CareerRecordInput,
   CareerRecordKind,
   ContactChannelInput,
+  CustomSectionInput,
   EvidenceInput,
   MetricInput,
   NewPhrasing,
@@ -69,7 +70,14 @@ export const extrasByKind: Record<CareerRecordKind, Record<string, unknown>> = {
   language: { proficiency: "C1" },
   volunteering: {},
   speaking: {},
+  custom_entry: {},
 };
+
+// `custom_entry` is the one kind with a required parent, so anything that walks
+// every kind needs a section to hand it - and must hand it to no other kind.
+export function parentSection(kind: CareerRecordKind, id: Uuid): Record<string, unknown> {
+  return kind === "custom_entry" ? { customSectionId: id } : {};
+}
 
 export function recordInput(
   kind: CareerRecordKind,
@@ -103,6 +111,14 @@ export function organisationInput(name: string, overrides: Partial<OrganisationI
     location: null,
     ...overrides,
   } as OrganisationInput;
+}
+
+export function customSectionInput(
+  heading: string,
+  sortKey: string,
+  overrides: Partial<CustomSectionInput> = {},
+) {
+  return { id: newUuid(), heading, sortKey, ...overrides } as CustomSectionInput;
 }
 
 export function linkInput(

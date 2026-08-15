@@ -15,6 +15,7 @@ export const CAREER_RECORD_KINDS = [
   "language",
   "volunteering",
   "speaking",
+  "custom_entry",
 ] as const;
 
 export const careerRecordKindSchema = z.enum(CAREER_RECORD_KINDS);
@@ -47,6 +48,10 @@ const recordBase = z.object({
 const inputBase = recordBase.omit({ createdAt: true, updatedAt: true, archivedAt: true });
 const patchBase = inputBase.omit({ id: true }).partial();
 
+function capitalise(text: string): string {
+  return `${text[0]?.toUpperCase() ?? ""}${text.slice(1)}`;
+}
+
 // One kind, three shapes. The three bases are narrowed before the kind's extra
 // fields are added, because narrowing after the fact loses the key names to the
 // generic and stops type-checking. `kind` stays required on the patch: a record's
@@ -56,11 +61,12 @@ function recordKind<K extends (typeof CAREER_RECORD_KINDS)[number], E extends z.
   kind: K,
   extras: E,
 ) {
-  const name = `${kind[0]?.toUpperCase() ?? ""}${kind.slice(1)}`;
+  // `custom_entry` is the one kind whose name is two words. The id keys this
+  // record's definition in the published JSON Schema, so it carries no space.
+  const id = `${kind.split("_").map(capitalise).join("")}Record`;
+  const title = `${capitalise(kind.replace("_", " "))} record`;
   return {
-    full: recordBase
-      .extend({ kind: z.literal(kind), ...extras })
-      .meta({ id: `${name}Record`, title: `${name} record` }),
+    full: recordBase.extend({ kind: z.literal(kind), ...extras }).meta({ id, title }),
     input: inputBase.extend({ kind: z.literal(kind), ...extras }),
     patch: patchBase.extend({ kind: z.literal(kind), ...z.object(extras).partial().shape }),
   };
@@ -96,6 +102,9 @@ const award = recordKind("award", {});
 const language = recordKind("language", { proficiency: nullableText });
 const volunteering = recordKind("volunteering", {});
 const speaking = recordKind("speaking", {});
+// The one kind with a required parent: a custom entry means nothing apart from
+// the heading it prints under, and no other kind may carry the column at all.
+const customEntry = recordKind("custom_entry", { customSectionId: uuidSchema });
 
 export const careerRecordSchema = z.discriminatedUnion("kind", [
   experience.full,
@@ -108,6 +117,7 @@ export const careerRecordSchema = z.discriminatedUnion("kind", [
   language.full,
   volunteering.full,
   speaking.full,
+  customEntry.full,
 ]);
 
 export const careerRecordInputSchema = z.discriminatedUnion("kind", [
@@ -121,6 +131,7 @@ export const careerRecordInputSchema = z.discriminatedUnion("kind", [
   language.input,
   volunteering.input,
   speaking.input,
+  customEntry.input,
 ]);
 
 export const careerRecordPatchSchema = z.discriminatedUnion("kind", [
@@ -134,6 +145,7 @@ export const careerRecordPatchSchema = z.discriminatedUnion("kind", [
   language.patch,
   volunteering.patch,
   speaking.patch,
+  customEntry.patch,
 ]);
 
 export type CareerRecordKind = z.infer<typeof careerRecordKindSchema>;

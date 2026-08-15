@@ -17,6 +17,7 @@ export {
   CareerRecordKindMismatchError,
   type CareerRecordRepository,
   ConcurrencyConflictError,
+  type CustomSectionRepository,
   DuplicatePointRecordLinkError,
   NotFoundError,
   type OrganisationRepository,
