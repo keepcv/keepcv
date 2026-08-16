@@ -11,9 +11,10 @@ RPC would not be.
 
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact
-> channels, organisations, custom sections, records, points, phrasings and
+> channels, organisations, custom sections, records, points, phrasings, tags and
 > everything hanging off them - plus the boot payload and the native export and
-> import. Tags, search, resumes and versions follow.
+> import. Resumes and versions follow. There is no search route: search is a pure
+> function over the boot payload, in `@keepcv/core`.
 
 ## Installation
 

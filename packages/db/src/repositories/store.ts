@@ -3,9 +3,11 @@ import {
   type Repositories,
   StoreNotEmptyError,
   type StoreRepository,
+  tagSlug,
 } from "@keepcv/core";
 import type { CareerRecord, Store, Timestamp, Uuid } from "@keepcv/schema";
 import { and, eq } from "drizzle-orm";
+import type { PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
@@ -19,10 +21,13 @@ import {
   phrasingSet,
   point,
   pointRecordLink,
+  pointTag,
   profile,
   record,
   recordField,
   recordLink,
+  recordTag,
+  tag,
 } from "../schema/index.js";
 import { owned } from "./owned-row.js";
 
@@ -72,6 +77,14 @@ export function createStoreRepository(
   db: Database,
   repositories: Omit<Repositories, "store">,
 ): StoreRepository {
+  // Drizzle refuses an insert with no rows, and most collections in an export
+  // are empty, so every load below would otherwise carry the same guard.
+  async function insertAll<T extends PgTable>(table: T, values: PgInsertValue<T>[]): Promise<void> {
+    if (values.length > 0) {
+      await db.insert(table).values(values);
+    }
+  }
+
   async function read(currentOnly = false): Promise<Store> {
     return {
       profile: await repositories.profile.get(),
@@ -92,6 +105,9 @@ export function createStoreRepository(
       pointRecordLinks: await repositories.points.listRecordLinks(),
       metrics: await repositories.points.listMetrics(everything),
       evidence: await repositories.points.listEvidence(everything),
+      tags: await repositories.tags.list(everything),
+      recordTags: await repositories.tags.listRecordTags(),
+      pointTags: await repositories.tags.listPointTags(),
     };
   }
 
@@ -100,37 +116,34 @@ export function createStoreRepository(
   // (data-model.md #5). It runs before the profile and the records because both
   // can point at a set.
   async function loadPhrasings(store: Store, ownerId: Uuid): Promise<void> {
-    if (store.phrasingSets.length > 0) {
-      await db.insert(phrasingSet).values(
-        store.phrasingSets.map((row) => ({
-          ...row,
-          ...standardRow(row, ownerId),
-          canonicalPhrasingId: null,
-        })),
-      );
-    }
-    if (store.phrasings.length > 0) {
-      await db.insert(phrasing).values(
-        store.phrasings.map((row) => ({
-          ...row,
-          ...standardRow(row, ownerId),
-          currentRevisionId: null,
-        })),
-      );
-    }
-    if (store.phrasingRevisions.length > 0) {
-      // Derived again rather than trusted: a hand-edited file whose plain text
-      // disagrees with its body would otherwise make I8 false in the store.
-      await db.insert(phrasingRevision).values(
-        store.phrasingRevisions.map((row) => ({
-          id: row.id,
-          ownerId,
-          phrasingId: row.phrasingId,
-          createdAt: new Date(row.createdAt),
-          ...deriveRevision(row.body),
-        })),
-      );
-    }
+    await insertAll(
+      phrasingSet,
+      store.phrasingSets.map((row) => ({
+        ...row,
+        ...standardRow(row, ownerId),
+        canonicalPhrasingId: null,
+      })),
+    );
+    await insertAll(
+      phrasing,
+      store.phrasings.map((row) => ({
+        ...row,
+        ...standardRow(row, ownerId),
+        currentRevisionId: null,
+      })),
+    );
+    // Derived again rather than trusted: a hand-edited file whose plain text
+    // disagrees with its body would otherwise make I8 false in the store.
+    await insertAll(
+      phrasingRevision,
+      store.phrasingRevisions.map((row) => ({
+        id: row.id,
+        ownerId,
+        phrasingId: row.phrasingId,
+        createdAt: new Date(row.createdAt),
+        ...deriveRevision(row.body),
+      })),
+    );
 
     for (const row of store.phrasings.filter((p) => p.currentRevisionId !== null)) {
       await db
@@ -149,26 +162,26 @@ export function createStoreRepository(
   // Last, because a point references both a record and a phrasing set, and its
   // metrics and evidence reference it.
   async function loadPoints(store: Store, ownerId: Uuid): Promise<void> {
-    if (store.points.length > 0) {
-      await db
-        .insert(point)
-        .values(store.points.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-    }
-    if (store.pointRecordLinks.length > 0) {
-      await db
-        .insert(pointRecordLink)
-        .values(store.pointRecordLinks.map((row) => ({ ...row, ownerId })));
-    }
-    if (store.metrics.length > 0) {
-      await db
-        .insert(metric)
-        .values(store.metrics.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-    }
-    if (store.evidence.length > 0) {
-      await db
-        .insert(evidence)
-        .values(store.evidence.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-    }
+    await insertAll(
+      point,
+      store.points.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+    );
+    await insertAll(
+      pointRecordLink,
+      store.pointRecordLinks.map((row) => ({ ...row, ownerId })),
+    );
+    await insertAll(
+      metric,
+      store.metrics.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+    );
+    await insertAll(
+      evidence,
+      store.evidence.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+    );
+    await insertAll(
+      pointTag,
+      store.pointTags.map((row) => ({ ...row, ownerId })),
+    );
   }
 
   // Reading the whole store to decide costs kilobytes and covers a collection
@@ -204,35 +217,46 @@ export function createStoreRepository(
         .set({ ...store.profile, ...standardRow(store.profile, ownerId) })
         .where(owned(profile));
 
-      if (store.contactChannels.length > 0) {
-        await db
-          .insert(contactChannel)
-          .values(store.contactChannels.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-      }
-      if (store.organisations.length > 0) {
-        await db
-          .insert(organisation)
-          .values(store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-      }
+      await insertAll(
+        contactChannel,
+        store.contactChannels.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        organisation,
+        store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      // The slug is derived again rather than trusted, for the reason a
+      // revision's plain text is: a hand-edited file whose slug disagrees with
+      // its label would otherwise make I17 false in the store it loaded into.
+      await insertAll(
+        tag,
+        store.tags.map((row) => ({
+          ...row,
+          ...standardRow(row, ownerId),
+          slug: tagSlug(row.label),
+        })),
+      );
       // Before the records, which is the only table that references one.
-      if (store.customSections.length > 0) {
-        await db
-          .insert(customSection)
-          .values(store.customSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-      }
-      if (store.records.length > 0) {
-        await db.insert(record).values(store.records.map((row) => toRecordRow(row, ownerId)));
-      }
-      if (store.recordLinks.length > 0) {
-        await db
-          .insert(recordLink)
-          .values(store.recordLinks.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-      }
-      if (store.recordFields.length > 0) {
-        await db
-          .insert(recordField)
-          .values(store.recordFields.map((row) => ({ ...row, ...standardRow(row, ownerId) })));
-      }
+      await insertAll(
+        customSection,
+        store.customSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        record,
+        store.records.map((row) => toRecordRow(row, ownerId)),
+      );
+      await insertAll(
+        recordLink,
+        store.recordLinks.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        recordField,
+        store.recordFields.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        recordTag,
+        store.recordTags.map((row) => ({ ...row, ownerId })),
+      );
 
       await loadPoints(store, ownerId);
     },

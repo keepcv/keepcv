@@ -135,20 +135,21 @@ builds and `tsc` only checks.
 
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
-`phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric` and
-`evidence`, and the port has seven repositories. That is the whole record store;
-much of the data model describes tables that do not exist yet - drafts, tags,
-search, resumes, versions; do not assume otherwise.
+`phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
+`evidence`, `tag`, `record_tag` and `point_tag`, and the port has eight
+repositories. That is the record store and its vocabulary; much of the data model
+describes tables that do not exist yet - drafts, resumes, versions; do not assume
+otherwise. There is no `search_document` and there will not be one: see below.
 
 The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
-`/v1/openapi.json`, the point's secondary records and phrasing revisions, and
-eleven owned collections: `/v1/contact-channels`, `/v1/organisations`,
-`/v1/custom-sections`, `/v1/records`, `/v1/record-links`, `/v1/record-fields`,
-`/v1/points`, `/v1/metrics`, `/v1/evidence`, `/v1/phrasing-sets` and
-`/v1/phrasings`. That is the whole record store; tags, search, resumes and
-versions are unbuilt. `createApi` takes the port, an owner scope and an
-`authenticate` function and knows nothing else - no driver, no token store, no
-port number.
+`/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
+assignment on records and points, `/v1/tags/{id}/merge`, and twelve owned
+collections: `/v1/contact-channels`, `/v1/organisations`, `/v1/custom-sections`,
+`/v1/records`, `/v1/record-links`, `/v1/record-fields`, `/v1/points`,
+`/v1/metrics`, `/v1/evidence`, `/v1/phrasing-sets`, `/v1/phrasings` and
+`/v1/tags`. Resumes and versions are unbuilt. `createApi` takes the port, an
+owner scope and an `authenticate` function and knows nothing else - no driver, no
+token store, no port number.
 
 The web app is **read-only so far**: the shell, the store overview and the record
 list, both fed by one `GET /v1/store` on boot. Nothing in it writes, so there are
@@ -171,10 +172,18 @@ clears the address bar. A token in a query string would be in every log between
 here and nowhere.
 
 **Screens read the cached store through selectors in `@keepcv/core`**, never
-through a request of their own. Counting, filtering and every incompleteness
-nudge is a pure function there, so the same answer serves the browser, the CLI
-and anything server-side. Formatting is the opposite and lives in the web app's
-`model/`: a DTO is a contract, not a UI changelog.
+through a request of their own. Counting, filtering, tag usage, every
+incompleteness nudge and **search itself** are pure functions there, so the same
+answer serves the browser, the CLI and anything server-side. Formatting is the
+opposite and lives in the web app's `model/`: a DTO is a contract, not a UI
+changelog.
+
+**Search is `search(store, query)` in `@keepcv/core`, not a route and not a
+table.** The store is kilobytes and the client already holds all of it, so a
+derived `search_document` would have been one fact stored twice, written by every
+mutation and kept honest by a rebuild-and-compare test - and it would have cost a
+round trip per keystroke. Prefix matching does what the trigram index was for.
+Do not add a `/v1/search`; add fields to the selector.
 
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
@@ -349,9 +358,11 @@ Several of these look like bugs. They are not - do not "fix" them.
   `pnpm lint:fix` silently reformats the entire repository to tabs at 80 columns.
   This has happened once.
 - **Tests are typechecked but not built.** Each package's `tsconfig.json` excludes
-  `*.test.ts` (and `*.harness.ts` in `db`); a sibling `tsconfig.test.json`
-  typechecks them with `noEmit`. Including tests in the build puts compiled copies
-  in `dist`, and Vitest then runs every suite twice.
+  `*.test.ts` and `*.harness.ts`; a sibling `tsconfig.test.json` typechecks them
+  with `noEmit`. Including tests in the build puts compiled copies in `dist`, and
+  Vitest then runs every suite twice. A fixture shared by two test files is a
+  `*.harness.ts`, never a `*.test.ts` another one imports - importing a test file
+  registers its suites a second time.
 - **`packages/core/tsconfig.json` sets `"types": []` on purpose.** With no ambient
   type packages and no DOM library, `node:fs` does not resolve and `process` is
   not declared, so the no-I/O boundary fails the build instead of failing review.

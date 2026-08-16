@@ -71,7 +71,6 @@ owner -+- profile -- contact_channel
        |        +- point_tag
        |
        +- draft                            uncommitted editor state
-       +- search_document                  derived; tsvector + trigram
        |
        +- resume --+- resume_contact_channel
                    +- resume_section -- resume_entry -- resume_entry_point
@@ -726,7 +725,7 @@ the losslessness guarantee.
 ```sql
 tag (
   ...standard,
-  slug     text not null,        -- normalised: lowercased, hyphenated
+  slug     text not null,        -- derived from the label; see below
   label    text not null,        -- as the user typed it
   category text null             -- 'skill' | 'domain' | 'competency' | user-defined
 )
@@ -734,8 +733,20 @@ tag (
 -- Partial so that archiving a tag frees its slug for reuse.
 create unique index on tag (owner_id, slug) where archived_at is null;
 
-record_tag (tag_id, record_id, primary key (tag_id, record_id))
-point_tag  (tag_id, point_id,  primary key (tag_id, point_id))
+record_tag (
+  owner_id uuid not null references owner(id) on delete cascade,
+  tag_id uuid not null, record_id uuid not null,
+  primary key (owner_id, tag_id, record_id),
+  foreign key (owner_id, tag_id)    references tag    (owner_id, id) on delete cascade,
+  foreign key (owner_id, record_id) references record (owner_id, id) on delete cascade
+)
+point_tag (
+  owner_id uuid not null references owner(id) on delete cascade,
+  tag_id uuid not null, point_id uuid not null,
+  primary key (owner_id, tag_id, point_id),
+  foreign key (owner_id, tag_id)   references tag   (owner_id, id) on delete cascade,
+  foreign key (owner_id, point_id) references point (owner_id, id) on delete cascade
+)
 ```
 
 A controlled vocabulary rather than free strings, so rename and merge are
@@ -743,29 +754,47 @@ single operations and role profiles can be rules over a stable set. Two
 explicit join tables rather than one polymorphic table, so both sides keep
 referential integrity.
 
-### `search_document`
+Both carry `owner_id` and reach their ends through composite keys, like
+`point_record_link` (#7) and for the same reason: identity is scoped to the
+owner (#3.1), so a single-column reference would resolve to another store's row
+the moment a backup is restored beside its original. Neither carries standard
+columns beyond that - the pair is the whole row, so untagging deletes rather
+than archives and destroys nothing the user wrote.
 
-```sql
-search_document (
-  owner_id, source_kind, source_id,
-  title text not null,
-  body  text not null,           -- concatenated plain text
-  tsv   tsvector generated always as (
-          setweight(to_tsvector('english', title), 'A') ||
-          setweight(to_tsvector('english', body),  'B')) stored,
-  primary key (source_kind, source_id)
-);
-create index on search_document using gin (tsv);
-create index on search_document using gin (title gin_trgm_ops);
-```
+**`slug` is derived from `label`, never sent.** It is the projection uniqueness
+is enforced on: case, spacing, punctuation and accents are folded away, so
+"React", "react" and " React " are one tag rather than three. `+` and `#` are
+spelled out first, because C, C++ and C# are three different skills. It is
+computed on every write and again on import rather than trusted, exactly as
+`phrasing_revision.plain_text` is (I8, I17) - a second hand-maintained copy of a
+fact is the thing this model refuses everywhere else.
 
-Two access paths because the UI needs two behaviours: `tsv` for global search
-over whole words, `pg_trgm` for search-as-you-type, since Postgres full-text
-search will not match `postg` against `postgresql`. Both are available in
-PGlite.
+**Merging moves the assignments and archives the tag merged away.** Rows already
+carrying both keep the one they had, which is why the assignments are inserted
+and deleted rather than repointed in place - an update of `tag_id` would collide
+with the row already there. A tag cannot be merged into itself: that would move
+its assignments onto the tag it then archives, which is the vocabulary losing a
+word rather than gaining one.
 
-Maintained on write by the repository layer, not by triggers - so it can be
-rebuilt deterministically and is covered by ordinary tests.
+### Search is a pure function, not a table
+
+There is no `search_document`. The whole store is kilobytes and `GET /v1/store`
+puts all of it in the client on boot, so search is a selector in `@keepcv/core`
+over rows the browser already holds: `search(store, query)` ranks records and
+points by weighted prefix match across title, organisation, tag labels and
+phrasing text.
+
+A derived table would have had to be written by every mutation in the store and
+kept honest by a rebuild-and-compare test - one fact stored twice, with the
+drift-detector that admits it. It also cost a network round trip per keystroke,
+which is the interaction search-as-you-type exists to avoid. Prefix matching
+gives what the trigram index was there for (`postg` finds `postgresql`) with no
+index at all, and the same function serves the browser, the CLI and anything
+server-side.
+
+The judgement this rests on is "the whole store is kilobytes", which is the same
+assumption the boot payload already makes. If that ever stops holding, the boot
+payload is what breaks first, and the two are then one decision rather than two.
 
 ---
 
@@ -975,6 +1004,7 @@ Enforced by constraint where possible, by test where not.
 | I14 | Every record kind has exactly one presenter | exhaustiveness check + test |
 | I15 | A canonical phrasing belongs to its set, and a current revision to its phrasing | composite foreign key carrying the parent's own id |
 | I16 | A point's primary record is not also one of its secondary links | repository refuses the link and drops it on promotion + test |
+| I17 | `tag.slug` always equals the projection of `tag.label` | derived on write, and derived again on import rather than trusted; test |
 
 ---
 
@@ -1021,9 +1051,9 @@ N+1 query on the most-visited screen in the product.
 | Phrasings of a set | `phrasing (owner_id, phrasing_set_id, sort_key) where archived_at is null` |
 | Revision history | `phrasing_revision (owner_id, phrasing_id, created_at)` |
 | Links / fields of a record | `record_link (owner_id, record_id, sort_key)`, `record_field (owner_id, record_id, sort_key)` |
-| Global search | `search_document` GIN on `tsv` |
-| Type-ahead search | `search_document` GIN trigram on `title` |
-| Tag filtering | `record_tag (tag_id)`, `point_tag (tag_id)` |
+| Tag filtering | `record_tag (owner_id, tag_id)`, `point_tag (owner_id, tag_id)` - the primary keys, which prefix on the tag |
+| A row's own tags | `record_tag (owner_id, record_id)`, `point_tag (owner_id, point_id)` |
+| Tag by name | `tag (owner_id, slug) where archived_at is null` - the uniqueness index serves the lookup too |
 | "Where is this used?" | `resume_content_ref (ref_kind, ref_id)` |
 | Version timeline | `resume_version (resume_id, seq desc)` |
 

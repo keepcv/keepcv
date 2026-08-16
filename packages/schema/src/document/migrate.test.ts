@@ -30,6 +30,9 @@ const current = {
     pointRecordLinks: [],
     metrics: [],
     evidence: [],
+    tags: [],
+    recordTags: [],
+    pointTags: [],
   },
 };
 

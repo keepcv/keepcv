@@ -30,6 +30,7 @@ const points = collectionRoutes({
   query: archivedQuery.extend({
     recordId: uuidSchema.optional(),
     confidence: pointConfidenceSchema.optional(),
+    tag: uuidSchema.optional(),
   }),
 });
 
@@ -121,10 +122,15 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
 
   return router()
     .openapi(points.list, async (c) => {
-      const { archived, recordId, confidence } = c.req.valid("query");
+      const { archived, recordId, confidence, tag } = c.req.valid("query");
       const items = await on(
         async (of) =>
-          await of.list({ recordId, confidence, includeArchived: archived === "include" }),
+          await of.list({
+            recordId,
+            confidence,
+            tagId: tag,
+            includeArchived: archived === "include",
+          }),
       );
       return c.json({ items }, 200);
     })

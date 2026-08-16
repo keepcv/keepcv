@@ -14,10 +14,10 @@ import {
   type Timestamp,
   type Uuid,
 } from "@keepcv/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
-import { evidence, metric, point, pointRecordLink } from "../schema/index.js";
+import { evidence, metric, point, pointRecordLink, pointTag } from "../schema/index.js";
 import {
   type Changes,
   insertOwned,
@@ -99,6 +99,19 @@ export function createPointRepository(
     );
   }
 
+  // A subquery rather than a join, so the select stays one row per point and the
+  // ordering below is the one the list already had.
+  function carriesTag(tagId: Uuid | undefined): SQL | undefined {
+    if (tagId === undefined) return undefined;
+    return inArray(
+      point.id,
+      db
+        .select({ id: pointTag.pointId })
+        .from(pointTag)
+        .where(and(eq(pointTag.ownerId, currentOwnerId()), eq(pointTag.tagId, tagId))),
+    );
+  }
+
   async function dropLink(pointId: Uuid, recordId: Uuid): Promise<void> {
     await db
       .delete(pointRecordLink)
@@ -126,6 +139,7 @@ export function createPointRepository(
             options?.confidence === undefined
               ? undefined
               : eq(point.confidence, options.confidence),
+            carriesTag(options?.tagId),
             live(point, options?.includeArchived),
           ),
         )

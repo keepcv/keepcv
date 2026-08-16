@@ -23,6 +23,7 @@ import {
   pointInput,
   type Run,
   recordInput,
+  tagInput,
 } from "./contract.harness.js";
 
 // Everything the format can carry: every record kind with its own columns, both
@@ -158,6 +159,12 @@ async function fill(run: Run): Promise<void> {
       }),
     );
     await r.points.archiveEvidence(staleNote.id, staleNote.updatedAt);
+
+    const react = await r.tags.create(tagInput("React", { category: "skill" }));
+    const merged = await r.tags.create(tagInput("Preact"));
+    await r.tags.merge(merged.id, react.id, merged.updatedAt);
+    await r.tags.tagRecord(senior.id, react.id);
+    await r.tags.tagPoint(placed.id, react.id);
   });
 }
 
@@ -177,6 +184,9 @@ function reversed(store: Store): Store {
     pointRecordLinks: [...store.pointRecordLinks].reverse(),
     metrics: [...store.metrics].reverse(),
     evidence: [...store.evidence].reverse(),
+    tags: [...store.tags].reverse(),
+    recordTags: [...store.recordTags].reverse(),
+    pointTags: [...store.pointTags].reverse(),
   };
 }
 
@@ -214,10 +224,10 @@ eachDriver(({ run, otherOwner }) => {
       expect(exported.records.map((entry) => entry.kind)).toEqual(
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
-      // The two collections with no `archivedAt`: a revision is immutable, so a
-      // superseded wording is superseded and never archived, and a point's record
-      // link holds nothing of its own to archive.
-      const unarchivable = ["phrasingRevisions", "pointRecordLinks"];
+      // The collections with no `archivedAt`: a revision is immutable, so a
+      // superseded wording is superseded and never archived, and a link or a tag
+      // assignment holds nothing of its own to archive.
+      const unarchivable = ["phrasingRevisions", "pointRecordLinks", "recordTags", "pointTags"];
       for (const [collection, value] of Object.entries(exported)) {
         if (!Array.isArray(value) || unarchivable.includes(collection)) continue;
         expect(
@@ -276,6 +286,23 @@ eachDriver(({ run, otherOwner }) => {
           plainText: "not what the body says",
           charCount: 0,
         })),
+      };
+
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(tampered));
+
+      expect(await other(async (r) => await r.store.read())).toEqual(exported);
+    });
+
+    // I17, for the reason I8 is checked above: a slug is the projection of a
+    // label, so a hand-edited file claiming otherwise loads with the projection
+    // rather than its claim - which is also what keeps the uniqueness rule true.
+    it("derives a tag's slug from its label rather than trusting the document", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const tampered = {
+        ...exported,
+        tags: exported.tags.map((tag) => ({ ...tag, slug: "not-what-the-label-says" })),
       };
 
       const other = await otherOwner();

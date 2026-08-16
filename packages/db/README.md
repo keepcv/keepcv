@@ -11,8 +11,8 @@ queries, so there is no dialect drift to manage.
 
 > **Status: early development.** The public API is unstable and there is no
 > release yet. The whole record store is here - profile, organisations, records,
-> custom sections, points, phrasings and the native export; resumes, versions,
-> tags and search follow.
+> custom sections, points, phrasings, tags and the native export; resumes and
+> versions follow.
 
 ## Installation
 

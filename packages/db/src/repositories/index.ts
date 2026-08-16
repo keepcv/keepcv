@@ -7,6 +7,7 @@ import { createPhrasingRepository } from "./phrasing.js";
 import { createPointRepository } from "./point.js";
 import { createProfileRepository } from "./profile.js";
 import { createStoreRepository } from "./store.js";
+import { createTagRepository } from "./tag.js";
 
 export function createRepositories(db: Database): Repositories {
   const phrasings = createPhrasingRepository(db);
@@ -17,6 +18,7 @@ export function createRepositories(db: Database): Repositories {
     records: createCareerRecordRepository(db),
     points: createPointRepository(db, phrasings),
     phrasings,
+    tags: createTagRepository(db),
   };
   return { ...repositories, store: createStoreRepository(db, repositories) };
 }

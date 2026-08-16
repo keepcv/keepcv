@@ -10,13 +10,14 @@ import { pointRecordLinkSchema, pointSchema } from "../entities/point.js";
 import { profileSchema } from "../entities/profile.js";
 import { recordFieldSchema } from "../entities/record-field.js";
 import { recordLinkSchema } from "../entities/record-link.js";
+import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
 // Every entity the store holds, archived rows included: `import(export(store))
 // == store` is a tested property, so anything omitted here is data the format
-// silently drops. Grows with each content slice - tags, resumes, versions.
+// silently drops. Grows with each content slice - resumes, versions.
 //
 // Flat arrays rather than links and fields nested inside their records: the
 // export is storage-shaped, and a shape that mirrors the rows is one that can be
@@ -39,6 +40,9 @@ export const storeSchema = z
     // Private, and exported anyway: never printed is not the same as withheld
     // from the user, and an export that dropped it would not round-trip.
     evidence: z.array(evidenceSchema),
+    tags: z.array(tagSchema),
+    recordTags: z.array(recordTagSchema),
+    pointTags: z.array(pointTagSchema),
   })
   // Named, because two routes answer this shape and an anonymous one would be
   // inlined into the OpenAPI document twice.

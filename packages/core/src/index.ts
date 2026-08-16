@@ -30,22 +30,32 @@ export {
   type Repositories,
   StoreNotEmptyError,
   type StoreRepository,
+  TagMergedIntoItselfError,
+  type TagRepository,
   type UnitOfWork,
 } from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
 export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
+export { type SearchHit, type SearchSubject, search } from "./store/search.js";
 export {
   archived,
   live,
   organisationOf,
   overview,
   pointsOfRecord,
+  pointsWithTag,
   type RecordCount,
   recordCounts,
+  recordsWithTag,
   type StoreOverview,
+  type TagUsage,
+  tagsOfPoint,
+  tagsOfRecord,
+  tagUsage,
   textOfPhrasingSet,
   textOfPoint,
   type Unfinished,
   unplacedPoints,
 } from "./store/selectors.js";
+export { tagSlug } from "./tags/slug.js";

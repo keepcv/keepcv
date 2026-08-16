@@ -117,8 +117,11 @@ CRUD   /v1/contact-channels
 CRUD   /v1/organisations
 CRUD   /v1/custom-sections             headings the built-in kinds do not cover
 
-CRUD   /v1/records                     ?kind=&tag=&archived=&q=
+CRUD   /v1/records                     ?kind=&tag=&archived=
 GET    /v1/records/:id
+GET    /v1/records/:id/tags            the tags it carries
+PUT    /v1/records/:id/tags/:tagId     idempotent
+DELETE /v1/records/:id/tags/:tagId
 
 CRUD   /v1/record-links                ?recordId=&archived=  uniform, any kind
 CRUD   /v1/record-fields               ?recordId=&archived=  uniform, any kind
@@ -128,6 +131,9 @@ GET    /v1/points/:id/records          the records it also relates to
 PUT    /v1/points/:id/records/:recordId   secondary parent; idempotent
 DELETE /v1/points/:id/records/:recordId
 GET    /v1/points/:id/usage            which resume versions reference it
+GET    /v1/points/:id/tags             the tags it carries
+PUT    /v1/points/:id/tags/:tagId      idempotent
+DELETE /v1/points/:id/tags/:tagId
 CRUD   /v1/metrics                     ?pointId=&archived=
 CRUD   /v1/evidence                    ?pointId=&archived=  never rendered
 
@@ -141,9 +147,8 @@ GET    /v1/phrasings/:id/revisions     history
 PUT    /v1/drafts/:targetKind/:targetId/:field
 DELETE /v1/drafts/:targetKind/:targetId/:field
 
-CRUD   /v1/tags
-POST   /v1/tags/:id/merge              { intoTagId }
-GET    /v1/search                      ?q=&kind=&tag=&mode=fulltext|prefix
+CRUD   /v1/tags                        ?archived=
+POST   /v1/tags/:id/merge              { expectedUpdatedAt, intoTagId }
 
 CRUD   /v1/resumes
 GET    /v1/resumes/:id/composition     sections, entries, points
@@ -192,6 +197,26 @@ Notes on the non-obvious ones:
   that does not exist: an empty list would read as "this point relates to
   nothing" or "this phrasing has never said anything", and neither is a state the
   store can be in.
+- **There is no `GET /v1/search`.** Search is a pure function over the boot
+  payload the client already holds (data-model.md #8), so it is a selector in
+  `@keepcv/core` rather than a route - the same reasoning as there being no
+  `/v1/store/summary`, and it also removes the round trip per keystroke that
+  search-as-you-type cannot afford. `/v1/records` therefore takes no `?q=`
+  either; a caller narrowing by text is a caller who should read the store.
+- **A tag is assigned from the side that carries it.** `PUT
+  /v1/records/:id/tags/:tagId` is nested because the pair is the whole row, like
+  a point's secondary records - it takes no body and no `If-Match`, a repeat has
+  nothing to change, and a `DELETE` of a pair that was never assigned is the same
+  204. The tag it names is a `422` when it does not exist, and the record is a
+  `404`: the subject of the request is the row in the path.
+- **A tag's `slug` is derived and appears in no input.** It is the projection its
+  uniqueness is enforced on, so the store computes it from the label on every
+  write; a body carrying one has it dropped at the boundary. A second label
+  projecting to a slug already taken is a `409` naming `tag_slug_unique`.
+- **`POST /v1/tags/:id/merge` carries the concurrency token of the tag being
+  merged away**, since that is the row it archives. Merging a tag into itself is
+  a `422` pointing at `intoTagId` - nothing changed under the caller and
+  re-reading would not help.
 - **There is no `move` route.** A move is a `PATCH` of `sortKey`, which the
   sparse-patch rule above already covers, and a second way to do it would be a
   second thing to keep correct.
@@ -285,8 +310,10 @@ interface Repositories {
   // Sets, phrasings and revisions together: a set is created with its first
   // phrasing and that phrasing's first text, so none is ever written alone.
   phrasings:    PhrasingRepository;
+  // The vocabulary and both sides of it: a tag outlives everything carrying it,
+  // and rename and merge are operations on the word rather than on the rows.
+  // There is no search repository - search is a selector in core (#3).
   tags:         TagRepository;
-  search:       SearchRepository;
   resumes:      ResumeRepository;
   versions:     ResumeVersionRepository;
   drafts:       DraftRepository;
@@ -308,9 +335,10 @@ Rules:
 - **Read methods filter `archived_at is null` by default.** Including archived
   rows is an explicit option, never the default.
 - **Multi-table operations run inside `UnitOfWork`.** Creating a point writes
-  `point`, `phrasing_set`, `phrasing`, `phrasing_revision` and later
-  `search_document`, and resolves two circular foreign keys along the way
-  (data-model.md #5); a partial failure would leave a point with no text.
+  `point`, `phrasing_set`, `phrasing` and `phrasing_revision`, and resolves two
+  circular foreign keys along the way (data-model.md #5); a partial failure would
+  leave a point with no text. Merging a tag moves both sides of the vocabulary
+  and archives a row, for the same reason.
 - **Metrics and evidence hang off `PointRepository`**, for the reason links and
   fields hang off `CareerRecordRepository`: nothing holds one without holding
   the point it belongs to.

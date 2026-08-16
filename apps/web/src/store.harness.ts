@@ -45,6 +45,9 @@ export function emptyStore(): Store {
     pointRecordLinks: [],
     metrics: [],
     evidence: [],
+    tags: [],
+    recordTags: [],
+    pointTags: [],
   });
 }
 
