@@ -24,7 +24,10 @@ const records = collectionRoutes({
   dto: careerRecordSchema,
   input: careerRecordInputSchema,
   patch: careerRecordPatchSchema,
-  query: archivedQuery.extend({ kind: careerRecordKindSchema.optional() }),
+  query: archivedQuery.extend({
+    kind: careerRecordKindSchema.optional(),
+    tag: uuidSchema.optional(),
+  }),
 });
 
 // Flat, narrowed by `?recordId`, rather than nested under the record. The port
@@ -62,9 +65,9 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
 
   return router()
     .openapi(records.list, async (c) => {
-      const { archived, kind } = c.req.valid("query");
+      const { archived, kind, tag } = c.req.valid("query");
       const items = await on(
-        async (of) => await of.list({ kind, includeArchived: archived === "include" }),
+        async (of) => await of.list({ kind, tagId: tag, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })

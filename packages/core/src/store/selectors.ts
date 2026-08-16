@@ -4,6 +4,7 @@ import type {
   Organisation,
   Point,
   Store,
+  Tag,
   Uuid,
 } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
@@ -60,6 +61,54 @@ export function textOfPhrasingSet(store: Store, phrasingSetId: Uuid | null): str
   const phrasing = store.phrasings.find((row) => row.id === set?.canonicalPhrasingId);
   const revision = store.phrasingRevisions.find((row) => row.id === phrasing?.currentRevisionId);
   return revision?.plainText ?? "";
+}
+
+// Archived tags come back too, like archived rows anywhere else: `live` is the
+// caller's filter to apply, and a tag that vanished from a row it is on would
+// read as an unexplained change rather than as something hidden.
+export function tagsOfRecord(store: Store, recordId: Uuid): Tag[] {
+  const assigned = new Set(
+    store.recordTags.filter((entry) => entry.recordId === recordId).map((entry) => entry.tagId),
+  );
+  return store.tags.filter((tag) => assigned.has(tag.id));
+}
+
+export function tagsOfPoint(store: Store, pointId: Uuid): Tag[] {
+  const assigned = new Set(
+    store.pointTags.filter((entry) => entry.pointId === pointId).map((entry) => entry.tagId),
+  );
+  return store.tags.filter((tag) => assigned.has(tag.id));
+}
+
+export function recordsWithTag(store: Store, tagId: Uuid): CareerRecord[] {
+  const carries = new Set(
+    store.recordTags.filter((entry) => entry.tagId === tagId).map((entry) => entry.recordId),
+  );
+  return store.records.filter((entry) => carries.has(entry.id));
+}
+
+export function pointsWithTag(store: Store, tagId: Uuid): Point[] {
+  const carries = new Set(
+    store.pointTags.filter((entry) => entry.tagId === tagId).map((entry) => entry.pointId),
+  );
+  return store.points.filter((point) => carries.has(point.id));
+}
+
+export interface TagUsage {
+  tag: Tag;
+  records: number;
+  points: number;
+}
+
+// Every tag, including the ones nothing carries: an unused tag is the one worth
+// renaming or merging away, so a list that hid it would hide the work.
+// The counts are of live rows, which is what clicking the tag then shows.
+export function tagUsage(store: Store): TagUsage[] {
+  return store.tags.map((tag) => ({
+    tag,
+    records: live(recordsWithTag(store, tag.id)).length,
+    points: live(pointsWithTag(store, tag.id)).length,
+  }));
 }
 
 export interface RecordCount {

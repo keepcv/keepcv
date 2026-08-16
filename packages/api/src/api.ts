@@ -11,6 +11,7 @@ import { pointRoutes } from "./routes/points.js";
 import { profileRoutes } from "./routes/profile.js";
 import { recordRoutes } from "./routes/records.js";
 import { storeRoutes } from "./routes/store.js";
+import { tagRoutes } from "./routes/tags.js";
 
 export const OPENAPI_PATH = "/v1/openapi.json";
 
@@ -86,6 +87,7 @@ export function createApi(options: ApiOptions) {
     .route("/", recordRoutes(options.unitOfWork))
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))
+    .route("/", tagRoutes(options.unitOfWork))
     .route("/", storeRoutes(options.unitOfWork));
 }
 

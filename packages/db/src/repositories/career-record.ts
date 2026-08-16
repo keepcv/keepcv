@@ -10,9 +10,10 @@ import {
   type Timestamp,
   type Uuid,
 } from "@keepcv/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { Database } from "../database.js";
-import { record, recordField, recordLink } from "../schema/index.js";
+import { currentOwnerId } from "../owner-scope.js";
+import { record, recordField, recordLink, recordTag } from "../schema/index.js";
 import {
   type Changes,
   insertOwned,
@@ -60,6 +61,19 @@ function toRecordField(row: RecordFieldRow): RecordField {
 }
 
 export function createCareerRecordRepository(db: Database): CareerRecordRepository {
+  // A subquery rather than a join, so the select stays one row per record and
+  // the ordering below is the one the list already had.
+  function carriesTag(tagId: Uuid | undefined): SQL | undefined {
+    if (tagId === undefined) return undefined;
+    return inArray(
+      record.id,
+      db
+        .select({ id: recordTag.recordId })
+        .from(recordTag)
+        .where(and(eq(recordTag.ownerId, currentOwnerId()), eq(recordTag.tagId, tagId))),
+    );
+  }
+
   async function setRecord(
     id: Uuid,
     expectedUpdatedAt: Timestamp,
@@ -115,6 +129,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
           and(
             owned(record),
             options?.kind === undefined ? undefined : eq(record.kind, options.kind),
+            carriesTag(options?.tagId),
             live(record, options?.includeArchived),
           ),
         )

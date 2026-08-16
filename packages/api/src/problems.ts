@@ -6,6 +6,7 @@ import {
   DuplicatePointRecordLinkError,
   NotFoundError,
   StoreNotEmptyError,
+  TagMergedIntoItselfError,
 } from "@keepcv/core";
 import { PROBLEM_TYPES, type Problem, UnsupportedSchemaVersionError } from "@keepcv/schema";
 import { ZodError } from "zod";
@@ -145,6 +146,18 @@ export function problemFor(error: unknown, instance: string): Problem {
       detail: error.message,
       instance,
       errors: [{ path: "patch.kind", code: "wrong_record_kind" }],
+    };
+  }
+  // Nothing changed under the caller and re-reading would not help: a merge
+  // naming the tag it is applied to was wrong when it was sent.
+  if (error instanceof TagMergedIntoItselfError) {
+    return {
+      type: PROBLEM_TYPES.validationFailed,
+      title: "Validation failed",
+      status: 422,
+      detail: error.message,
+      instance,
+      errors: [{ path: "intoTagId", code: "same_tag" }],
     };
   }
   if (error instanceof StoreNotEmptyError) {

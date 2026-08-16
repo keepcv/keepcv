@@ -1,14 +1,4 @@
-import type { CareerRecord, Metric, Point, Store, Uuid } from "@keepcv/schema";
-import {
-  careerRecordSchema,
-  metricSchema,
-  organisationSchema,
-  phrasingRevisionSchema,
-  phrasingSchema,
-  phrasingSetSchema,
-  pointSchema,
-  storeSchema,
-} from "@keepcv/schema";
+import type { CareerRecord } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
@@ -16,142 +6,24 @@ import {
   organisationOf,
   overview,
   pointsOfRecord,
+  pointsWithTag,
   recordCounts,
+  recordsWithTag,
+  tagsOfPoint,
+  tagsOfRecord,
+  tagUsage,
   textOfPoint,
   unplacedPoints,
 } from "./selectors.js";
-
-const EPOCH = "2026-01-01T00:00:00.000Z";
-
-// Parsed through the schemas rather than cast: a fixture the wire format would
-// reject is one these selectors are not actually being tested against.
-function standard(overrides: { updatedAt?: string; archivedAt?: string | null } = {}) {
-  return {
-    id: newUuid(),
-    createdAt: EPOCH,
-    updatedAt: overrides.updatedAt ?? EPOCH,
-    archivedAt: overrides.archivedAt ?? null,
-  };
-}
-
-function emptyStore(): Store {
-  return storeSchema.parse({
-    profile: {
-      ...standard(),
-      fullName: null,
-      pronouns: null,
-      headline: null,
-      location: null,
-      summarySetId: null,
-    },
-    contactChannels: [],
-    organisations: [],
-    customSections: [],
-    records: [],
-    recordLinks: [],
-    recordFields: [],
-    phrasingSets: [],
-    phrasings: [],
-    phrasingRevisions: [],
-    points: [],
-    pointRecordLinks: [],
-    metrics: [],
-    evidence: [],
-  });
-}
-
-// A kind's own columns are required keys that happen to be nullable, so a body
-// missing them is not a record of that kind at all.
-const columnsOfKind: Record<string, Record<string, unknown>> = {
-  project: {},
-  experience: { employmentType: null, mode: null },
-  certification: { credentialId: null, expiresOn: null },
-};
-
-function aRecord(overrides: Record<string, unknown> = {}): CareerRecord {
-  const { kind = "project" } = overrides as { kind?: string };
-  return careerRecordSchema.parse({
-    ...standard(),
-    kind,
-    ...columnsOfKind[kind],
-    title: "a project",
-    subtitle: null,
-    organisationId: null,
-    startedOn: null,
-    endedOn: null,
-    isCurrent: false,
-    location: null,
-    sortKey: "a0",
-    summarySetId: null,
-    ...overrides,
-  });
-}
-
-// A point arrives with the words it holds, so the fixture writes all four rows
-// of the chain rather than a point on its own.
-function aPoint(store: Store, text: string, overrides: Record<string, unknown> = {}): Point {
-  const phrasingId = newUuid();
-  const revisionId = newUuid();
-  const setId = newUuid();
-
-  store.phrasingSets.push(
-    phrasingSetSchema.parse({
-      ...standard(),
-      id: setId,
-      purpose: "point",
-      canonicalPhrasingId: phrasingId,
-    }),
-  );
-  store.phrasings.push(
-    phrasingSchema.parse({
-      ...standard(),
-      id: phrasingId,
-      phrasingSetId: setId,
-      variant: "standard",
-      label: null,
-      sortKey: "a0",
-      currentRevisionId: revisionId,
-    }),
-  );
-  store.phrasingRevisions.push(
-    phrasingRevisionSchema.parse({
-      id: revisionId,
-      createdAt: EPOCH,
-      phrasingId,
-      body: [{ t: "text", v: text }],
-      plainText: text,
-      charCount: text.length,
-      contentHash: "0".repeat(64),
-    }),
-  );
-
-  const point = pointSchema.parse({
-    ...standard(),
-    recordId: null,
-    phrasingSetId: setId,
-    confidence: "unverified",
-    occurredOn: null,
-    sortKey: "a0",
-    ...overrides,
-  });
-  store.points.push(point);
-  return point;
-}
-
-function aMetric(pointId: Uuid, overrides: Record<string, unknown> = {}): Metric {
-  return metricSchema.parse({
-    ...standard(),
-    pointId,
-    label: "Latency",
-    value: 120,
-    unit: "ms",
-    baseline: null,
-    direction: null,
-    period: null,
-    sortKey: "a0",
-    ...overrides,
-  });
-}
+import {
+  aMetric,
+  anOrganisation,
+  aPoint,
+  aRecord,
+  aTag,
+  EPOCH,
+  emptyStore,
+} from "./store.harness.js";
 
 describe("live and archived", () => {
   it("splits rows without losing either side", () => {
@@ -354,19 +226,77 @@ describe("the overview", () => {
 describe("a record's organisation", () => {
   it("resolves the one it names and nothing when it names none", () => {
     const store = emptyStore();
-    const org = organisationSchema.parse({
-      ...standard(),
-      name: "Analytical Engines",
-      kind: "company",
-      website: null,
-      industry: null,
-      location: null,
-    });
+    const org = anOrganisation("Analytical Engines");
     store.organisations.push(org);
 
     expect(organisationOf(store, aRecord({ organisationId: org.id }))?.name).toBe(
       "Analytical Engines",
     );
     expect(organisationOf(store, aRecord())).toBeUndefined();
+  });
+});
+
+describe("tags", () => {
+  it("reads the tags on a record and on a point, and nothing for an untagged one", () => {
+    const store = emptyStore();
+    const record = aRecord();
+    const untagged = aRecord();
+    store.records.push(record, untagged);
+    const point = aPoint(store, "measured something");
+
+    const react = aTag(store, "React");
+    const platform = aTag(store, "Platform");
+    store.recordTags.push({ tagId: react.id, recordId: record.id });
+    store.pointTags.push({ tagId: platform.id, pointId: point.id });
+
+    expect(tagsOfRecord(store, record.id).map((t) => t.label)).toEqual(["React"]);
+    expect(tagsOfRecord(store, untagged.id)).toEqual([]);
+    expect(tagsOfPoint(store, point.id).map((t) => t.label)).toEqual(["Platform"]);
+  });
+
+  // An archived tag is hidden, not removed, so a row it is on still says so and
+  // the caller decides whether to show it - as it does for every archived row.
+  it("keeps an archived tag on the row that carries it", () => {
+    const store = emptyStore();
+    const record = aRecord();
+    store.records.push(record);
+    const retired = aTag(store, "Retired", { archivedAt: EPOCH });
+    store.recordTags.push({ tagId: retired.id, recordId: record.id });
+
+    expect(tagsOfRecord(store, record.id)).toHaveLength(1);
+    expect(live(tagsOfRecord(store, record.id))).toEqual([]);
+  });
+
+  it("finds what carries a tag, on both sides", () => {
+    const store = emptyStore();
+    const record = aRecord();
+    store.records.push(record, aRecord());
+    const point = aPoint(store, "measured something");
+    const react = aTag(store, "React");
+    store.recordTags.push({ tagId: react.id, recordId: record.id });
+    store.pointTags.push({ tagId: react.id, pointId: point.id });
+
+    expect(recordsWithTag(store, react.id).map((r) => r.id)).toEqual([record.id]);
+    expect(pointsWithTag(store, react.id).map((p) => p.id)).toEqual([point.id]);
+  });
+
+  // A tag nothing carries is the one worth merging away, so it stays on the
+  // list at zero rather than disappearing from the screen that manages it.
+  it("counts every tag, including one nothing carries", () => {
+    const store = emptyStore();
+    const record = aRecord();
+    const shelved = aRecord({ archivedAt: EPOCH });
+    store.records.push(record, shelved);
+    const react = aTag(store, "React");
+    const unused = aTag(store, "Unused");
+    store.recordTags.push(
+      { tagId: react.id, recordId: record.id },
+      { tagId: react.id, recordId: shelved.id },
+    );
+
+    expect(tagUsage(store)).toEqual([
+      { tag: react, records: 1, points: 0 },
+      { tag: unused, records: 0, points: 0 },
+    ]);
   });
 });

@@ -13,6 +13,7 @@ import type {
   PointInput,
   RecordFieldInput,
   RecordLinkInput,
+  TagInput,
   Uuid,
 } from "@keepcv/schema";
 import { afterAll, beforeAll, beforeEach, describe } from "vitest";
@@ -222,6 +223,11 @@ export function metricInput(pointId: Uuid, sortKey: string, overrides: Partial<M
     sortKey,
     ...overrides,
   } as MetricInput;
+}
+
+// No slug: it is derived from the label on write, so a caller cannot send one.
+export function tagInput(label: string, overrides: Partial<TagInput> = {}) {
+  return { id: newUuid(), label, category: null, ...overrides } as TagInput;
 }
 
 export function evidenceInput(pointId: Uuid, overrides: Partial<EvidenceInput> = {}) {

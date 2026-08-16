@@ -111,8 +111,13 @@ answering "where is this used?".
 ### Tagging and search
 
 A tag vocabulary with rename and merge; assignment across both records and
-points; global full-text search; type-ahead trigram search; filters persisted
-in the URL; saved filters.
+points; search over records and points, ranked and matching on prefixes so it
+answers while the query is still being typed; filters persisted in the URL;
+saved filters.
+
+**Search is a pure function over the boot payload, not a table** (data-model.md
+#8). It therefore has no migration, no route and no index to maintain, and the
+same call serves the browser, the CLI and anything server-side.
 
 ### Composition
 

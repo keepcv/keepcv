@@ -98,6 +98,8 @@ describe("the OpenAPI document", () => {
       "/v1/points/{id}/records",
       "/v1/points/{id}/records/{recordId}",
       "/v1/points/{id}/restore",
+      "/v1/points/{id}/tags",
+      "/v1/points/{id}/tags/{tagId}",
       "/v1/profile",
       "/v1/record-fields",
       "/v1/record-fields/{id}",
@@ -108,7 +110,13 @@ describe("the OpenAPI document", () => {
       "/v1/records",
       "/v1/records/{id}",
       "/v1/records/{id}/restore",
+      "/v1/records/{id}/tags",
+      "/v1/records/{id}/tags/{tagId}",
       "/v1/store",
+      "/v1/tags",
+      "/v1/tags/{id}",
+      "/v1/tags/{id}/merge",
+      "/v1/tags/{id}/restore",
     ]);
     expect(Object.keys(document.paths["/v1/contact-channels/{id}"] ?? {}).sort()).toEqual([
       "delete",

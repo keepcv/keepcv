@@ -30,6 +30,7 @@ import type {
   PointInput,
   PointPatch,
   PointRecordLink,
+  PointTag,
   Profile,
   ProfilePatch,
   RecordField,
@@ -38,8 +39,12 @@ import type {
   RecordLink,
   RecordLinkInput,
   RecordLinkPatch,
+  RecordTag,
   RichText,
   Store,
+  Tag,
+  TagInput,
+  TagPatch,
   Timestamp,
   Uuid,
 } from "@keepcv/schema";
@@ -162,6 +167,7 @@ export interface CustomSectionRepository {
 export interface CareerRecordRepository {
   list(options?: {
     kind?: CareerRecordKind | undefined;
+    tagId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<CareerRecord[]>;
   get(id: Uuid): Promise<CareerRecord>;
@@ -255,6 +261,7 @@ export interface PointRepository {
   list(options?: {
     recordId?: Uuid | undefined;
     confidence?: PointConfidence | undefined;
+    tagId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<Point[]>;
   get(id: Uuid): Promise<Point>;
@@ -289,6 +296,52 @@ export interface PointRepository {
   updateEvidence(id: Uuid, patch: EvidencePatch, expectedUpdatedAt: Timestamp): Promise<Evidence>;
   archiveEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
   restoreEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
+}
+
+// Merging a tag into itself would move its assignments onto the tag it then
+// archives, which is not a merge and not a rename - it is the vocabulary losing
+// a word. There is nothing to re-read, so it is a caller mistake, not a clash.
+export class TagMergedIntoItselfError extends Error {
+  override readonly name = "TagMergedIntoItselfError";
+  readonly id: Uuid;
+
+  constructor(id: Uuid) {
+    super(`tag ${id} cannot be merged into itself`);
+    this.id = id;
+  }
+}
+
+// A controlled vocabulary shared by records and points, which is why it is one
+// repository rather than a part of either: a tag outlives everything carrying
+// it, and rename and merge are operations on the word rather than on the rows.
+// `slug` is derived from the label on every write, so no method takes one.
+export interface TagRepository {
+  list(options?: { includeArchived?: boolean | undefined }): Promise<Tag[]>;
+  get(id: Uuid): Promise<Tag>;
+  create(input: TagInput): Promise<Tag>;
+  update(id: Uuid, patch: TagPatch, expectedUpdatedAt: Timestamp): Promise<Tag>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
+  // Moves every assignment onto the other tag and archives this one, so the
+  // rows keep a tag and the vocabulary loses a duplicate. Answers with the tag
+  // that was merged away, as archiving it on its own would.
+  merge(id: Uuid, intoTagId: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
+
+  // No token and no archive on any of the four: the pair is the whole row, so
+  // untagging destroys nothing the user wrote and both ends of it survive.
+  listRecordTags(options?: {
+    recordId?: Uuid | undefined;
+    tagId?: Uuid | undefined;
+  }): Promise<RecordTag[]>;
+  tagRecord(recordId: Uuid, tagId: Uuid): Promise<RecordTag>;
+  untagRecord(recordId: Uuid, tagId: Uuid): Promise<void>;
+
+  listPointTags(options?: {
+    pointId?: Uuid | undefined;
+    tagId?: Uuid | undefined;
+  }): Promise<PointTag[]>;
+  tagPoint(pointId: Uuid, tagId: Uuid): Promise<PointTag>;
+  untagPoint(pointId: Uuid, tagId: Uuid): Promise<void>;
 }
 
 // Import loads a whole store or nothing. Merging two stores is the Import
@@ -332,6 +385,7 @@ export interface Repositories {
   records: CareerRecordRepository;
   points: PointRepository;
   phrasings: PhrasingRepository;
+  tags: TagRepository;
   store: StoreRepository;
 }
 

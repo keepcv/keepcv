@@ -78,6 +78,10 @@ the entire WYSIWYG premise.
                  - diff(versionA, versionB)
                  - canonicalise(RichText) + contentHash
                  - projectPlainText(RichText)
+                 - search(store, query) and the store selectors: counts,
+                       nudges and tag usage are pure functions of the boot
+                       payload, so no screen asks the server a question it
+                       already holds the answer to
                  - estimateLength(ResumeDocument, TemplateConfig)
                        estimate only - Paged.js in the preview is authoritative
                        for actual page count and overflow
@@ -86,7 +90,7 @@ the entire WYSIWYG premise.
                  No I/O. Runs unchanged in Node and in the browser.
 
 @keepcv/db       Drizzle schema, migrations, repository IMPLEMENTATIONS,
-                 search-document maintenance, content-ref index maintenance.
+                 content-ref index maintenance.
 
 @keepcv/api      Hono routes, Zod validation, error mapping, typed client.
 
@@ -123,7 +127,9 @@ bug class, not a style preference.
 tidiness: the moment that matters is returning after ninety days and finding
 everything navigable. A filtered view you can bookmark, share
 with yourself, and return to via browser history is worth more than one that
-resets on reload.
+resets on reload. The query is URL state and nothing else: running it is a pure
+function of the cached store (data-model.md #8), so there is no server state
+behind a search box and no query key for one.
 
 **Drafts are persisted server-side** (`draft` table, data-model.md #5). In a
 product whose promise is that nothing written is lost, losing in-progress text
@@ -139,8 +145,6 @@ to a closed tab is the founding failure in miniature.
 ['record', recordId]
 ['points', { recordId }]
 ['phrasingSet', phrasingSetId]
-['tags']
-['search', query]
 ['resumes']
 ['resume', resumeId]                       // working composition
 ['resume', resumeId, 'versions']

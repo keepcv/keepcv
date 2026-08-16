@@ -142,6 +142,18 @@ export {
   recordLinkPatchSchema,
   recordLinkSchema,
 } from "./entities/record-link.js";
+export {
+  type PointTag,
+  pointTagSchema,
+  type RecordTag,
+  recordTagSchema,
+  type Tag,
+  type TagInput,
+  type TagPatch,
+  tagInputSchema,
+  tagPatchSchema,
+  tagSchema,
+} from "./entities/tag.js";
 export { EXPORT_JSON_SCHEMA_FILE, exportJsonSchema } from "./json-schema.js";
 export {
   type ContentHash,
