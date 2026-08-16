@@ -144,7 +144,7 @@ PATCH  /v1/phrasings/:id               label, variant, sortKey - not text
 POST   /v1/phrasings/:id/revisions     append; the only way text changes
 GET    /v1/phrasings/:id/revisions     history
 
-PUT    /v1/drafts/:targetKind/:targetId/:field
+PUT    /v1/drafts/:targetKind/:targetId/:field   { body }  - no If-Match
 DELETE /v1/drafts/:targetKind/:targetId/:field
 
 CRUD   /v1/tags                        ?archived=
@@ -217,6 +217,14 @@ Notes on the non-obvious ones:
   merged away**, since that is the row it archives. Merging a tag into itself is
   a `422` pointing at `intoTagId` - nothing changed under the caller and
   re-reading would not help.
+- **A draft is addressed by what it drafts.** The target is its identity, so
+  there is no id to put in a path, and there is no `GET`: every draft arrives in
+  the boot payload, and an editor asking per field would be a round trip
+  answering "no" nearly every time. `PUT` carries no concurrency token - the next
+  keystrokes are meant to replace the last ones - and `DELETE` of a field with no
+  draft is the same `204`. A target that does not exist is a `404`, because the
+  row in the path is the subject of the request; a `targetKind` outside the
+  vocabulary, or a `field` that is not a plain path segment, is a `422`.
 - **There is no `move` route.** A move is a `PATCH` of `sortKey`, which the
   sparse-patch rule above already covers, and a second way to do it would be a
   second thing to keep correct.
@@ -264,18 +272,23 @@ Notes on the non-obvious ones:
   (template-model.md), not the manifest. The manifest is storage-shaped; the
   document is template-shaped, and only the latter is a public contract.
 - **`GET /v1/store` returns current state only** - no phrasing revision
-  history, no version manifests, no drafts. Those are fetched per subject on
+  history and no version manifests. Those are fetched per subject on
   demand. The "the whole store is only kilobytes" assumption
   holds for current state; revision history grows without bound by design
   and must never be in the boot payload. `GET /v1/export` is the opposite and
   carries everything, history included: an export that drops superseded wordings
   is a delete, and I10 would not hold.
 
+  **Drafts are in it.** They are not history: there is at most one per field and
+  it is the newest thing the user wrote, so they are bounded and they are
+  current. The editor has to know a draft is waiting before it opens, which is
+  why the alternative - a `GET` per field - is not the cheaper one.
+
   It answers the same `Store` shape the export wraps, with `phrasingRevisions`
   narrowed to the revision each phrasing currently points at - so every point
   arrives with the words it says, and none of the words it used to say. One
-  schema until versions and drafts join the export, which is where the two
-  shapes genuinely diverge.
+  schema until versions join the export, which is where the two shapes genuinely
+  diverge.
 
   **Archived rows are in it.** "Current" means "not history", not "not
   archived": the archived filter is a client-side toggle over rows it already
@@ -314,9 +327,11 @@ interface Repositories {
   // and rename and merge are operations on the word rather than on the rows.
   // There is no search repository - search is a selector in core (#3).
   tags:         TagRepository;
+  // Keyed by what it drafts rather than by an id: `save` overwrites and takes no
+  // token, and `discard` is the one delete the store performs.
+  drafts:       DraftRepository;
   resumes:      ResumeRepository;
   versions:     ResumeVersionRepository;
-  drafts:       DraftRepository;
   // The native export, whole: `read` returns every row the owner has including
   // archived ones, `load` puts one back with its ids and timestamps intact.
   store:        StoreRepository;

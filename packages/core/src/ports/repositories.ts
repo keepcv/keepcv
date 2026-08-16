@@ -9,6 +9,9 @@ import type {
   CustomSection,
   CustomSectionInput,
   CustomSectionPatch,
+  Draft,
+  DraftBody,
+  DraftTarget,
   Evidence,
   EvidenceInput,
   EvidencePatch,
@@ -344,6 +347,17 @@ export interface TagRepository {
   untagPoint(pointId: Uuid, tagId: Uuid): Promise<void>;
 }
 
+// Uncommitted editor state, keyed by what it drafts rather than by an id of its
+// own. `save` overwrites: a draft is the newest keystrokes and the next ones
+// replace it, so there is no concurrency token and nothing to archive. `discard`
+// deletes, which is the one place in the store that does - the text it held is
+// either a revision by then or something the user explicitly abandoned.
+export interface DraftRepository {
+  list(): Promise<Draft[]>;
+  save(target: DraftTarget, body: DraftBody): Promise<Draft>;
+  discard(target: DraftTarget): Promise<void>;
+}
+
 // Import loads a whole store or nothing. Merging two stores is the Import
 // capability's job and needs a review step in front of it, so this refuses
 // rather than guessing which side of a clash to keep.
@@ -386,6 +400,7 @@ export interface Repositories {
   points: PointRepository;
   phrasings: PhrasingRepository;
   tags: TagRepository;
+  drafts: DraftRepository;
   store: StoreRepository;
 }
 

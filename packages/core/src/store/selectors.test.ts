@@ -1,7 +1,9 @@
-import type { CareerRecord } from "@keepcv/schema";
+import type { CareerRecord, DraftTarget } from "@keepcv/schema";
+import { draftSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
+  draftFor,
   live,
   organisationOf,
   overview,
@@ -298,5 +300,44 @@ describe("tags", () => {
       { tag: react, records: 1, points: 0 },
       { tag: unused, records: 0, points: 0 },
     ]);
+  });
+});
+
+describe("draftFor", () => {
+  const aDraft = (target: DraftTarget, text: string) =>
+    draftSchema.parse({ ...target, createdAt: EPOCH, updatedAt: EPOCH, body: { text } });
+
+  it("finds the draft of one field and no other", () => {
+    const store = emptyStore();
+    const phrasingId = newUuid();
+    const target = { targetKind: "phrasing", targetId: phrasingId, field: "text" } as const;
+    store.drafts.push(
+      aDraft(target, "half a sentence"),
+      aDraft({ ...target, field: "label" }, "a name"),
+      aDraft({ ...target, targetId: newUuid() }, "another phrasing"),
+    );
+
+    expect(draftFor(store, target)?.body).toEqual({ text: "half a sentence" });
+    expect(draftFor(store, { ...target, field: "label" })?.body).toEqual({ text: "a name" });
+  });
+
+  // Two kinds can hold the same id only in a store restored from somewhere else,
+  // but the key is the triple and a lookup that ignored the kind would answer
+  // with somebody else's text.
+  it("does not confuse two kinds that name the same id", () => {
+    const store = emptyStore();
+    const id = newUuid();
+    store.drafts.push(aDraft({ targetKind: "record", targetId: id, field: "title" }, "a title"));
+
+    expect(draftFor(store, { targetKind: "record", targetId: id, field: "title" })).toBeDefined();
+    expect(
+      draftFor(store, { targetKind: "phrasing", targetId: id, field: "title" }),
+    ).toBeUndefined();
+  });
+
+  it("answers with nothing when the field has never been drafted", () => {
+    expect(
+      draftFor(emptyStore(), { targetKind: "record", targetId: newUuid(), field: "title" }),
+    ).toBeUndefined();
   });
 });

@@ -136,14 +136,16 @@ builds and `tsc` only checks.
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
-`evidence`, `tag`, `record_tag` and `point_tag`, and the port has eight
-repositories. That is the record store and its vocabulary; much of the data model
-describes tables that do not exist yet - drafts, resumes, versions; do not assume
-otherwise. There is no `search_document` and there will not be one: see below.
+`evidence`, `tag`, `record_tag`, `point_tag` and `draft`, and the port has nine
+repositories. That is the record store, its vocabulary and its editor state; much
+of the data model describes tables that do not exist yet - resumes, versions; do
+not assume otherwise. There is no `search_document` and there will not be one:
+see below.
 
 The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
 `/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
-assignment on records and points, `/v1/tags/{id}/merge`, and twelve owned
+assignment on records and points, `/v1/tags/{id}/merge`,
+`/v1/drafts/{targetKind}/{targetId}/{field}`, and twelve owned
 collections: `/v1/contact-channels`, `/v1/organisations`, `/v1/custom-sections`,
 `/v1/records`, `/v1/record-links`, `/v1/record-fields`, `/v1/points`,
 `/v1/metrics`, `/v1/evidence`, `/v1/phrasing-sets`, `/v1/phrasings` and
@@ -160,7 +162,10 @@ generated from filenames.
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each
 phrasing currently says, because history grows without bound and is fetched on
-every open. There is deliberately no summary route: counts, recent activity and
+every open. **Drafts are in both** - one per field at most, and the newest thing
+the user wrote, so they are current state rather than history, and an editor
+learns a draft is waiting from the payload it already holds rather than from a
+`GET` per field. There is deliberately no summary route: counts, recent activity and
 nudges are pure functions of that payload and belong in `@keepcv/core`, which
 runs in the browser, rather than being derived a second time in SQL.
 

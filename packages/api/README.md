@@ -11,10 +11,10 @@ RPC would not be.
 
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact
-> channels, organisations, custom sections, records, points, phrasings, tags and
-> everything hanging off them - plus the boot payload and the native export and
-> import. Resumes and versions follow. There is no search route: search is a pure
-> function over the boot payload, in `@keepcv/core`.
+> channels, organisations, custom sections, records, points, phrasings, tags,
+> drafts and everything hanging off them - plus the boot payload and the native
+> export and import. Resumes and versions follow. There is no search route:
+> search is a pure function over the boot payload, in `@keepcv/core`.
 
 ## Installation
 
@@ -80,6 +80,11 @@ const response = await client.v1.profile.$get();
   `POST /v1/phrasings/{id}/revisions`, which keeps the superseded wording and
   moves a pointer. It is the one write with no concurrency token, because two
   people writing different wordings at once must both keep their text.
+- **In-progress text survives a closed tab.** `PUT /v1/drafts/{targetKind}/{targetId}/{field}`
+  keeps uncommitted editor state outside history, overwritable and without a
+  concurrency token, so keystrokes never become revisions and nothing half-written
+  is lost. Drafts arrive with the boot payload, so an editor knows one is waiting
+  before it opens.
 - **One request boots a client.** `GET /v1/store` answers the whole store,
   archived rows included, so filters and counts are selectors over cached data
   rather than requests. It carries the wording each phrasing says now and not the

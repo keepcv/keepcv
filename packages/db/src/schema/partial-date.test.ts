@@ -3,6 +3,7 @@ import { partialDateSchema } from "@keepcv/schema";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BOOTS_A_STORE } from "../repositories/contract.harness.js";
 import { MIGRATIONS_FOLDER } from "../store.js";
 
 // The domain's CHECK and PARTIAL_DATE_PATTERN are written out separately, so
@@ -35,7 +36,7 @@ describe("the partial_date domain", () => {
 
   beforeAll(async () => {
     await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });
-  });
+  }, BOOTS_A_STORE);
 
   afterAll(async () => {
     await client.close();

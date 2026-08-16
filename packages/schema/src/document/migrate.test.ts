@@ -33,6 +33,7 @@ const current = {
     tags: [],
     recordTags: [],
     pointTags: [],
+    drafts: [],
   },
 };
 
