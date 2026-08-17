@@ -153,7 +153,8 @@ overrides, and sixteen owned collections: `/v1/contact-channels`,
 `/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
 `/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/resumes`,
 `/v1/resume-sections`, `/v1/resume-entries` and `/v1/resume-entry-points`.
-Versions are unbuilt, and so is anything that compiles a `ResumeDocument`.
+It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`.
+Versions and templates are unbuilt.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
@@ -234,7 +235,10 @@ otherwise the DTO is both.
 
 The one deliberate exception is `ResumeDocument`, which crosses every layer
 unchanged. Duplicating it per layer would guarantee the preview and the exported
-file eventually disagree.
+file eventually disagree. It lives in `@keepcv/schema` beside the store shapes,
+and `compile()` in `@keepcv/core` is the only thing that produces one -
+formatting a date or a metric for a template is that function's job, not a
+renderer's.
 
 ### Two boundaries that are enforced, not encouraged
 

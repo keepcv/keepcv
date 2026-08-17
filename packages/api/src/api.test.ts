@@ -126,6 +126,7 @@ describe("the OpenAPI document", () => {
       "/v1/resumes/{id}",
       "/v1/resumes/{id}/contact-channels",
       "/v1/resumes/{id}/contact-channels/{contactChannelId}",
+      "/v1/resumes/{id}/document",
       "/v1/resumes/{id}/restore",
       "/v1/store",
       "/v1/tags",

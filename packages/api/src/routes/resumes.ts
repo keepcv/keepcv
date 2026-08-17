@@ -1,7 +1,8 @@
 import { createRoute } from "@hono/zod-openapi";
-import type { ResumeRepository, UnitOfWork } from "@keepcv/core";
+import { compile, NotFoundError, type ResumeRepository, type UnitOfWork } from "@keepcv/core";
 import {
   resumeContactChannelSchema,
+  resumeDocumentSchema,
   resumeEntryInputSchema,
   resumeEntryPatchSchema,
   resumeEntryPointInputSchema,
@@ -116,6 +117,26 @@ const clearContactChannel = createRoute({
   responses: {
     ...sessionRequired,
     204: { description: "the resume does not override that channel" },
+    404: noResume,
+  },
+});
+
+// Compiled from the same pure function the browser previews with, so the two
+// cannot drift (template-model.md #7).
+const readDocument = createRoute({
+  method: "get",
+  path: "/v1/resumes/{id}/document",
+  tags: ["resumes"],
+  summary: "Compile a resume into the document every renderer binds to",
+  description:
+    "Uniform, self-contained and free of store identifiers. Hidden and archived rows are already filtered out, and evidence has no field it could travel in.",
+  request: {
+    params: z.object({ id: uuidSchema }),
+    query: z.object({ locale: z.string().min(2).optional() }),
+  },
+  responses: {
+    ...sessionRequired,
+    200: jsonResponse(resumeDocumentSchema, "the compiled document"),
     404: noResume,
   },
 });
@@ -308,6 +329,17 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       return c.json(restored, 200);
     })
 
+    .openapi(readDocument, async (c) => {
+      const { id } = c.req.valid("param");
+      const { locale } = c.req.valid("query");
+      const store = await unitOfWork.run(async (r) => await r.store.readCurrent());
+      const document = compile(store, id, {
+        generatedAt: new Date().toISOString(),
+        ...(locale === undefined ? {} : { locale }),
+      });
+      if (document === undefined) throw new NotFoundError("resume", id);
+      return c.json(document, 200);
+    })
     .openapi(listContactChannels, async (c) => {
       const { id } = c.req.valid("param");
       const items = await on(async (of) => {

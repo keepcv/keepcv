@@ -36,8 +36,6 @@ type ResumeDocument = {
   meta: {
     generatedAt: string;          // ISO 8601
     resumeName: string;
-    templateId: string;
-    templateVersion: string;
     locale: string;               // date and list formatting
   };
 
@@ -48,12 +46,21 @@ type ResumeDocument = {
     location?: string;
     summary?: RichText;
     contacts: Contact[];
-    links: Link[];
   };
 
   sections: Section[];
 };
 ```
+
+**No `templateId` or `templateVersion` in `meta` yet.** There is no template
+package for them to name, and a resume carries no template columns
+(data-model.md #9.1). They arrive with the Templates capability, alongside the
+columns.
+
+**The header has one list, not two.** A contact channel that is a URL - a
+website, a LinkedIn, a GitHub - is a `Contact` with an `href`, so a second
+`links[]` beside it would be a list nothing could ever fill. `Link` remains the
+type for a record's links, which is where it is actually used.
 
 ### Section
 
@@ -219,7 +226,8 @@ field.
 ## 4. Keys, overflow and length budgeting
 
 Every section, entry and point carries an opaque `key`, stable within the
-document and derived from the manifest. Templates emit it as `data-key`.
+document and derived from its position in it - `s0`, `s0e1`, `s0e1p2`, and the
+same for a group, link, field or metric. Templates emit it as `data-key`.
 
 That is what lets the preview map a rendered element back to the thing that
 produced it, which in turn makes these expressible:
@@ -227,8 +235,10 @@ produced it, which in turn makes these expressible:
 - *"This point is what pushed you onto page two."*
 - *"Drop these three lowest-tagged points to fit."*
 
-Keys are **not** store identifiers. They resolve through the
-manifest, so templates never gain access to the store.
+Keys are **not** store identifiers, and a test asserts no id reaches the
+document. Positional keys are why: there is nothing to resolve through, so
+there is nothing for a template to look up. A resume compiled from a pinned
+manifest will key the same way, since the manifest carries the same order.
 
 ---
 
@@ -306,13 +316,19 @@ resume_version.manifest          -->  core.compile()  -->  ResumeDocument   (ser
 working composition + store      -->  core.compile()  -->  ResumeDocument   (browser: preview)
 ```
 
+`compile(store, resumeId, { generatedAt, locale })` is the second of those and
+is what exists today; the manifest overload arrives with Versions. Both the
+browser and `GET /v1/resumes/:id/document` call this one function, which is what
+stops a preview and an export disagreeing.
+
 The same pure function, two callers (`application-structure.md` #7). Compile
 does, in order:
 
 1. resolve pinned phrasing revisions (manifest) or current ones (preview)
 2. apply visibility, archival and privacy filters
 3. run the presenter for each record kind
-4. resolve section headings and apply `omitIfEmpty`
+4. resolve section headings - the section's own override, then a custom
+   section's heading, then the kind's default
 5. compute groups where the layout hint calls for it
 6. format dates, metrics and contacts for `meta.locale`
 7. assign keys and freeze
