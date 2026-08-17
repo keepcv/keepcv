@@ -3,7 +3,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../lib/api.js";
-import { addPoint, addRecord, aFilledStore, emptyStore } from "../store.harness.js";
+import { addMetric, addPoint, addRecord, aFilledStore, emptyStore } from "../store.harness.js";
 import { buildRouter } from "./router.js";
 
 // Only the network is stubbed: the wiring is what a screen test would not touch.
@@ -49,9 +49,6 @@ describe("the app", () => {
     mount(answer, "/records");
 
     expect(await screen.findByText("Difference Engine")).toBeInTheDocument();
-    // The point's words come from the boot payload, which is the reason the
-    // current revision is in it.
-    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
     expect(answer).toHaveBeenCalledTimes(1);
   });
 
@@ -109,13 +106,77 @@ describe("the app", () => {
     expect(screen.getByText(/points captured but not placed/)).toBeInTheDocument();
   });
 
-  it("says a record has no points yet rather than showing an empty list", async () => {
-    const store = emptyStore();
-    addRecord(store, { title: "Fresh record" });
-    addPoint(store, "elsewhere");
-    mount(() => jsonOf(store), "/records");
+  // The kind list is navigation rather than a filter bar above the content, so
+  // it is on every screen and it lists only what the store actually holds.
+  it("navigates by what the store holds", async () => {
+    mount(() => jsonOf(aFilledStore()));
 
-    expect(await screen.findByText("Fresh record")).toBeInTheDocument();
-    expect(screen.getByText(/No points yet/)).toBeInTheDocument();
+    const nav = (await screen.findAllByRole("navigation", { name: "Store" }))[0];
+    expect(nav).toHaveTextContent("Experience");
+    expect(nav).toHaveTextContent("Projects");
+    expect(nav).not.toHaveTextContent("Publications");
+  });
+});
+
+describe("a record", () => {
+  // The record list was a dead end before this: every row now opens, and the
+  // point's words come from the boot payload, which is why the current revision
+  // is in it.
+  it("opens onto its points, with the metric that measured them", async () => {
+    const store = emptyStore();
+    const role = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency from 800ms to 120ms", { recordId: role.id });
+    addMetric(store, point.id);
+    const answer = vi.fn(() => jsonOf(store));
+
+    mount(answer, `/records/${role.id}`);
+
+    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
+    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(screen.getByText("Latency 120ms")).toBeInTheDocument();
+    expect(answer).toHaveBeenCalledTimes(1);
+  });
+
+  it("invites a first point rather than showing an empty list", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { title: "Fresh record" });
+    addPoint(store, "elsewhere");
+
+    mount(() => jsonOf(store), `/records/${record.id}`);
+
+    expect(await screen.findByRole("heading", { name: "Fresh record" })).toBeInTheDocument();
+    expect(screen.getByText(/Nothing here yet/)).toBeInTheDocument();
+  });
+
+  it("says so when the id is not in the store", async () => {
+    mount(() => jsonOf(aFilledStore()), "/records/01a00ff5-0000-7000-8000-000000000000");
+
+    expect(await screen.findByText("No record with that id")).toBeInTheDocument();
+  });
+});
+
+describe("search", () => {
+  // Records and points together, and answered from the cached store: the whole
+  // interaction is one request rather than one per keystroke.
+  it("finds records and the points under them, with no second request", async () => {
+    const answer = vi.fn(() => jsonOf(aFilledStore()));
+    mount(answer, "/search?q=engine");
+
+    expect(await screen.findByText(/for "engine"/)).toBeInTheDocument();
+    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(screen.getByText("Difference Engine")).toBeInTheDocument();
+    expect(answer).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches on a prefix, so it answers mid-word", async () => {
+    mount(() => jsonOf(aFilledStore()), "/search?q=laten");
+
+    expect(await screen.findByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+  });
+
+  it("leaves archived rows out until asked", async () => {
+    mount(() => jsonOf(aFilledStore()), "/search?q=shelved");
+
+    expect(await screen.findByText(/Nothing matches/)).toBeInTheDocument();
   });
 });

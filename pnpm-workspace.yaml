@@ -28,6 +28,7 @@ catalog:
   "@types/react": ^19.2.18
   "@types/react-dom": ^19.2.4
   "@vitejs/plugin-react": ^6.0.5
+  clsx: ^2.1.1
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
   eslint: ^10.8.0
@@ -37,6 +38,7 @@ catalog:
   pg: ^8.22.0
   react: ^19.2.8
   react-dom: ^19.2.8
+  tailwind-merge: ^3.6.0
   tailwindcss: ^4.3.3
   turbo: ^2.10.8
   # Pinned to 6.x deliberately: typescript-eslint 8.x refuses to load against

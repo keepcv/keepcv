@@ -161,11 +161,14 @@ two versions, restore, and templates are unbuilt.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-The web app is **read-only so far**: the shell, the store overview and the record
-list, both fed by one `GET /v1/store` on boot. Nothing in it writes, so there are
-no mutations, no optimistic updates and no conflict UI yet. React, TanStack
-Router and Query, Tailwind v4, Vite. Routes are declared in code rather than
-generated from filenames.
+The web app is **read-only so far**: an application frame - a navigation rail
+that lists the kinds the store holds, a search field, and a disclosure in place
+of the rail below `lg` - over the store overview, the record list, a record's
+detail and search results. All of it is fed by one `GET /v1/store` on the root
+route's loader. Nothing in it writes, so there are no mutations, no optimistic
+updates and no conflict UI yet. React, TanStack Router and Query, Tailwind v4,
+Vite, and `components/ui/` for the primitives a screen needs. Routes are declared
+in code rather than generated from filenames.
 
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each

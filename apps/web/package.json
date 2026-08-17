@@ -2,7 +2,7 @@
   "name": "@keepcv/web",
   "version": "0.0.0",
   "private": true,
-  "description": "The KeepCV web app: the shell, the store overview and the record list.",
+  "description": "The KeepCV web app: the frame, the store overview, records and search.",
   "license": "MIT",
   "author": "nrautela",
   "repository": {
@@ -36,8 +36,10 @@
     "@keepcv/schema": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
+    "clsx": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "tailwind-merge": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

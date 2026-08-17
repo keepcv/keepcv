@@ -1,5 +1,6 @@
-import { live, organisationOf, pointsOfRecord, textOfPoint } from "@keepcv/core";
+import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
+import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 
 // Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
@@ -87,6 +88,17 @@ export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
     .map((entry) => toRecordRow(store, entry));
 }
 
-export function pointTextsOf(store: Store, recordId: Uuid): string[] {
-  return live(pointsOfRecord(store, recordId)).map((point) => textOfPoint(store, point));
+export interface RecordGroup {
+  kind: CareerRecordKind;
+  rows: RecordRow[];
+}
+
+// In the order the kinds are declared, which is reading order: storage order
+// puts Awards above Experience, and nobody reads a career that way.
+export function groupedRecordRows(store: Store, filters: RecordFilters): RecordGroup[] {
+  const rows = recordRows(store, filters);
+  return CAREER_RECORD_KINDS.map((kind) => ({
+    kind,
+    rows: rows.filter((row) => row.kind === kind),
+  })).filter((group) => group.rows.length > 0);
 }
