@@ -3,10 +3,10 @@
 The browser app for [KeepCV](https://github.com/keepcv/keepcv). Not published:
 the `keepcv` launcher serves the built output, on the same origin as the API.
 
-> **Status: early development.** Read-only so far - the application frame, the
-> store overview, records, points, resumes with a compiled preview, and search.
-> Editing, the point and phrasing editor and dragging a resume into shape
-> follow.
+> **Status: early development.** The application frame, the store overview,
+> records with the form that writes them, points, resumes with a compiled
+> preview, and search. Points, phrasings and dragging a resume into shape are
+> still read-only.
 
 ## Running it
 
@@ -46,6 +46,12 @@ pnpm --filter @keepcv/web dev
   request.
 - **Errors are typed.** The API answers RFC 9457, so a failure renders a problem
   rather than a parsed string.
+- **Writes are optimistic, and a conflict is never resolved for you.** Ids are
+  minted in the browser, so the row on the screen is the row the store ends up
+  with; if the store refuses the write, the cache goes back. A `409` shows what
+  each side says, field by field, and saves nothing until you pick one.
+- **Nothing is deleted.** Archiving is the only removal, and it reverses from the
+  same button.
 
 ## The session token
 

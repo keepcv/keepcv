@@ -3,8 +3,9 @@ import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Empty } from "../../../app/states.js";
+import { ButtonLink } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
-import { formatPeriod, KIND_LABELS } from "../../records/model/record-rows.js";
+import { formatPeriod, KIND_NAMES } from "../../records/model/record-rows.js";
 
 function Total({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
@@ -66,6 +67,11 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
       <Empty title="Nothing in the store yet">
         This is the permanent record, not a resume. Add everything you have done; deciding what fits
         on one page happens later, and nothing you write here is ever trimmed away.
+        <span className="mt-4 block">
+          <ButtonLink tone="primary" to="/records/new">
+            Add your first record
+          </ButtonLink>
+        </span>
       </Empty>
     );
   }
@@ -101,7 +107,7 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
                       {entry.title ?? "Untitled"}
                     </span>
                     <span className="shrink-0 text-xs text-slate-500">
-                      {KIND_LABELS[entry.kind]}
+                      {KIND_NAMES[entry.kind]}
                     </span>
                     <span className="hidden w-36 shrink-0 text-right text-xs tabular-nums text-slate-400 sm:block">
                       {formatPeriod(entry)}

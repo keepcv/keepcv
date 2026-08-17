@@ -41,6 +41,22 @@ export function formatPeriod(entry: CareerRecord): string | null {
   return ended === null ? `${started} -` : `${started} - ${ended}`;
 }
 
+// One record, not a heading over several: a badge on a single row reading
+// "Certifications" is the plural table used in a place it does not fit.
+export const KIND_NAMES: Record<CareerRecordKind, string> = {
+  experience: "Experience",
+  education: "Education",
+  project: "Project",
+  skill: "Skill",
+  certification: "Certification",
+  publication: "Publication",
+  award: "Award",
+  language: "Language",
+  volunteering: "Volunteering",
+  speaking: "Speaking",
+  custom_entry: "Custom entry",
+};
+
 export const KIND_LABELS: Record<CareerRecordKind, string> = {
   experience: "Experience",
   education: "Education",

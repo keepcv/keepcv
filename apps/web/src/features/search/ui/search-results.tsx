@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
-import { KIND_LABELS } from "../../records/model/record-rows.js";
+import { KIND_NAMES } from "../../records/model/record-rows.js";
 import { type SearchFilters, type SearchRow, searchRows } from "../model/search-rows.js";
 
 function Hit({ row }: { row: SearchRow }) {
@@ -15,7 +15,7 @@ function Hit({ row }: { row: SearchRow }) {
         {row.context}
       </span>
       <Badge className="shrink-0">{row.subject === "point" ? "Point" : "Record"}</Badge>
-      {row.kind === null ? null : <Badge className="shrink-0">{KIND_LABELS[row.kind]}</Badge>}
+      {row.kind === null ? null : <Badge className="shrink-0">{KIND_NAMES[row.kind]}</Badge>}
       {row.isArchived ? (
         <Badge tone="warning" className="shrink-0">
           Archived

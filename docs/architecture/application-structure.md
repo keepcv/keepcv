@@ -179,7 +179,17 @@ reconciliation, no key churn when the response arrives.
 
 Conflicts use the `updated_at` token: a `409` returns current server state and
 the UI surfaces a comparison rather than silently discarding either side.
-Silent last-write-wins is unacceptable in this product specifically.
+Silent last-write-wins is unacceptable in this product specifically. The
+comparison is field by field, naming what each side says and what matched, and
+it offers exactly two resolutions - save mine over it, or keep what is stored.
+Neither is taken until one is chosen.
+
+**Optimistic is about the cache, not about navigation.** The row is written into
+`['store']` before the request leaves, and put back if the request is refused -
+without that, a screen goes on claiming a write that never landed, and goes on
+claiming it if the re-read fails too. But a mutation that *navigates* waits for
+the response first: arriving on a record's page and then being thrown off it is
+worse than a pause on a button that says "Saving".
 
 ---
 
@@ -235,6 +245,24 @@ the overview's whole job.
 Because points are uniform across every record kind, **this screen
 is built once** and serves experience, education, projects and everything
 else. Only the kind-specific field block above it differs.
+
+Editing is a route of its own rather than a dialog, so a half-written record
+survives a reload and can be linked to. **The form is built once too**: the
+shared columns are laid out by hand and a kind's own columns come from a declared
+table, checked against the schema so a column added to the model cannot stay
+unreachable from the only screen that writes one. A kind is chosen when a record
+is created and fixed afterwards, because the kind decides which columns the row
+has and the store cannot move a row between them.
+
+**An organisation is typed, not chosen.** The field suggests the names the store
+already has and creates the one it does not, in the same submit; a picker with no
+way to add would leave every employer unnameable until some other screen existed.
+Matching is case-insensitive on the trimmed name, so retyping an employer does
+not make a second one.
+
+**Archiving is the only removal, and it reverses from the same button.** It is on
+the record, not on the list: a destructive-looking control on a row is one a
+mis-tap reaches.
 
 ### 5.4 Point / phrasing editor - the highest-risk interface
 
@@ -374,14 +402,17 @@ apps/web/src/
       ui/               components
       routes/           route definitions and loaders
   components/ui/        shadcn-owned primitives
-  lib/                  api client, formatting, date helpers
+  lib/                  api client, the store cache, formatting, date helpers
   styles/               tokens, themes
 ```
 
 Rules:
 
 - A feature may not import another feature's internals. Shared logic moves to
-  `@keepcv/core` if it is domain logic, or `lib/` if it is presentation.
+  `@keepcv/core` if it is domain logic, or `lib/` if it is presentation. **The
+  boot payload's cache is one of those** - its query key, its loader and the
+  optimistic-mutation helper every feature writes through are `lib/`, not a
+  `store` feature the others would have to reach into.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - **Directories arrive with something in them.** `components/ui/` appears with

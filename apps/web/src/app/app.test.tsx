@@ -1,6 +1,7 @@
+import { careerRecordSchema, organisationSchema, type Store } from "@keepcv/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../lib/api.js";
 import {
@@ -18,10 +19,10 @@ import {
 import { buildRouter } from "./router.js";
 
 // Only the network is stubbed: the wiring is what a screen test would not touch.
-function mount(answer: () => Response, path = "/"): void {
+function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn(() => Promise.resolve(answer())),
+    vi.fn((url: string, init?: RequestInit) => Promise.resolve(answer(String(url), init))),
   );
   window.history.replaceState(null, "", path);
 
@@ -38,8 +39,74 @@ function mount(answer: () => Response, path = "/"): void {
 function jsonOf(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": status === 200 ? "application/json" : "application/problem+json" },
+    headers: { "content-type": status < 400 ? "application/json" : "application/problem+json" },
   });
+}
+
+interface Call {
+  method: string;
+  path: string;
+  body: unknown;
+}
+
+function create(store: Store, { path, body }: Call, at: string): Response {
+  const row = { ...(body as object), createdAt: at, updatedAt: at, archivedAt: null };
+  if (path === "/v1/organisations") {
+    store.organisations.push(organisationSchema.parse(row));
+  } else {
+    store.records.push(careerRecordSchema.parse(row));
+  }
+  return jsonOf(row, 201);
+}
+
+function amend(store: Store, { method, path, body }: Call, at: string): Response {
+  const id = /^\/v1\/records\/([^/]+)/.exec(path)?.[1];
+  const index = store.records.findIndex((row) => row.id === id);
+  const found = store.records[index];
+  if (found === undefined) return jsonOf({ status: 404 }, 404);
+
+  const patch =
+    method === "DELETE"
+      ? { archivedAt: at }
+      : path.endsWith("/restore")
+        ? { archivedAt: null }
+        : (body as { patch: object }).patch;
+  const row = careerRecordSchema.parse({ ...found, ...patch, updatedAt: at });
+  store.records.splice(index, 1, row);
+  return jsonOf(row);
+}
+
+// A stub that writes, so an optimistic row is checked against what comes back
+// rather than against itself.
+function storeServer(store: Store, intercept?: (call: Call) => Response | undefined) {
+  const calls: Call[] = [];
+
+  function answer(url: string, init?: RequestInit): Response {
+    const call: Call = {
+      method: init?.method ?? "GET",
+      path: new URL(url).pathname,
+      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    };
+    calls.push(call);
+
+    const forced = intercept?.(call);
+    if (forced !== undefined) return forced;
+    if (call.method === "GET") return jsonOf(store);
+
+    const at = new Date().toISOString();
+    const isCreate = call.path === "/v1/organisations" || call.path === "/v1/records";
+    return isCreate ? create(store, call, at) : amend(store, call, at);
+  }
+
+  return { answer, calls };
+}
+
+function type(label: string, value: string): void {
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+}
+
+function press(name: string): void {
+  fireEvent.click(screen.getByRole("button", { name }));
 }
 
 afterEach(() => {
@@ -162,6 +229,109 @@ describe("a record", () => {
     mount(() => jsonOf(aFilledStore()), "/records/01a00ff5-0000-7000-8000-000000000000");
 
     expect(await screen.findByText("No record with that id")).toBeInTheDocument();
+  });
+});
+
+describe("writing a record", () => {
+  it("adds one, along with the organisation it names", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/records/new?kind=experience");
+
+    expect(await screen.findByRole("heading", { name: "New record" })).toBeInTheDocument();
+    type("Title", "Engine lead");
+    type("Organisation", "Analytical Engines");
+    press("Add record");
+
+    // Opening the record proves the write landed and the cache holds it: the id
+    // was minted here, so the optimistic row is the row.
+    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
+    expect(server.calls.map((call) => `${call.method} ${call.path}`)).toContain(
+      "POST /v1/organisations",
+    );
+    expect(store.records[0]?.title).toBe("Engine lead");
+    expect(store.records[0]?.organisationId).toBe(store.organisations[0]?.id);
+  });
+
+  // An idle mutation reports `null`, not `undefined`, so the wrong emptiness
+  // check put a red panel on a form nobody had touched.
+  it("opens with nothing to apologise for", async () => {
+    mount(storeServer(emptyStore()).answer, "/records/new");
+
+    expect(await screen.findByRole("heading", { name: "New record" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps a refused date on the field that holds it, and sends nothing", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/records/new?kind=project");
+
+    expect(await screen.findByRole("heading", { name: "New record" })).toBeInTheDocument();
+    type("Started", "April 2019");
+    press("Add record");
+
+    expect(await screen.findByText(/expected YYYY/)).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.method === "POST")).toHaveLength(0);
+  });
+
+  // Archiving is the only removal there is, and it reverses.
+  it("archives from the record's own screen, and restores it again", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "project", title: "Shelved idea" });
+    const server = storeServer(store);
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("button", { name: "Archive" });
+    press("Archive");
+
+    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+    expect(store.records[0]?.archivedAt).not.toBeNull();
+
+    press("Restore");
+    await screen.findByRole("button", { name: "Archive" });
+    expect(store.records[0]?.archivedAt).toBeNull();
+    expect(server.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "GET /v1/store",
+      `DELETE /v1/records/${record.id}`,
+      "GET /v1/store",
+      `POST /v1/records/${record.id}/restore`,
+      "GET /v1/store",
+    ]);
+  });
+
+  // Silent last-write-wins is the one resolution this product cannot offer.
+  it("shows both sides when the record changed underneath, and keeps neither", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "project", title: "Difference Engine" });
+    const server = storeServer(store, (call) =>
+      call.method === "PATCH"
+        ? jsonOf(
+            {
+              type: "https://keepcv.app/problems/stale-write",
+              title: "Stale write",
+              status: 409,
+              detail: "the record changed after it was read",
+              instance: `/v1/records/${record.id}`,
+              current: { ...record, title: "Difference Engine, mark II" },
+            },
+            409,
+          )
+        : undefined,
+    );
+
+    mount(server.answer, `/records/${record.id}/edit`);
+
+    expect(await screen.findByRole("heading", { name: "Edit record" })).toBeInTheDocument();
+    type("Title", "Analytical Engine");
+    press("Save");
+
+    expect(
+      await screen.findByText("This record changed while you were editing it"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Analytical Engine/)).toBeInTheDocument();
+    expect(screen.getByText(/Difference Engine, mark II/)).toBeInTheDocument();
+    expect(store.records[0]?.title).toBe("Difference Engine");
   });
 });
 

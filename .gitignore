@@ -150,5 +150,9 @@ docs/adr/
 # Turborepo
 .turbo/
 
+# Launcher data directories, including the ./.keepcv-scratch one the README and
+# AGENTS.md tell you to run against.
+.keepcv-*/
+
 
 bash.exe.stackdump
