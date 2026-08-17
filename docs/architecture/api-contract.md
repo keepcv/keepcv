@@ -157,7 +157,7 @@ CRUD   /v1/resume-entry-points         ?resumeId=&resumeEntryId=&archived=
 GET    /v1/resumes/:id/contact-channels          the overrides this resume carries
 PUT    /v1/resumes/:id/contact-channels/:channelId  { isVisible }; idempotent
 DELETE /v1/resumes/:id/contact-channels/:channelId  revert to the channel's default
-GET    /v1/resumes/:id/document        compiled ResumeDocument (server-side)
+GET    /v1/resumes/:id/document        ?locale=  compiled ResumeDocument
 
 GET    /v1/resumes/:id/versions
 POST   /v1/resumes/:id/versions        { trigger }  - commits open drafts first
@@ -286,7 +286,9 @@ Notes on the non-obvious ones:
   and half-reading a file is worse than not reading it.
 - **`GET /v1/resumes/:id/document` exists for server-side export**, but the
   browser compiles its own preview locally from cached data via the same pure
-  function (`application-structure.md` #7). Both call identical code.
+  function (`application-structure.md` #7). Both call `compile()` in
+  `@keepcv/core`. It is a `404` for a resume that is not there, which is what
+  the selector's `undefined` becomes at the boundary.
 - **`/v1/export` is never gated** by auth or entitlement state.
 - **`GET /v1/resumes/:id/document` returns a uniform `ResumeDocument`**
   (template-model.md), not the manifest. The manifest is storage-shaped; the

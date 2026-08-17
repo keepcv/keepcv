@@ -138,7 +138,11 @@ are what a client writes through.
 
 ### Render and templates
 
-The `ResumeDocument` compiler and the shared template fixture
+The `ResumeDocument` compiler is built: `compile(store, resumeId, options)` in
+`@keepcv/core`, one presenter per record kind, and
+`GET /v1/resumes/:id/document`. What remains is the template contract itself.
+
+The shared template fixture
 ([`template-model.md`](template-model.md)); the template contract and config
 schemas; an ATS-strict single-column template; a Paged.js live preview in an
 isolated iframe; typography and spacing configuration; further templates; and

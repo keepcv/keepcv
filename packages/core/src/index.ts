@@ -1,3 +1,6 @@
+export { type CompileOptions, compile } from "./document/compile.js";
+export { contactHref, formatMetric, formatPartialDate, formatPeriod } from "./document/format.js";
+export { PRESENTED_KINDS, type Presented, present } from "./document/presenters.js";
 // This package must import no I/O of any kind - it runs unchanged in Node and
 // in the browser, and CI enforces it (application-structure.md #2).
 

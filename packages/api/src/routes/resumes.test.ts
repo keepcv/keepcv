@@ -10,6 +10,7 @@ import {
   type ResumeEntryPoint,
   type ResumeSection,
   resumeContactChannelSchema,
+  resumeDocumentSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
   resumeSchema,
@@ -357,6 +358,31 @@ describe("composition", () => {
     expect(
       await items(await send("GET", "/v1/resume-entry-points"), resumeEntryPointSchema),
     ).toEqual([entryPoint]);
+  });
+});
+
+describe("the compiled document", () => {
+  it("compiles what the resume selects, with no store identifier in it", async () => {
+    const { resume, record, point } = await compose();
+
+    const response = await send("GET", `/v1/resumes/${resume.id}/document`);
+    expect(response.status).toBe(200);
+    const document = resumeDocumentSchema.parse(await response.json());
+
+    expect(document.meta.resumeName).toBe("Backend, Acme");
+    expect(document.sections[0]?.entries[0]?.title).toBe("Ingest rewrite");
+    expect(document.sections[0]?.entries[0]?.points[0]?.plainText).toBe("Cut p95 latency 6x");
+
+    const serialised = JSON.stringify(document);
+    for (const id of [resume.id, record.id, point.id]) expect(serialised).not.toContain(id);
+  });
+
+  it("formats for the locale asked for, and is a 404 for a resume that is not there", async () => {
+    const { resume } = await compose();
+
+    const german = await send("GET", `/v1/resumes/${resume.id}/document?locale=de-DE`);
+    expect(resumeDocumentSchema.parse(await german.json()).meta.locale).toBe("de-DE");
+    expect((await send("GET", `/v1/resumes/${newUuid()}/document`)).status).toBe(404);
   });
 });
 

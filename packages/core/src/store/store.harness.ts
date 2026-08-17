@@ -10,12 +10,15 @@ import type {
 } from "@keepcv/schema";
 import {
   careerRecordSchema,
+  contactChannelSchema,
   metricSchema,
   organisationSchema,
   phrasingRevisionSchema,
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  recordFieldSchema,
+  recordLinkSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
   resumeSchema,
@@ -272,4 +275,57 @@ export function anEntryPoint(
   });
   store.resumeEntryPoints.push(entryPoint);
   return entryPoint;
+}
+
+export function aContactChannel(
+  store: Store,
+  kind: string,
+  value: string,
+  overrides: Record<string, unknown> = {},
+) {
+  const channel = contactChannelSchema.parse({
+    ...standard(),
+    kind,
+    label: null,
+    value,
+    isDefaultVisible: true,
+    sortKey: "a0",
+    ...overrides,
+  });
+  store.contactChannels.push(channel);
+  return channel;
+}
+
+export function aLink(store: Store, recordId: Uuid, overrides: Record<string, unknown> = {}) {
+  const link = recordLinkSchema.parse({
+    ...standard(),
+    recordId,
+    kind: "repo",
+    label: null,
+    url: "https://example.com/engine",
+    sortKey: "a0",
+    ...overrides,
+  });
+  store.recordLinks.push(link);
+  return link;
+}
+
+export function aField(
+  store: Store,
+  recordId: Uuid,
+  key: string,
+  overrides: Record<string, unknown> = {},
+) {
+  const field = recordFieldSchema.parse({
+    ...standard(),
+    recordId,
+    key,
+    label: "Credential ID",
+    value: "AWS-1234",
+    valueKind: "text",
+    sortKey: "a0",
+    ...overrides,
+  });
+  store.recordFields.push(field);
+  return field;
 }
