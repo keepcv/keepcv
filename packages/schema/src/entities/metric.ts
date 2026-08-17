@@ -7,9 +7,7 @@ export const METRIC_DIRECTIONS = ["increase", "decrease", "neutral"] as const;
 
 export const metricDirectionSchema = z.enum(METRIC_DIRECTIONS);
 
-// A number a point moved, structured rather than buried in its prose, so "show
-// me everything where I moved a percentage" is a query. Finite because the store
-// is exported as JSON, which has no way to write an infinity back.
+// Finite: the store is exported as JSON, which has no way to write an infinity.
 export const metricSchema = z
   .object({
     ...standardFields,

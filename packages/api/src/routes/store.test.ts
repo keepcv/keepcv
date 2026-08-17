@@ -78,9 +78,8 @@ async function aStoreWithHistory(): Promise<{ phrasingId: string }> {
 }
 
 describe("the boot payload", () => {
-  // The client fetches this once and reads its screens out of it, so a phrasing
-  // arriving without the words it currently says would send every point back for
-  // a request of its own.
+  // A phrasing arriving without its current words sends every point back for a
+  // request of its own.
   it("carries the wording each phrasing says now, and no superseded one", async () => {
     const { phrasingId } = await aStoreWithHistory();
     const store = await storeVia(send);
@@ -116,9 +115,7 @@ describe("the boot payload", () => {
 });
 
 describe("export and import", () => {
-  // The property the whole format exists for. Ids and timestamps come back
-  // verbatim, which is what makes a restored store the same store rather than a
-  // copy of its contents.
+  // Ids and timestamps come back verbatim, or a restored store is only a copy.
   it("round-trips a whole store into an empty one", async () => {
     await aStoreWorthKeeping();
     const exported = await exportVia(send);
@@ -138,9 +135,7 @@ describe("export and import", () => {
     expect(problem.type).toBe(PROBLEM_TYPES.storeNotEmpty);
   });
 
-  // Mismatched client and server builds are the normal state of self-hosted
-  // software, so a file this build cannot read has to say so rather than
-  // half-loading it.
+  // A file this build cannot read has to say so rather than half-load it.
   it("refuses a document written by a newer build", async () => {
     const exported = await exportVia(send);
     const restore = await otherOwner();

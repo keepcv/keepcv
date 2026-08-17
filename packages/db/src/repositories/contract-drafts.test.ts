@@ -60,9 +60,7 @@ eachDriver(({ run, otherOwner }) => {
       expect(drafts[0]?.body).toEqual({ body: "half a sentence" });
     });
 
-    // How long the unsaved text has been sitting there is what the editor tells
-    // the user when it offers to restore it, so the first write is the one that
-    // dates it.
+    // The editor says how long the text has sat, so the first write dates it.
     it("keeps the moment the draft was started and moves the moment it changed", async () => {
       const phrasingId = await aPhrasing(run);
       const target = onPhrasing(phrasingId);
@@ -105,9 +103,7 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.drafts.list())).toEqual([saved]);
     });
 
-    // No foreign key can say this, because the target is polymorphic, so the
-    // store says it instead - otherwise a typo writes a draft nothing can reach
-    // and nothing will ever clean up.
+    // The target is polymorphic, so no foreign key can say this (I18).
     it("refuses a draft of something that is not there", async () => {
       await expect(
         run(async (r) => await r.drafts.save(onPhrasing(newUuid()), {})),
@@ -174,9 +170,8 @@ eachDriver(({ run, otherOwner }) => {
       ]);
     });
 
-    // Identity is owner-scoped, so two stores hold the same target id the moment
-    // a backup is restored beside its original. A delete that left the owner out
-    // of its predicate would take both.
+    // Two stores hold the same target id once a backup is restored beside its
+    // original, and a delete missing the owner predicate would take both.
     it("discards only its own row when another store holds the same one", async () => {
       const phrasingId = await aPhrasing(run);
       const target = onPhrasing(phrasingId);

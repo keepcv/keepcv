@@ -15,10 +15,8 @@ import { quoted } from "./vocabulary.js";
 
 const DIRECTIONS = ["increase", "decrease", "neutral"];
 
-// Numbers kept as numbers rather than buried in the wording, so "everything where
-// I moved a percentage" is a query rather than a memory exercise. `double
-// precision` and not `numeric`: the only writer is a JavaScript number, and a
-// column that holds exactly the values the DTO can express cannot drift from it.
+// `double precision` and not `numeric`: the only writer is a JavaScript number,
+// and a column holding exactly what the DTO can express cannot drift from it.
 export const metric = pgTable(
   "metric",
   {

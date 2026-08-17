@@ -16,13 +16,8 @@ import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-// Every entity the store holds, archived rows included: `import(export(store))
-// == store` is a tested property, so anything omitted here is data the format
-// silently drops. Grows with each content slice - resumes, versions.
-//
-// Flat arrays rather than links and fields nested inside their records: the
-// export is storage-shaped, and a shape that mirrors the rows is one that can be
-// written back without deciding what belongs where.
+// `import(export(store)) == store` is a tested property, so anything omitted
+// here is data the format silently drops. A slice adding a table adds it here.
 export const storeSchema = z
   .object({
     profile: profileSchema,
@@ -38,26 +33,19 @@ export const storeSchema = z
     points: z.array(pointSchema),
     pointRecordLinks: z.array(pointRecordLinkSchema),
     metrics: z.array(metricSchema),
-    // Private, and exported anyway: never printed is not the same as withheld
-    // from the user, and an export that dropped it would not round-trip.
     evidence: z.array(evidenceSchema),
     tags: z.array(tagSchema),
     recordTags: z.array(recordTagSchema),
     pointTags: z.array(pointTagSchema),
-    // In the boot payload as well as the export, unlike revision history: a
-    // draft is the newest thing the user wrote and there is at most one per
-    // field, so it is current state and it is bounded. The editor has to know a
-    // draft is waiting before it opens, and asking per field would be a round
-    // trip answering "no" nearly every time (api-contract.md #3).
+    // In the boot payload too, unlike revision history (api-contract.md #3).
     drafts: z.array(draftSchema),
   })
   // Named, because two routes answer this shape and an anonymous one would be
   // inlined into the OpenAPI document twice.
   .meta({ id: "Store", title: "Career store" });
 
-// The canonical, lossless career store format - not a resume. `schemaVersion`
-// is pinned to the current one because `migrateDocument` is the only supported
-// way in, and it brings older documents forward first.
+// `schemaVersion` is pinned to the current one: `migrateDocument` is the only
+// supported way in, and it brings older documents forward first.
 export const exportDocumentSchema = z
   .object({
     schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),

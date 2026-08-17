@@ -1,9 +1,7 @@
 import { live, organisationOf, pointsOfRecord, textOfPoint } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
 
-// The view model: formatted for one screen and disposable. Formatting lives here
-// rather than on the DTO, which is a contract and not a UI changelog
-// (application-structure.md #1).
+// Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
   id: Uuid;
   kind: CareerRecordKind;
@@ -17,9 +15,8 @@ export interface RecordRow {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// A partial date is a real precision, not a full date with the tail unknown:
-// "2019" means the year is all the user chose to record, and rendering it as
-// "1 January 2019" would invent a claim they never made.
+// A real precision, not a full date with the tail unknown: rendering "2019" as
+// "1 January 2019" invents a claim the user never made.
 export function formatPartialDate(value: PartialDate): string {
   const [year, month, day] = value.split("-");
   if (year === undefined) return value;
@@ -28,8 +25,7 @@ export function formatPartialDate(value: PartialDate): string {
   return day === undefined ? `${name} ${year}` : `${String(Number(day))} ${name} ${year}`;
 }
 
-// "Still there" and "I have not said yet" are different, so an ongoing period
-// reads as "Present" and an unfinished one is left visibly open.
+// An ongoing period reads "Present"; an unfinished one is left visibly open.
 export function formatPeriod(entry: CareerRecord): string | null {
   const started = entry.startedOn === null ? null : formatPartialDate(entry.startedOn);
   const ended = entry.isCurrent
@@ -61,8 +57,7 @@ export function toRecordRow(store: Store, entry: CareerRecord): RecordRow {
   return {
     id: entry.id,
     kind: entry.kind,
-    // A record can be saved half-entered, so a missing title is a state the
-    // screen renders rather than a state the store prevents.
+    // A record can be saved half-entered, so this is a state, not an error.
     title: entry.title ?? "Untitled",
     subtitle: entry.subtitle,
     organisation: organisationOf(store, entry)?.name ?? null,
@@ -77,9 +72,8 @@ export interface RecordFilters {
   archived: "exclude" | "include" | "only";
 }
 
-// Already ordered by the store, which returns a total order, so this narrows
-// without sorting: a list that reshuffled under the cursor on every filter
-// change would be its own bug.
+// Narrows without sorting: the store already returns a total order, and a list
+// that reshuffled on every filter change would be its own bug.
 export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
   return store.records
     .filter((entry) => filters.kind === undefined || entry.kind === filters.kind)

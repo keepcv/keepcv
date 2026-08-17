@@ -154,9 +154,7 @@ eachDriver(({ run, otherOwner }) => {
       ).toBe("record_tag_tag_fk");
     });
 
-    // Identity is owner-scoped, so the ids in two stores overlap the moment a
-    // backup is restored beside its original. The record is the subject here, so
-    // one belonging to somebody else is a row this owner does not have.
+    // The record is the subject, so one belonging to somebody else is a 404.
     it("cannot tag another owner's record or point", async () => {
       const asIntruder = await otherOwner();
       const theirs = await asIntruder(async (r) => {
@@ -329,10 +327,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toBe(3);
     });
 
-    // Two stores holding the same ids is what restoring a backup beside its
-    // original looks like, and it is the only shape in which a filter reading
-    // across owners answers with rows rather than with nothing: this owner's
-    // record, matched on the other owner's tagging of the same id.
+    // The only shape in which a filter reading across owners answers with rows:
+    // this owner's record, matched on the other owner's tagging of the same id.
     it("does not narrow by another owner's assignments", async () => {
       const tagId = newUuid();
       const recordId = newUuid();

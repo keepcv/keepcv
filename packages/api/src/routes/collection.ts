@@ -3,16 +3,14 @@ import { timestampSchema, uuidSchema } from "@keepcv/schema";
 import { z } from "zod";
 import { jsonResponse, problemResponse, sessionRequired } from "../router.js";
 
-// The concurrency token travels in the body rather than `If-Unmodified-Since`.
-// That header has second granularity and `updated_at` is milliseconds, so half
-// of every comparison would match a write it should have refused.
+// In the body, not `If-Unmodified-Since`: that header has second granularity and
+// `updated_at` is milliseconds, so half of every comparison would match wrongly.
 const expectedUpdatedAt = timestampSchema;
 
 export const basedOn = z.object({ expectedUpdatedAt });
 
-// Beside the patch rather than merged into it: a record's patch is a union
-// discriminated on `kind`, which has no key to extend, and a token sitting among
-// the fields is one a patch key could shadow.
+// Beside the patch, not merged into it: a record's patch is a discriminated
+// union with no key to extend, and a patch key could shadow the token.
 export function patchBody<Schema extends z.ZodType>(schema: Schema) {
   return z.object({ expectedUpdatedAt, patch: schema });
 }
@@ -23,14 +21,11 @@ export function jsonBody<Schema extends z.ZodType>(schema: Schema) {
   return { content: { "application/json": { schema } } };
 }
 
-// Archived rows stay reachable: "where did my old entry go" must always have an
-// answer, so this is a filter and never a hiding place.
 export const archivedQuery = z.object({
   archived: z.enum(["exclude", "include"]).default("exclude"),
 });
 
-// Good enough for the nouns this API has, which are all ordinary words: there is
-// no "hour" or "university" among them to break the vowel rule.
+// Good enough for these nouns: no "hour" or "university" to break the rule.
 function article(noun: string): string {
   return "aeiou".includes(noun[0] ?? "") ? "an" : "a";
 }
@@ -43,22 +38,16 @@ export interface CollectionSpec<
   Query extends z.ZodObject,
 > {
   path: Path;
-  // Plural: it is the OpenAPI tag, and it reads as the list route's summary.
   tag: string;
   noun: string;
   dto: Dto;
   input: Input;
   patch: Patch;
-  // `archivedQuery`, extended where a collection narrows by more than that.
   query: Query;
 }
 
-// Every owned collection answers the same six routes, so the declarations are
-// written once and handed their schemas. Only the declarations: a handler's
-// argument and return types are derived through conditionals on the schema type,
-// and a bare
-// type parameter defers every one of them, so nothing generic over a schema can
-// typecheck a handler body against the route it belongs to.
+// Declarations only, never handlers: Hono derives handler types through
+// conditionals TypeScript defers while the schema is a type parameter.
 export function collectionRoutes<
   Path extends string,
   Dto extends z.ZodType,

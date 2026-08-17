@@ -6,13 +6,8 @@ export const EVIDENCE_KINDS = ["url", "note", "file"] as const;
 
 export const evidenceKindSchema = z.enum(EVIDENCE_KINDS);
 
-// What backs a point up, and PRIVATE: no renderer can leak it because
-// `ResumeDocument` has no field it could travel in (template-model.md #2). It is
-// in the native export in full all the same - private means never printed, not
-// withheld from the user, and it is the user's own data.
-//
-// Unordered, so no sort key: evidence is a set of supports, not a list someone
-// arranges.
+// PRIVATE and never rendered: `ResumeDocument` has no field it could travel in
+// (template-model.md #2). It is in the native export all the same.
 export const evidenceSchema = z
   .object({
     ...standardFields,

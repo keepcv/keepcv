@@ -12,10 +12,6 @@ export const ORGANISATION_KINDS = [
 
 export const organisationKindSchema = z.enum(ORGANISATION_KINDS);
 
-// First-class rather than a string on each record, so two roles at one company
-// group under a single heading and a certification, a talk and a paper can share
-// one issuer identity (data-model.md #6). No sort key: organisations are listed
-// by name, never dragged.
 export const organisationSchema = z
   .object({
     ...standardFields,
@@ -27,8 +23,6 @@ export const organisationSchema = z
   })
   .meta({ id: "Organisation", title: "Organisation" });
 
-// The id comes from the client so a retried create is idempotent
-// (api-contract.md #2).
 export const organisationInputSchema = organisationSchema.omit({
   createdAt: true,
   updatedAt: true,

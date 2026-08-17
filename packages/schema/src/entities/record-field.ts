@@ -7,11 +7,6 @@ export const RECORD_FIELD_VALUE_KINDS = ["text", "url", "date", "number"] as con
 
 export const recordFieldValueKindSchema = z.enum(RECORD_FIELD_VALUE_KINDS);
 
-// A labelled value on any record kind. `key` is what a specialised template
-// addresses; typed columns like `doi` reach the same slot through their
-// presenter, so a template sees one uniform list either way (template-model.md
-// #3). Deriving a key from a user's label, and resolving a collision with a
-// presenter's key, both belong to the layers that have those two things.
 export const recordFieldSchema = z
   .object({
     ...standardFields,

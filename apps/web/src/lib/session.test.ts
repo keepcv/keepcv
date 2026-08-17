@@ -38,9 +38,7 @@ describe("claiming the session token", () => {
     expect(claimSessionToken(aLocation(""), storage)).toBe("abc123");
   });
 
-  // A URL in an address bar gets screenshotted, pasted into an issue and read
-  // over a shoulder. The token has been claimed by then and does not need to
-  // stay visible.
+  // An address bar gets screenshotted and pasted into issues.
   it("removes the token from the address bar, keeping the rest of the URL", () => {
     claimSessionToken(aLocation("#token=abc123"), storage);
     expect(window.location.pathname).toBe("/records");

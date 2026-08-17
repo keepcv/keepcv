@@ -3,8 +3,7 @@ import { type Problem, problemSchema } from "@keepcv/schema";
 
 export type { ApiClient };
 
-// Every failure the UI can render is one of these, so no component parses prose
-// or switches on a status code it read off a Response.
+// So no component parses prose or switches on a status code off a Response.
 export class ProblemError extends Error {
   override readonly name = "ProblemError";
   readonly problem: Problem;
@@ -26,9 +25,8 @@ export function apiClient(sessionToken: string | undefined): ApiClient {
   );
 }
 
-// A server that answered something other than a problem on a failure is a
-// mismatched build, which is the normal state of self-hosted software rather
-// than an impossible one, so it gets a problem rather than a parse error.
+// A mismatched build is the normal state of self-hosted software, so this gets
+// a problem rather than a parse error.
 export async function unwrap(response: Response): Promise<unknown> {
   if (response.ok) return await response.json();
 

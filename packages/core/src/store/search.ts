@@ -2,15 +2,11 @@ import type { Store, Uuid } from "@keepcv/schema";
 import { fold } from "../text/fold.js";
 import { live, organisationOf, tagsOfPoint, tagsOfRecord, textOfPhrasingSet } from "./selectors.js";
 
-// Search runs here rather than in SQL, over the boot payload the client already
-// holds: a store is kilobytes, so a keystroke costs no round trip, and the
-// alternative was a derived table every write had to keep in step
+// A pure function over the boot payload, not a table and not a route
 // (data-model.md #8).
 
 export type SearchSubject = "record" | "point";
 
-// No title and no snippet: the caller holds the store this was computed from,
-// and how a row reads on screen is the UI's to decide.
 export interface SearchHit {
   subject: SearchSubject;
   id: Uuid;
@@ -45,8 +41,7 @@ function field(value: string | null, weight: number): Field {
 function bestWeight(term: string, fields: readonly Field[]): number {
   let best = 0;
   for (const entry of fields) {
-    // Prefixes, not whole words: typing "postg" has to find "PostgreSQL" while
-    // it is still being typed, which is what a trigram index was there for.
+    // Prefixes, not whole words: "postg" has to find "PostgreSQL" mid-keystroke.
     if (entry.weight > best && entry.words.some((word) => word.startsWith(term))) {
       best = entry.weight;
     }
@@ -54,8 +49,7 @@ function bestWeight(term: string, fields: readonly Field[]): number {
   return best;
 }
 
-// Every term has to land somewhere, so a two-word query narrows rather than
-// widens - the opposite is what makes a search box feel broken.
+// Every term has to land somewhere, so a two-word query narrows rather than widens.
 function score(terms: readonly string[], fields: readonly Field[]): number {
   let total = 0;
   for (const term of terms) {
@@ -108,9 +102,7 @@ export function search(
     if (found > 0) hits.push({ subject: "point", id: point.id, score: found });
   }
 
-  // A total order, so two searches of unchanged data give the same list and the
-  // rows do not reshuffle under the cursor. Records first at equal score: a
-  // record is where its points are.
+  // A total order, so rows do not reshuffle under the cursor between keystrokes.
   return hits.sort(
     (a, b) => b.score - a.score || RANK[a.subject] - RANK[b.subject] || a.id.localeCompare(b.id),
   );

@@ -20,9 +20,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
   pendingComponent: () => <Skeleton rows={4} />,
 });
 
-// Filters live in the URL, not in component state: a filtered view you can
-// bookmark and reach again through browser history is what returning after
-// ninety days needs (application-structure.md #3).
+// Filters live in the URL, not in component state (application-structure.md #3).
 const recordSearchSchema = z.object({
   kind: careerRecordKindSchema.optional(),
   archived: z.enum(["exclude", "include", "only"]).default("exclude"),

@@ -11,19 +11,15 @@ export interface DerivedRevision {
   contentHash: ContentHash;
 }
 
-// Everything a phrasing revision holds beside the text the user typed, derived in
-// one place so a body written in the editor and the same body arriving in an
-// import cannot end up with different hashes. The canonical form is what gets
-// stored as well as what gets hashed - hashing one shape and storing another
-// leaves the stored hash unverifiable on read.
+// The canonical form is stored as well as hashed: storing another shape leaves
+// the hash unverifiable on read.
 export function deriveRevision(body: RichText): DerivedRevision {
   const canonical = canonicaliseRichText(body);
   const plainText = projectPlainText(canonical);
   return {
     body: canonical,
     plainText,
-    // Code points rather than UTF-16 units: a length budget counts what a reader
-    // sees, and an emoji is not two characters wide.
+    // Code points, not UTF-16 units: an emoji is not two characters wide.
     charCount: [...plainText].length,
     contentHash: contentHash(canonical as JsonValue),
   };

@@ -28,10 +28,8 @@ type RecordRow = typeof record.$inferSelect;
 type RecordLinkRow = typeof recordLink.$inferSelect;
 type RecordFieldRow = typeof recordField.$inferSelect;
 
-// Every column goes to the union and the row's kind decides which of them
-// survive: the ones another kind owns are not in that member's shape, so Zod
-// drops them. That is what keeping ten kinds in one table costs, and it is one
-// function rather than a ten-branch switch.
+// Every column goes to the union and the kind's own member decides which
+// survive: the ones another kind owns are not in its shape, so Zod drops them.
 function toCareerRecord(row: RecordRow): CareerRecord {
   const { ownerId: _ownerId, ...rest } = row;
   return careerRecordSchema.parse({ ...rest, ...standardDto(row) });
@@ -61,8 +59,7 @@ function toRecordField(row: RecordFieldRow): RecordField {
 }
 
 export function createCareerRecordRepository(db: Database): CareerRecordRepository {
-  // A subquery rather than a join, so the select stays one row per record and
-  // the ordering below is the one the list already had.
+  // A subquery, not a join: the select stays one row per record.
   function carriesTag(tagId: Uuid | undefined): SQL | undefined {
     if (tagId === undefined) return undefined;
     return inArray(
@@ -119,8 +116,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
   }
 
   return {
-    // Sort keys are unique per kind, so a cross-kind list orders by kind first;
-    // otherwise two records from different lists would interleave arbitrarily.
+    // Sort keys are unique per kind, so a cross-kind list orders by kind first.
     async list(options) {
       const rows = await db
         .select()
@@ -145,9 +141,8 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
       return toCareerRecord(await insertOwned(db, record, "record", input));
     },
 
-    // The kind is read back rather than added to the update's predicate, so a
-    // patch aimed at the wrong kind is reported as exactly that instead of
-    // arriving as a missing row or a stale token.
+    // Read back rather than added to the predicate, so a patch aimed at the wrong
+    // kind reports that instead of a missing row or a stale token.
     async update(id, patch, expectedUpdatedAt) {
       const { kind, ...changes } = patch;
       const current = await requireOwned<RecordRow>(db, record, "record", id);

@@ -14,9 +14,8 @@ import { mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, basedOn, collectionRoutes, idParam, jsonBody } from "./collection.js";
 
-// One vocabulary across records and points, so the assignment routes for both
-// live here beside it rather than in the files their paths belong to: renaming
-// and merging is what tagging is, and it is one feature to read.
+// The assignment routes for both sides live here rather than in the files their
+// paths belong to: one vocabulary is one feature to read.
 const tags = collectionRoutes({
   path: "/v1/tags",
   tag: "tags",
@@ -44,8 +43,7 @@ const merge = createRoute({
   },
 });
 
-// Nested because the pair is the whole row, like a point's secondary records: a
-// tag assignment has no id of its own and nothing to patch.
+// Nested because the pair is the whole row, with no id and nothing to patch.
 const pairParams = z.object({ id: uuidSchema, tagId: uuidSchema });
 const noRecord = problemResponse("no record of this owner has that id");
 const noPoint = problemResponse("no point of this owner has that id");

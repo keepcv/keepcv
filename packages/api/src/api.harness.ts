@@ -6,9 +6,8 @@ import { type Api, createApi, SESSION_TOKEN_HEADER, sessionTokenAuth } from "./i
 
 export const SESSION_TOKEN = "a-token-minted-for-this-launch";
 
-// A WebAssembly start plus every migration, and CI runs this package's files
-// alongside the repository suite's, so a two-core runner has ten PGlite
-// instances booting at once. The default hook budget is not enough for that.
+// Ten PGlite instances boot at once in CI, and the default hook budget is not
+// enough for a WebAssembly start plus every migration.
 const BOOTS_A_STORE = 60_000;
 
 export type Send = (method: string, path: string, body?: unknown) => Promise<Response>;
@@ -33,9 +32,7 @@ function sendVia(app: () => Api): Send {
     });
 }
 
-// One store per file and a fresh owner per test, for the reason the repository
-// suite does it: owner scoping is what isolates the tests, so the isolation
-// under test is the isolation they rely on.
+// A fresh owner per test: the isolation under test is the isolation relied on.
 export function withApi(): ApiHarness {
   let store: Store;
   let app: Api;

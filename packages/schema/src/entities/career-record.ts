@@ -26,9 +26,7 @@ export const SKILL_PROFICIENCIES = ["familiar", "working", "proficient", "expert
 const nullableText = z.string().nullable();
 const nullablePartialDate = partialDateSchema.nullable();
 
-// The vocabulary every kind shares (data-model.md #3.2). Almost all of it is
-// nullable: a record can be saved half-entered, and what is missing is an
-// observation the UI makes rather than a constraint that blocks a save.
+// Nullable by design: a record can be saved half-entered (data-model.md #3.2).
 const recordBase = z.object({
   ...standardFields,
   title: nullableText,
@@ -36,9 +34,7 @@ const recordBase = z.object({
   organisationId: uuidSchema.nullable(),
   startedOn: nullablePartialDate,
   endedOn: nullablePartialDate,
-  // "Still there" and "I have not filled this in yet" are different facts the UI
-  // renders differently, which is why an ongoing period is a flag and not a null
-  // end date.
+  // An ongoing period is this flag, never a null end date: different facts.
   isCurrent: z.boolean(),
   location: nullableText,
   sortKey: sortKeySchema,
@@ -52,17 +48,13 @@ function capitalise(text: string): string {
   return `${text[0]?.toUpperCase() ?? ""}${text.slice(1)}`;
 }
 
-// One kind, three shapes. The three bases are narrowed before the kind's extra
-// fields are added, because narrowing after the fact loses the key names to the
-// generic and stops type-checking. `kind` stays required on the patch: a record's
-// kind never changes - swapping an experience for a project would discard that
-// kind's facts - but carrying it types the caller into the right set of fields.
+// Narrowed before each kind's extra fields are added: narrowing afterwards loses
+// the key names to the generic and stops type-checking.
 function recordKind<K extends (typeof CAREER_RECORD_KINDS)[number], E extends z.ZodRawShape>(
   kind: K,
   extras: E,
 ) {
-  // `custom_entry` is the one kind whose name is two words. The id keys this
-  // record's definition in the published JSON Schema, so it carries no space.
+  // No space: this id keys the definition in the published JSON Schema.
   const id = `${kind.split("_").map(capitalise).join("")}Record`;
   const title = `${capitalise(kind.replace("_", " "))} record`;
   return {
@@ -87,23 +79,18 @@ const skill = recordKind("skill", {
   category: nullableText,
   proficiency: z.enum(SKILL_PROFICIENCIES).nullable(),
 });
-// `expiresOn` is not `endedOn`: an expiry is not an ending, and conflating them
-// would break "which certifications lapse in the next 90 days".
+// `expiresOn` is not `endedOn`: conflating them breaks "what lapses in 90 days".
 const certification = recordKind("certification", {
   credentialId: nullableText,
   expiresOn: nullablePartialDate,
 });
-// The author list is the publication's `subtitle` (template-model.md #6), so it
-// is not a field of its own.
 const publication = recordKind("publication", { doi: nullableText });
 const award = recordKind("award", {});
-// Free text where a skill's proficiency is a controlled vocabulary: "C1",
-// "Native" and "reading only" are all things people mean.
+// Free text, unlike a skill's proficiency: "C1" and "reading only" both occur.
 const language = recordKind("language", { proficiency: nullableText });
 const volunteering = recordKind("volunteering", {});
 const speaking = recordKind("speaking", {});
-// The one kind with a required parent: a custom entry means nothing apart from
-// the heading it prints under, and no other kind may carry the column at all.
+// The one kind with a required parent, and the only one that may carry it.
 const customEntry = recordKind("custom_entry", { customSectionId: uuidSchema });
 
 export const careerRecordSchema = z.discriminatedUnion("kind", [

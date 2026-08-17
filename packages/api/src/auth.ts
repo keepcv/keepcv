@@ -1,14 +1,13 @@
 import type { Uuid } from "@keepcv/schema";
 
-// Local mode mints one token per launch; hosted mode resolves a session instead.
-// Either way a route handler never sees a credential - it gets an owner from
-// ambient scope and cannot ask for a different one (api-contract.md #2).
+// A route handler never sees a credential: it gets an owner from ambient scope
+// and cannot ask for a different one (api-contract.md #2).
 export type Authenticate = (request: Request) => Promise<Uuid | undefined>;
 
 export const SESSION_TOKEN_HEADER = "x-keepcv-session";
 
-// Constant time: a plain comparison returns on the first wrong byte, which turns
-// the token into something guessable one character at a time.
+// Constant time: a plain comparison returns on the first wrong byte, which makes
+// the token guessable one character at a time.
 function equalsConstantTime(presented: Uint8Array, expected: Uint8Array): boolean {
   let mismatch = presented.length ^ expected.length;
   for (let index = 0; index < presented.length; index += 1) {

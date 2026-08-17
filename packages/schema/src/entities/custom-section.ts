@@ -2,10 +2,6 @@ import { z } from "zod";
 import { sortKeySchema } from "../primitives/sort-key.js";
 import { standardFields } from "./standard-fields.js";
 
-// A heading the built-in kinds do not cover - "Patents", "Press", "Grants". What
-// prints under it is a record of kind `custom_entry`, so a custom row carries
-// links, fields and points like any other record and no template learns a second
-// shape (data-model.md #6).
 export const customSectionSchema = z
   .object({
     ...standardFields,

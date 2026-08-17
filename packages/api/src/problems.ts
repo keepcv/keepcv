@@ -15,8 +15,7 @@ export class UnauthorizedError extends Error {
   override readonly name = "UnauthorizedError";
 }
 
-// A stale write answers with the state the server actually holds, so the UI can
-// show both sides instead of one being dropped silently (api-contract.md #2).
+// Carries the state the server holds, so the UI can show both sides.
 export class StaleWriteError extends Error {
   override readonly name = "StaleWriteError";
   readonly current: unknown;
@@ -27,8 +26,8 @@ export class StaleWriteError extends Error {
   }
 }
 
-// Every mutation route goes through here. Re-reading is the whole point of the
-// 409, and it cannot happen inside the transaction that just rolled back.
+// The re-read is the point of the 409, and it cannot happen inside the
+// transaction that just rolled back.
 export async function mutate<T>(
   write: () => Promise<T>,
   readCurrent: () => Promise<unknown>,
@@ -43,17 +42,16 @@ export async function mutate<T>(
   }
 }
 
-// A taken sort key is two clients dragging at once, which the caller resolves by
-// re-reading. A missing parent or a column the row's kind may not carry is a
-// request that was already wrong when it was sent.
+// A taken sort key is resolved by re-reading; a missing parent was wrong when it
+// was sent.
 const CONSTRAINT_STATUS: Record<ConstraintKind, 409 | 422> = {
   unique: 409,
   foreignKey: 422,
   check: 422,
 };
 
-// Matches the spec's `body[0].c[0].href`: array steps read as indices, so a
-// reader can find the offending node without counting.
+// Array steps read as indices - `body[0].c[0].href` - so the offending node can
+// be found without counting.
 function formatPath(path: readonly PropertyKey[]): string {
   return path.reduce<string>((text, segment) => {
     if (typeof segment === "number") {
@@ -125,8 +123,7 @@ export function problemFor(error: unknown, instance: string): Problem {
       constraint: error.constraint,
     };
   }
-  // The point already prints under that record, so a secondary link would be the
-  // same relationship written twice. The caller resolves it by re-reading.
+  // A 409: the primary already says it, and the caller resolves it by re-reading.
   if (error instanceof DuplicatePointRecordLinkError) {
     return {
       type: PROBLEM_TYPES.constraintViolated,
@@ -136,8 +133,7 @@ export function problemFor(error: unknown, instance: string): Problem {
       instance,
     };
   }
-  // Not a 409: the record did not change under the caller, and re-reading would
-  // not help. A patch naming the wrong kind was wrong when it was sent.
+  // Not a 409: nothing changed under the caller and re-reading would not help.
   if (error instanceof CareerRecordKindMismatchError) {
     return {
       type: PROBLEM_TYPES.validationFailed,
@@ -148,8 +144,7 @@ export function problemFor(error: unknown, instance: string): Problem {
       errors: [{ path: "patch.kind", code: "wrong_record_kind" }],
     };
   }
-  // Nothing changed under the caller and re-reading would not help: a merge
-  // naming the tag it is applied to was wrong when it was sent.
+  // Not a 409, for the reason above.
   if (error instanceof TagMergedIntoItselfError) {
     return {
       type: PROBLEM_TYPES.validationFailed,
@@ -179,8 +174,7 @@ export function problemFor(error: unknown, instance: string): Problem {
     };
   }
 
-  // Nothing recognised the error, so it is a fault rather than a caller mistake.
-  // It is logged rather than described: `detail` reaches the client.
+  // Logged rather than described: `detail` reaches the client.
   console.error(error);
   return {
     type: PROBLEM_TYPES.internalError,

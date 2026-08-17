@@ -6,9 +6,7 @@ import { apiClient } from "../lib/api.js";
 import { addPoint, addRecord, aFilledStore, emptyStore } from "../store.harness.js";
 import { buildRouter } from "./router.js";
 
-// Through the real router, the real query cache and the real typed client, with
-// only the network stubbed: the wiring between them is the part a screen test on
-// its own would not touch.
+// Only the network is stubbed: the wiring is what a screen test would not touch.
 function mount(answer: () => Response, path = "/"): void {
   vi.stubGlobal(
     "fetch",

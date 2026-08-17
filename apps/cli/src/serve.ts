@@ -6,8 +6,7 @@ import { createApi, sessionTokenAuth } from "@keepcv/api";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { serveWebApp, webAssetsDir } from "./web-assets.js";
 
-// A career store belongs to the person, not to whichever directory they happened
-// to run this from.
+// Under the home directory, not wherever this was run from.
 export const DEFAULT_DATA_DIR = join(homedir(), ".keepcv");
 export const DEFAULT_PORT = 4319;
 
@@ -25,8 +24,7 @@ export async function startServer(options: {
   await store.migrate();
   const ownerId = await store.ensureLocalOwner();
 
-  // Minted per launch and held in memory. A token written to disk outlives the
-  // process that needed it, and local mode gains nothing from that.
+  // Held in memory: a token written to disk outlives the process that needed it.
   const token = randomBytes(32).toString("base64url");
 
   const api = createApi({
@@ -35,17 +33,15 @@ export async function startServer(options: {
     authenticate: sessionTokenAuth(token, ownerId),
   });
 
-  // Composed here rather than inside the API: `createApi` takes the port and an
-  // owner scope and knows nothing about a filesystem, which is what lets the
-  // hosted adapter reuse it unchanged.
+  // Composed here, so `createApi` knows nothing about a filesystem and the
+  // hosted adapter reuses it unchanged.
   const web = serveWebApp(webAssetsDir());
   const handle = async (request: Request): Promise<Response> =>
     new URL(request.url).pathname.startsWith("/v1/")
       ? await api.fetch(request)
       : await web(request);
 
-  // Loopback only. This is a personal store on a machine that may well be on a
-  // shared network, and nothing here is built to face one.
+  // Loopback only: nothing here is built to face a network.
   const server = serve({ fetch: handle, port: options.port, hostname: "127.0.0.1" });
 
   const port = await new Promise<number>((resolve) => {

@@ -1,7 +1,5 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
-// PGlite and node-postgres share this base, which is why there is one schema,
-// one migration set and one set of queries for both (data-model.md: PostgreSQL
-// is the only dialect). A transaction handle satisfies it too, so repositories
-// take it and never learn whether they are inside one.
+// A transaction handle satisfies this too, so a repository takes it and never
+// learns whether it is inside one.
 export type Database = PgDatabase<PgQueryResultHKT>;

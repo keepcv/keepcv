@@ -12,8 +12,7 @@ import { mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, jsonBody, patchBody } from "./collection.js";
 
-// The one resource with no id in its path: there is exactly one profile per
-// owner, so it is neither created nor archived and has no collection route.
+// One per owner, so it is neither created nor archived and has no id in a path.
 const getProfile = createRoute({
   method: "get",
   path: "/v1/profile",
@@ -40,8 +39,6 @@ const patchProfile = createRoute({
   },
 });
 
-// Channels belong to the profile in the port, but they are an owned collection
-// on the wire like any other, so they answer the same six routes.
 const channels = collectionRoutes({
   path: "/v1/contact-channels",
   tag: "contact channels",
