@@ -138,9 +138,12 @@ are what a client writes through.
 
 ### Render and templates
 
-The `ResumeDocument` compiler is built: `compile(store, resumeId, options)` in
-`@keepcv/core`, one presenter per record kind, and
-`GET /v1/resumes/:id/document`. What remains is the template contract itself.
+The `ResumeDocument` compiler is built as two steps in `@keepcv/core`:
+`captureManifest(store, resumeId)` resolves the selection and freezes it, and
+`renderManifest(manifest, revisions, options)` formats it. `compile()` is the
+pair, one presenter per record kind, and `GET /v1/resumes/:id/document`. A live
+preview and a version pinned months ago therefore render through one path.
+What remains is the template contract itself.
 
 The shared template fixture
 ([`template-model.md`](template-model.md)); the template contract and config
@@ -155,9 +158,14 @@ LaTeX and Typst. Full-store backup and restore.
 
 ### Versions and snapshots
 
-Version capture on export and save; a timeline; a structural diff between any
-two versions; restore as a forward operation; starred snapshots with labels
-and target context; usage index maintenance.
+Capture, the timeline, snapshots and the usage index are built:
+`captureManifest(store, resumeId)` in `@keepcv/core` freezes what a resume says,
+the store assigns the sequence and refuses a duplicate of the current manifest,
+and `resume_content_ref` answers "where is this used?" for records and points.
+
+What remains is **a structural diff between any two versions** and **restore as
+a forward operation** - a restore writes the older manifest back over the
+working composition and appends a version saying where it came from.
 
 ### Import
 

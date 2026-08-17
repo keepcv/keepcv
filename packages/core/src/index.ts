@@ -1,6 +1,8 @@
-export { type CompileOptions, compile } from "./document/compile.js";
+export { captureManifest, type ManifestRef, manifestRefs } from "./document/capture.js";
+export { compile } from "./document/compile.js";
 export { contactHref, formatMetric, formatPartialDate, formatPeriod } from "./document/format.js";
 export { PRESENTED_KINDS, type Presented, present } from "./document/presenters.js";
+export { type CompileOptions, renderManifest } from "./document/render.js";
 // This package must import no I/O of any kind - it runs unchanged in Node and
 // in the browser, and CI enforces it (application-structure.md #2).
 
@@ -17,6 +19,7 @@ export {
   SortKeyError,
 } from "./ordering/sort-key.js";
 export {
+  type AppendedVersion,
   CareerRecordKindMismatchError,
   type CareerRecordRepository,
   CONSTRAINT_KINDS,
@@ -33,6 +36,7 @@ export {
   type ProfileRepository,
   type Repositories,
   type ResumeRepository,
+  type ResumeVersionRepository,
   StoreNotEmptyError,
   type StoreRepository,
   TagMergedIntoItselfError,

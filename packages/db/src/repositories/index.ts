@@ -8,6 +8,7 @@ import { createPhrasingRepository } from "./phrasing.js";
 import { createPointRepository } from "./point.js";
 import { createProfileRepository } from "./profile.js";
 import { createResumeRepository } from "./resume.js";
+import { createResumeVersionRepository } from "./resume-version.js";
 import { createStoreRepository } from "./store.js";
 import { createTagRepository } from "./tag.js";
 
@@ -22,6 +23,7 @@ export function createRepositories(db: Database): Repositories {
     phrasings,
     tags: createTagRepository(db),
     resumes: createResumeRepository(db),
+    versions: createResumeVersionRepository(db),
     drafts: createDraftRepository(db),
   };
   return { ...repositories, store: createStoreRepository(db, repositories) };

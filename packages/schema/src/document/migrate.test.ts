@@ -39,6 +39,8 @@ const current = {
     resumeEntries: [],
     resumeEntryPoints: [],
     resumeContactChannels: [],
+    resumeVersions: [],
+    resumeSnapshots: [],
   },
 };
 

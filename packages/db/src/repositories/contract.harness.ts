@@ -313,6 +313,41 @@ export function entryPointInput(
 
 export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;
 
+export interface Composed {
+  resumeId: Uuid;
+  sectionId: Uuid;
+  entryId: Uuid;
+  recordId: Uuid;
+  pointId: Uuid;
+  phrasingId: Uuid;
+}
+
+// A resume with one section, one entry and one point under it: the shape almost
+// every composition case starts from.
+// `sortKey` because records are unique on it per kind: a second call into one
+// owner collides otherwise.
+export async function compose(run: Run, name = "Backend, Acme", sortKey = "a0"): Promise<Composed> {
+  return await run(async (r) => {
+    const resume = await r.resumes.create(resumeInput(name));
+    const record = await r.records.create(recordInput("experience", sortKey));
+    const point = pointInput(record.id, sortKey, "Cut p95 latency from 800ms to 120ms");
+    await r.points.create(point);
+    const section = await r.resumes.addSection(sectionInput(resume.id, "experience", "a0"));
+    const entry = await r.resumes.addEntry(entryInput(section.id, resume.id, record.id, "a0"));
+    await r.resumes.addEntryPoint(
+      entryPointInput(entry.id, resume.id, point.id, point.phrasing.id, "a0"),
+    );
+    return {
+      resumeId: resume.id,
+      sectionId: section.id,
+      entryId: entry.id,
+      recordId: record.id,
+      pointId: point.id,
+      phrasingId: point.phrasing.id,
+    };
+  });
+}
+
 export interface Driver {
   run: Run;
   otherOwner: () => Promise<Run>;

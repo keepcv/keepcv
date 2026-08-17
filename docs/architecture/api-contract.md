@@ -119,6 +119,7 @@ CRUD   /v1/custom-sections             headings the built-in kinds do not cover
 
 CRUD   /v1/records                     ?kind=&tag=&archived=
 GET    /v1/records/:id
+GET    /v1/records/:id/usage           which resume versions printed it
 GET    /v1/records/:id/tags            the tags it carries
 PUT    /v1/records/:id/tags/:tagId     idempotent
 DELETE /v1/records/:id/tags/:tagId
@@ -130,7 +131,7 @@ CRUD   /v1/points                      ?recordId=&tag=&confidence=&archived=
 GET    /v1/points/:id/records          the records it also relates to
 PUT    /v1/points/:id/records/:recordId   secondary parent; idempotent
 DELETE /v1/points/:id/records/:recordId
-GET    /v1/points/:id/usage            which resume versions reference it
+GET    /v1/points/:id/usage            which resume versions printed it
 GET    /v1/points/:id/tags             the tags it carries
 PUT    /v1/points/:id/tags/:tagId      idempotent
 DELETE /v1/points/:id/tags/:tagId
@@ -159,12 +160,12 @@ PUT    /v1/resumes/:id/contact-channels/:channelId  { isVisible }; idempotent
 DELETE /v1/resumes/:id/contact-channels/:channelId  revert to the channel's default
 GET    /v1/resumes/:id/document        ?locale=  compiled ResumeDocument
 
-GET    /v1/resumes/:id/versions
-POST   /v1/resumes/:id/versions        { trigger }  - commits open drafts first
-GET    /v1/resumes/:id/versions/:vid
-GET    /v1/resumes/:id/versions/diff   ?a=&b=
-POST   /v1/resumes/:id/versions/:vid/restore
-POST   /v1/resumes/:id/versions/:vid/snapshot   { label, note }
+GET    /v1/resume-versions             ?resumeId=
+POST   /v1/resume-versions             { id, resumeId, trigger } - the store captures the manifest
+GET    /v1/resume-versions/:id         the version and the manifest it pinned
+GET    /v1/resume-versions/diff        ?a=&b=
+POST   /v1/resume-versions/:id/restore
+CRUD   /v1/resume-snapshots            ?resumeId=&archived=
 
 POST   /v1/render                      ResumeDocument -> PDF/HTML
 POST   /v1/lint                        ResumeDocument -> lint report
@@ -293,6 +294,21 @@ Notes on the non-obvious ones:
 - **`GET /v1/resumes/:id/document` returns a uniform `ResumeDocument`**
   (template-model.md), not the manifest. The manifest is storage-shaped; the
   document is template-shaped, and only the latter is a public contract.
+- **A version is three routes, not six, and a snapshot is a collection.** A
+  version is keyed by its own id like everything else, so it is flat and narrowed
+  by `?resumeId=` for the reason links and fields are; it has no `PATCH` and no
+  archive because it is immutable. A snapshot is an ordinary owned row - a label
+  on a version - so it is the usual six, and starring, relabelling and unstarring
+  are its create, patch and archive rather than three verbs of their own.
+- **The manifest is captured by the store, not sent by the client.** A version
+  records what the resume said, which the client is in no position to assert. The
+  body carries the id, the resume and the trigger only. `POST` answers `201` with
+  a new version, or `200` with the current one unchanged when the manifest has
+  not moved since it was captured (data-model.md #9.2) - so a client that exports
+  twice gets one timeline entry and can tell which happened.
+- **Capture does not commit open drafts.** A version records what the store says;
+  turning in-progress text into history as a side effect of pressing Export is
+  the surprise drafts exist to prevent.
 - **`GET /v1/store` returns current state only** - no phrasing revision
   history and no version manifests. Those are fetched per subject on
   demand. The "the whole store is only kilobytes" assumption
@@ -306,11 +322,12 @@ Notes on the non-obvious ones:
   current. The editor has to know a draft is waiting before it opens, which is
   why the alternative - a `GET` per field - is not the cheaper one.
 
-  It answers the same `Store` shape the export wraps, with `phrasingRevisions`
-  narrowed to the revision each phrasing currently points at - so every point
-  arrives with the words it says, and none of the words it used to say. One
-  schema until versions join the export, which is where the two shapes genuinely
-  diverge.
+  It answers the `Store` shape, with `phrasingRevisions` narrowed to the
+  revision each phrasing currently points at - so every point arrives with the
+  words it says, and none of the words it used to say. The export wraps
+  `Archive`, which is that shape plus `resumeVersions` and `resumeSnapshots`:
+  the two diverged when versions joined the export, and they are two schemas so
+  that a selector cannot read history off a payload that does not carry it.
 
   **Archived rows are in it.** "Current" means "not history", not "not
   archived": the archived filter is a client-side toggle over rows it already
@@ -354,8 +371,11 @@ interface Repositories {
   drafts:       DraftRepository;
   resumes:      ResumeRepository;
   versions:     ResumeVersionRepository;
+  // Append-only, and the usage index projected out of every manifest it holds.
+  versions:     ResumeVersionRepository;
   // The native export, whole: `read` returns every row the owner has including
-  // archived ones, `load` puts one back with its ids and timestamps intact.
+  // archived ones and its history, `load` puts one back with its ids and
+  // timestamps intact.
   store:        StoreRepository;
 }
 

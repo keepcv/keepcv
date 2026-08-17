@@ -907,11 +907,11 @@ resume_contact_channel (
 )
 ```
 
-**No template columns and no `current_version_id` yet.** A `template_config` has
-nothing to validate against until a template package exists, and
-`current_version_id` references a table the Versions capability creates. Both
-arrive with the capability that owns them, by the expand step of an
-expand/contract migration.
+**No template columns.** A `template_config` has nothing to validate against
+until a template package exists, so `template_id`, `template_version` and
+`template_config` arrive with that capability, by the expand step of an
+expand/contract migration. There is no `current_version_id` either, and #9.2
+says why.
 
 **A point may appear at most once per resume**, which is why `resume_id` is
 carried down onto entries and entry points rather than reached through the
@@ -950,50 +950,79 @@ resume_version (                  -- IMMUTABLE
   id uuid not null,
   owner_id uuid not null,
   primary key (owner_id, id),
-  resume_id uuid not null references resume(id) on delete cascade,
+  resume_id uuid not null,
   seq int not null,               -- 1, 2, 3... per resume; user-facing
   trigger text not null check (trigger in ('export','manual_save','restore')),
-  restored_from_version_id uuid null references resume_version(id),
+  restored_from_version_id uuid null,
   manifest jsonb not null,
   manifest_hash char(64) not null,
   created_at timestamptz not null default now(),
-  unique (resume_id, seq)
+  foreign key (owner_id, resume_id) references resume (owner_id, id) on delete cascade,
+  foreign key (owner_id, restored_from_version_id) references resume_version (owner_id, id),
+  unique (owner_id, resume_id, seq)
 )
 
 resume_snapshot (
   ...standard,
-  resume_version_id uuid not null unique references resume_version(id),
+  resume_version_id uuid not null,
   label text not null,            -- "Sent to Acme, March"
   note  text null,
-  starred_at timestamptz not null default now()
+  starred_at timestamptz not null default now(),
+  foreign key (owner_id, resume_version_id)
+    references resume_version (owner_id, id) on delete cascade,
+  unique (owner_id, resume_version_id)
 )
 
 resume_content_ref (              -- DERIVED index; rebuildable from manifests
-  resume_version_id uuid not null references resume_version(id) on delete cascade,
+  owner_id uuid not null,
+  resume_version_id uuid not null,
   ref_kind text not null check (ref_kind in
     ('record','point','phrasing_revision','contact_channel')),
   ref_id   uuid not null,
-  primary key (resume_version_id, ref_kind, ref_id)
+  primary key (owner_id, resume_version_id, ref_kind, ref_id),
+  foreign key (owner_id, resume_version_id)
+    references resume_version (owner_id, id) on delete cascade
 );
-create index on resume_content_ref (ref_kind, ref_id);
+create index on resume_content_ref (owner_id, ref_kind, ref_id);
 ```
+
+**A version is append-only, like a phrasing revision**, and held that way by the
+same mechanism: a hand-written trigger at the end of the migration refuses any
+update. With the rule living only in the repository, one stray `set` would
+rewrite what a version claims was sent.
+
+**No `current_version_id` on `resume`.** The current version is `max(seq)`, and
+"is there anything unsaved" is a comparison of the working manifest's hash with
+that version's - so a column would be a second copy of a fact the timeline
+already holds, kept in step by hand.
 
 `resume_content_ref` exists purely to serve the UI. Screens need to answer
 "which resumes used this point?" and "if I archive this record, what does it
 affect?" - questions that would otherwise mean scanning every manifest's
-`jsonb`. It is written when a version is created and is fully rebuildable, so
-it can never be the cause of a correctness bug.
+`jsonb`, and history grows without bound. **It is a derived table, which #8
+otherwise argues against, and the difference is that its parent is immutable:**
+it is written in the same transaction as the version and neither ever changes
+again, so there is no mutation path for it to drift along. It is not exported,
+because a derived index in a file is a second copy that could arrive
+disagreeing with the manifests; import rebuilds it from them (I12).
 
 Restoring never rewinds: it appends a new version whose manifest equals the old
 one, with `trigger = 'restore'` and `restored_from_version_id` set, so the
 timeline records that a restore happened.
 
 **Identical exports do not create duplicate versions.** If a new manifest's
-`manifest_hash` equals the current version's, no version is written and the
+`manifest_hash` equals the *current* version's, no version is written and the
 existing one is returned. Exporting the same resume three times to send to
 three companies must not produce three indistinguishable timeline entries -
 that is how a version list becomes unreadable after ninety days away.
-Distinguishing *those* three sends is what snapshots are for.
+Distinguishing *those* three sends is what snapshots are for. The comparison is
+against the current version alone: an older manifest arriving again is a
+restore, and the timeline has to record that it happened.
+
+**Capturing a version does not commit open drafts.** A version records what the
+store says. Turning in-progress text into permanent history as a side effect of
+pressing Export is the surprise drafts exist to prevent (#5), so the composer
+surfaces open drafts before capture rather than resolving them silently.
 
 ### 9.3 Manifest shape
 
@@ -1002,42 +1031,68 @@ whole, never queried by its parts - the justification for the exception to
 normalisation.
 
 The manifest is **storage-shaped, not template-shaped**: it pins what was
-selected. `core.compile()` turns it into the uniform `ResumeDocument`
+selected. `renderManifest()` turns it into the uniform `ResumeDocument`
 (template-model.md #7).
 
 ```jsonc
 {
   "schemaVersion": 1,
+  "resume": {
+    "name": "Backend, Acme", "targetCompany": "Acme", "targetRole": "Staff Engineer",
+    "targetUrl": null, "appliedOn": "2026-03-02"
+  },
   "profile": {
-    "fullName": "...", "headline": "...",
-    "summaryPhrasingRevisionId": "...",
-    "contactChannels": [{ "id": "...", "kind": "email", "value": "..." }]
+    "fullName": "...", "headline": "...", "pronouns": null, "location": "...",
+    "summaryRevisionId": "...",
+    "contacts": [ /* whole contact_channel rows, in printing order */ ]
   },
   "sections": [{
-    "kind": "experience", "heading": "Experience", "layout": "grouped", "sortKey": "a0",
+    "kind": "experience", "heading": "Experience", "layout": "grouped",
     "entries": [{
-      "recordId": "...", "sortKey": "a0",
-      "pinned": {
-        "kind": "experience", "title": "...", "subtitle": "...",
-        "organisation": { "name": "..." },
-        "startedOn": "2023-04", "endedOn": null, "isCurrent": true,
-        "links":  [{ "kind": "repo", "label": "...", "url": "..." }],
-        "fields": [{ "key": "employmentType", "label": "...", "value": "..." }]
-      },
+      "record": { /* the whole record row as it was */ },
+      "organisation": { /* the whole organisation row, or null */ },
+      "summaryRevisionId": "...",
+      "links":  [ /* whole record_link rows */ ],
+      "fields": [ /* whole record_field rows */ ],
+      "tags": ["React"],
       "points": [
-        { "pointId": "...", "phrasingRevisionId": "...", "sortKey": "a0" }
+        { "pointId": "...", "phrasingRevisionId": "...",
+          "metrics": [ /* whole metric rows */ ], "tags": ["React"] }
       ]
     }]
-  }],
-  "template": { "id": "ats-strict", "version": "1.2.0", "config": { ... } }
+  }]
 }
 ```
 
-**`pinned` freezes the record's structural fields too.** Pinning only phrasing
+**`record` freezes the record's structural fields too.** Pinning only phrasing
 revisions would leave job titles, dates, links and fields live - so correcting
 a title in 2027 would silently rewrite what a 2026 snapshot claims you sent.
 The same reasoning as pinned phrasing revisions, applied to everything a
-phrasing revision does not cover.
+phrasing revision does not cover. The rows are pinned whole rather than into a
+parallel vocabulary, so a column added to a record kind is pinned without anyone
+extending a second shape, and a presenter reads a pinned record unchanged.
+
+**Ordering is the array**, not a `sort_key` on each element: the manifest is
+already in printing order, and a key beside it would be the same fact twice.
+Restoring generates fresh keys from the order.
+
+**The heading and the layout are resolved at capture.** A section carrying no
+override pins the heading its kind or its custom section printed under, so
+renaming that custom section later cannot reword what a version says.
+
+**Text is pinned by reference, not by copy.** A manifest names
+`phrasing_revision_id`s; revisions are append-only and never deleted, so what a
+version resolves to cannot change, and a wording used by forty versions is
+stored once (I4).
+
+**No `template` block yet.** A `template_config` has nothing to validate against
+until a template package exists; it arrives with that capability, by the expand
+step of an expand/contract migration, as `template_id` and `template_version` do
+on `resume`.
+
+**No `targetJdText`.** The job description is what the resume was composed
+against rather than part of what was sent, and it would multiply the size of
+every version.
 
 ---
 
@@ -1050,7 +1105,7 @@ Enforced by constraint where possible, by test where not.
 | I1 | No row is visible outside its `owner_id` scope | repository scoping + test |
 | I2 | `phrasing_revision` rows are never updated, and never deleted except by explicit purge | no update path; trigger + test |
 | I3 | Two revisions of one phrasing never share a `content_hash` | unique index; appending text a phrasing already holds moves its pointer instead |
-| I4 | `resume_version.manifest` references only existing, pinned revisions | validation on write + test |
+| I4 | `resume_version.manifest` references only existing, pinned revisions | validated on capture; revisions are append-only, so a pinned one cannot vanish |
 | I5 | `ResumeDocument` can never contain `evidence` | type has no such field |
 | I6 | Archived content never appears in a rendered resume | repository default filter + test |
 | I7 | `content_hash` is stable across serialisations | property test on canonicalisation |
@@ -1058,7 +1113,7 @@ Enforced by constraint where possible, by test where not.
 | I9 | `partial_date` values sort correctly within equal precision | domain `CHECK` |
 | I10 | `import(export(store)) == store` | round-trip test over a covering store, required by every slice |
 | I11 | `sort_key` is unique within its parent scope | unique index per scope |
-| I12 | `resume_content_ref` is exactly derivable from manifests | rebuild-and-compare test |
+| I12 | `resume_content_ref` is exactly derivable from manifests | written from the manifest on capture, rebuilt from it on import + test |
 | I13 | A point appears at most once per resume | `unique (owner_id, resume_id, point_id)`, which the entry point can carry because `resume_id` is on it |
 | I14 | Every record kind has exactly one presenter | exhaustiveness check + test |
 | I15 | A canonical phrasing belongs to its set, a current revision to its phrasing, and a resume's entry to a section of that same resume | composite foreign key carrying the parent's own id |
@@ -1115,8 +1170,8 @@ N+1 query on the most-visited screen in the product.
 | A row's own tags | `record_tag (owner_id, record_id)`, `point_tag (owner_id, point_id)` |
 | Tag by name | `tag (owner_id, slug) where archived_at is null` - the uniqueness index serves the lookup too |
 | Every draft an owner holds | `draft (owner_id, target_kind, target_id, field)` - the primary key, and the only access path: drafts are read whole with the boot payload and looked up in it |
-| "Where is this used?" | `resume_content_ref (ref_kind, ref_id)` |
-| Version timeline | `resume_version (resume_id, seq desc)` |
+| "Where is this used?" | `resume_content_ref (owner_id, ref_kind, ref_id)` |
+| Version timeline | `resume_version (owner_id, resume_id, seq)` - the uniqueness index serves the timeline read too |
 
 ---
 

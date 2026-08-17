@@ -18,13 +18,17 @@ import {
   resumeSchema,
   resumeSectionSchema,
 } from "../entities/resume.js";
+import { resumeSnapshotSchema, resumeVersionSchema } from "../entities/resume-version.js";
 import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
+// Current state, which is what the boot payload carries. History is in
+// `archiveSchema` below, and grows without bound (api-contract.md #3).
 // `import(export(store)) == store` is a tested property, so anything omitted
-// here is data the format silently drops. A slice adding a table adds it here.
+// there is data the format silently drops. A slice adding a table adds it to
+// one of these two.
 export const storeSchema = z
   .object({
     profile: profileSchema,
@@ -56,13 +60,22 @@ export const storeSchema = z
   // inlined into the OpenAPI document twice.
   .meta({ id: "Store", title: "Career store" });
 
+// The store plus its history. `resumeContentRef` is absent because it is derived
+// from the manifests and rebuilt on import (data-model.md #9.2).
+export const archiveSchema = storeSchema
+  .extend({
+    resumeVersions: z.array(resumeVersionSchema),
+    resumeSnapshots: z.array(resumeSnapshotSchema),
+  })
+  .meta({ id: "Archive", title: "Career store with history" });
+
 // `schemaVersion` is pinned to the current one: `migrateDocument` is the only
 // supported way in, and it brings older documents forward first.
 export const exportDocumentSchema = z
   .object({
     schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
     exportedAt: timestampSchema,
-    store: storeSchema,
+    store: archiveSchema,
   })
   .meta({
     id: "KeepCVExport",
@@ -72,4 +85,5 @@ export const exportDocumentSchema = z
   });
 
 export type Store = z.infer<typeof storeSchema>;
+export type Archive = z.infer<typeof archiveSchema>;
 export type ExportDocument = z.infer<typeof exportDocumentSchema>;
