@@ -3,11 +3,8 @@ import { SORT_KEY_DIGITS, type SortKey, sortKeySchema } from "@keepcv/schema";
 const SMALLEST_DIGIT = "0";
 const LARGEST_DIGIT = "z";
 
-// A key is a magnitude-prefixed integer part plus an optional fraction:
-// a0...az, b00...bzz, c000... - the head says how many digits follow, and
-// upper-case heads encode negative integers. Without the magnitude prefix an
-// append can only halve the remaining gap, so key length grows linearly: a
-// thousand appends produced two-hundred-character keys.
+// A magnitude-prefixed integer part plus an optional fraction: a0...az, b00...bzz.
+// Without the prefix an append halves the gap - 1000 appends gave 200-char keys.
 const MIN_KEY = `A${SMALLEST_DIGIT.repeat(26)}`;
 const FIRST_KEY = `a${SMALLEST_DIGIT}`;
 
@@ -96,12 +93,8 @@ function decrementInteger(int: string): string | null {
   return previousHead + digits.join("");
 }
 
-// A fraction strictly between `lower` and `upper`. The sentinels are
-// asymmetric: `""` is an absent lower bound, `null` an absent upper one.
-//
-// The branches below are the specification; splitting them into named helpers
-// would scatter the case analysis without making any case easier to verify.
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: see above
+// `""` is an absent lower bound, `null` an absent upper one.
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the branches are the specification, and naming each scatters the case analysis
 function midpoint(lower: string, upper: string | null): string {
   if (upper !== null && lower >= upper) {
     throw new SortKeyError(`fractions are out of order: ${lower} >= ${upper}`);
@@ -110,11 +103,8 @@ function midpoint(lower: string, upper: string | null): string {
     throw new SortKeyError("a fraction must not end with the smallest digit");
   }
 
-  // Past its end `lower` is padded with the smallest digit, since a shorter
-  // fraction equals itself followed by zeroes. Treating the missing digit as a
-  // mismatch ends the walk early and yields a fraction ending in the smallest
-  // digit - midpoint("", "0V") returning "0" rather than "0G" - which is the
-  // one key shape nothing can be inserted before.
+  // Padded past its end with the smallest digit: treating the missing one as a
+  // mismatch returns "0" rather than "0G" for midpoint("", "0V").
   if (upper !== null) {
     let shared = 0;
     while (shared < upper.length && (lower[shared] ?? SMALLEST_DIGIT) === upper[shared]) {
@@ -141,8 +131,6 @@ function midpoint(lower: string, upper: string | null): string {
   return digitAt(lowerDigit) + midpoint(lower.slice(1), null);
 }
 
-// @keepcv/schema checks the lexical contract; the structural rules belong to
-// this algorithm and are checked here.
 function validated(key: string): SortKey {
   const branded = sortKeySchema.parse(key);
   if (key === MIN_KEY) {
@@ -150,8 +138,7 @@ function validated(key: string): SortKey {
   }
   const fraction = key.slice(integerPart(key).length);
   if (fraction.endsWith(SMALLEST_DIGIT)) {
-    // Nothing can be inserted before such a key without lengthening it without
-    // bound.
+    // Nothing sorts before such a key without lengthening it without bound.
     throw new SortKeyError(`fractional part must not end with the smallest digit: ${key}`);
   }
   return branded;
@@ -160,8 +147,7 @@ function validated(key: string): SortKey {
 function keyBefore(upper: string): SortKey {
   const int = integerPart(upper);
   if (int === MIN_KEY) return validated(int + midpoint("", upper.slice(int.length)));
-  // `upper` carries a fraction, so its integer part alone already sorts before
-  // it and nothing has to be borrowed.
+  // `upper` carries a fraction, so its integer part alone already sorts before it.
   if (int < upper) return validated(int);
   const decremented = decrementInteger(int);
   if (decremented === null) throw new SortKeyError("cannot order before the smallest key");
@@ -171,8 +157,7 @@ function keyBefore(upper: string): SortKey {
 function keyAfter(lower: string): SortKey {
   const int = integerPart(lower);
   const incremented = incrementInteger(int);
-  // Incrementing only fails at the largest magnitude, where the fraction grows
-  // instead.
+  // Incrementing only fails at the largest magnitude, where the fraction grows.
   return validated(incremented ?? int + midpoint(lower.slice(int.length), null));
 }
 
@@ -190,8 +175,7 @@ function keyWithin(lower: string, upper: string): SortKey {
   return validated(lowerInt + midpoint(lower.slice(lowerInt.length), null));
 }
 
-// A `null` bound means unbounded: start of the list, end of it, or - when both
-// are null - the first key in an empty one.
+// A `null` bound means unbounded on that side.
 export function generateKeyBetween(
   lower: SortKey | string | null,
   upper: SortKey | string | null,
@@ -209,8 +193,7 @@ export function generateKeyBetween(
   return keyWithin(lower, upper);
 }
 
-// Bounded insertions bisect rather than chain, so key length stays
-// logarithmic in `count` instead of linear.
+// Bisects rather than chains, so key length stays logarithmic in `count`.
 export function generateNKeysBetween(
   lower: SortKey | string | null,
   upper: SortKey | string | null,

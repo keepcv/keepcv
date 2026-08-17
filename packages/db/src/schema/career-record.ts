@@ -32,9 +32,8 @@ const KINDS = [
 const MODES = ["onsite", "hybrid", "remote"];
 const SKILL_PROFICIENCIES = ["familiar", "working", "proficient", "expert"];
 
-// The columns a kind owns are null on every other kind. This is what keeps one
-// table honest where eleven subtype tables would have used the type system: an
-// education row cannot acquire a delivery mode.
+// What keeps one table honest where subtype tables would use the type system:
+// an education row cannot acquire a delivery mode.
 function onlyOn(kind: string, columns: string[]) {
   return check(
     `record_${kind}_columns_check`,
@@ -42,12 +41,8 @@ function onlyOn(kind: string, columns: string[]) {
   );
 }
 
-// One table for every record kind, not a supertype plus subtypes. The vocabulary
-// in data-model.md #3.2 is identical across kinds, so it lives here; what is left
-// is eleven kind-specific columns, scoped by CHECK. `title` is nullable and
-// `is_current` defaults false, because a record can be saved half-entered and
-// "this is missing an end date" is an observation the UI makes, not a constraint
-// that blocks a save (data-model.md P-A).
+// One table for every record kind (data-model.md #6). `title` is nullable and
+// `is_current` defaults false: a record can be saved half-entered.
 export const record = pgTable(
   "record",
   {
@@ -85,9 +80,7 @@ export const record = pgTable(
       "record_proficiency_kinds_check",
       sql.raw(`kind in ('skill', 'language') or proficiency is null`),
     ),
-    // Skill proficiency is a controlled vocabulary so "everything I am expert in"
-    // is a query; language proficiency is free text, because "C1", "Native" and
-    // "reading only" are all things people mean and we do not get to pick.
+    // Skill proficiency is a vocabulary; language proficiency is free text.
     check(
       "record_skill_proficiency_check",
       sql.raw(
@@ -100,25 +93,20 @@ export const record = pgTable(
     onlyOn("certification", ["credential_id", "expires_on"]),
     onlyOn("publication", ["doi"]),
 
-    // Both directions, where `onlyOn` gives one: a custom entry has to name the
-    // heading it prints under, and no other kind may name one at all.
+    // Both directions, where `onlyOn` gives one.
     check(
       "record_custom_section_check",
       sql.raw(`(kind = 'custom_entry') = (custom_section_id is not null)`),
     ),
 
-    // Records are dragged within their kind's list - except custom entries, whose
-    // list is one section (data-model.md #3.5). NULLS NOT DISTINCT is what lets
-    // one constraint say both: `custom_section_id` is null on every other kind, so
-    // nulls comparing equal collapses this back to (owner, kind, sort_key) there.
+    // NULLS NOT DISTINCT covers both scopes: the column is null on every kind but
+    // custom_entry, where nulls comparing equal collapses this to (owner, kind).
     unique("record_sort_key_unique")
       .on(table.ownerId, table.kind, table.customSectionId, table.sortKey)
       .nullsNotDistinct(),
 
-    // Composite rather than a plain reference to organisation(id): it makes
-    // pointing at another owner's organisation impossible rather than merely
-    // untested. A null organisation_id satisfies it, which is the MATCH SIMPLE
-    // behaviour we want.
+    // Composite, so pointing at another owner's organisation is impossible rather
+    // than merely untested. A null satisfies it, which is MATCH SIMPLE.
     foreignKey({
       name: "record_organisation_fk",
       columns: [table.ownerId, table.organisationId],

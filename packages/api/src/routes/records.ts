@@ -30,9 +30,8 @@ const records = collectionRoutes({
   }),
 });
 
-// Flat, narrowed by `?recordId`, rather than nested under the record. The port
-// keys a link by its own id alone, so a parent in the path would be an
-// identifier the store never reads and the row could contradict.
+// Flat and narrowed by `?recordId`: a parent in the path would be an identifier
+// the store never reads and the row could contradict (api-contract.md #3).
 const byRecord = archivedQuery.extend({ recordId: uuidSchema.optional() });
 
 const links = collectionRoutes({

@@ -17,9 +17,7 @@ import { mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 
-// A set is never created empty: its first phrasing goes in with it, in one
-// transaction, and becomes the canonical one. The patch carries
-// `canonicalPhrasingId` and nothing else - `purpose` never changes.
+// A set is never created empty: its first phrasing goes in with it.
 const sets = collectionRoutes({
   path: "/v1/phrasing-sets",
   tag: "phrasing sets",
@@ -30,8 +28,7 @@ const sets = collectionRoutes({
   query: archivedQuery,
 });
 
-// The patch cannot carry text. Text changes only by appending a revision, which
-// makes the append-only rule structural rather than a convention to remember.
+// No text on the patch: the append-only rule is structural, not a convention.
 const phrasings = collectionRoutes({
   path: "/v1/phrasings",
   tag: "phrasings",
@@ -44,11 +41,8 @@ const phrasings = collectionRoutes({
 
 const noPhrasing = problemResponse("no phrasing of this owner has that id");
 
-// The only way text changes, and the only write that carries no concurrency
-// token. Appending cannot conflict: two people writing different wordings at
-// once must both keep their text, which is the loss this design exists to
-// prevent. Posting text the phrasing already holds returns the revision that
-// already says it.
+// The only write with no concurrency token: appending cannot conflict, and text
+// the phrasing already holds returns the revision that already says it.
 const addRevision = createRoute({
   method: "post",
   path: "/v1/phrasings/{id}/revisions",

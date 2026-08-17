@@ -9,9 +9,8 @@ import { mutate } from "../problems.js";
 import { router } from "../router.js";
 import { archivedQuery, collectionRoutes } from "./collection.js";
 
-// What prints under a custom heading is a record of kind `custom_entry`, so
-// there is no nested entries route: an entry is created and listed through
-// /v1/records like every other kind (api-contract.md #3).
+// No nested entries route: an entry is a `custom_entry` record, created and
+// listed through /v1/records (api-contract.md #3).
 const routes = collectionRoutes({
   path: "/v1/custom-sections",
   tag: "custom sections",

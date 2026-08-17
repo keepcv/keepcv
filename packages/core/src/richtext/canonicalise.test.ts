@@ -4,9 +4,8 @@ import { describe, expect, it } from "vitest";
 import { canonicaliseRichText } from "./canonicalise.js";
 import { projectPlainText } from "./plain-text.js";
 
-// Generates only bodies richTextSchema accepts: at most three nested marks and
-// no link inside a link. A generator that strayed outside those bounds would
-// make the "canonicalising keeps it valid" property vacuous.
+// Only bodies richTextSchema accepts: straying outside makes the "canonicalising
+// keeps it valid" property vacuous.
 function bodies(depth: number, allowLink: boolean): fc.Arbitrary<Inline[]> {
   const text = fc.record({ t: fc.constant("text" as const), v: fc.string({ maxLength: 3 }) });
   if (depth === 0) return fc.array(text, { maxLength: 4 });

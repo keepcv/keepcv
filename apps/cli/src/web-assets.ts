@@ -4,9 +4,8 @@ import { createRequire } from "node:module";
 import { dirname, join, normalize, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 
-// Resolved through the package rather than a path relative to this file, so it
-// works the same from `dist` in the repo and from a published install where the
-// two packages sit side by side in node_modules.
+// Resolved through the package, so `dist` in the repo and a published install
+// with the two packages side by side both work.
 export function webAssetsDir(): string {
   const require = createRequire(import.meta.url);
   return join(dirname(require.resolve("@keepcv/web/package.json")), "dist");
@@ -36,22 +35,20 @@ async function fileAt(path: string): Promise<Response | undefined> {
     headers: {
       "content-type": contentType(path),
       "content-length": String(info.size),
-      // Hashed filenames for the assets; the entry document is never cached,
-      // because a stale one would load an asset the new build has deleted.
+      // The entry document is never cached: a stale one loads a deleted asset.
       "cache-control": path.endsWith(".html") ? "no-store" : "public, max-age=31536000, immutable",
     },
   });
 }
 
-// A single-page app: anything that is not a file on disk is a route the client
-// resolves, so it gets the entry document rather than a 404.
+// Anything that is not a file on disk is a client route, not a 404.
 export function serveWebApp(root: string): (request: Request) => Promise<Response> {
   const index = join(root, "index.html");
 
   return async (request) => {
     const pathname = decodeURIComponent(new URL(request.url).pathname);
-    // Normalised and confirmed to be under the root before anything is opened:
-    // a path with `..` in it is otherwise a read of any file the process can see.
+    // Confirmed under the root before anything opens: `..` is otherwise a read
+    // of any file the process can see.
     const candidate = resolve(root, `.${normalize(pathname)}`);
     const inside = candidate === root || candidate.startsWith(root + sep);
 

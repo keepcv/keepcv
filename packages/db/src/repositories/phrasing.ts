@@ -87,9 +87,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
     );
   }
 
-  // Appends the text unless the phrasing already holds it, and points the
-  // phrasing at the result either way - so reverting to an earlier wording moves
-  // the pointer back rather than filling the history with duplicates (I3).
+  // Points the phrasing at the result either way, so reverting to an earlier
+  // wording moves the pointer back rather than duplicating it (I3).
   async function append(phrasingId: Uuid, body: RichText): Promise<PhrasingRevisionRow> {
     const ownerId = currentOwnerId();
     const derived = deriveRevision(body);
@@ -117,9 +116,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
       }
     }
 
-    // Deliberately not `updateOwned`: `current_revision_id` is derived state, and
-    // bumping the concurrency token here would make committing text conflict with
-    // a rename it does not actually race.
+    // Deliberately not `updateOwned`: bumping the token here would make committing
+    // text conflict with a rename it does not race.
     await db
       .update(phrasing)
       .set({ currentRevisionId: revision.id })
@@ -154,10 +152,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
       return toPhrasingSet(await requireOwned<PhrasingSetRow>(db, phrasingSet, "phrasingSet", id));
     },
 
-    // Set, phrasing and revision in one go, because each of the three references
-    // the next and a set with no words in it is not a state worth being able to
-    // reach (data-model.md #5). The canonical pointer is written last, once there
-    // is something for it to point at.
+    // Each of the three references the next, so the canonical pointer is written
+    // last, once there is something for it to point at (data-model.md #5).
     async createSet(input) {
       const ownerId = currentOwnerId();
       await db.insert(phrasingSet).values({ id: input.id, ownerId, purpose: input.purpose });
@@ -228,10 +224,9 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
       return toPhrasingRevision(await append(phrasingId, body));
     },
 
-    // Two revisions can share a millisecond, so the id breaks the tie and the
-    // history is a total order.
-    // `currentOnly` joins through the pointer rather than filtering on it, so a
-    // phrasing that has no revision yet contributes nothing instead of a null.
+    // Two revisions can share a millisecond, so the id breaks the tie.
+    // `currentOnly` joins through the pointer, so a phrasing with no revision yet
+    // contributes nothing instead of a null.
     async listRevisions(options) {
       const base = db.select({ revision: phrasingRevision }).from(phrasingRevision);
       const selected = options?.currentOnly

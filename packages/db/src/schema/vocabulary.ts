@@ -1,7 +1,5 @@
-// Controlled vocabularies are repeated here rather than imported from
-// @keepcv/schema: drizzle-kit loads the schema through a CJS require, which
-// cannot resolve the package. The vocabulary drift tests feed both sides the
-// same values, so a list that grows on one side and not the other fails.
+// Repeated rather than imported from @keepcv/schema: drizzle-kit loads this
+// through a CJS require and cannot resolve the package. Drift tests cover it.
 export function quoted(values: string[]): string {
   return values.map((value) => `'${value}'`).join(", ");
 }

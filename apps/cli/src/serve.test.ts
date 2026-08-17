@@ -30,9 +30,7 @@ describe("keepcv serve", () => {
         });
         expect(profileSchema.parse(await response.json()).fullName).toBeNull();
 
-        // The app and the API share an origin, so the browser never needs to be
-        // told where the store is. A client route resolves to the entry document
-        // while /v1 keeps answering the API.
+        // One origin: a client route gets the entry document, /v1 gets the API.
         const app = await fetch(url("/records"));
         expect(app.status).toBe(200);
         expect(app.headers.get("content-type")).toContain("text/html");

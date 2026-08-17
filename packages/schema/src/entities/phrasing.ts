@@ -12,10 +12,6 @@ export const PHRASING_VARIANTS = ["standard", "short", "long", "angled"] as cons
 export const phrasingPurposeSchema = z.enum(PHRASING_PURPOSES);
 export const phrasingVariantSchema = z.enum(PHRASING_VARIANTS);
 
-// One set per thing that can be said more than one way. `canonicalPhrasingId` is
-// which wording is used when nobody has chosen: a pointer rather than a variant
-// value, so promoting a wording is one write and does not force the demoted one
-// to be relabelled (data-model.md #5).
 export const phrasingSetSchema = z
   .object({
     ...standardFields,
@@ -24,9 +20,7 @@ export const phrasingSetSchema = z
   })
   .meta({ id: "PhrasingSet", title: "Phrasing set" });
 
-// `variant` is structural and drives selection and length estimation; `label` is
-// the user's own name for this wording. There is no text here - text lives in
-// revisions, which is what makes it append-only.
+// No text here: it lives in revisions, which is what makes it append-only.
 export const phrasingSchema = z
   .object({
     ...standardFields,
@@ -38,9 +32,7 @@ export const phrasingSchema = z
   })
   .meta({ id: "Phrasing", title: "Phrasing" });
 
-// Immutable, so no `updatedAt` and no `archivedAt`. `plainText`, `charCount` and
-// `contentHash` are derived from `body` and travel with it so a reader needs no
-// rich-text implementation to search, lint or estimate length.
+// Immutable, so no `updatedAt` and no `archivedAt` (data-model.md I2).
 export const phrasingRevisionSchema = z
   .object({
     id: uuidSchema,
@@ -53,8 +45,6 @@ export const phrasingRevisionSchema = z
   })
   .meta({ id: "PhrasingRevision", title: "Phrasing revision" });
 
-// A phrasing arrives with the text it is being created to hold, because a
-// phrasing with no revision is a wording with nothing in it.
 export const newPhrasingSchema = z.object({
   id: uuidSchema,
   variant: phrasingVariantSchema,
@@ -65,20 +55,15 @@ export const newPhrasingSchema = z.object({
 
 export const phrasingInputSchema = newPhrasingSchema.extend({ phrasingSetId: uuidSchema });
 
-// A set is never created empty either: its first phrasing goes in with it, in one
-// transaction, and becomes the canonical one.
 export const phrasingSetInputSchema = z.object({
   id: uuidSchema,
   purpose: phrasingPurposeSchema,
   phrasing: newPhrasingSchema,
 });
 
-// No `body`: text changes only by appending a revision, so a patch that could
-// carry it would be a second way to do it, and the one that loses history.
+// No `body`: a patch that could carry text would be the way that loses history.
 export const phrasingPatchSchema = newPhrasingSchema.omit({ id: true, body: true }).partial();
 
-// `purpose` never changes, and the canonical pointer never goes back to null once
-// a set has a phrasing.
 export const phrasingSetPatchSchema = z.object({ canonicalPhrasingId: uuidSchema }).partial();
 
 export type PhrasingPurpose = z.infer<typeof phrasingPurposeSchema>;

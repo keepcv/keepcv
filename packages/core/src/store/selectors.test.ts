@@ -36,9 +36,7 @@ describe("live and archived", () => {
 });
 
 describe("a record's points", () => {
-  // A point prints under its primary record and relates to its secondary ones.
-  // Counting one without the other gives a number the user cannot reconcile
-  // with the points actually shown on the record.
+  // Counting one without the other gives a number the user cannot reconcile.
   it("includes the ones linked to it as well as the ones printing under it", () => {
     const store = emptyStore();
     const record = aRecord();
@@ -321,9 +319,7 @@ describe("draftFor", () => {
     expect(draftFor(store, { ...target, field: "label" })?.body).toEqual({ text: "a name" });
   });
 
-  // Two kinds can hold the same id only in a store restored from somewhere else,
-  // but the key is the triple and a lookup that ignored the kind would answer
-  // with somebody else's text.
+  // A lookup that ignored the kind would answer with somebody else's text.
   it("does not confuse two kinds that name the same id", () => {
     const store = emptyStore();
     const id = newUuid();

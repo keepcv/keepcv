@@ -4,10 +4,8 @@ import { type ApiClient, unwrap } from "../../../lib/api.js";
 
 export const STORE_KEY = ["store"] as const;
 
-// One request boots the app and most screens read from it through selectors
-// rather than fetching (application-structure.md #4). The store is kilobytes and
-// only this client writes to it, so it stays fresh until a mutation says
-// otherwise rather than being refetched on a timer.
+// One request boots the app (application-structure.md #4). Only this client
+// writes, so it stays fresh until a mutation says otherwise.
 export function storeQuery(client: ApiClient) {
   return queryOptions({
     queryKey: STORE_KEY,

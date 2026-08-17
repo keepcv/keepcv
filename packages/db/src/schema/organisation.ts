@@ -5,10 +5,8 @@ import { quoted } from "./vocabulary.js";
 
 const KINDS = ["company", "institution", "issuer", "publisher", "venue", "other"];
 
-// First-class rather than a string on each record, because two roles at one
-// company is common and every well-made resume groups them under one heading
-// (data-model.md #6). `name` is the one thing you always know when creating one,
-// so it is the single NOT NULL the principle allows.
+// data-model.md #6. `name` is the one thing you always know, so it is the single
+// NOT NULL here.
 export const organisation = pgTable(
   "organisation",
   {

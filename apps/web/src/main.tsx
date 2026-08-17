@@ -9,8 +9,7 @@ import "./styles/app.css";
 
 const queries = new QueryClient({
   defaultOptions: {
-    // Nothing but this client writes to a local store, and a 401 is a token
-    // problem that retrying identically will not fix.
+    // A 401 is a token problem that retrying identically will not fix.
     queries: { retry: false, refetchOnWindowFocus: false },
   },
 });

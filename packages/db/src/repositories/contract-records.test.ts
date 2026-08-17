@@ -119,9 +119,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.records.list())).toHaveLength(3);
     });
 
-    // The scope of a sort key is the list it is dragged within, and that list is
-    // one kind. Two kinds sharing a key is normal; two records of one kind
-    // sharing one would make a drag ambiguous.
+    // Two kinds sharing a key is normal; two records of one kind is an ambiguous
+    // drag.
     it("scopes sort-key uniqueness to the kind", async () => {
       await run(async (r) => {
         await r.records.create(recordInput("experience", "a0"));
@@ -319,9 +318,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toHaveLength(1);
     });
 
-    // The list an entry is dragged within is one section, not every custom entry
-    // the owner has. Scoping it to the kind would reject a legitimate move in the
-    // second heading because the first happened to use the same key.
+    // Scoping to the kind would reject a legitimate move under the second heading
+    // because the first used the same key.
     it("scopes an entry's sort key to its section", async () => {
       const patents = await aSection("Patents", "a0");
       const press = await aSection("Press", "a1");
@@ -535,9 +533,7 @@ eachDriver(({ run, otherOwner }) => {
     });
   });
 
-  // The CHECK constraints are written out in the Drizzle schema because
-  // drizzle-kit cannot resolve @keepcv/schema. These are what stop the two sides
-  // drifting: every declared value has to insert, and an undeclared one must not.
+  // Every declared value has to insert, and an undeclared one must not.
   describe("vocabularies", () => {
     const cases: {
       name: string;
@@ -651,9 +647,7 @@ eachDriver(({ run, otherOwner }) => {
     });
   });
 
-  // A kind-specific column is null on every other kind. One table gives up the
-  // type system for this, so the CHECK that replaces it is named in the
-  // assertion: a rejection for some other reason would not be a pass.
+  // The CHECK is named in the assertion: another rejection is not a pass.
   describe("kind-scoped columns", () => {
     it.each([
       {

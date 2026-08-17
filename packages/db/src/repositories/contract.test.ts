@@ -201,9 +201,8 @@ eachDriver(({ run, otherOwner, store }) => {
       expect(await run(async (r) => await r.profile.listContactChannels())).toEqual([]);
     });
 
-    // PGlite holds one connection, so overlapping units are only safe while
-    // every statement goes through a transaction. The composer fires several
-    // optimistic mutations at once while dragging, so this is reachable.
+    // PGlite holds one connection, and the composer fires several optimistic
+    // mutations at once while dragging.
     it("keeps concurrent units from interleaving", async () => {
       const keys = generateNKeysBetween(null, null, 5);
       await Promise.all(
@@ -217,9 +216,8 @@ eachDriver(({ run, otherOwner, store }) => {
     });
   });
 
-  // The CHECK constraints are written out in the Drizzle schema because
-  // drizzle-kit cannot resolve @keepcv/schema. This is what stops the two lists
-  // drifting: one test for every vocabulary the store declares.
+  // One test for every vocabulary the store declares, so the two lists cannot
+  // drift.
   describe("vocabularies", () => {
     it("accepts exactly the contact channel kinds the schema declares", async () => {
       const keys = generateNKeysBetween(null, null, CONTACT_CHANNEL_KINDS.length);
@@ -248,10 +246,8 @@ eachDriver(({ run, otherOwner, store }) => {
 });
 
 describe("local store", () => {
-  // The one test that boots its own store in the body rather than a hook, so it
-  // needs the hook's budget: the default five seconds is not enough for a
-  // WebAssembly start and every migration while the rest of the repo's suites
-  // are running beside it.
+  // Boots its own store in the body rather than a hook, so it needs the hook's
+  // budget rather than the default five seconds.
   it(
     "returns the same owner on every launch",
     async () => {

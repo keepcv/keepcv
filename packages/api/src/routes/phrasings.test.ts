@@ -113,9 +113,7 @@ describe("phrasing sets", () => {
 });
 
 describe("phrasing text is append-only", () => {
-  // "Editing" appends a revision and moves a pointer. A resume version pinned in
-  // March must not silently acquire June's wording, and the only way to keep that
-  // true is for the old text to still be there.
+  // A version pinned in March must not silently acquire June's wording.
   it("keeps the superseded wording and moves the pointer", async () => {
     const set = await addSet("Led the migration");
     const phrasing = await onlyPhrasing(set.id);
@@ -139,9 +137,7 @@ describe("phrasing text is append-only", () => {
     expect(after.currentRevisionId).toBe(appended.id);
   });
 
-  // Appending cannot conflict, which is why this is the one write that carries
-  // no concurrency token: two people writing different wordings at once must
-  // both keep their text.
+  // Two people appending different wordings at once must both keep their text.
   it("carries no concurrency token", async () => {
     const set = await addSet("Led the migration");
     const phrasing = await onlyPhrasing(set.id);

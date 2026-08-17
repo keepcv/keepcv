@@ -1,9 +1,8 @@
 import { type Uuid, uuidSchema } from "@keepcv/schema";
 import { bytesToHex } from "@noble/hashes/utils.js";
 
-// The one host API this package touches. Declared rather than pulled in from
-// @types/node, because core's tsconfig sets `"types": []` - that is what stops
-// a Node built-in reaching a package the browser also runs.
+// Declared rather than pulled in from @types/node: core's tsconfig sets
+// `"types": []`, which is what stops a Node built-in reaching the browser.
 declare const crypto: { getRandomValues<T extends ArrayBufferView>(array: T): T };
 
 const COUNTER_MAX = 0xfff;
@@ -11,10 +10,7 @@ const COUNTER_MAX = 0xfff;
 let lastMilliseconds = -1;
 let counter = 0;
 
-// Identifiers are minted before the server has heard of the row, so an
-// optimistic write is the real write (application-structure.md #4). Version 7
-// puts the timestamp first, which is what keeps insert locality and makes an
-// (updated_at, id) cursor stable.
+// Version 7: the timestamp comes first, which is what keeps insert locality.
 export function newUuid(): Uuid {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const view = new DataView(bytes.buffer);
@@ -22,12 +18,11 @@ export function newUuid(): Uuid {
 
   if (now > lastMilliseconds) {
     lastMilliseconds = now;
-    // Seeded into the low byte, leaving ~3800 identifiers in this millisecond
-    // before the counter has to borrow from the next one.
+    // Leaves ~3800 identifiers in this millisecond before it borrows the next.
     counter = view.getUint8(6);
   } else if (counter < COUNTER_MAX) {
-    // Also the branch a clock that steps backwards takes, so identifiers stay
-    // monotonic across an NTP correction rather than colliding with issued ones.
+    // Also the branch a backwards clock step takes, so an NTP correction cannot
+    // collide with identifiers already issued.
     counter++;
   } else {
     lastMilliseconds++;

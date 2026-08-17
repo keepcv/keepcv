@@ -35,8 +35,7 @@ function Chip({
   );
 }
 
-// Built once and serving every kind: points are uniform across records, so only
-// the kind-specific block differs (application-structure.md #5.3).
+// One list for every kind: only the kind-specific block differs.
 export function RecordList({ store, filters }: { store: Store; filters: RecordFilters }) {
   const rows = recordRows(store, filters);
 

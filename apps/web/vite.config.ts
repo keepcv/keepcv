@@ -10,9 +10,8 @@ export default defineConfig({
   // to know where it was deployed.
   base: "/",
   build: { outDir: "dist", emptyOutDir: true },
-  // In production the launcher serves both from one origin. The dev server has
-  // to reproduce that rather than let the app learn a second base URL, which
-  // would be a code path only development ever takes.
+  // The launcher serves both from one origin, so the dev server reproduces that
+  // rather than teaching the app a second base URL.
   server: { proxy: { "/v1": "http://127.0.0.1:4319" } },
   test: {
     environment: "jsdom",

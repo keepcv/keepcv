@@ -22,15 +22,11 @@ export const contactChannelSchema = z
     kind: contactChannelKindSchema,
     label: z.string().nullable(),
     value: z.string().min(1),
-    // Seeds a new resume's contact block; each resume then overrides it
-    // per channel, because a public portfolio should not carry a phone number.
     isDefaultVisible: z.boolean(),
     sortKey: sortKeySchema,
   })
   .meta({ id: "ContactChannel", title: "Contact channel" });
 
-// The id comes from the client so a retried create is idempotent
-// (api-contract.md #2).
 export const contactChannelInputSchema = contactChannelSchema.pick({
   id: true,
   kind: true,

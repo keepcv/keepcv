@@ -17,10 +17,8 @@ import { quoted } from "./vocabulary.js";
 
 const CONFIDENCES = ["verified", "estimated", "unverified"];
 
-// The atomic content unit, attachable to a record of any kind. `record_id` is
-// nullable so a point can be captured before it is decided where it belongs
-// (data-model.md P-A); `phrasing_set_id` is not, because a point with no words
-// in it is not a state worth being able to reach.
+// `record_id` is nullable so a point can be captured before it is placed;
+// `phrasing_set_id` is not, because a point with no words is not a state.
 export const point = pgTable(
   "point",
   {
@@ -35,9 +33,8 @@ export const point = pgTable(
     primaryKey({ columns: [table.ownerId, table.id] }),
     check("point_confidence_check", sql.raw(`confidence in (${quoted(CONFIDENCES)})`)),
 
-    // NULLS NOT DISTINCT, because the points nobody has placed yet are a list the
-    // user drags within like any other. With the default, every one of them would
-    // sit in a scope of its own and I11 would hold there vacuously.
+    // NULLS NOT DISTINCT: unplaced points are one list the user drags within, and
+    // with the default each would sit in a scope of its own and I11 hold vacuously.
     unique("point_sort_key_unique")
       .on(table.ownerId, table.recordId, table.sortKey)
       .nullsNotDistinct(),
@@ -58,13 +55,8 @@ export const point = pgTable(
   ],
 );
 
-// Secondary associations, N:N. A pure many-to-many model cannot answer "under
-// which heading does this print", which every renderer needs, and a single
-// foreign key cannot express work spanning a role and a side project: the
-// primary parent decides placement, these drive discovery and selection.
-//
-// No standard columns and so no `archived_at`. The row carries nothing of its
-// own, so unlinking destroys nothing - both ends of it survive.
+// The primary parent decides placement; these drive discovery and selection. No
+// `archived_at`: the row carries nothing of its own, so unlinking destroys nothing.
 export const pointRecordLink = pgTable(
   "point_record_link",
   {

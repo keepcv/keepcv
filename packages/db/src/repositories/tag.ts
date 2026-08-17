@@ -43,8 +43,8 @@ export function createTagRepository(db: Database): TagRepository {
     return toTag(await updateOwned<TagRow>(db, tag, "tag", id, expectedUpdatedAt, changes));
   }
 
-  // Inserted and then deleted rather than updated in place: a record already
-  // carrying both tags would collide with itself on the primary key.
+  // Inserted then deleted, not updated: a row carrying both tags would collide
+  // with itself on the primary key.
   async function moveRecordTags(from: Uuid, to: Uuid): Promise<void> {
     const carriers = and(eq(recordTag.ownerId, currentOwnerId()), eq(recordTag.tagId, from));
     const rows = await db.select().from(recordTag).where(carriers);
@@ -70,8 +70,8 @@ export function createTagRepository(db: Database): TagRepository {
   }
 
   return {
-    // By label, which is the word the user reads. An archived tag frees its slug
-    // and so two can carry one label, which is why the id breaks the tie.
+    // An archived tag frees its slug, so two can share a label and the id breaks
+    // the tie.
     async list(options) {
       const rows = await db
         .select()
@@ -89,8 +89,7 @@ export function createTagRepository(db: Database): TagRepository {
       return toTag(await insertOwned(db, tag, "tag", { ...input, slug: tagSlug(input.label) }));
     },
 
-    // The slug follows the label rather than being renamed beside it: it is a
-    // projection, and two spellings of one fact are one to keep in step by hand.
+    // The slug follows the label rather than being renamed beside it (I17).
     async update(id, patch, expectedUpdatedAt) {
       const slug = patch.label === undefined ? {} : { slug: tagSlug(patch.label) };
       return await set(id, expectedUpdatedAt, { ...patch, ...slug });
@@ -104,9 +103,7 @@ export function createTagRepository(db: Database): TagRepository {
       return await set(id, expectedUpdatedAt, { archivedAt: null });
     },
 
-    // Archived first, so a stale token refuses before anything moves. Both halves
-    // run in one unit of work, so a vocabulary half-merged is not a state the
-    // store can be left in.
+    // Archived first, so a stale token refuses before anything moves.
     async merge(id, intoTagId, expectedUpdatedAt) {
       if (id === intoTagId) {
         throw new TagMergedIntoItselfError(id);
@@ -134,9 +131,8 @@ export function createTagRepository(db: Database): TagRepository {
       return rows.map((row) => recordTagSchema.parse(row));
     },
 
-    // Idempotent, because the pair is the whole row: tagging twice leaves nothing
-    // to change. A tag that does not exist fails the foreign key, which is the
-    // right answer for a request that was already wrong when it was sent.
+    // Idempotent: the pair is the whole row. A tag that does not exist fails the
+    // foreign key, which the API answers as 422.
     async tagRecord(recordId, tagId) {
       await requireOwned<RecordRow>(db, record, "record", recordId);
       await db
@@ -146,8 +142,7 @@ export function createTagRepository(db: Database): TagRepository {
       return recordTagSchema.parse({ tagId, recordId });
     },
 
-    // Untagging something that was never tagged has already achieved what the
-    // caller asked for, so only the record has to exist.
+    // Already achieved, so only the record has to exist.
     async untagRecord(recordId, tagId) {
       await requireOwned<RecordRow>(db, record, "record", recordId);
       await db

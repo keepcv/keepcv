@@ -12,10 +12,7 @@ import { record } from "./career-record.js";
 import { owner, standardColumns } from "./owner.js";
 import { point } from "./point.js";
 
-// A controlled vocabulary rather than free strings on each row, so renaming a
-// tag is one write and merging two is an operation (data-model.md #8). `slug` is
-// derived from the label by the repository, which is what stops "React" and
-// "react" becoming two words for one thing.
+// `slug` is derived from the label by the repository (data-model.md I17).
 export const tag = pgTable(
   "tag",
   {
@@ -26,18 +23,15 @@ export const tag = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
-    // Partial, so archiving a tag frees its slug: a word taken by something the
-    // user has put away is a word they cannot use.
+    // Partial, so archiving a tag frees its slug.
     uniqueIndex("tag_slug_unique")
       .on(table.ownerId, table.slug)
       .where(sql`${table.archivedAt} is null`),
   ],
 );
 
-// Two join tables rather than one polymorphic one, so both sides keep a real
-// foreign key. Neither carries standard columns beyond `owner_id`: the pair is
-// the whole row, so untagging deletes rather than archives and destroys nothing
-// the user wrote - both ends of it survive.
+// Two tables rather than one polymorphic one, so both sides keep a real foreign
+// key. The pair is the whole row, so untagging deletes rather than archives.
 export const recordTag = pgTable(
   "record_tag",
   {

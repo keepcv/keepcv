@@ -5,10 +5,8 @@ import type { PgColumn, PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 
-// Any table built from `standardColumns()`, and the part of any of its rows that
-// these helpers touch. Drizzle's builders cannot infer a row type through a
-// generic table parameter, so the table is loosely typed here and the row type
-// comes from the caller instead - which is where it is known anyway.
+// Drizzle's builders cannot infer a row type through a generic table parameter,
+// so the table is loosely typed and the row type comes from the caller.
 export type OwnedTable = PgTable & {
   id: PgColumn;
   ownerId: PgColumn;
@@ -25,9 +23,7 @@ export function toTimestamp(value: Date): Timestamp {
   return value.toISOString() as Timestamp;
 }
 
-// The four columns every owned table shares, converted once so ten mappers do
-// not each spell out the archived_at ternary. `phrasing_revision` is immutable
-// and has neither `updated_at` nor `archived_at`, so it does not use this.
+// `phrasing_revision` is immutable and has neither, so it does not use this.
 export function standardDto(row: {
   id: string;
   createdAt: Date;
@@ -42,18 +38,15 @@ export function standardDto(row: {
   };
 }
 
-// An absent key leaves the column alone; an explicit null clears it. Drizzle
-// drops undefined values from a `set`, which is what makes a sparse patch work,
-// and `updatedAt` is always present so a patch of nothing is still a valid
-// statement rather than an empty one.
+// Drizzle drops undefined from a `set`, which is what makes a sparse patch work.
+// `updatedAt` is always present, so a patch of nothing is still a valid statement.
 export type Changes<Row> = { [Column in keyof Row]?: Row[Column] | undefined };
 
 export function owned(table: OwnedTable) {
   return eq(table.ownerId, currentOwnerId());
 }
 
-// Reads filter archived rows out by default (api-contract.md #4). Including them
-// is an explicit option, never the default.
+// Archived rows are filtered out by default (api-contract.md #4).
 export function live(table: OwnedTable, includeArchived: boolean | undefined): SQL | undefined {
   return includeArchived === true ? undefined : isNull(table.archivedAt);
 }
@@ -84,12 +77,8 @@ export async function requireOwned<Row extends OwnedRow>(
   return row;
 }
 
-// The owner comes from ambient scope rather than the values, which is what makes
-// inserting into somebody else's store impossible rather than merely untested.
-// Unlike the read helpers this stays generic in the table, so the row type comes
-// back inferred and the caller needs no cast; only re-adding `ownerId` to the
-// narrowed values needs one, since TypeScript cannot see that it reconstitutes
-// the full insert type.
+// Generic in the table, unlike the read helpers, so the row type comes back
+// inferred. The cast is only for re-adding `ownerId`.
 export async function insertOwned<T extends OwnedTable>(
   db: Database,
   table: T,
@@ -106,10 +95,8 @@ export async function insertOwned<T extends OwnedTable>(
   return row;
 }
 
-// One update path for every owner-scoped table, so they cannot disagree about
-// what a failed write means. A miss is one of two very different things and the
-// caller has to tell them apart: a 404 is a dead link, a 409 is two edits racing
-// and needs the user to compare rather than one side being dropped silently.
+// A miss is one of two very different things: a 404 is a dead link, a 409 is two
+// edits racing and needs the user to compare.
 export async function updateOwned<Row extends OwnedRow>(
   db: Database,
   table: OwnedTable,

@@ -26,10 +26,8 @@ import {
   tagInput,
 } from "./contract.harness.js";
 
-// Everything the format can carry: every record kind with its own columns, both
-// halves of every nullable pair, archived rows beside live ones, all three
-// partial-date precisions, wording with markup and more than one revision behind
-// it, and a name no ASCII round trip survives.
+// Everything the format can carry: every kind, both halves of every nullable
+// pair, archived rows, markup, history, and a name no ASCII round trip survives.
 async function fill(run: Run): Promise<void> {
   await run(async (r) => {
     const summary = await r.phrasings.createSet(
@@ -202,9 +200,8 @@ function reversed(store: Store): Store {
 
 eachDriver(({ run, otherOwner }) => {
   describe("export and import", () => {
-    // Through the file format rather than the object it came from: an export is
-    // JSON someone keeps, and `migrateDocument` is the only supported way back
-    // in, so anything that survives in memory but not on disk fails here.
+    // Through the file format, so anything surviving in memory but not on disk
+    // fails here.
     it("restores a whole store into an empty one, unchanged", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -234,10 +231,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(exported.records.map((entry) => entry.kind)).toEqual(
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
-      // The collections with no `archivedAt`: a revision is immutable, so a
-      // superseded wording is superseded and never archived; a link or a tag
-      // assignment holds nothing of its own to archive; and a draft is discarded
-      // rather than put away, which is the one delete the store performs.
+      // The collections with no `archivedAt`: revisions are immutable, a link or
+      // an assignment holds nothing of its own, and a draft is discarded.
       const unarchivable = [
         "phrasingRevisions",
         "pointRecordLinks",
@@ -290,9 +285,7 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
-    // I8: a revision's plain text is derived from its body, so a file whose
-    // derived fields disagree with the body it carries loads with the body's own
-    // projection rather than the file's claim about it.
+    // I8: a file whose derived fields disagree with its body loads the projection.
     it("derives revision text from the body rather than trusting the document", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -311,9 +304,7 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
-    // I17, for the reason I8 is checked above: a slug is the projection of a
-    // label, so a hand-edited file claiming otherwise loads with the projection
-    // rather than its claim - which is also what keeps the uniqueness rule true.
+    // I17, for the reason I8 is checked above.
     it("derives a tag's slug from its label rather than trusting the document", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -336,9 +327,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
-    // The boot payload is the export minus history and nothing else: stating it
-    // as a difference rather than listing the collections again means a
-    // collection added to the format is covered here without anyone remembering.
+    // Stated as a difference, so a collection added to the format is covered here
+    // without anyone remembering to extend a list.
     it("reads current state as the export with the superseded wordings dropped", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -354,10 +344,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(current.phrasingRevisions.length).toBeLessThan(exported.phrasingRevisions.length);
     });
 
-    // Identity is owner-scoped, so two stores hold the same revision ids the
-    // moment a backup is restored beside its original. Current state is read by
-    // joining a revision to the phrasing pointing at it, and a join that left
-    // the owner out would match across both and double every row.
+    // Two stores hold the same revision ids once a backup is restored beside its
+    // original, and a join missing the owner would match across both.
     it("reads current state unchanged when another owner holds the same rows", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());

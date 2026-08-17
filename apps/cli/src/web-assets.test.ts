@@ -51,10 +51,8 @@ describe("the web app handler", () => {
     expect(await response.text()).toContain("KeepCV");
   });
 
-  // Otherwise a request is a read of any file the process can see, the data
-  // directory and the store included. Two things stop it - normalising the path
-  // and confirming the result is under the root - and each covers the other, so
-  // removing either alone leaves this passing. Removing both does not.
+  // Normalising the path and confirming it is under the root each cover the
+  // other, so removing either alone leaves this passing. Removing both does not.
   it("refuses to escape the root, however the path is written", async () => {
     for (const path of [
       "/../secrets.txt",

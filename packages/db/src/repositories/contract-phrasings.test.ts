@@ -232,9 +232,8 @@ eachDriver(({ run, otherOwner }) => {
       });
     });
 
-    // Two bodies that render the same words are the same revision, so an editor
-    // that emits b(x)b(y) on one pass and b(xy) on the next cannot fill the
-    // history with edits nobody made.
+    // An editor emitting b(x)b(y) then b(xy) cannot fill the history with edits
+    // nobody made.
     it("treats two spellings of one body as the same text", async () => {
       const first = newPhrasing("a0", "text", {
         body: [{ t: "b", c: [{ t: "text", v: "Designs engines" }] }],
@@ -256,9 +255,7 @@ eachDriver(({ run, otherOwner }) => {
       ).toHaveLength(1);
     });
 
-    // Appending cannot conflict with anything, so it must not consume the token a
-    // rename in another tab is holding. Rejecting that edit is exactly the loss
-    // the append-only design exists to prevent.
+    // Appending must not consume the token a rename in another tab is holding.
     it("leaves a token the caller is already holding usable", async () => {
       const first = newPhrasing("a0", "Designs engines");
       await run(async (r) => await r.phrasings.createSet(phrasingSetInput("point", first)));
@@ -279,9 +276,7 @@ eachDriver(({ run, otherOwner }) => {
     });
   });
 
-  // Two vocabularies written out in the Drizzle schema and declared in Zod, kept
-  // from drifting: every declared value has to insert, and an undeclared one must
-  // not.
+  // Every declared value has to insert, and an undeclared one must not.
   describe("vocabularies", () => {
     it("accepts exactly the purposes the schema declares", async () => {
       await run(async (r) => {

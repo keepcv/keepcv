@@ -99,8 +99,7 @@ export function createPointRepository(
     );
   }
 
-  // A subquery rather than a join, so the select stays one row per point and the
-  // ordering below is the one the list already had.
+  // A subquery, not a join: the select stays one row per point.
   function carriesTag(tagId: Uuid | undefined): SQL | undefined {
     if (tagId === undefined) return undefined;
     return inArray(
@@ -126,8 +125,7 @@ export function createPointRepository(
 
   return {
     // Sort keys are unique per record, so a cross-record list orders by record
-    // first. The points nobody has placed sort last, which is where the inbox
-    // that shows them belongs.
+    // first. Unplaced points sort last, where the inbox shows them.
     async list(options) {
       const rows = await db
         .select()
@@ -151,9 +149,7 @@ export function createPointRepository(
       return toPoint(await requireOwned<PointRow>(db, point, "point", id));
     },
 
-    // The phrasing set first, because the point references it. Five tables in
-    // one transaction, which is the reason there is no non-transactional path to
-    // a repository.
+    // The phrasing set first, because the point references it.
     async create(input) {
       const { phrasing, ...columns } = input;
       await phrasings.createSet({ id: input.phrasingSetId, purpose: "point", phrasing });
@@ -161,9 +157,7 @@ export function createPointRepository(
       return toPoint(await insertOwned(db, point, "point", columns));
     },
 
-    // Making a linked record the primary one drops the link: the primary already
-    // says the point relates to that record, and keeping both would be the same
-    // relationship written twice.
+    // Promoting a linked record to primary drops the link (data-model.md I16).
     async update(id, patch, expectedUpdatedAt) {
       if (patch.recordId != null) {
         await dropLink(id, patch.recordId);
@@ -195,8 +189,7 @@ export function createPointRepository(
       return rows.map((row) => pointRecordLinkSchema.parse(row));
     },
 
-    // Idempotent, because the pair is the whole row: linking twice leaves
-    // nothing to change.
+    // Idempotent: the pair is the whole row, so linking twice changes nothing.
     async linkRecord(pointId, recordId) {
       const current = await requireOwned<PointRow>(db, point, "point", pointId);
       if (current.recordId === recordId) {
@@ -210,8 +203,7 @@ export function createPointRepository(
       return pointRecordLinkSchema.parse({ pointId, recordId });
     },
 
-    // Unlinking a record that was never linked has already achieved what the
-    // caller asked for, so only the point has to exist.
+    // Already achieved, so only the point has to exist.
     async unlinkRecord(pointId, recordId) {
       await requireOwned<PointRow>(db, point, "point", pointId);
       await dropLink(pointId, recordId);
@@ -252,8 +244,7 @@ export function createPointRepository(
       return await setMetric(id, expectedUpdatedAt, { archivedAt: null });
     },
 
-    // Evidence has no sort key, so the id carries the order and two reads of it
-    // are the same list.
+    // Evidence has no sort key, so the id carries the order.
     async listEvidence(options) {
       const rows = await db
         .select()

@@ -7,9 +7,7 @@ export const RECORD_LINK_KINDS = ["repo", "demo", "docs", "verify", "recording",
 
 export const recordLinkKindSchema = z.enum(RECORD_LINK_KINDS);
 
-// One shape for every record kind's URLs, rather than a verification URL on
-// certifications and a recording URL on talks. The dividing rule is in
-// data-model.md #6: a URL is a link, a labelled value is a field.
+// A URL is a link; a labelled value is a field (data-model.md #6).
 export const recordLinkSchema = z
   .object({
     ...standardFields,
