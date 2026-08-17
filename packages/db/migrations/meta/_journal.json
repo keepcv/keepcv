@@ -64,6 +64,13 @@
       "when": 1786854714222,
       "tag": "0008_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786934196030,
+      "tag": "0009_resume_composition",
+      "breakpoints": true
     }
   ]
 }

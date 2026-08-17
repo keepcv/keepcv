@@ -29,6 +29,7 @@ export {
   type PointRepository,
   type ProfileRepository,
   type Repositories,
+  type ResumeRepository,
   StoreNotEmptyError,
   type StoreRepository,
   TagMergedIntoItselfError,

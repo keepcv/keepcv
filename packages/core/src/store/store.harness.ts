@@ -53,6 +53,11 @@ export function emptyStore(): Store {
     recordTags: [],
     pointTags: [],
     drafts: [],
+    resumes: [],
+    resumeSections: [],
+    resumeEntries: [],
+    resumeEntryPoints: [],
+    resumeContactChannels: [],
   });
 }
 

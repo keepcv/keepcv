@@ -11,6 +11,8 @@ import {
   channelInput,
   customSectionInput,
   eachDriver,
+  entryInput,
+  entryPointInput,
   evidenceInput,
   fieldInput,
   linkInput,
@@ -23,6 +25,8 @@ import {
   pointInput,
   type Run,
   recordInput,
+  resumeInput,
+  sectionInput,
   tagInput,
 } from "./contract.harness.js";
 
@@ -172,6 +176,35 @@ async function fill(run: Run): Promise<void> {
       { targetKind: "record", targetId: senior.id, field: "title" },
       { value: "Staff Engineer" },
     );
+
+    const applied = await r.resumes.create(resumeInput("For Acme"));
+    const shelvedResume = await r.resumes.create(resumeInput("An older draft"));
+    await r.resumes.archive(shelvedResume.id, shelvedResume.updatedAt);
+
+    const experience = await r.resumes.addSection(sectionInput(applied.id, "experience", "a0"));
+    const patentsSection = await r.resumes.addSection(
+      sectionInput(applied.id, "custom", "a1", { customSectionId: patents.id }),
+    );
+    await r.resumes.archiveSection(patentsSection.id, patentsSection.updatedAt);
+
+    const entry = await r.resumes.addEntry(entryInput(experience.id, applied.id, senior.id, "a0"));
+    const droppedEntry = await r.resumes.addEntry(
+      entryInput(experience.id, applied.id, shelved.id, "a1"),
+    );
+    await r.resumes.archiveEntry(droppedEntry.id, droppedEntry.updatedAt);
+
+    const [firstPhrasing] = await r.phrasings.list({ phrasingSetId: placed.phrasingSetId });
+    if (firstPhrasing !== undefined) {
+      const chosen = await r.resumes.addEntryPoint(
+        entryPointInput(entry.id, applied.id, placed.id, firstPhrasing.id, "a0"),
+      );
+      await r.resumes.archiveEntryPoint(chosen.id, chosen.updatedAt);
+    }
+
+    const [channel] = await r.profile.listContactChannels();
+    if (channel !== undefined) {
+      await r.resumes.setContactChannel(applied.id, channel.id, false);
+    }
   });
 }
 
@@ -195,6 +228,11 @@ function reversed(store: Store): Store {
     recordTags: [...store.recordTags].reverse(),
     pointTags: [...store.pointTags].reverse(),
     drafts: [...store.drafts].reverse(),
+    resumes: [...store.resumes].reverse(),
+    resumeSections: [...store.resumeSections].reverse(),
+    resumeEntries: [...store.resumeEntries].reverse(),
+    resumeEntryPoints: [...store.resumeEntryPoints].reverse(),
+    resumeContactChannels: [...store.resumeContactChannels].reverse(),
   };
 }
 
@@ -239,6 +277,7 @@ eachDriver(({ run, otherOwner }) => {
         "recordTags",
         "pointTags",
         "drafts",
+        "resumeContactChannels",
       ];
       for (const [collection, value] of Object.entries(exported)) {
         if (!Array.isArray(value) || unarchivable.includes(collection)) continue;

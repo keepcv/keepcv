@@ -13,6 +13,10 @@ import type {
   PointInput,
   RecordFieldInput,
   RecordLinkInput,
+  ResumeEntryInput,
+  ResumeEntryPointInput,
+  ResumeInput,
+  ResumeSectionInput,
   TagInput,
   Uuid,
 } from "@keepcv/schema";
@@ -235,6 +239,76 @@ export function evidenceInput(pointId: Uuid, overrides: Partial<EvidenceInput> =
     note: null,
     ...overrides,
   } as EvidenceInput;
+}
+
+export function resumeInput(name: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id: newUuid(),
+    name,
+    targetCompany: null,
+    targetRole: null,
+    targetUrl: null,
+    targetJdText: null,
+    appliedOn: null,
+    ...overrides,
+  } as ResumeInput;
+}
+
+export function sectionInput(
+  resumeId: Uuid,
+  kind: string,
+  sortKey: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: newUuid(),
+    resumeId,
+    kind,
+    customSectionId: null,
+    heading: null,
+    layout: null,
+    sortKey,
+    isVisible: true,
+    ...overrides,
+  } as ResumeSectionInput;
+}
+
+export function entryInput(
+  resumeSectionId: Uuid,
+  resumeId: Uuid,
+  recordId: Uuid,
+  sortKey: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: newUuid(),
+    resumeId,
+    resumeSectionId,
+    recordId,
+    sortKey,
+    isVisible: true,
+    ...overrides,
+  } as ResumeEntryInput;
+}
+
+export function entryPointInput(
+  resumeEntryId: Uuid,
+  resumeId: Uuid,
+  pointId: Uuid,
+  phrasingId: Uuid,
+  sortKey: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: newUuid(),
+    resumeId,
+    resumeEntryId,
+    pointId,
+    phrasingId,
+    sortKey,
+    isVisible: true,
+    ...overrides,
+  } as ResumeEntryPointInput;
 }
 
 export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;
