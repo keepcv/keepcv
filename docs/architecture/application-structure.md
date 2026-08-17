@@ -249,6 +249,13 @@ That last item is why `resume_content_ref` exists (data-model.md #9.2).
 Editing a phrasing without knowing which resumes depend on it is exactly the
 anxiety this product exists to remove.
 
+**Points are also a destination of their own**, listed with the record each is
+filed under, its metrics, its tags and how many resumes print it. The point is
+the atomic unit; a store that can only be browsed through records hides the one
+thing every resume is assembled from. Its filters are the overview's nudges made
+reachable - unplaced, and no metric - so a count on the overview is a link
+rather than a number nobody can act on.
+
 ### 5.5 Resume composer
 
 Three panes: the store with in/out toggles; the resume structure,
@@ -257,6 +264,18 @@ drag-and-drop; live preview.
 Needs: the full store (already cached); the working composition; a compiled
 `ResumeDocument`. Mutations are single-row patches with a fractional
 `sort_key`, so a drag sends one small request (data-model.md #3.4).
+
+Reading comes before dragging: the screen is **composition and preview, toggled**,
+and both halves answer from the cached payload. Composition shows every row the
+selection holds - including the ones toggled off, dimmed and marked, because off
+is a state the selection exists to hold and a row that vanished would read as a
+delete. It shows the **wording this resume chose**, since an entry point pins a
+phrasing rather than a set. Preview runs `compile()` in the browser, which is the
+whole reason `@keepcv/core` does no I/O: the preview and a server-side export are
+the same function over the same manifest.
+
+An entry links back to its record, and a record's "where it appears" links here,
+so the two directions of "what does this affect" both resolve.
 
 ### 5.6 Version timeline and compare
 

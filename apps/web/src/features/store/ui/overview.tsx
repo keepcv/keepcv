@@ -1,4 +1,4 @@
-import { overview, textOfPoint } from "@keepcv/core";
+import { live, overview } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -16,14 +16,37 @@ function Total({ label, value, note }: { label: string; value: number; note?: st
   );
 }
 
-function Nudge({ count, children }: { count: number; children: ReactNode }) {
+function Tally({ count }: { count: number }) {
+  return (
+    <span className="min-w-6 rounded bg-amber-100 px-1.5 text-center font-medium tabular-nums text-amber-900">
+      {count}
+    </span>
+  );
+}
+
+// A nudge that names no destination is a nudge nobody acts on.
+function Nudge({
+  count,
+  to,
+  search,
+  children,
+}: {
+  count: number;
+  to: string;
+  search: Record<string, unknown>;
+  children: ReactNode;
+}) {
   if (count === 0) return null;
   return (
-    <li className="flex items-baseline gap-2 text-sm text-slate-700">
-      <span className="min-w-6 rounded bg-amber-100 px-1.5 text-center font-medium tabular-nums text-amber-900">
-        {count}
-      </span>
-      <span>{children}</span>
+    <li>
+      <Link
+        to={to}
+        search={search}
+        className="flex items-baseline gap-2 rounded-md py-0.5 text-sm text-slate-700 hover:text-slate-900"
+      >
+        <Tally count={count} />
+        <span className="underline-offset-2 hover:underline">{children}</span>
+      </Link>
     </li>
   );
 }
@@ -51,9 +74,10 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
     <div className="space-y-5">
       <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Total label="Records" value={summary.totals.records} />
         <Total label="Points" value={summary.totals.points} />
+        <Total label="Resumes" value={live(store.resumes).length} />
         <Total label="Archived" value={summary.totals.archived} note="Kept, never deleted." />
       </div>
 
@@ -99,27 +123,48 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
             <p className="text-sm text-slate-600">Nothing half-finished. Unusual, and good.</p>
           ) : (
             <ul className="space-y-2">
-              <Nudge count={unfinished.unplacedPoints.length}>
+              <Nudge
+                count={unfinished.unplacedPoints.length}
+                to="/points"
+                search={{ filter: "unplaced" }}
+              >
                 points captured but not placed on a record
               </Nudge>
-              <Nudge count={unfinished.pointsWithoutMetrics.length}>
+              <Nudge
+                count={unfinished.pointsWithoutMetrics.length}
+                to="/points"
+                search={{ filter: "unmeasured" }}
+              >
                 points with no metric, so they say what you did but not what it moved
               </Nudge>
-              <Nudge count={unfinished.missingEndDate.length}>
-                records that ended without an end date
-              </Nudge>
-              <Nudge count={unfinished.expiringCertifications.length}>
+              <Nudge
+                count={unfinished.expiringCertifications.length}
+                to="/records"
+                search={{ kind: "certification", archived: "exclude" }}
+              >
                 certifications lapsing within ninety days
               </Nudge>
-            </ul>
-          )}
-          {unfinished.unplacedPoints.length === 0 ? null : (
-            <ul className="mt-4 space-y-1 border-t border-slate-100 pt-3">
-              {unfinished.unplacedPoints.slice(0, 5).map((point) => (
-                <li key={point.id} className="truncate text-sm text-slate-600">
-                  {textOfPoint(store, point) || "an empty point"}
+              {/* Named rather than filtered: these are few, and a record opens. */}
+              {unfinished.missingEndDate.length === 0 ? null : (
+                <li className="flex items-baseline gap-2 text-sm text-slate-700">
+                  <Tally count={unfinished.missingEndDate.length} />
+                  <span>
+                    ended without an end date:{" "}
+                    {unfinished.missingEndDate.slice(0, 5).map((entry, index) => (
+                      <span key={entry.id}>
+                        {index === 0 ? "" : ", "}
+                        <Link
+                          to="/records/$recordId"
+                          params={{ recordId: entry.id }}
+                          className="underline underline-offset-2 hover:text-slate-900"
+                        >
+                          {entry.title ?? "Untitled"}
+                        </Link>
+                      </span>
+                    ))}
+                  </span>
                 </li>
-              ))}
+              )}
             </ul>
           )}
         </PanelBody>

@@ -1,6 +1,7 @@
 import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
+import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
 
 // Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
@@ -70,7 +71,7 @@ export function toRecordRow(store: Store, entry: CareerRecord): RecordRow {
 
 export interface RecordFilters {
   kind?: CareerRecordKind | undefined;
-  archived: "exclude" | "include" | "only";
+  archived: ArchivedFilter;
 }
 
 // Narrows without sorting: the store already returns a total order, and a list
@@ -78,13 +79,7 @@ export interface RecordFilters {
 export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
   return store.records
     .filter((entry) => filters.kind === undefined || entry.kind === filters.kind)
-    .filter((entry) =>
-      filters.archived === "include"
-        ? true
-        : filters.archived === "only"
-          ? entry.archivedAt !== null
-          : entry.archivedAt === null,
-    )
+    .filter((entry) => matchesArchived(entry, filters.archived))
     .map((entry) => toRecordRow(store, entry));
 }
 

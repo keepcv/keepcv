@@ -265,6 +265,12 @@ Rules:
 - Sections a template chooses not to support must be **omitted visibly**
   (reported to the composer), never dropped silently. Silently losing a
   section is the destructive behaviour this product exists to eliminate.
+- **An empty section is said out loud, not dropped.** Capture emits a visible
+  section whose entries were all hidden or archived, and a heading with nothing
+  under it reads as a rendering fault unless the template names the gap.
+- **A grouped section prints every entry exactly once.** Groups only claim
+  entries that carry an organisation, so a template that renders groups must
+  also render whatever no group claimed.
 
 ### Test fixture
 

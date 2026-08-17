@@ -4,8 +4,9 @@ The browser app for [KeepCV](https://github.com/keepcv/keepcv). Not published:
 the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** Read-only so far - the application frame, the
-> store overview, the record list, a record's detail and search. Editing, the
-> point and phrasing editor and the resume composer follow.
+> store overview, records, points, resumes with a compiled preview, and search.
+> Editing, the point and phrasing editor and dragging a resume into shape
+> follow.
 
 ## Running it
 

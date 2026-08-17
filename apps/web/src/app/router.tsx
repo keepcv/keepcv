@@ -2,12 +2,17 @@ import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import { POINT_FILTERS } from "../features/points/model/point-rows.js";
+import { PointList } from "../features/points/ui/point-list.js";
 import { RecordDetail } from "../features/records/ui/record-detail.js";
 import { RecordList } from "../features/records/ui/record-list.js";
+import { RESUME_VIEWS, ResumeDetailScreen } from "../features/resumes/ui/resume-detail.js";
+import { ResumeList } from "../features/resumes/ui/resume-list.js";
 import { SearchResults } from "../features/search/ui/search-results.js";
 import { prefetchStore, useStore } from "../features/store/api/use-store.js";
 import { Overview } from "../features/store/ui/overview.js";
 import type { ApiClient } from "../lib/api.js";
+import { ARCHIVED_FILTERS } from "../lib/archived.js";
 import { Shell } from "./shell.js";
 import { Failure, Skeleton } from "./states.js";
 
@@ -32,7 +37,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 // Filters live in the URL, not in component state (application-structure.md #3).
 const recordSearchSchema = z.object({
   kind: careerRecordKindSchema.optional(),
-  archived: z.enum(["exclude", "include", "only"]).default("exclude"),
+  archived: z.enum(ARCHIVED_FILTERS).default("exclude"),
 });
 
 const searchSchema = z.object({
@@ -70,6 +75,44 @@ const recordRoute = createRoute({
   },
 });
 
+const pointsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/points",
+  validateSearch: z.object({ filter: z.enum(POINT_FILTERS).default("all") }),
+  component: function PointsScreen() {
+    const store = useStore(pointsRoute.useRouteContext().api);
+    return <PointList store={store} filter={pointsRoute.useSearch().filter} />;
+  },
+});
+
+const resumesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/resumes",
+  validateSearch: z.object({ archived: z.enum(ARCHIVED_FILTERS).default("exclude") }),
+  component: function ResumesScreen() {
+    const store = useStore(resumesRoute.useRouteContext().api);
+    return <ResumeList store={store} archived={resumesRoute.useSearch().archived} />;
+  },
+});
+
+const resumeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/resumes/$resumeId",
+  params: { parse: ({ resumeId }) => ({ resumeId: uuidSchema.parse(resumeId) }) },
+  validateSearch: z.object({ view: z.enum(RESUME_VIEWS).default("composition") }),
+  component: function ResumeScreen() {
+    const store = useStore(resumeRoute.useRouteContext().api);
+    return (
+      <ResumeDetailScreen
+        store={store}
+        resumeId={resumeRoute.useParams().resumeId}
+        view={resumeRoute.useSearch().view}
+        asOf={new Date().toISOString()}
+      />
+    );
+  },
+});
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
@@ -81,7 +124,15 @@ const searchRoute = createRoute({
   },
 });
 
-const routeTree = rootRoute.addChildren([overviewRoute, recordsRoute, recordRoute, searchRoute]);
+const routeTree = rootRoute.addChildren([
+  overviewRoute,
+  recordsRoute,
+  recordRoute,
+  pointsRoute,
+  resumesRoute,
+  resumeRoute,
+  searchRoute,
+]);
 
 export function buildRouter(context: RouterContext) {
   return createRouter({

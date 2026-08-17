@@ -1,4 +1,4 @@
-import { recordCounts } from "@keepcv/core";
+import { live, recordCounts } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -48,7 +48,15 @@ export function Navigation({ store }: { store: Store }) {
         </NavLink>
         <NavLink to="/records" search={{ archived: "exclude" }}>
           All records
-          <Count>{store.records.filter((row) => row.archivedAt === null).length}</Count>
+          <Count>{live(store.records).length}</Count>
+        </NavLink>
+        <NavLink to="/points" search={{ filter: "all" }}>
+          Points
+          <Count>{live(store.points).length}</Count>
+        </NavLink>
+        <NavLink to="/resumes" search={{ archived: "exclude" }}>
+          Resumes
+          <Count>{live(store.resumes).length}</Count>
         </NavLink>
       </div>
 

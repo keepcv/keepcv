@@ -8,27 +8,11 @@ import type {
   Organisation,
   Phrasing,
   ResumeManifest,
-  SectionKind,
   Store,
   Uuid,
 } from "@keepcv/schema";
 import { MANIFEST_SCHEMA_VERSION, resumeManifestSchema } from "@keepcv/schema";
-import { type ComposedEntry, composition, live } from "../store/selectors.js";
-
-// The heading a kind prints under when the section carries no override.
-const HEADINGS: Record<SectionKind, string> = {
-  experience: "Experience",
-  education: "Education",
-  project: "Projects",
-  skill: "Skills",
-  certification: "Certifications",
-  publication: "Publications",
-  award: "Awards",
-  language: "Languages",
-  volunteering: "Volunteering",
-  speaking: "Speaking",
-  custom: "Other",
-};
+import { type ComposedEntry, composition, live, sectionHeading } from "../store/selectors.js";
 
 function inOrder<T extends { sortKey: string; id: Uuid }>(rows: readonly T[]): T[] {
   return [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id));
@@ -120,10 +104,9 @@ export function captureManifest(store: Store, resumeId: Uuid): ResumeManifest | 
   const sections: ManifestSection[] = composed.sections
     .filter((row) => row.section.isVisible)
     .map((row) => {
-      const custom = store.customSections.find((entry) => entry.id === row.section.customSectionId);
       return {
         kind: row.section.kind,
-        heading: row.section.heading ?? custom?.heading ?? HEADINGS[row.section.kind],
+        heading: sectionHeading(store, row.section),
         layout: row.section.layout ?? "entries",
         entries: row.entries
           .filter((entry) => entry.entry.isVisible && entry.record.archivedAt === null)

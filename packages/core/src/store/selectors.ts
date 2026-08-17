@@ -10,6 +10,7 @@ import type {
   ResumeEntry,
   ResumeEntryPoint,
   ResumeSection,
+  SectionKind,
   Store,
   Tag,
   Uuid,
@@ -59,7 +60,13 @@ export function textOfPhrasingSet(store: Store, phrasingSetId: Uuid | null): str
   if (phrasingSetId === null) return "";
   const set = store.phrasingSets.find((row) => row.id === phrasingSetId);
   const phrasing = store.phrasings.find((row) => row.id === set?.canonicalPhrasingId);
-  const revision = store.phrasingRevisions.find((row) => row.id === phrasing?.currentRevisionId);
+  return phrasing === undefined ? "" : textOfPhrasing(store, phrasing);
+}
+
+// A resume pins the phrasing, not the set, so what it says is this and not the
+// canonical wording (data-model.md #9.1).
+export function textOfPhrasing(store: Store, phrasing: Phrasing): string {
+  const revision = store.phrasingRevisions.find((row) => row.id === phrasing.currentRevisionId);
   return revision?.plainText ?? "";
 }
 
@@ -187,6 +194,26 @@ export function overview(
       unplacedPoints: unplacedPoints(store),
     },
   };
+}
+
+// The heading a kind prints under when the section carries no override.
+const SECTION_HEADINGS: Record<SectionKind, string> = {
+  experience: "Experience",
+  education: "Education",
+  project: "Projects",
+  skill: "Skills",
+  certification: "Certifications",
+  publication: "Publications",
+  award: "Awards",
+  language: "Languages",
+  volunteering: "Volunteering",
+  speaking: "Speaking",
+  custom: "Other",
+};
+
+export function sectionHeading(store: Store, section: ResumeSection): string {
+  const custom = store.customSections.find((row) => row.id === section.customSectionId);
+  return section.heading ?? custom?.heading ?? SECTION_HEADINGS[section.kind];
 }
 
 export interface ComposedPoint {

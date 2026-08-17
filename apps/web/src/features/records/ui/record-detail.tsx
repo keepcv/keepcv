@@ -170,7 +170,14 @@ export function RecordDetail({ store, recordId }: { store: Store; recordId: Uuid
             <ul className="space-y-1.5 text-sm">
               {placements.map((placement) => (
                 <li key={placement.resumeId} className="flex items-center justify-between gap-4">
-                  <span className="text-slate-800">{placement.resumeName}</span>
+                  <Link
+                    to="/resumes/$resumeId"
+                    params={{ resumeId: placement.resumeId }}
+                    search={{ view: "composition" }}
+                    className="text-slate-800 underline-offset-2 hover:underline"
+                  >
+                    {placement.resumeName}
+                  </Link>
                   {placement.isVisible ? null : <Badge>toggled off</Badge>}
                 </li>
               ))}

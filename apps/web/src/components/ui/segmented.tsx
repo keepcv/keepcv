@@ -17,11 +17,13 @@ export function Segmented({ label, children }: { label: string; children: ReactN
 
 export function Segment({
   to,
+  params,
   search,
   active,
   children,
 }: {
   to: string;
+  params?: Record<string, unknown>;
   search: Record<string, unknown>;
   active: boolean;
   children: string;
@@ -29,6 +31,7 @@ export function Segment({
   return (
     <Link
       to={to}
+      {...(params === undefined ? {} : { params })}
       search={search}
       aria-current={active ? "true" : undefined}
       className={cn(

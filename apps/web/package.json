@@ -2,7 +2,7 @@
   "name": "@keepcv/web",
   "version": "0.0.0",
   "private": true,
-  "description": "The KeepCV web app: the frame, the store overview, records and search.",
+  "description": "The KeepCV web app: the frame, records, points, resumes and search.",
   "license": "MIT",
   "author": "nrautela",
   "repository": {

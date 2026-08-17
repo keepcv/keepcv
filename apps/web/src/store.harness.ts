@@ -2,13 +2,22 @@ import { newUuid } from "@keepcv/core";
 import {
   type CareerRecord,
   careerRecordSchema,
+  contactChannelSchema,
   metricSchema,
   organisationSchema,
+  type Phrasing,
   type Point,
   phrasingRevisionSchema,
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  type Resume,
+  type ResumeEntry,
+  type ResumeSection,
+  resumeEntryPointSchema,
+  resumeEntrySchema,
+  resumeSchema,
+  resumeSectionSchema,
   type Store,
   storeSchema,
   type Uuid,
@@ -99,6 +108,37 @@ export function addOrganisation(store: Store, name: string): Uuid {
   return row.id;
 }
 
+export function addPhrasing(
+  store: Store,
+  phrasingSetId: Uuid,
+  text: string,
+  overrides: Record<string, unknown> = {},
+): Phrasing {
+  const revisionId = newUuid();
+  const phrasing = phrasingSchema.parse({
+    ...standard(),
+    phrasingSetId,
+    variant: "standard",
+    label: null,
+    sortKey: "a0",
+    currentRevisionId: revisionId,
+    ...overrides,
+  });
+  store.phrasings.push(phrasing);
+  store.phrasingRevisions.push(
+    phrasingRevisionSchema.parse({
+      id: revisionId,
+      createdAt: EPOCH,
+      phrasingId: phrasing.id,
+      body: [{ t: "text", v: text }],
+      plainText: text,
+      charCount: text.length,
+      contentHash: "0".repeat(64),
+    }),
+  );
+  return phrasing;
+}
+
 // A point arrives with the words it holds, so the fixture writes all four rows
 // of the chain rather than a point on its own.
 export function addPoint(
@@ -107,37 +147,16 @@ export function addPoint(
   overrides: Record<string, unknown> = {},
 ): Point {
   const setId = newUuid();
-  const phrasingId = newUuid();
-  const revisionId = newUuid();
-
   store.phrasingSets.push(
     phrasingSetSchema.parse({
       ...standard({ id: setId }),
       purpose: "point",
-      canonicalPhrasingId: phrasingId,
+      canonicalPhrasingId: null,
     }),
   );
-  store.phrasings.push(
-    phrasingSchema.parse({
-      ...standard({ id: phrasingId }),
-      phrasingSetId: setId,
-      variant: "standard",
-      label: null,
-      sortKey: "a0",
-      currentRevisionId: revisionId,
-    }),
-  );
-  store.phrasingRevisions.push(
-    phrasingRevisionSchema.parse({
-      id: revisionId,
-      createdAt: EPOCH,
-      phrasingId,
-      body: [{ t: "text", v: text }],
-      plainText: text,
-      charCount: text.length,
-      contentHash: "0".repeat(64),
-    }),
-  );
+  const canonical = addPhrasing(store, setId, text);
+  const set = store.phrasingSets.find((row) => row.id === setId);
+  if (set !== undefined) set.canonicalPhrasingId = canonical.id;
 
   const point = pointSchema.parse({
     ...standard(),
@@ -168,9 +187,103 @@ export function addMetric(store: Store, pointId: Uuid): void {
   );
 }
 
-// One store with something of everything on the two screens this app has.
+export function addContactChannel(store: Store, kind: string, value: string): void {
+  store.contactChannels.push(
+    contactChannelSchema.parse({
+      ...standard(),
+      kind,
+      label: null,
+      value,
+      isDefaultVisible: true,
+      sortKey: "a0",
+    }),
+  );
+}
+
+export function addResume(store: Store, overrides: Record<string, unknown> = {}): Resume {
+  const resume = resumeSchema.parse({
+    ...standard(),
+    name: "a resume",
+    targetCompany: null,
+    targetRole: null,
+    targetUrl: null,
+    targetJdText: null,
+    appliedOn: null,
+    ...overrides,
+  });
+  store.resumes.push(resume);
+  return resume;
+}
+
+export function addSection(
+  store: Store,
+  resumeId: Uuid,
+  overrides: Record<string, unknown> = {},
+): ResumeSection {
+  const section = resumeSectionSchema.parse({
+    ...standard(),
+    resumeId,
+    kind: "experience",
+    customSectionId: null,
+    heading: null,
+    layout: null,
+    sortKey: "a0",
+    isVisible: true,
+    ...overrides,
+  });
+  store.resumeSections.push(section);
+  return section;
+}
+
+export function addEntry(
+  store: Store,
+  section: ResumeSection,
+  recordId: Uuid,
+  overrides: Record<string, unknown> = {},
+): ResumeEntry {
+  const entry = resumeEntrySchema.parse({
+    ...standard(),
+    resumeId: section.resumeId,
+    resumeSectionId: section.id,
+    recordId,
+    sortKey: "a0",
+    isVisible: true,
+    ...overrides,
+  });
+  store.resumeEntries.push(entry);
+  return entry;
+}
+
+// The phrasing comes from the point's set, so the fixture cannot place a point
+// under wording that belongs to a different one.
+export function addEntryPoint(
+  store: Store,
+  entry: ResumeEntry,
+  point: Point,
+  overrides: Record<string, unknown> = {},
+): void {
+  const phrasing = store.phrasings.find((row) => row.phrasingSetId === point.phrasingSetId);
+  store.resumeEntryPoints.push(
+    resumeEntryPointSchema.parse({
+      ...standard(),
+      resumeId: entry.resumeId,
+      resumeEntryId: entry.id,
+      pointId: point.id,
+      phrasingId: phrasing?.id,
+      sortKey: "a0",
+      isVisible: true,
+      ...overrides,
+    }),
+  );
+}
+
+// One store with something of everything the app has a screen for.
 export function aFilledStore(): Store {
   const store = emptyStore();
+  store.profile.fullName = "Ada Lovelace";
+  store.profile.headline = "Engine lead";
+  addContactChannel(store, "email", "ada@example.org");
+
   const engines = addOrganisation(store, "Analytical Engines");
 
   const role = addRecord(store, {
@@ -181,12 +294,30 @@ export function aFilledStore(): Store {
     endedOn: null,
     isCurrent: true,
   });
-  addRecord(store, { kind: "project", title: "Difference Engine", startedOn: "2021" });
+  const engine = addRecord(store, {
+    kind: "project",
+    title: "Difference Engine",
+    startedOn: "2021",
+  });
   addRecord(store, { kind: "project", title: "Shelved idea", archivedAt: EPOCH });
 
   const measured = addPoint(store, "Cut p95 latency from 800ms to 120ms", { recordId: role.id });
   addMetric(store, measured.id);
+  const quiet = addPoint(store, "Rewrote the scheduler", { recordId: role.id, sortKey: "a1" });
   addPoint(store, "Somewhere, eventually");
+
+  const resume = addResume(store, {
+    name: "Staff engineer, 2026",
+    targetRole: "Staff engineer",
+    targetCompany: "Babbage Ltd",
+    appliedOn: "2026-02-10",
+  });
+  const experience = addSection(store, resume.id);
+  const entry = addEntry(store, experience, role.id);
+  addEntryPoint(store, entry, measured);
+  addEntryPoint(store, entry, quiet, { sortKey: "a1", isVisible: false });
+  const projects = addSection(store, resume.id, { kind: "project", sortKey: "a1" });
+  addEntry(store, projects, engine.id);
 
   return store;
 }
