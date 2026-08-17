@@ -42,8 +42,6 @@ export function createCustomSectionRepository(db: Database): CustomSectionReposi
   }
 
   return {
-    // Unlike an organisation, a section is dragged: the headings come out in the
-    // order they print in.
     async list(options) {
       const rows = await db
         .select()
@@ -67,9 +65,8 @@ export function createCustomSectionRepository(db: Database): CustomSectionReposi
       return await set(id, expectedUpdatedAt, patch);
     },
 
-    // The entries under an archived heading are not touched: archiving a section
-    // hides it, and cascading would make restoring it guess which of them the
-    // user had archived on their own beforehand.
+    // The entries are not touched: cascading would make restoring the section
+    // guess which of them the user had archived on their own.
     async archive(id, expectedUpdatedAt) {
       return await set(id, expectedUpdatedAt, { archivedAt: new Date() });
     },

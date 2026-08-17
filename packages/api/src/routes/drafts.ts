@@ -4,10 +4,8 @@ import { draftInputSchema, draftSchema, draftTargetSchema } from "@keepcv/schema
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { jsonBody } from "./collection.js";
 
-// Addressed by what it drafts, because that is its identity: there is no second
-// draft of one field, so there is no id to put in a path. There is no GET
-// either - the boot payload carries every draft, and an editor asking per field
-// would be a round trip answering "no" nearly every time.
+// Addressed by what it drafts: that is its identity, so there is no id for a
+// path. No GET either - the boot payload carries every draft.
 const path = "/v1/drafts/{targetKind}/{targetId}/{field}";
 const noTarget = problemResponse("no row of this owner has that kind and id");
 

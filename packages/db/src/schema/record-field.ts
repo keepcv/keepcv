@@ -14,10 +14,7 @@ import { standardColumns } from "./owner.js";
 // Repeated from `recordFieldValueKindSchema`; see the note in career-record.ts.
 const VALUE_KINDS = ["text", "url", "date", "number"];
 
-// User-defined extras on any record kind. `key` is machine-readable and is what
-// a specialised template addresses; typed columns like `doi` reach the same
-// slot through their presenter, so a template sees one uniform list either way
-// (template-model.md #3).
+// `key` is what a specialised template addresses (template-model.md #3).
 export const recordField = pgTable(
   "record_field",
   {
@@ -35,9 +32,7 @@ export const recordField = pgTable(
       "record_field_value_kind_check",
       sql.raw(`value_kind in (${VALUE_KINDS.map((kind) => `'${kind}'`).join(", ")})`),
     ),
-    // Owner-scoped like every other uniqueness rule here: record ids repeat
-    // across owners once a store has been imported, so a rule keyed on record_id
-    // alone would make one owner's import collide with another's.
+    // Owner-scoped: record ids repeat across owners once a store is imported.
     uniqueIndex("record_field_key_unique").on(table.ownerId, table.recordId, table.key),
     uniqueIndex("record_field_sort_key_unique").on(table.ownerId, table.recordId, table.sortKey),
     foreignKey({

@@ -24,9 +24,7 @@ import {
 
 eachDriver(({ run, otherOwner }) => {
   describe("points", () => {
-    // Five tables in one call. A point that reached the store without its words
-    // would be a row nothing can render, so this is the whole of what `create`
-    // promises.
+    // A point without its words is a row nothing can render.
     it("is created with the phrasing set, phrasing and revision holding its words", async () => {
       const input = await run(async (r) => {
         const record = await r.records.create(recordInput("experience", "a0"));
@@ -91,9 +89,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(listed.slice(1).map((entry) => entry.sortKey)).toEqual(["a0", "a1"]);
     });
 
-    // Postgres treats nulls as distinct in a unique index by default, which would
-    // have left every unplaced point in a scope of its own and I11 holding
-    // vacuously over the list the user actually drags within.
+    // Nulls distinct by default would leave every unplaced point in a scope of
+    // its own, and I11 holding vacuously over the list the user drags within.
     it("narrows a list to one confidence", async () => {
       await run(async (r) => {
         await r.points.create(pointInput(null, "a0", "Measured", { confidence: "verified" }));

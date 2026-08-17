@@ -20,16 +20,12 @@ import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 import { runAsOwner } from "../owner-scope.js";
 import { openLocalStore, openServerStore, type Store } from "../store.js";
 
-// One suite, every implementation of the port. It asserts the invariants in
-// data-model.md #10 rather than the queries, so an implementation that diverges
-// fails loudly instead of subtly - which is the whole reason the private cloud
-// repository can be a thin adapter rather than a fork.
+// One suite, every implementation of the port: it asserts the invariants in
+// data-model.md #10 rather than the queries.
 const connectionString = process.env["DATABASE_URL"];
 
-// Locally the server half is opt-in. In CI it is not: a suite that quietly
-// tests one implementation and reports success for both is worse than no suite,
-// and it has already happened once - turbo runs tasks in a strict environment
-// and dropped DATABASE_URL before it reached vitest.
+// In CI the server half is not opt-in: turbo runs tasks in a strict environment
+// and dropped DATABASE_URL before it reached vitest, once.
 if (connectionString === undefined && process.env["CI"] !== undefined) {
   throw new Error("DATABASE_URL is unset, so the port would be tested against PGlite only");
 }
@@ -265,9 +261,7 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       return asOwner(ownerId);
     }
 
-    // A WebAssembly start plus every migration, once per file, and CI runs this
-    // suite alongside the API package's. The default hook budget is not enough
-    // for that many stores booting at once.
+    // The default hook budget is not enough for that many stores booting at once.
     beforeAll(async () => {
       store = open();
       await store.migrate();
@@ -277,9 +271,7 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       await store.close();
     });
 
-    // Every test gets its own owner rather than a truncated database. Owner
-    // scoping is what isolates them, so the isolation under test is the
-    // isolation the suite relies on.
+    // The isolation under test is the isolation the suite relies on.
     beforeEach(async () => {
       current = await mintOwner();
     });

@@ -11,19 +11,16 @@ import {
 import { z } from "zod";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 
-// One format today, and a named one rather than none: `?format=jsonresume` has
-// to fail rather than quietly hand back native data under the wrong name.
+// Named rather than defaulted: `?format=jsonresume` has to fail rather than hand
+// back native data under the wrong name.
 const formatQuery = z.object({ format: z.enum(["native"]).default("native") });
 
-// Deliberately not `exportDocumentSchema`, which pins the current version: a
-// document written by an older build is exactly what import exists to accept,
-// and `migrateDocument` brings it forward before anything is validated.
+// Deliberately not `exportDocumentSchema`, which pins the current version: an
+// older document is what import exists to accept, and `migrateDocument` runs first.
 const anyVersion = z.looseObject({ schemaVersion: z.number().int() });
 
-// The whole store is kilobytes, so the client fetches this once on boot and
-// reads most screens out of it with selectors rather than a request per list.
-// Archived rows come too: filtering them is the client's to do, and refetching
-// to answer "where did my old entry go" is what hiding them would cost.
+// Fetched once on boot and read through selectors (api-contract.md #3). Archived
+// rows come too: filtering them is the client's to do.
 const readStore = createRoute({
   method: "get",
   path: "/v1/store",
@@ -78,8 +75,8 @@ export function storeRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(exportStore, async (c) => {
       const store = await unitOfWork.run(async (r) => await r.store.read());
-      // The envelope belongs to the file rather than the repository: the store
-      // knows nothing about when it was written out (api-contract.md #4).
+      // The envelope belongs to the file: the store does not know when it was
+      // written out.
       const document: ExportDocument = {
         schemaVersion: CURRENT_SCHEMA_VERSION,
         exportedAt: timestampSchema.parse(new Date().toISOString()),

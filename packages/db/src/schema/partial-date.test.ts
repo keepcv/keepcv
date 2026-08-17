@@ -6,10 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BOOTS_A_STORE } from "../repositories/contract.harness.js";
 import { MIGRATIONS_FOLDER } from "../store.js";
 
-// The domain's CHECK and PARTIAL_DATE_PATTERN are written out separately, so
-// this is what holds them together: both sides see the same values and have to
-// agree. A value that parses in the browser and then fails on insert is the
-// failure this prevents.
+// Both sides see the same values: a value that parses in the browser and then
+// fails on insert is the failure this prevents.
 const values = [
   "2019",
   "2019-03",

@@ -11,10 +11,8 @@ import type {
 } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 
-// The whole store is kilobytes and the client holds all of it, so the screens
-// read it through these rather than through requests of their own
-// (application-structure.md #4). Pure, and therefore equally callable from the
-// browser, the CLI and a server-side renderer.
+// Screens read the cached store through these rather than through requests of
+// their own (application-structure.md #4).
 
 interface Archivable {
   archivedAt: string | null;
@@ -33,9 +31,8 @@ export function organisationOf(store: Store, entry: CareerRecord): Organisation 
   return store.organisations.find((row) => row.id === entry.organisationId);
 }
 
-// A point belongs to a record two ways: `recordId` decides where it prints, and
-// a secondary link says it also relates to one. A screen counting either without
-// the other reports a number the user cannot reconcile with what they see.
+// Both ways a point belongs: counting one without the other reports a number
+// the user cannot reconcile with the points on the screen.
 export function pointsOfRecord(store: Store, recordId: Uuid): Point[] {
   const alsoRelated = new Set(
     store.pointRecordLinks.filter((link) => link.recordId === recordId).map((link) => link.pointId),
@@ -43,16 +40,12 @@ export function pointsOfRecord(store: Store, recordId: Uuid): Point[] {
   return store.points.filter((point) => point.recordId === recordId || alsoRelated.has(point.id));
 }
 
-// Points nobody has placed. The inbox: capturing a point before deciding where
-// it belongs is the whole reason `recordId` is nullable.
 export function unplacedPoints(store: Store): Point[] {
   return live(store.points).filter((point) => point.recordId === null);
 }
 
-// The four-level chain the data model resolves in one join - point to set, set
-// to its canonical phrasing, phrasing to the revision it points at, revision to
-// the words. Any link missing means the point has nothing to say yet, which is a
-// state the editor can reach and the screen has to render.
+// A missing link means the point has nothing to say yet, which the editor can
+// reach and the screen has to render.
 export function textOfPoint(store: Store, point: Point): string {
   return textOfPhrasingSet(store, point.phrasingSetId);
 }
@@ -65,9 +58,7 @@ export function textOfPhrasingSet(store: Store, phrasingSetId: Uuid | null): str
   return revision?.plainText ?? "";
 }
 
-// Archived tags come back too, like archived rows anywhere else: `live` is the
-// caller's filter to apply, and a tag that vanished from a row it is on would
-// read as an unexplained change rather than as something hidden.
+// Archived tags come back too: `live` is the caller's filter to apply.
 export function tagsOfRecord(store: Store, recordId: Uuid): Tag[] {
   const assigned = new Set(
     store.recordTags.filter((entry) => entry.recordId === recordId).map((entry) => entry.tagId),
@@ -102,9 +93,8 @@ export interface TagUsage {
   points: number;
 }
 
-// Every tag, including the ones nothing carries: an unused tag is the one worth
-// renaming or merging away, so a list that hid it would hide the work.
-// The counts are of live rows, which is what clicking the tag then shows.
+// Every tag, including the ones nothing carries. Counts are of live rows, which
+// is what clicking the tag then shows.
 export function tagUsage(store: Store): TagUsage[] {
   return store.tags.map((tag) => ({
     tag,
@@ -113,9 +103,7 @@ export function tagUsage(store: Store): TagUsage[] {
   }));
 }
 
-// An editor asks this before it opens: a draft present means offering restore or
-// discard, and never silently resurrecting text the user believed they had
-// abandoned (application-structure.md #6).
+// Asked before an editor opens (application-structure.md #6).
 export function draftFor(store: Store, target: DraftTarget): Draft | undefined {
   return store.drafts.find(
     (draft) =>
@@ -131,8 +119,7 @@ export interface RecordCount {
   archived: number;
 }
 
-// Every kind, including the ones at zero: an empty count is the invitation to
-// add the first one, and a kind that vanishes from the list cannot be clicked.
+// Every kind, including the ones at zero: a kind not on the list is unclickable.
 export function recordCounts(store: Store): RecordCount[] {
   return CAREER_RECORD_KINDS.map((kind) => {
     const ofKind = store.records.filter((entry) => entry.kind === kind);
@@ -141,11 +128,8 @@ export function recordCounts(store: Store): RecordCount[] {
 }
 
 export interface Unfinished {
-  // Not current and with no end date: two different facts, which is why an
-  // ongoing period is a flag rather than a null end date.
+  // Not current and with no end date: two different facts.
   missingEndDate: CareerRecord[];
-  // A point that says a thing happened without saying what it moved. The most
-  // common gap between a point that reads as a duty and one that reads as work.
   pointsWithoutMetrics: Point[];
   expiringCertifications: CareerRecord[];
   unplacedPoints: Point[];
@@ -161,8 +145,7 @@ export interface StoreOverview {
 const RECENTLY_EDITED = 8;
 const EXPIRING_WITHIN_DAYS = 90;
 
-// `asOf` is a parameter rather than `Date.now()`, so this stays pure and a test
-// can ask what the screen will say in March without waiting for March.
+// A parameter rather than `Date.now()`, so a test can ask about March in January.
 export function overview(
   store: Store,
   options: { asOf: string; expiringWithinDays?: number },
@@ -189,8 +172,7 @@ export function overview(
         (entry) => !entry.isCurrent && entry.startedOn !== null && entry.endedOn === null,
       ),
       pointsWithoutMetrics: livePoints.filter((point) => !withMetrics.has(point.id)),
-      // A partial date compares correctly as a string against a full one, since
-      // "2026-03" sorts before "2026-03-14" and both sort before "2026-04".
+      // Partial dates compare correctly as strings: "2026-03" < "2026-03-14" < "2026-04".
       expiringCertifications: liveRecords.filter(
         (entry) =>
           entry.kind === "certification" &&

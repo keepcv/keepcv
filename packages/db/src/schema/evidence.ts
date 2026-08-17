@@ -6,13 +6,8 @@ import { quoted } from "./vocabulary.js";
 
 const KINDS = ["url", "note", "file"];
 
-// PRIVATE, and never rendered. The exclusion is structural rather than a filter
-// somebody has to remember: `ResumeDocument` has no field this could travel in
-// (I5). It is in the native export in full all the same - "private" means never
-// printed, not withheld from the user, and I10 would not hold otherwise.
-//
-// Unordered, so no sort key: evidence backs a point up rather than reading as a
-// list.
+// PRIVATE and never rendered: `ResumeDocument` has no field it could travel in
+// (I5). It is in the native export all the same, or I10 would not hold.
 export const evidence = pgTable(
   "evidence",
   {

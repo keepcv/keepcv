@@ -34,8 +34,7 @@ const points = collectionRoutes({
   }),
 });
 
-// Flat and narrowed by `?pointId`, for the reason links and fields are
-// (api-contract.md #3): the store keys one by its own id alone.
+// Flat and narrowed by `?pointId` (api-contract.md #3).
 const byPoint = archivedQuery.extend({ pointId: uuidSchema.optional() });
 
 const metrics = collectionRoutes({
@@ -48,8 +47,7 @@ const metrics = collectionRoutes({
   query: byPoint,
 });
 
-// "Evidence" has no singular, and "Add a evidence" is what templating the noun
-// alone would produce.
+// "Evidence" has no singular, so templating the noun gives "Add a evidence".
 const evidence = collectionRoutes({
   path: "/v1/evidence",
   tag: "evidence",
@@ -64,8 +62,6 @@ const pairParams = z.object({ id: uuidSchema, recordId: uuidSchema });
 const pointParam = z.object({ id: uuidSchema });
 const noPoint = problemResponse("no point of this owner has that id");
 
-// A point's secondary parents. `Point.recordId` decides where it prints; these
-// say it also relates to a record, which is what discovery and selection read.
 const listRecords = createRoute({
   method: "get",
   path: "/v1/points/{id}/records",
@@ -82,8 +78,7 @@ const listRecords = createRoute({
   },
 });
 
-// No body and no token: the pair is the whole row, so a repeat has nothing to
-// change and there is nothing for a concurrent edit to race.
+// No body and no token: the pair is the whole row.
 const linkRecord = createRoute({
   method: "put",
   path: "/v1/points/{id}/records/{recordId}",

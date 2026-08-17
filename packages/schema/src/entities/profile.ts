@@ -13,9 +13,6 @@ export const profileSchema = z
   })
   .meta({ id: "Profile", title: "Profile" });
 
-// Sparse: an absent key leaves the field alone, an explicit null clears it.
-// Almost every field is nullable by design (data-model.md P-A), so "unchanged"
-// and "cleared" have to stay distinguishable.
 export const profilePatchSchema = profileSchema
   .pick({
     fullName: true,

@@ -68,10 +68,8 @@ export const CONSTRAINT_KINDS = ["unique", "foreignKey", "check"] as const;
 
 export type ConstraintKind = (typeof CONSTRAINT_KINDS)[number];
 
-// The store refuses writes no type can rule out: a sort key already taken, a
-// parent that was archived away, a column the row's kind may not carry. The port
-// raises this rather than letting a driver error through, so the caller can tell
-// a caller mistake from a server fault and answer with the right status.
+// Raised instead of letting a driver error through, so the caller can tell a
+// caller mistake from a server fault and answer with the right status.
 export class ConstraintViolationError extends Error {
   override readonly name = "ConstraintViolationError";
   readonly kind: ConstraintKind;
@@ -84,9 +82,8 @@ export class ConstraintViolationError extends Error {
   }
 }
 
-// Carries the timestamp the row actually has so the caller can re-read the
-// current state and show a comparison. Silently taking the later write is not
-// an option in a product whose promise is that nothing written is lost.
+// Carries the timestamp the row actually has, so the caller can show both sides
+// rather than one being dropped silently.
 export class ConcurrencyConflictError extends Error {
   override readonly name = "ConcurrencyConflictError";
   readonly entity: string;
@@ -101,9 +98,8 @@ export class ConcurrencyConflictError extends Error {
   }
 }
 
-// A record's kind never changes, so a patch declaring the wrong one is a caller
-// working from a stale idea of what the record is - not a missing row and not a
-// racing edit. Applying the shared fields anyway would half-succeed.
+// Not a missing row and not a racing edit: applying the shared fields anyway
+// would half-succeed.
 export class CareerRecordKindMismatchError extends Error {
   override readonly name = "CareerRecordKindMismatchError";
   readonly id: Uuid;
@@ -118,9 +114,6 @@ export class CareerRecordKindMismatchError extends Error {
   }
 }
 
-// Contact channels belong to the profile rather than getting a repository of
-// their own: there is exactly one profile per owner and the channels are its
-// parts, so nothing can hold one without holding the profile it hangs off.
 export interface ProfileRepository {
   get(): Promise<Profile>;
   update(patch: ProfilePatch, expectedUpdatedAt: Timestamp): Promise<Profile>;
@@ -139,8 +132,8 @@ export interface ProfileRepository {
   restoreContactChannel(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ContactChannel>;
 }
 
-// Every `list` returns a total order, so two reads of unchanged data are the
-// same list. The export leans on it: a round trip compares two whole stores.
+// Every `list` here returns a total order: the export round trip compares two
+// whole stores, so an unstable one fails it.
 export interface OrganisationRepository {
   list(options?: { includeArchived?: boolean | undefined }): Promise<Organisation[]>;
   get(id: Uuid): Promise<Organisation>;
@@ -150,10 +143,6 @@ export interface OrganisationRepository {
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Organisation>;
 }
 
-// A heading the built-in kinds do not cover, and the parent of the records that
-// print under it. Its own repository rather than a part of the record one, for
-// the reason an organisation has one: a section outlives every entry in it and
-// has an ordering and a lifecycle of its own.
 export interface CustomSectionRepository {
   list(options?: { includeArchived?: boolean | undefined }): Promise<CustomSection[]>;
   get(id: Uuid): Promise<CustomSection>;
@@ -163,10 +152,6 @@ export interface CustomSectionRepository {
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
 }
 
-// Links and fields hang off records for the reason contact channels hang off the
-// profile: they are parts of a record, not aggregates of their own. There is no
-// `move`, because a move is a patch of `sortKey` and one way to do a thing beats
-// two.
 export interface CareerRecordRepository {
   list(options?: {
     kind?: CareerRecordKind | undefined;
@@ -204,11 +189,8 @@ export interface CareerRecordRepository {
   restoreField(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RecordField>;
 }
 
-// A set and its first phrasing are created together, and the phrasing is created
-// with the text it exists to hold, so none of the three tables is ever written
-// alone. `addRevision` is the only way text changes: "editing" appends a row and
-// moves `currentRevisionId`, which is what stops a resume version pinned in March
-// from silently acquiring June's wording.
+// `addRevision` is the only way text changes, which is what stops a version
+// pinned in March from silently acquiring June's wording.
 export interface PhrasingRepository {
   listSets(options?: { includeArchived?: boolean | undefined }): Promise<PhrasingSet[]>;
   getSet(id: Uuid): Promise<PhrasingSet>;
@@ -227,23 +209,16 @@ export interface PhrasingRepository {
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Phrasing>;
 
-  // No concurrency token, unlike every other write. Two people appending
-  // different wordings at once must both keep their text - rejecting the second
-  // one is the loss the append-only design exists to prevent - and identical text
-  // is the revision that already exists, so it makes the pointer point there.
+  // No concurrency token, unlike every other write: rejecting a second appended
+  // wording is the loss append-only exists to prevent.
   addRevision(phrasingId: Uuid, body: RichText): Promise<PhrasingRevision>;
   listRevisions(options?: {
     phrasingId?: Uuid | undefined;
-    // Only the revision each phrasing currently points at, which is what a
-    // reader wanting text rather than history needs.
     currentOnly?: boolean | undefined;
   }): Promise<PhrasingRevision[]>;
 }
 
-// A point's primary record decides where it prints; a secondary link says it
-// also relates to a record. Recording both for one record says nothing the
-// primary does not, so it is refused rather than stored and then deduplicated on
-// every read that wants "the records this point relates to".
+// Refused rather than stored and deduplicated on every read (data-model.md I16).
 export class DuplicatePointRecordLinkError extends Error {
   override readonly name = "DuplicatePointRecordLinkError";
   readonly pointId: Uuid;
@@ -256,10 +231,7 @@ export class DuplicatePointRecordLinkError extends Error {
   }
 }
 
-// Metrics and evidence hang off points for the reason links and fields hang off
-// records. A point is created with its phrasing set and that set's first wording,
-// so five tables are written before `create` returns and none of them is ever
-// written alone.
+// `create` writes five tables, so it is never reachable outside a transaction.
 export interface PointRepository {
   list(options?: {
     recordId?: Uuid | undefined;
@@ -273,9 +245,8 @@ export interface PointRepository {
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Point>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Point>;
 
-  // No concurrency token and no archive: a link holds nothing of its own, so
-  // removing one destroys nothing and both ends of it survive. Making a linked
-  // record the primary one drops the link, since the primary already says it.
+  // No token and no archive: the pair is the whole row. Promoting a linked
+  // record to primary drops the link in the same transaction.
   listRecordLinks(options?: { pointId?: Uuid | undefined }): Promise<PointRecordLink[]>;
   linkRecord(pointId: Uuid, recordId: Uuid): Promise<PointRecordLink>;
   unlinkRecord(pointId: Uuid, recordId: Uuid): Promise<void>;
@@ -301,9 +272,7 @@ export interface PointRepository {
   restoreEvidence(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Evidence>;
 }
 
-// Merging a tag into itself would move its assignments onto the tag it then
-// archives, which is not a merge and not a rename - it is the vocabulary losing
-// a word. There is nothing to re-read, so it is a caller mistake, not a clash.
+// A caller mistake rather than a clash: there is nothing to re-read.
 export class TagMergedIntoItselfError extends Error {
   override readonly name = "TagMergedIntoItselfError";
   readonly id: Uuid;
@@ -314,9 +283,6 @@ export class TagMergedIntoItselfError extends Error {
   }
 }
 
-// A controlled vocabulary shared by records and points, which is why it is one
-// repository rather than a part of either: a tag outlives everything carrying
-// it, and rename and merge are operations on the word rather than on the rows.
 // `slug` is derived from the label on every write, so no method takes one.
 export interface TagRepository {
   list(options?: { includeArchived?: boolean | undefined }): Promise<Tag[]>;
@@ -325,13 +291,10 @@ export interface TagRepository {
   update(id: Uuid, patch: TagPatch, expectedUpdatedAt: Timestamp): Promise<Tag>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
-  // Moves every assignment onto the other tag and archives this one, so the
-  // rows keep a tag and the vocabulary loses a duplicate. Answers with the tag
-  // that was merged away, as archiving it on its own would.
+  // Answers with the tag that was merged away, as archiving it alone would.
   merge(id: Uuid, intoTagId: Uuid, expectedUpdatedAt: Timestamp): Promise<Tag>;
 
-  // No token and no archive on any of the four: the pair is the whole row, so
-  // untagging destroys nothing the user wrote and both ends of it survive.
+  // No token and no archive on any of the four: the pair is the whole row.
   listRecordTags(options?: {
     recordId?: Uuid | undefined;
     tagId?: Uuid | undefined;
@@ -347,20 +310,16 @@ export interface TagRepository {
   untagPoint(pointId: Uuid, tagId: Uuid): Promise<void>;
 }
 
-// Uncommitted editor state, keyed by what it drafts rather than by an id of its
-// own. `save` overwrites: a draft is the newest keystrokes and the next ones
-// replace it, so there is no concurrency token and nothing to archive. `discard`
-// deletes, which is the one place in the store that does - the text it held is
-// either a revision by then or something the user explicitly abandoned.
+// Keyed by what it drafts. `save` overwrites and takes no token; `discard` is
+// the one delete the store performs (data-model.md #5).
 export interface DraftRepository {
   list(): Promise<Draft[]>;
   save(target: DraftTarget, body: DraftBody): Promise<Draft>;
   discard(target: DraftTarget): Promise<void>;
 }
 
-// Import loads a whole store or nothing. Merging two stores is the Import
-// capability's job and needs a review step in front of it, so this refuses
-// rather than guessing which side of a clash to keep.
+// Merging two stores needs a review step in front of it, so this refuses rather
+// than guessing which side of a clash to keep.
 export class StoreNotEmptyError extends Error {
   override readonly name = "StoreNotEmptyError";
   readonly collection: string;
@@ -371,27 +330,18 @@ export class StoreNotEmptyError extends Error {
   }
 }
 
-// The native export, whole and lossless. `read` returns every row the owner has,
-// archived ones included; `load` restores them with their ids and timestamps
-// intact, which is what makes data-model.md I10 hold and is why this is the one
-// write that bypasses the concurrency token.
+// `load` restores ids and timestamps intact, which is what makes I10 hold and
+// why it is the one write that bypasses the concurrency token.
 export interface StoreRepository {
   read(): Promise<Store>;
-  // The same shape carrying current state only: every row, archived ones
-  // included, but of the phrasing revisions just the one each phrasing points
-  // at. Revision history grows without bound and the boot payload must not
-  // (api-contract.md #3).
+  // The same shape minus superseded wordings: history grows without bound and
+  // the boot payload must not (api-contract.md #3).
   readCurrent(): Promise<Store>;
   load(store: Store): Promise<void>;
 }
 
-// One repository per aggregate, added as the capability that needs it is built
-// (api-contract.md #4 lists the full set). No method takes an owner id: the
-// implementation reads it from ambient request scope, so forgetting to scope a
-// query is not something a caller can do. Every key of a `list` option bag is
-// `| undefined` as well as optional: under `exactOptionalPropertyTypes` those are
-// different types, and a route handler forwarding a query parameter the request
-// did not carry has the second one.
+// Every key of a `list` option bag is `| undefined` as well as optional: under
+// `exactOptionalPropertyTypes` those are different types.
 export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
@@ -404,9 +354,8 @@ export interface Repositories {
   store: StoreRepository;
 }
 
-// The only way to reach a repository. Creating a point writes five tables and
-// resolves two circular foreign keys (data-model.md #5); a partial failure there
-// leaves a point with no text, so there is no non-transactional path.
+// The only way to reach a repository: a partial failure mid-point leaves a point
+// with no text, so there is no non-transactional path.
 export interface UnitOfWork {
   run<T>(work: (repositories: Repositories) => Promise<T>): Promise<T>;
 }

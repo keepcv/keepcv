@@ -26,9 +26,8 @@ describe("newUuid", () => {
     expect(new Set(uuids).size).toBe(BATCH);
   });
 
-  // The 12-bit counter holds ~3800 identifiers per millisecond, which a bulk
-  // import passes and nothing else does. Freezing the clock is the only way to
-  // reach the branch that borrows the next millisecond.
+  // Freezing the clock is the only way to reach the borrow-the-next-millisecond
+  // branch, which only a bulk import reaches in practice.
   it("keeps ordering when more identifiers are minted than one millisecond holds", () => {
     vi.useFakeTimers();
     try {

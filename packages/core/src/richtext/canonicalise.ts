@@ -22,11 +22,8 @@ function canonicaliseNode(node: Inline): Inline | null {
   return withChildren(node, children);
 }
 
-// The form a phrasing body is stored and hashed in. Bodies that render
-// identically must canonicalise to the same tree: the unique
-// (phrasing_id, content_hash) index is what makes "no revision unless the text
-// actually changed" a database guarantee (data-model.md #5), and an editor that
-// emits b(x)b(y) on one pass and b(xy) on the next would defeat it.
+// Bodies that render identically must canonicalise to the same tree, or an editor
+// emitting b(x)b(y) then b(xy) defeats phrasing_revision_content_hash_unique.
 export function canonicaliseRichText(body: RichText): RichText {
   const canonical: Inline[] = [];
 

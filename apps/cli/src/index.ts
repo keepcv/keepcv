@@ -11,10 +11,8 @@ const USAGE = `
 
 `;
 
-// The token travels in the fragment, which no browser sends to any server: a
-// page on another origin that fetches this one gets HTML with the token nowhere
-// in it, and nothing lands in a proxy log. The app claims it once and keeps it
-// for the tab.
+// In the fragment, which no browser sends to any server: a token in a query
+// string would be in every log between here and nowhere.
 function banner(port: number, token: string, dataDir: string): string {
   const origin = `http://127.0.0.1:${String(port)}`;
   return [
@@ -65,8 +63,7 @@ async function main(argv: string[]): Promise<number> {
   const running = await startServer({ port, dataDir });
   process.stdout.write(banner(running.port, running.token, dataDir));
 
-  // PGlite holds the data directory open, so an abrupt exit leaves it locked
-  // against the next launch.
+  // PGlite holds the data directory open, and an abrupt exit leaves it locked.
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => {
       void running.stop().then(() => {

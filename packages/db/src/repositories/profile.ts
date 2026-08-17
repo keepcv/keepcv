@@ -24,9 +24,8 @@ import {
 type ProfileRow = typeof profile.$inferSelect;
 type ContactChannelRow = typeof contactChannel.$inferSelect;
 
-// Parsing rather than casting: this is the row -> DTO boundary, and a column
-// that drifts from the contract - a widened CHECK, a dropped NOT NULL - should
-// fail here rather than reach the wire.
+// Parsed, not cast: a column that drifts from the contract - a widened CHECK, a
+// dropped NOT NULL - fails here rather than reaching the wire.
 function toProfile(row: ProfileRow): Profile {
   return profileSchema.parse({
     ...standardDto(row),
@@ -79,8 +78,7 @@ export function createProfileRepository(db: Database): ProfileRepository {
   return {
     get,
 
-    // The profile is the one table with no id in its key: there is exactly one
-    // per owner, so the owner is the predicate and a miss can only be staleness.
+    // One per owner, so the owner is the predicate and a miss is staleness.
     async update(patch, expectedUpdatedAt) {
       const [row] = await db
         .update(profile)

@@ -114,9 +114,7 @@ describe("searching the store", () => {
     expect(search(store, "platform").map((hit) => hit.id)).toEqual([role.id]);
   });
 
-  // The accent has to be dropped rather than left to separate the word: a
-  // trailing one would fall off the end of the token either way, so the case
-  // worth testing is one in the middle.
+  // The mark has to be in the middle: a trailing one falls off the token anyway.
   it("folds accents and case, so a plain query finds an accented word", () => {
     const store = emptyStore();
     const crepe = aRecord({ title: "Cr\u00eape rebuild" });

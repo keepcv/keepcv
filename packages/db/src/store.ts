@@ -29,9 +29,8 @@ export interface LocalStore extends Store {
   ensureLocalOwner(): Promise<Uuid>;
 }
 
-// Postgres reports a refused write as a SQLSTATE, and Drizzle keeps the driver's
-// error as the cause. Both drivers name the constraint there, which is the only
-// part worth carrying upwards - the rest is a query the caller cannot act on.
+// Both drivers name the constraint on the cause, which is the only part worth
+// carrying upwards.
 const CONSTRAINT_KIND_BY_SQLSTATE: Record<string, ConstraintKind | undefined> = {
   "23505": "unique",
   "23503": "foreignKey",
@@ -47,10 +46,8 @@ function asDomainError(error: unknown): unknown {
   return new ConstraintViolationError(kind, cause.constraint, { cause: error });
 }
 
-// The one place a driver error becomes a domain one. Every write in the package
-// runs inside a unit, so putting the translation here covers repositories that
-// do not exist yet - and a violation reaching the API as a driver error would be
-// answered as a server fault when it is nothing of the kind.
+// Every write runs inside a unit, so translating here covers repositories that
+// do not exist yet.
 function unitOfWork(db: Database): UnitOfWork {
   return {
     run: async (work) => {
@@ -63,9 +60,8 @@ function unitOfWork(db: Database): UnitOfWork {
   };
 }
 
-// The profile is created with the owner rather than lazily on first read: every
-// owner has exactly one, so a store where it is missing is broken, and that is a
-// much easier thing to notice than a silent auto-create.
+// Created with the owner rather than lazily: a missing profile is a broken store,
+// which is easier to notice than a silent auto-create.
 async function insertOwner(tx: Database, id: Uuid): Promise<void> {
   await tx.insert(owner).values({ id });
   await tx.insert(profile).values({ id: newUuid(), ownerId: id });
@@ -79,9 +75,8 @@ export function openLocalStore(options: { dataDir?: string } = {}): LocalStore {
     migrate: async () => await migratePglite(db, { migrationsFolder: MIGRATIONS_FOLDER }),
     createOwner: async (id) => await db.transaction(async (tx) => await insertOwner(tx, id)),
 
-    // Local mode holds exactly one owner (data-model.md #4), minted on first
-    // launch and stable afterwards. The look-up and the insert share a
-    // transaction so a second caller cannot mint a second one.
+    // The look-up and the insert share a transaction, so a second caller cannot
+    // mint a second owner.
     ensureLocalOwner: async () =>
       await db.transaction(async (tx) => {
         const rows = await tx.select({ id: owner.id }).from(owner).limit(2);
@@ -110,11 +105,8 @@ export function openServerStore(options: { connectionString: string }): Store {
   return {
     unitOfWork: unitOfWork(db),
 
-    // Behind an advisory lock, because two processes migrating one database at
-    // once is normal - a rolling deploy, or the test suite running its files in
-    // parallel - and drizzle's `create table if not exists` for its own
-    // bookkeeping table is not safe against a concurrent one. It fails on
-    // pg_type's unique index, which reads as nothing to do with migrations.
+    // Behind an advisory lock: drizzle's own bookkeeping table is not concurrency
+    // safe, and two migrating processes fail on pg_type's unique index.
     migrate: async () => {
       const client = await pool.connect();
       try {

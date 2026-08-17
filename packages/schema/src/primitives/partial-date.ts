@@ -1,13 +1,11 @@
 import { z } from "zod";
 
-// The `partial_date` domain in @keepcv/db repeats this exact source. A test
-// there feeds both the same values and fails if they disagree, so the CHECK and
-// the wire contract cannot drift (data-model.md #3.4).
+// The `partial_date` domain in @keepcv/db repeats this source, and a test there
+// feeds both the same values so the CHECK and the wire contract cannot drift.
 export const PARTIAL_DATE_PATTERN = String.raw`^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$`;
 
-// JavaScript's `$` also matches before a trailing newline; Postgres's `~` does
-// not. Without the lookahead "2019\n" parses here and then fails the domain
-// CHECK on insert.
+// JavaScript's `$` matches before a trailing newline and Postgres's `~` does
+// not, so without the lookahead "2019\n" parses here and fails the CHECK.
 const partialDate = new RegExp(`${PARTIAL_DATE_PATTERN}(?![\\s\\S])`);
 
 export const partialDateSchema = z

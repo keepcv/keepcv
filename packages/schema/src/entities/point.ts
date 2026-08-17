@@ -9,11 +9,7 @@ export const POINT_CONFIDENCES = ["verified", "estimated", "unverified"] as cons
 
 export const pointConfidenceSchema = z.enum(POINT_CONFIDENCES);
 
-// The atomic content unit - never "achievement", "bullet" or "highlight". One
-// primitive with optional facets rather than a family of near-identical types,
-// which is what lets a template iterate points without knowing which section it
-// is in. `recordId` is nullable so a point can be captured before it is decided
-// where it belongs.
+// The atomic content unit - never "achievement", "bullet" or "highlight".
 export const pointSchema = z
   .object({
     ...standardFields,
@@ -25,23 +21,16 @@ export const pointSchema = z
   })
   .meta({ id: "Point", title: "Point" });
 
-// A point arrives with the words it exists to hold: its phrasing set is created
-// with it, in one transaction, so a point with nothing to say is not a state
-// anyone can reach. Both ids are the caller's, as everywhere else.
 export const pointInputSchema = pointSchema
   .omit({ createdAt: true, updatedAt: true, archivedAt: true })
   .extend({ phrasing: newPhrasingSchema });
 
-// No `phrasingSetId`: text changes by appending a revision to the set the point
-// already has, never by pointing the point at a different one.
+// No `phrasingSetId`: text changes by appending a revision, never by repointing.
 export const pointPatchSchema = pointInputSchema
   .omit({ id: true, phrasingSetId: true, phrasing: true })
   .partial();
 
-// A point's secondary parents. `Point.recordId` decides where it prints; these
-// say it also relates to a record, which is what discovery and selection read.
-// The pair is the whole row - a link holds nothing of its own, so it has no id
-// and no lifecycle.
+// The pair is the whole row, so it has no id and no lifecycle.
 export const pointRecordLinkSchema = z
   .object({
     pointId: uuidSchema,

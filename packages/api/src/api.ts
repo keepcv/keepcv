@@ -18,9 +18,7 @@ export const OPENAPI_PATH = "/v1/openapi.json";
 
 export interface ApiOptions {
   unitOfWork: UnitOfWork;
-  // The scope every repository call reads its owner from. The implementation
-  // supplies it - @keepcv/db uses AsyncLocalStorage - so nothing here depends on
-  // a driver, and the private cloud adapter brings its own (api-contract.md #4).
+  // Supplied by the implementation, so nothing here depends on a driver.
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
   authenticate: Authenticate;
 }
@@ -38,8 +36,7 @@ export function createApi(options: ApiOptions) {
   const app = router();
 
   app.use("/v1/*", async (c, next) => {
-    // The document describes the contract and tooling fetches it before it has a
-    // token, so it is the one thing under /v1 outside the guard.
+    // Tooling fetches this before it has a token, so it is outside the guard.
     if (c.req.path === OPENAPI_PATH) {
       await next();
       return;
@@ -48,8 +45,7 @@ export function createApi(options: ApiOptions) {
     if (ownerId === undefined) {
       throw new UnauthorizedError();
     }
-    // Entered once per request, so every repository call underneath is scoped by
-    // construction rather than by each handler remembering to.
+    // Entered once per request, so every call underneath is scoped by construction.
     await runAsOwner(ownerId, async () => {
       await next();
     });
@@ -67,8 +63,7 @@ export function createApi(options: ApiOptions) {
 
   app.onError((error, c) => answer(problemFor(error, c.req.path)));
 
-  // Hono's own 404 is an empty text body, which a client cannot tell apart from
-  // a route that answered nothing.
+  // Hono's own 404 is an empty text body, which a client cannot type.
   app.notFound((c) =>
     answer({
       type: PROBLEM_TYPES.notFound,
@@ -79,8 +74,8 @@ export function createApi(options: ApiOptions) {
     }),
   );
 
-  // Chained rather than mounted one per statement: the typed client is built
-  // from this return type, and Hono accumulates route types only along a chain.
+  // Chained, not mounted per statement: Hono accumulates route types only along
+  // a chain, and the typed client is built from this return type.
   return app
     .route("/", profileRoutes(options.unitOfWork))
     .route("/", organisationRoutes(options.unitOfWork))

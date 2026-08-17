@@ -8,8 +8,8 @@ import { type OwnedTable, requireOwned, toTimestamp } from "./owned-row.js";
 
 type DraftRow = typeof draft.$inferSelect;
 
-// A kind with nothing to check against is one the check constraint refuses, so
-// the vocabulary is declared once in the table rather than twice.
+// An unknown kind falls through to draft_target_kind_check, so the vocabulary is
+// declared once rather than twice.
 const TARGETS: Record<string, OwnedTable | undefined> = { phrasing, record };
 
 function toDraft(row: DraftRow): Draft {
@@ -50,9 +50,7 @@ export function createDraftRepository(db: Database): DraftRepository {
       return rows.map(toDraft);
     },
 
-    // An upsert, because a draft is the newest keystrokes and the ones after it
-    // replace it. `created_at` stays where it was, so the editor can say how long
-    // the unsaved text has been sitting there.
+    // `created_at` stays put, so the editor can say how long the text has sat.
     async save(target, body) {
       await requireTarget(target);
       const [row] = await db
@@ -69,9 +67,7 @@ export function createDraftRepository(db: Database): DraftRepository {
       return toDraft(row);
     },
 
-    // The one delete in the store, and deliberate: by the time a draft is
-    // discarded its text is either a revision or something the user explicitly
-    // abandoned. Discarding one that was never there is the same answer.
+    // The one delete in the store, and deliberate (data-model.md #5).
     async discard(target) {
       await requireTarget(target);
       await db.delete(draft).where(keyed(target));

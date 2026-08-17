@@ -26,8 +26,7 @@ function Nudge({ count, children }: { count: number; children: ReactNode }) {
   );
 }
 
-// The cold re-entry screen: everything on it answers "where was I", which is
-// what returning after ninety days needs (application-structure.md #5.1).
+// The cold re-entry screen (application-structure.md #5.1).
 export function Overview({ store, asOf }: { store: Store; asOf: string }) {
   const summary = overview(store, { asOf });
   const { unfinished } = summary;

@@ -14,9 +14,7 @@ import { quoted } from "./vocabulary.js";
 
 const KINDS = ["repo", "demo", "docs", "verify", "recording", "other"];
 
-// One link table for every record kind rather than a `verification_url` here and
-// a `recording_url` there. The dividing rule is in data-model.md #6: a URL is a
-// link, a labelled value is a field.
+// A URL is a link; a labelled value is a field (data-model.md #6).
 export const recordLink = pgTable(
   "record_link",
   {

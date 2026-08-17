@@ -8,9 +8,8 @@ export type Inline =
 
 const MAX_MARK_DEPTH = 3;
 
-// A regex rather than a refinement so the restriction survives into the
-// published JSON Schema and a third-party validator enforces it too. The point
-// of the restriction is that `javascript:` never reaches a renderer.
+// A regex, not a refinement, so it survives into the published JSON Schema. The
+// point of it is that `javascript:` never reaches a renderer.
 const HREF = /^(?:https?|mailto):\S+$/;
 
 // Named because it recurses: without an id the published JSON Schema calls the
@@ -43,8 +42,7 @@ function violation(nodes: Inline[], depth: number, insideLink: boolean): string 
   return null;
 }
 
-// One paragraph, no block constructs (data-model.md #3.6). Merging adjacent
-// text nodes is canonicalisation, so it belongs to @keepcv/core, not parsing.
+// One paragraph, no block constructs (data-model.md #3.6).
 export const richTextSchema = z.array(inlineSchema).superRefine((nodes, ctx) => {
   const message = violation(nodes, 0, false);
   if (message !== null) ctx.addIssue({ code: "custom", message });

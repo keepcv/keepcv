@@ -324,26 +324,61 @@ names, collapsing branches into ternaries, or golfing.
 
 ### Comment only when a comment is load-bearing
 
-**The default is no comment.** Rationale belongs in the written record - the
-specs, the product context, the ADRs - where it is versioned, indexed and
-findable. A copy in a comment block is a second copy, and it is the one nobody
-updates.
+**The default is no comment.** Most declarations need none.
 
-Write one only where a reader would otherwise be misled or reintroduce a bug: a
-non-obvious invariant, a deliberate deviation, a subtle case the code cannot
-express, a bug actually hit once. Name the concrete failure when there was one.
+**Apply the deletion test before writing one.** Delete it, and ask what the next
+reader does wrong. If they write a bug, keep the comment and name that bug. If
+they would merely not know why it is done this way, delete it - that is spec
+prose, and a copy in the code is the copy nobody updates.
 
-- **One line. Two if the case really needs it.** Longer means it is spec
-  material: put it there and leave a pointer (`data-model.md #3.6`). Never cite
-  an ADR number or `PRODUCT.md` - those files are not pushed, so the reference
-  resolves for nobody but you.
-- **Not on every export.** A file annotated throughout is a file where the one
-  load-bearing comment is invisible. Most declarations need none.
+A comment earns its place by naming one of exactly three things:
+
+- **a constraint, by name** - `tag_slug_unique`, `noUncheckedIndexedAccess`,
+  `phrasing_revision_content_hash_unique`
+- **a failure that has actually happened** - not one that could
+- **a case the types cannot express** and the next edit would silently break
+
+**"X rather than Y, so that Z" is not one of them.** That form is the design
+argument, and the design argument lives in `docs/architecture/`. If it matters,
+put it there and leave the bare pointer - `data-model.md #3.6` - as the entire
+comment. A pointer plus a paragraph is the paragraph in two places.
+
+**When the argument lives in an ADR, the code gets no comment at all.** ADRs are
+not pushed, so nothing in the code can reach one and nothing may cite one. Write
+the conclusion into `docs/architecture/` in the same change and point at that.
+The pull of an unreachable ADR is what produces most bad comments here.
+
+**One line. Two only if the case genuinely needs it.** Three is a spec section
+that has escaped into the code. Aim for zero comments in a file; one is normal;
+a file wanting three is telling you the naming is wrong or `docs/architecture/`
+is missing a paragraph.
+
+A worked example, from this repository before the bar was applied:
+
+```ts
+// First-class rather than a string on each record, so two roles at one company
+// group under a single heading and a certification, a talk and a paper can share
+// one issuer identity (data-model.md #6). No sort key: organisations are listed
+// by name, never dragged.
+export const organisationSchema = z.object({ ... });
+```
+
+Three sentences of `data-model.md` #6 copied, plus one restating a field that is
+not there. It became:
+
+```ts
+export const organisationSchema = z.object({ ... });
+```
+
+Also:
+
 - Do not restate the code. If a comment paraphrases the line under it, delete it
   and name things better instead.
 - Do not write JSDoc for self-evident signatures. Types already say it.
 - Do not leave section banners, `// eslint-disable` without a reason, or
   scaffolding comments describing what you are about to write.
+- **A test comment names the failure the test guards, in one line**, or there is
+  no comment. The test name says what; the comment says what breaks without it.
 
 When you touch a file, the same bar applies to the comments already in it: an
 over-long or now-redundant one gets cut down, not preserved out of politeness.

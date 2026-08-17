@@ -10,9 +10,7 @@ const setId = "019891a4-6ac5-7000-8000-0000000000a1";
 const phrasingId = "019891a4-6ac5-7000-8000-0000000000a2";
 const revisionId = "019891a4-6ac5-7000-8000-0000000000a3";
 
-// The repository has no update path for a revision, so this is the half of I2
-// that does not depend on the repository being right: raw SQL, going straight at
-// the row.
+// The half of I2 that does not depend on the repository: raw SQL at the row.
 describe("phrasing_revision immutability", () => {
   const client = new PGlite();
 

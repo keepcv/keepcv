@@ -41,8 +41,7 @@ interface Standard {
   archivedAt: Timestamp | null;
 }
 
-// The owner comes from ambient scope and never from the document, so importing
-// somebody else's export cannot write into their store.
+// The owner comes from ambient scope, never from the document.
 function standardRow(entity: Standard, ownerId: Uuid) {
   return {
     id: entity.id,
@@ -53,8 +52,7 @@ function standardRow(entity: Standard, ownerId: Uuid) {
   };
 }
 
-// Every kind-specific column, so a record row carries the same key set whatever
-// its kind is and the columns its kind does not own go in as null.
+// So a record row carries the same key set whatever its kind is.
 const kindColumns = {
   employmentType: null,
   mode: null,
@@ -78,8 +76,7 @@ export function createStoreRepository(
   db: Database,
   repositories: Omit<Repositories, "store">,
 ): StoreRepository {
-  // Drizzle refuses an insert with no rows, and most collections in an export
-  // are empty, so every load below would otherwise carry the same guard.
+  // Drizzle refuses an insert with no rows, and most collections are empty.
   async function insertAll<T extends PgTable>(table: T, values: PgInsertValue<T>[]): Promise<void> {
     if (values.length > 0) {
       await db.insert(table).values(values);
@@ -97,10 +94,8 @@ export function createStoreRepository(
       recordFields: await repositories.records.listFields(everything),
       phrasingSets: await repositories.phrasings.listSets(everything),
       phrasings: await repositories.phrasings.list(everything),
-      // The export takes every revision, not just the current one: superseded
-      // wordings are things the user wrote, and dropping them is a delete. The
-      // boot payload takes the current ones, because history grows without bound
-      // and it is fetched on every open.
+      // The export takes every revision: dropping a superseded wording is a
+      // delete. The boot payload takes the current ones (api-contract.md #3).
       phrasingRevisions: await repositories.phrasings.listRevisions({ currentOnly }),
       points: await repositories.points.list(everything),
       pointRecordLinks: await repositories.points.listRecordLinks(),
@@ -109,17 +104,12 @@ export function createStoreRepository(
       tags: await repositories.tags.list(everything),
       recordTags: await repositories.tags.listRecordTags(),
       pointTags: await repositories.tags.listPointTags(),
-      // In the boot payload too, unlike revision history: a draft is the newest
-      // thing the user wrote, there is at most one per field, and the editor has
-      // to know one is waiting before it opens.
       drafts: await repositories.drafts.list(),
     };
   }
 
-  // In the order the subsystem is created in: each of the three tables references
-  // the next, so the pointers back are filled once every row exists
-  // (data-model.md #5). It runs before the profile and the records because both
-  // can point at a set.
+  // Each of the three references the next, so the pointers back are filled once
+  // every row exists. Before the profile and the records, which point at a set.
   async function loadPhrasings(store: Store, ownerId: Uuid): Promise<void> {
     await insertAll(
       phrasingSet,
@@ -137,8 +127,7 @@ export function createStoreRepository(
         currentRevisionId: null,
       })),
     );
-    // Derived again rather than trusted: a hand-edited file whose plain text
-    // disagrees with its body would otherwise make I8 false in the store.
+    // Derived again rather than trusted, or a hand-edited file makes I8 false.
     await insertAll(
       phrasingRevision,
       store.phrasingRevisions.map((row) => ({
@@ -164,8 +153,8 @@ export function createStoreRepository(
     }
   }
 
-  // Last, because a point references both a record and a phrasing set, and its
-  // metrics and evidence reference it.
+  // Last: a point references a record and a phrasing set, and is referenced by
+  // its metrics and evidence.
   async function loadPoints(store: Store, ownerId: Uuid): Promise<void> {
     await insertAll(
       point,
@@ -189,8 +178,7 @@ export function createStoreRepository(
     );
   }
 
-  // Reading the whole store to decide costs kilobytes and covers a collection
-  // added to the format later without anyone remembering to extend a list.
+  // Reading the whole store covers a collection added to the format later.
   async function requireEmpty(): Promise<void> {
     const current = await read();
     for (const [collection, value] of Object.entries(current)) {
@@ -215,8 +203,7 @@ export function createStoreRepository(
 
       await loadPhrasings(store, ownerId);
 
-      // The profile row is created with the owner, so it is overwritten rather
-      // than inserted - id included, since the export carries one.
+      // Created with the owner, so it is overwritten rather than inserted.
       await db
         .update(profile)
         .set({ ...store.profile, ...standardRow(store.profile, ownerId) })
@@ -230,9 +217,7 @@ export function createStoreRepository(
         organisation,
         store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
-      // The slug is derived again rather than trusted, for the reason a
-      // revision's plain text is: a hand-edited file whose slug disagrees with
-      // its label would otherwise make I17 false in the store it loaded into.
+      // Derived again rather than trusted, or a hand-edited file makes I17 false.
       await insertAll(
         tag,
         store.tags.map((row) => ({
@@ -265,8 +250,7 @@ export function createStoreRepository(
 
       await loadPoints(store, ownerId);
 
-      // Last, because a draft names a row in one of the tables above and the
-      // repository checks that the row is there.
+      // Last: a draft names a row above, and the repository checks it is there.
       await insertAll(
         draft,
         store.drafts.map((row) => ({

@@ -3,9 +3,8 @@ import { boolean, check, index, pgTable, primaryKey, text, uniqueIndex } from "d
 import { standardColumns } from "./owner.js";
 import { quoted } from "./vocabulary.js";
 
-// A `text` column with a CHECK rather than a Postgres enum type, because a CHECK
-// can be narrowed as well as widened by an ordinary migration and an enum cannot
-// drop a value without a type rewrite (data-model.md #3.3).
+// A CHECK rather than a Postgres enum: an enum cannot drop a value without a
+// type rewrite (data-model.md #3.3). Every vocabulary in this schema follows it.
 const KINDS = [
   "email",
   "phone",

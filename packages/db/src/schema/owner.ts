@@ -1,16 +1,11 @@
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-// Millisecond precision throughout, not the microseconds Postgres defaults to.
-// `updated_at` is the optimistic-concurrency token (api-contract.md #2), so it
-// travels to the client as an ISO string and comes back to be compared: at
-// microsecond precision that comparison never matches, because a JavaScript
-// Date cannot carry the digits it was given.
+// Milliseconds, not the microseconds Postgres defaults to: a JavaScript Date
+// cannot carry them, so every second write would look like a conflict.
 export function instant(name: string) {
   return timestamp(name, { withTimezone: true, precision: 3 });
 }
 
-// The tenancy anchor. Local mode holds exactly one row; when accounts land it
-// gains a nullable link to Better Auth's user table and no other table changes.
 export const owner = pgTable("owner", {
   id: uuid("id").primaryKey(),
   createdAt: instant("created_at").notNull().defaultNow(),
@@ -19,10 +14,8 @@ export const owner = pgTable("owner", {
   lastOpenedAt: instant("last_opened_at"),
 });
 
-// data-model.md #3.1. Immutable tables omit `updated_at` and `archived_at`, so
-// they do not use this. The primary key is `(owner_id, id)` and each table
-// declares it: identity is owner-scoped, so restoring an export never collides
-// with a store some other owner already imported.
+// data-model.md #3.1. Each table declares the `(owner_id, id)` primary key
+// itself: identity is owner-scoped, so restoring an export never collides.
 export function standardColumns() {
   return {
     id: uuid("id").notNull(),
