@@ -35,8 +35,7 @@ const SECTION_KINDS = [
 
 const LAYOUTS = ["entries", "inline", "grouped"];
 
-// A selection over the store (data-model.md #9.1). No template columns and no
-// `current_version_id`: those arrive with the capabilities that own them.
+// data-model.md #9.1.
 export const resume = pgTable(
   "resume",
   {
@@ -77,9 +76,7 @@ export const resumeSection = pgTable(
       sql.raw(`(kind = 'custom') = (custom_section_id is not null)`),
     ),
     unique("resume_section_sort_key_unique").on(table.ownerId, table.resumeId, table.sortKey),
-    // One section per heading: two "Experience" blocks on one resume is a
-    // composition nothing can render sensibly. NULLS NOT DISTINCT so the rule
-    // reads on the kind alone everywhere but `custom`.
+    // NULLS NOT DISTINCT, so the rule reads on the kind alone but `custom`.
     unique("resume_section_kind_unique")
       .on(table.ownerId, table.resumeId, table.kind, table.customSectionId)
       .nullsNotDistinct(),
@@ -112,9 +109,8 @@ export const resumeEntry = pgTable(
     unique("resume_entry_record_unique").on(table.ownerId, table.resumeSectionId, table.recordId),
     unique("resume_entry_sort_key_unique").on(table.ownerId, table.resumeSectionId, table.sortKey),
     index("resume_entry_record_idx").on(table.ownerId, table.recordId),
-    // Carrying the resume id into the reference is what makes "this entry's
-    // section is on this entry's resume" a foreign key rather than a check
-    // nobody runs (data-model.md I15).
+    // I15: the resume id is in the reference, so a cross-resume section cannot
+    // be named.
     foreignKey({
       name: "resume_entry_section_fk",
       columns: [table.ownerId, table.resumeId, table.resumeSectionId],
@@ -141,9 +137,7 @@ export const resumeEntryPoint = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
-    // I13, and the reason `resume_id` is carried down here: a point reachable
-    // from two records could otherwise be placed under two entries and print
-    // twice, which is always a mistake.
+    // I13, which needs `resume_id` on this row to be an index at all.
     unique("resume_entry_point_unique").on(table.ownerId, table.resumeId, table.pointId),
     unique("resume_entry_point_sort_key_unique").on(
       table.ownerId,

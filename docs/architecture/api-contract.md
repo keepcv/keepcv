@@ -150,11 +150,13 @@ DELETE /v1/drafts/:targetKind/:targetId/:field
 CRUD   /v1/tags                        ?archived=
 POST   /v1/tags/:id/merge              { expectedUpdatedAt, intoTagId }
 
-CRUD   /v1/resumes
-GET    /v1/resumes/:id/composition     sections, entries, points
-PATCH  /v1/resumes/:id/sections/:sid            heading, layout, visibility, sortKey
-PATCH  /v1/resumes/:id/entries/:eid             visibility, sortKey
-PATCH  /v1/resumes/:id/entries/:eid/points/:pid phrasingId, visibility, sortKey
+CRUD   /v1/resumes                     ?archived=
+CRUD   /v1/resume-sections             ?resumeId=&archived=
+CRUD   /v1/resume-entries              ?resumeId=&resumeSectionId=&archived=
+CRUD   /v1/resume-entry-points         ?resumeId=&resumeEntryId=&archived=
+GET    /v1/resumes/:id/contact-channels          the overrides this resume carries
+PUT    /v1/resumes/:id/contact-channels/:channelId  { isVisible }; idempotent
+DELETE /v1/resumes/:id/contact-channels/:channelId  revert to the channel's default
 GET    /v1/resumes/:id/document        compiled ResumeDocument (server-side)
 
 GET    /v1/resumes/:id/versions
@@ -183,8 +185,9 @@ Notes on the non-obvious ones:
   heading is a `record` of kind `custom_entry`, so it is created and listed
   through `/v1/records` like every other kind; the section id is a field of the
   record, and moving an entry between headings is a `PATCH` of it.
-- **Metrics, evidence, links and fields are flat collections** narrowed by
-  `?pointId` or `?recordId`, not nested under their parent. The store keys one
+- **Metrics, evidence, links, fields and the three levels of a resume's
+  composition are flat collections** narrowed by `?pointId`, `?recordId` or
+  `?resumeId`, not nested under their parent. The store keys one
   by its own id alone, so a parent in the path would be an identifier no query
   reads and the row could contradict - `/v1/records/A/links/L` where `L` belongs
   to `B` has to mean something, and every answer is worse than not being able to
@@ -197,6 +200,23 @@ Notes on the non-obvious ones:
   that does not exist: an empty list would read as "this point relates to
   nothing" or "this phrasing has never said anything", and neither is a state the
   store can be in.
+- **There is no `GET /v1/resumes/:id/composition`.** What a resume is made of is
+  `composition(store, resumeId)` in `@keepcv/core`, for the reason there is no
+  `/v1/store/summary`: every row it reads is already in the boot payload, so a
+  route would answer with data the client holds and the preview would resolve a
+  resume twice, once per side. The three collections above are what a client
+  writes through; reading is a selector.
+- **A resume's contact channels are overrides, and nested.** The pair is the
+  whole row, like a tag assignment: `PUT` carries only `isVisible` and no
+  concurrency token, and `DELETE` is a revert to the channel's own
+  `isDefaultVisible` rather than a hide - so clearing one that was never
+  overridden is the same `204`. A channel with no row prints by its own default,
+  which is why creating a resume writes none of them.
+- **A composition row is never moved between resumes.** `resumeId` - and a
+  section's `kind` - are what the row was created as, and no patch schema has a
+  key for them, so a body naming one has it dropped at the boundary. Moving an
+  entry to another resume is adding it there and archiving it here; the two
+  resumes then hold their own phrasing choices, which is the point.
 - **There is no `GET /v1/search`.** Search is a pure function over the boot
   payload the client already holds (data-model.md #8), so it is a selector in
   `@keepcv/core` rather than a route - the same reasoning as there being no

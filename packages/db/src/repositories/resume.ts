@@ -99,7 +99,6 @@ export function createResumeRepository(db: Database): ResumeRepository {
   ): Promise<Row> => await updateOwned<Row>(db, table, entity, id, expectedUpdatedAt, changes);
 
   return {
-    // By name, like an organisation: a resume is looked up rather than dragged.
     async list(options) {
       const rows = await db
         .select()
@@ -150,6 +149,10 @@ export function createResumeRepository(db: Database): ResumeRepository {
       return rows.map(toSection);
     },
 
+    async getSection(id) {
+      return toSection(await requireOwned<SectionRow>(db, resumeSection, "resume section", id));
+    },
+
     async addSection(input) {
       await requireOwned<ResumeRow>(db, resume, "resume", input.resumeId);
       return toSection(await insertOwned(db, resumeSection, "resume section", input));
@@ -197,6 +200,10 @@ export function createResumeRepository(db: Database): ResumeRepository {
       return rows.map(toEntry);
     },
 
+    async getEntry(id) {
+      return toEntry(await requireOwned<EntryRow>(db, resumeEntry, "resume entry", id));
+    },
+
     async addEntry(input) {
       await requireOwned<SectionRow>(db, resumeSection, "resume section", input.resumeSectionId);
       return toEntry(await insertOwned(db, resumeEntry, "resume entry", input));
@@ -242,6 +249,12 @@ export function createResumeRepository(db: Database): ResumeRepository {
         )
         .orderBy(asc(resumeEntryPoint.resumeEntryId), asc(resumeEntryPoint.sortKey));
       return rows.map(toEntryPoint);
+    },
+
+    async getEntryPoint(id) {
+      return toEntryPoint(
+        await requireOwned<EntryPointRow>(db, resumeEntryPoint, "resume entry point", id),
+      );
     },
 
     async addEntryPoint(input) {
@@ -310,8 +323,7 @@ export function createResumeRepository(db: Database): ResumeRepository {
       return resumeContactChannelSchema.parse({ resumeId, contactChannelId, isVisible });
     },
 
-    // A revert to the channel's own default, so clearing one that was never set
-    // is the same answer.
+    // A revert, so clearing one that was never set is the same answer.
     async clearContactChannel(resumeId, contactChannelId) {
       await requireOwned<ResumeRow>(db, resume, "resume", resumeId);
       await db

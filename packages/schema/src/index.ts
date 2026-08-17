@@ -183,8 +183,10 @@ export {
   resumeSectionPatchSchema,
   resumeSectionSchema,
   SECTION_KINDS,
+  SECTION_LAYOUTS,
   type SectionKind,
   sectionKindSchema,
+  sectionLayoutSchema,
 } from "./entities/resume.js";
 export {
   type PointTag,

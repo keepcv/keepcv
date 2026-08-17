@@ -12,9 +12,10 @@ RPC would not be.
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact
 > channels, organisations, custom sections, records, points, phrasings, tags,
-> drafts and everything hanging off them - plus the boot payload and the native
-> export and import. Resumes and versions follow. There is no search route:
-> search is a pure function over the boot payload, in `@keepcv/core`.
+> drafts and everything hanging off them - the composition a resume is, and the
+> boot payload and the native export and import. Versions follow. There is no
+> search route and no composition route: both are pure functions over the boot
+> payload, in `@keepcv/core`.
 
 ## Installation
 
@@ -85,6 +86,13 @@ const response = await client.v1.profile.$get();
   concurrency token, so keystrokes never become revisions and nothing half-written
   is lost. Drafts arrive with the boot payload, so an editor knows one is waiting
   before it opens.
+- **A resume is a selection, and it is composed rather than copied.**
+  `/v1/resumes` holds what a resume is aimed at; `/v1/resume-sections`,
+  `/v1/resume-entries` and `/v1/resume-entry-points` hold what it selects, each
+  narrowed by `?resumeId=`. Toggling something off sets `isVisible`, so the
+  wording chosen and the position it sat in survive, and a point can appear at
+  most once on one resume. Reading a whole resume is `composition(store, id)` in
+  `@keepcv/core`, not a route.
 - **One request boots a client.** `GET /v1/store` answers the whole store,
   archived rows included, so filters and counts are selectors over cached data
   rather than requests. It carries the wording each phrasing says now and not the

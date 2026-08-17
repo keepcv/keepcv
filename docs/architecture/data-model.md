@@ -852,56 +852,81 @@ resume (
   target_role      text null,
   target_url       text null,
   target_jd_text   text null,
-  applied_on       partial_date null,
-  template_id      text not null,
-  template_version text not null,
-  template_config  jsonb not null,   -- validated against the template's configSchema
-  current_version_id uuid null references resume_version(id)
+  applied_on       partial_date null
 )
 
 resume_section (
   ...standard,
-  resume_id uuid not null references resume(id) on delete cascade,
+  resume_id uuid not null,
   kind       text not null,
-  custom_section_id uuid null references custom_section(id),  -- required iff kind='custom'
+  custom_section_id uuid null,      -- required iff kind='custom'
   heading    text null,             -- override; null = template default
   layout     text null,             -- override for the layout hint
   sort_key   text not null,
   is_visible boolean not null default true,
-  check ((kind = 'custom') = (custom_section_id is not null))
+  foreign key (owner_id, resume_id) references resume on delete cascade,
+  foreign key (owner_id, custom_section_id) references custom_section,
+  check ((kind = 'custom') = (custom_section_id is not null)),
+  unique (owner_id, resume_id, sort_key),
+  unique nulls not distinct (owner_id, resume_id, kind, custom_section_id)
 )
 
 resume_entry (
   ...standard,
-  resume_section_id uuid not null references resume_section(id) on delete cascade,
-  record_id  uuid not null references record(id),
+  resume_id uuid not null,
+  resume_section_id uuid not null,
+  record_id  uuid not null,
   sort_key   text not null,
   is_visible boolean not null default true,
-  unique (resume_section_id, record_id)
+  foreign key (owner_id, resume_id, resume_section_id)
+    references resume_section (owner_id, resume_id, id) on delete cascade,
+  foreign key (owner_id, record_id) references record,
+  unique (owner_id, resume_section_id, record_id),
+  unique (owner_id, resume_section_id, sort_key)
 )
 
 resume_entry_point (
   ...standard,
-  resume_entry_id uuid not null references resume_entry(id) on delete cascade,
-  point_id    uuid not null references point(id),
-  phrasing_id uuid not null references phrasing(id),   -- LIVE, not pinned
+  resume_id uuid not null,
+  resume_entry_id uuid not null,
+  point_id    uuid not null,
+  phrasing_id uuid not null,        -- LIVE, not pinned
   sort_key   text not null,
   is_visible boolean not null default true,
-  unique (resume_entry_id, point_id)
+  foreign key (owner_id, resume_id, resume_entry_id)
+    references resume_entry (owner_id, resume_id, id) on delete cascade,
+  foreign key (owner_id, point_id) references point,
+  foreign key (owner_id, phrasing_id) references phrasing,
+  unique (owner_id, resume_id, point_id),
+  unique (owner_id, resume_entry_id, sort_key)
 )
 
 resume_contact_channel (
-  resume_id, contact_channel_id, is_visible boolean not null,
-  primary key (resume_id, contact_channel_id)
+  owner_id, resume_id, contact_channel_id, is_visible boolean not null,
+  primary key (owner_id, resume_id, contact_channel_id)
 )
 ```
 
-**A point may appear at most once per resume.** `unique (resume_entry_id,
-point_id)` only prevents duplication within one entry. Because a point can be
-linked to several records (`point_record_link`), it could otherwise be placed
-under two entries and print twice. A line appearing twice on a resume is always
-a mistake, so uniqueness is enforced per resume - and the composer shows where
-a point is already placed rather than silently refusing to add it.
+**No template columns and no `current_version_id` yet.** A `template_config` has
+nothing to validate against until a template package exists, and
+`current_version_id` references a table the Versions capability creates. Both
+arrive with the capability that owns them, by the expand step of an
+expand/contract migration.
+
+**A point may appear at most once per resume**, which is why `resume_id` is
+carried down onto entries and entry points rather than reached through the
+parent. Uniqueness per entry only prevents duplication within one entry, and a
+point linked to several records could otherwise be placed under two entries and
+print twice - always a mistake. Carrying the id makes both that rule and I15 a
+foreign key rather than a check nobody runs: an entry's section must belong to
+the entry's resume, because the reference says so. The composer shows where a
+point is already placed rather than silently refusing to add it.
+
+**One section per heading.** `unique nulls not distinct (owner_id, resume_id,
+kind, custom_section_id)` - two "Experience" blocks on one resume is a
+composition nothing can render sensibly, and NULLS NOT DISTINCT is what lets the
+rule read on the kind alone everywhere but `custom`, where two custom sections
+are distinct because what they print is.
 
 **Archiving a record does not remove it from a resume.** The composition row
 survives, so the choice and position are not destroyed (P-B). The record is
@@ -1034,9 +1059,9 @@ Enforced by constraint where possible, by test where not.
 | I10 | `import(export(store)) == store` | round-trip test over a covering store, required by every slice |
 | I11 | `sort_key` is unique within its parent scope | unique index per scope |
 | I12 | `resume_content_ref` is exactly derivable from manifests | rebuild-and-compare test |
-| I13 | A point appears at most once per resume | unique index across the resume |
+| I13 | A point appears at most once per resume | `unique (owner_id, resume_id, point_id)`, which the entry point can carry because `resume_id` is on it |
 | I14 | Every record kind has exactly one presenter | exhaustiveness check + test |
-| I15 | A canonical phrasing belongs to its set, and a current revision to its phrasing | composite foreign key carrying the parent's own id |
+| I15 | A canonical phrasing belongs to its set, a current revision to its phrasing, and a resume's entry to a section of that same resume | composite foreign key carrying the parent's own id |
 | I16 | A point's primary record is not also one of its secondary links | repository refuses the link and drops it on promotion + test |
 | I17 | `tag.slug` always equals the projection of `tag.label` | derived on write, and derived again on import rather than trusted; test |
 | I18 | Every `draft` names a row that exists | repository checks the target on write; no foreign key can, because the target is polymorphic |

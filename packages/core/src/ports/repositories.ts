@@ -325,10 +325,8 @@ export interface TagRepository {
 
 // Keyed by what it drafts. `save` overwrites and takes no token; `discard` is
 // the one delete the store performs (data-model.md #5).
-// A selection over the store, and one aggregate: sections, entries and the
-// points under them have no life apart from the resume they compose
-// (data-model.md #9.1). Every row carries `resumeId` so its parent reference can
-// include it, which is what makes I13 and I15 foreign keys rather than checks.
+// One aggregate: sections, entries and the points under them have no life apart
+// from the resume they compose (data-model.md #9.1).
 export interface ResumeRepository {
   list(options?: { includeArchived?: boolean | undefined }): Promise<Resume[]>;
   get(id: Uuid): Promise<Resume>;
@@ -337,12 +335,13 @@ export interface ResumeRepository {
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Resume>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Resume>;
 
-  // Nothing below deletes. Toggling a record out of a resume sets `isVisible`,
-  // so the phrasing choice and the position it had survive the toggle.
+  // Nothing below deletes: toggling a record out sets `isVisible`, so the
+  // phrasing choice and the position survive it.
   listSections(options?: {
     resumeId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<ResumeSection[]>;
+  getSection(id: Uuid): Promise<ResumeSection>;
   addSection(input: ResumeSectionInput): Promise<ResumeSection>;
   updateSection(
     id: Uuid,
@@ -357,6 +356,7 @@ export interface ResumeRepository {
     resumeSectionId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<ResumeEntry[]>;
+  getEntry(id: Uuid): Promise<ResumeEntry>;
   addEntry(input: ResumeEntryInput): Promise<ResumeEntry>;
   updateEntry(
     id: Uuid,
@@ -371,6 +371,7 @@ export interface ResumeRepository {
     resumeEntryId?: Uuid | undefined;
     includeArchived?: boolean | undefined;
   }): Promise<ResumeEntryPoint[]>;
+  getEntryPoint(id: Uuid): Promise<ResumeEntryPoint>;
   addEntryPoint(input: ResumeEntryPointInput): Promise<ResumeEntryPoint>;
   updateEntryPoint(
     id: Uuid,
@@ -380,8 +381,7 @@ export interface ResumeRepository {
   archiveEntryPoint(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntryPoint>;
   restoreEntryPoint(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntryPoint>;
 
-  // An override: a channel with no row here uses its own `isDefaultVisible`, so
-  // clearing one is a revert rather than a hide.
+  // An override: clearing one reverts to the channel's own `isDefaultVisible`.
   listContactChannels(options?: { resumeId?: Uuid | undefined }): Promise<ResumeContactChannel[]>;
   setContactChannel(
     resumeId: Uuid,
