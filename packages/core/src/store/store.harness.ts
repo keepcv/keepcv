@@ -52,6 +52,7 @@ export function emptyStore(): Store {
     tags: [],
     recordTags: [],
     pointTags: [],
+    drafts: [],
   });
 }
 

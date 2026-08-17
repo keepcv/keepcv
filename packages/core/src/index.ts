@@ -21,6 +21,7 @@ export {
   type ConstraintKind,
   ConstraintViolationError,
   type CustomSectionRepository,
+  type DraftRepository,
   DuplicatePointRecordLinkError,
   NotFoundError,
   type OrganisationRepository,
@@ -40,6 +41,7 @@ export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
 export { type SearchHit, type SearchSubject, search } from "./store/search.js";
 export {
   archived,
+  draftFor,
   live,
   organisationOf,
   overview,

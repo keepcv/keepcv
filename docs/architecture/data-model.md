@@ -402,12 +402,14 @@ to prevent - and the pointer is derived state that no rename actually races.
 
 ```sql
 draft (
-  ...standard (no archived_at),
-  target_kind text not null check (target_kind in ('phrasing','record','resume')),
+  owner_id    uuid not null references owner(id) on delete cascade,
+  target_kind text not null check (target_kind in ('phrasing','record')),
   target_id   uuid not null,
   field       text not null,
   body        jsonb not null,
-  unique (owner_id, target_kind, target_id, field)
+  created_at  timestamptz(3) not null default now(),
+  updated_at  timestamptz(3) not null default now(),
+  primary key (owner_id, target_kind, target_id, field)
 )
 ```
 
@@ -419,6 +421,38 @@ Drafts are persisted, overwritable, outside history, and deleted on commit or
 explicit discard. Reopening an editor with a draft present says so and offers
 restore or discard - it never silently resurrects text the user believed they
 had abandoned.
+
+**The target is the identity**, so there is no `id`: there is no second draft of
+one field, and a surrogate key would be an identifier no route and no query ever
+reads. There is no `archived_at` either, and `updated_at` is not a concurrency
+token - the next keystrokes are meant to overwrite this row, so a write that
+refused because the row had changed would refuse the only thing that ever writes
+it. `updated_at` says how old the unsaved text is, which is what the editor tells
+the user when it offers to restore it; `created_at` stays at the first write, so
+"unsaved since Tuesday" is a fact the row can state.
+
+**`target_kind` names only kinds that have a table**, which is why `resume` is
+not in the list yet: a draft carries no foreign key - its target is polymorphic,
+unlike every other reference in the store - so the repository checks the target
+exists on every write, and a kind nothing can be checked against would be a
+dangling row by construction. `resume` joins the check constraint in the
+migration that creates resumes.
+
+**`body` is unvalidated JSON**, deliberately. A draft is text on its way to being
+something, so checking it against the shape it will eventually commit to would
+reject exactly the half-written state this table exists to keep.
+
+**Discarding a draft deletes the row.** It is the one delete the store performs,
+and it does not violate "nothing the user wrote is destroyed": by the time a
+draft is discarded its text is either a `phrasing_revision` or something the user
+explicitly abandoned.
+
+**Drafts are in the boot payload as well as the export.** Revision history is not,
+because it grows without bound; a draft is the newest thing the user wrote and
+there is at most one per field, so it is current state and it is bounded. The
+editor has to know a draft is waiting before it opens, and asking per field would
+be a round trip answering "no" nearly every time - which is why there is no
+`GET /v1/drafts/...` (api-contract.md #3).
 
 ---
 
@@ -1005,6 +1039,7 @@ Enforced by constraint where possible, by test where not.
 | I15 | A canonical phrasing belongs to its set, and a current revision to its phrasing | composite foreign key carrying the parent's own id |
 | I16 | A point's primary record is not also one of its secondary links | repository refuses the link and drops it on promotion + test |
 | I17 | `tag.slug` always equals the projection of `tag.label` | derived on write, and derived again on import rather than trusted; test |
+| I18 | Every `draft` names a row that exists | repository checks the target on write; no foreign key can, because the target is polymorphic |
 
 ---
 
@@ -1054,6 +1089,7 @@ N+1 query on the most-visited screen in the product.
 | Tag filtering | `record_tag (owner_id, tag_id)`, `point_tag (owner_id, tag_id)` - the primary keys, which prefix on the tag |
 | A row's own tags | `record_tag (owner_id, record_id)`, `point_tag (owner_id, point_id)` |
 | Tag by name | `tag (owner_id, slug) where archived_at is null` - the uniqueness index serves the lookup too |
+| Every draft an owner holds | `draft (owner_id, target_kind, target_id, field)` - the primary key, and the only access path: drafts are read whole with the boot payload and looked up in it |
 | "Where is this used?" | `resume_content_ref (ref_kind, ref_id)` |
 | Version timeline | `resume_version (resume_id, seq desc)` |
 

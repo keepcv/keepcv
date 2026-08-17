@@ -13,6 +13,7 @@ import { currentOwnerId } from "../owner-scope.js";
 import {
   contactChannel,
   customSection,
+  draft,
   evidence,
   metric,
   organisation,
@@ -108,6 +109,10 @@ export function createStoreRepository(
       tags: await repositories.tags.list(everything),
       recordTags: await repositories.tags.listRecordTags(),
       pointTags: await repositories.tags.listPointTags(),
+      // In the boot payload too, unlike revision history: a draft is the newest
+      // thing the user wrote, there is at most one per field, and the editor has
+      // to know one is waiting before it opens.
+      drafts: await repositories.drafts.list(),
     };
   }
 
@@ -259,6 +264,18 @@ export function createStoreRepository(
       );
 
       await loadPoints(store, ownerId);
+
+      // Last, because a draft names a row in one of the tables above and the
+      // repository checks that the row is there.
+      await insertAll(
+        draft,
+        store.drafts.map((row) => ({
+          ...row,
+          ownerId,
+          createdAt: new Date(row.createdAt),
+          updatedAt: new Date(row.updatedAt),
+        })),
+      );
     },
   };
 }

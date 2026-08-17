@@ -1,6 +1,8 @@
 import type {
   CareerRecord,
   CareerRecordKind,
+  Draft,
+  DraftTarget,
   Organisation,
   Point,
   Store,
@@ -109,6 +111,18 @@ export function tagUsage(store: Store): TagUsage[] {
     records: live(recordsWithTag(store, tag.id)).length,
     points: live(pointsWithTag(store, tag.id)).length,
   }));
+}
+
+// An editor asks this before it opens: a draft present means offering restore or
+// discard, and never silently resurrecting text the user believed they had
+// abandoned (application-structure.md #6).
+export function draftFor(store: Store, target: DraftTarget): Draft | undefined {
+  return store.drafts.find(
+    (draft) =>
+      draft.targetKind === target.targetKind &&
+      draft.targetId === target.targetId &&
+      draft.field === target.field,
+  );
 }
 
 export interface RecordCount {

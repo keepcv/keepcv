@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BOOTS_A_STORE } from "../repositories/contract.harness.js";
 import { MIGRATIONS_FOLDER } from "../store.js";
 
 const ownerId = "019891a4-6ac5-7000-8000-0000000000a0";
@@ -31,7 +32,7 @@ describe("phrasing_revision immutability", () => {
        values ('${revisionId}', '${ownerId}', '${phrasingId}',
                '[{"t":"text","v":"Designs engines"}]', 'Designs engines', 15, '${"0".repeat(64)}')`,
     );
-  });
+  }, BOOTS_A_STORE);
 
   afterAll(async () => {
     await client.close();

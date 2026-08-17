@@ -45,6 +45,19 @@ export {
   customSectionSchema,
 } from "./entities/custom-section.js";
 export {
+  DRAFT_TARGET_KINDS,
+  type Draft,
+  type DraftBody,
+  type DraftInput,
+  type DraftTarget,
+  type DraftTargetKind,
+  draftBodySchema,
+  draftInputSchema,
+  draftSchema,
+  draftTargetKindSchema,
+  draftTargetSchema,
+} from "./entities/draft.js";
+export {
   EVIDENCE_KINDS,
   type Evidence,
   type EvidenceInput,

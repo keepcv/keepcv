@@ -165,6 +165,15 @@ async function fill(run: Run): Promise<void> {
     await r.tags.merge(merged.id, react.id, merged.updatedAt);
     await r.tags.tagRecord(senior.id, react.id);
     await r.tags.tagPoint(placed.id, react.id);
+
+    await r.drafts.save(
+      { targetKind: "phrasing", targetId: angled.id, field: "text" },
+      { body: [{ t: "text", v: "half a rewrite" }] },
+    );
+    await r.drafts.save(
+      { targetKind: "record", targetId: senior.id, field: "title" },
+      { value: "Staff Engineer" },
+    );
   });
 }
 
@@ -187,6 +196,7 @@ function reversed(store: Store): Store {
     tags: [...store.tags].reverse(),
     recordTags: [...store.recordTags].reverse(),
     pointTags: [...store.pointTags].reverse(),
+    drafts: [...store.drafts].reverse(),
   };
 }
 
@@ -225,9 +235,16 @@ eachDriver(({ run, otherOwner }) => {
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
       // The collections with no `archivedAt`: a revision is immutable, so a
-      // superseded wording is superseded and never archived, and a link or a tag
-      // assignment holds nothing of its own to archive.
-      const unarchivable = ["phrasingRevisions", "pointRecordLinks", "recordTags", "pointTags"];
+      // superseded wording is superseded and never archived; a link or a tag
+      // assignment holds nothing of its own to archive; and a draft is discarded
+      // rather than put away, which is the one delete the store performs.
+      const unarchivable = [
+        "phrasingRevisions",
+        "pointRecordLinks",
+        "recordTags",
+        "pointTags",
+        "drafts",
+      ];
       for (const [collection, value] of Object.entries(exported)) {
         if (!Array.isArray(value) || unarchivable.includes(collection)) continue;
         expect(

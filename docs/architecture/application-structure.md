@@ -79,9 +79,9 @@ the entire WYSIWYG premise.
                  - canonicalise(RichText) + contentHash
                  - projectPlainText(RichText)
                  - search(store, query) and the store selectors: counts,
-                       nudges and tag usage are pure functions of the boot
-                       payload, so no screen asks the server a question it
-                       already holds the answer to
+                       nudges, tag usage and draftFor(store, target) are pure
+                       functions of the boot payload, so no screen asks the
+                       server a question it already holds the answer to
                  - estimateLength(ResumeDocument, TemplateConfig)
                        estimate only - Paged.js in the preview is authoritative
                        for actual page count and overflow
@@ -133,7 +133,9 @@ behind a search box and no query key for one.
 
 **Drafts are persisted server-side** (`draft` table, data-model.md #5). In a
 product whose promise is that nothing written is lost, losing in-progress text
-to a closed tab is the founding failure in miniature.
+to a closed tab is the founding failure in miniature. They arrive with the boot
+payload and are read through `draftFor(store, target)`, so an editor knows a
+draft is waiting before it opens rather than asking after it has.
 
 ---
 

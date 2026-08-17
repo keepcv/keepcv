@@ -2,6 +2,7 @@ import { z } from "zod";
 import { careerRecordSchema } from "../entities/career-record.js";
 import { contactChannelSchema } from "../entities/contact-channel.js";
 import { customSectionSchema } from "../entities/custom-section.js";
+import { draftSchema } from "../entities/draft.js";
 import { evidenceSchema } from "../entities/evidence.js";
 import { metricSchema } from "../entities/metric.js";
 import { organisationSchema } from "../entities/organisation.js";
@@ -43,6 +44,12 @@ export const storeSchema = z
     tags: z.array(tagSchema),
     recordTags: z.array(recordTagSchema),
     pointTags: z.array(pointTagSchema),
+    // In the boot payload as well as the export, unlike revision history: a
+    // draft is the newest thing the user wrote and there is at most one per
+    // field, so it is current state and it is bounded. The editor has to know a
+    // draft is waiting before it opens, and asking per field would be a round
+    // trip answering "no" nearly every time (api-contract.md #3).
+    drafts: z.array(draftSchema),
   })
   // Named, because two routes answer this shape and an anonymous one would be
   // inlined into the OpenAPI document twice.

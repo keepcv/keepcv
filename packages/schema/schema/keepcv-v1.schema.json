@@ -159,6 +159,12 @@
           "items": {
             "$ref": "#/$defs/PointTag"
           }
+        },
+        "drafts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Draft"
+          }
         }
       },
       "required": [
@@ -178,7 +184,8 @@
         "evidence",
         "tags",
         "recordTags",
-        "pointTags"
+        "pointTags",
+        "drafts"
       ],
       "additionalProperties": false,
       "title": "Career store"
@@ -3003,6 +3010,55 @@
       ],
       "additionalProperties": false,
       "title": "Point tag"
+    },
+    "Draft": {
+      "type": "object",
+      "properties": {
+        "targetKind": {
+          "type": "string",
+          "enum": [
+            "phrasing",
+            "record"
+          ]
+        },
+        "targetId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+        },
+        "field": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z][a-zA-Z0-9-]*$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "body": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "targetKind",
+        "targetId",
+        "field",
+        "createdAt",
+        "updatedAt",
+        "body"
+      ],
+      "additionalProperties": false,
+      "title": "Draft"
     }
   }
 }

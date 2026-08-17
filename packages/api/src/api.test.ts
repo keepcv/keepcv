@@ -75,6 +75,7 @@ describe("the OpenAPI document", () => {
       "/v1/custom-sections",
       "/v1/custom-sections/{id}",
       "/v1/custom-sections/{id}/restore",
+      "/v1/drafts/{targetKind}/{targetId}/{field}",
       "/v1/evidence",
       "/v1/evidence/{id}",
       "/v1/evidence/{id}/restore",

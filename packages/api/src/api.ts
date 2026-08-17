@@ -5,6 +5,7 @@ import type { Authenticate } from "./auth.js";
 import { problemFor, UnauthorizedError } from "./problems.js";
 import { router } from "./router.js";
 import { customSectionRoutes } from "./routes/custom-sections.js";
+import { draftRoutes } from "./routes/drafts.js";
 import { organisationRoutes } from "./routes/organisations.js";
 import { phrasingRoutes } from "./routes/phrasings.js";
 import { pointRoutes } from "./routes/points.js";
@@ -88,6 +89,7 @@ export function createApi(options: ApiOptions) {
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))
     .route("/", tagRoutes(options.unitOfWork))
+    .route("/", draftRoutes(options.unitOfWork))
     .route("/", storeRoutes(options.unitOfWork));
 }
 

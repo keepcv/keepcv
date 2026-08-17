@@ -108,6 +108,11 @@ a constrained inline markup editor; structured metrics; private evidence;
 confidence levels; revision history with compare and restore; and a usage view
 answering "where is this used?".
 
+Drafts belong here: keystrokes must not create revisions, and in-progress text
+must survive a closed tab. The store keeps one draft per field of a target,
+overwritable and outside history, and it travels with the boot payload so an
+editor knows one is waiting before it opens (data-model.md #5).
+
 ### Tagging and search
 
 A tag vocabulary with rename and merge; assignment across both records and
