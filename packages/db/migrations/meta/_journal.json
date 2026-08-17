@@ -71,6 +71,13 @@
       "when": 1786934196030,
       "tag": "0009_resume_composition",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786973790399,
+      "tag": "0010_resume_versions",
+      "breakpoints": true
     }
   ]
 }

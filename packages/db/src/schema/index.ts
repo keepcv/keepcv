@@ -19,4 +19,5 @@ export {
   resumeEntryPoint,
   resumeSection,
 } from "./resume.js";
+export { resumeContentRef, resumeSnapshot, resumeVersion } from "./resume-version.js";
 export { pointTag, recordTag, tag } from "./tag.js";

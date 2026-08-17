@@ -8,6 +8,7 @@ import { SECTION_KINDS, SECTION_LAYOUTS, sortKeySchema, type Uuid } from "@keepc
 import { describe, expect, it } from "vitest";
 import {
   channelInput,
+  compose,
   customSectionInput,
   eachDriver,
   entryInput,
@@ -22,39 +23,6 @@ import {
 } from "./contract.harness.js";
 
 const key = (value: string) => sortKeySchema.parse(value);
-
-interface Composed {
-  resumeId: Uuid;
-  sectionId: Uuid;
-  entryId: Uuid;
-  recordId: Uuid;
-  pointId: Uuid;
-  phrasingId: Uuid;
-}
-
-// A resume with one section, one entry and one point under it: the shape almost
-// every case below starts from.
-async function compose(run: Run, name = "Backend, Acme"): Promise<Composed> {
-  return await run(async (r) => {
-    const resume = await r.resumes.create(resumeInput(name));
-    const record = await r.records.create(recordInput("experience", "a0"));
-    const point = pointInput(record.id, "a0", "Cut p95 latency from 800ms to 120ms");
-    await r.points.create(point);
-    const section = await r.resumes.addSection(sectionInput(resume.id, "experience", "a0"));
-    const entry = await r.resumes.addEntry(entryInput(section.id, resume.id, record.id, "a0"));
-    await r.resumes.addEntryPoint(
-      entryPointInput(entry.id, resume.id, point.id, point.phrasing.id, "a0"),
-    );
-    return {
-      resumeId: resume.id,
-      sectionId: section.id,
-      entryId: entry.id,
-      recordId: record.id,
-      pointId: point.id,
-      phrasingId: point.phrasing.id,
-    };
-  });
-}
 
 async function aPoint(
   run: Run,

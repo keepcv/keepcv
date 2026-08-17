@@ -1,4 +1,5 @@
 import type {
+  Archive,
   CareerRecord,
   CareerRecordInput,
   CareerRecordKind,
@@ -6,6 +7,7 @@ import type {
   ContactChannel,
   ContactChannelInput,
   ContactChannelPatch,
+  ContentRefKind,
   CustomSection,
   CustomSectionInput,
   CustomSectionPatch,
@@ -56,6 +58,11 @@ import type {
   ResumeSection,
   ResumeSectionInput,
   ResumeSectionPatch,
+  ResumeSnapshot,
+  ResumeSnapshotInput,
+  ResumeSnapshotPatch,
+  ResumeVersion,
+  ResumeVersionInput,
   RichText,
   Store,
   Tag,
@@ -63,6 +70,7 @@ import type {
   TagPatch,
   Timestamp,
   Uuid,
+  VersionRef,
 } from "@keepcv/schema";
 
 export class NotFoundError extends Error {
@@ -391,6 +399,38 @@ export interface ResumeRepository {
   clearContactChannel(resumeId: Uuid, contactChannelId: Uuid): Promise<void>;
 }
 
+// Answers the current version unchanged when the manifest has not moved: three
+// sends of one resume are three snapshots, not three timeline entries nobody can
+// tell apart (data-model.md #9.2).
+export interface AppendedVersion {
+  version: ResumeVersion;
+  created: boolean;
+}
+
+// Nothing here updates a version. `seq` and `manifestHash` are assigned on
+// append, and `usage` reads the index the manifests are projected into.
+export interface ResumeVersionRepository {
+  list(options?: { resumeId?: Uuid | undefined }): Promise<ResumeVersion[]>;
+  get(id: Uuid): Promise<ResumeVersion>;
+  append(input: ResumeVersionInput): Promise<AppendedVersion>;
+
+  listSnapshots(options?: {
+    resumeId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<ResumeSnapshot[]>;
+  getSnapshot(id: Uuid): Promise<ResumeSnapshot>;
+  star(input: ResumeSnapshotInput): Promise<ResumeSnapshot>;
+  updateSnapshot(
+    id: Uuid,
+    patch: ResumeSnapshotPatch,
+    expectedUpdatedAt: Timestamp,
+  ): Promise<ResumeSnapshot>;
+  archiveSnapshot(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeSnapshot>;
+  restoreSnapshot(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeSnapshot>;
+
+  usage(refKind: ContentRefKind, refId: Uuid): Promise<VersionRef[]>;
+}
+
 export interface DraftRepository {
   list(): Promise<Draft[]>;
   save(target: DraftTarget, body: DraftBody): Promise<Draft>;
@@ -412,11 +452,11 @@ export class StoreNotEmptyError extends Error {
 // `load` restores ids and timestamps intact, which is what makes I10 hold and
 // why it is the one write that bypasses the concurrency token.
 export interface StoreRepository {
-  read(): Promise<Store>;
+  read(): Promise<Archive>;
   // The same shape minus superseded wordings: history grows without bound and
   // the boot payload must not (api-contract.md #3).
   readCurrent(): Promise<Store>;
-  load(store: Store): Promise<void>;
+  load(archive: Archive): Promise<void>;
 }
 
 // Every key of a `list` option bag is `| undefined` as well as optional: under
@@ -430,6 +470,7 @@ export interface Repositories {
   phrasings: PhrasingRepository;
   tags: TagRepository;
   resumes: ResumeRepository;
+  versions: ResumeVersionRepository;
   drafts: DraftRepository;
   store: StoreRepository;
 }

@@ -1,11 +1,12 @@
 import {
   deriveRevision,
+  manifestRefs,
   type Repositories,
   StoreNotEmptyError,
   type StoreRepository,
   tagSlug,
 } from "@keepcv/core";
-import type { CareerRecord, Store, Timestamp, Uuid } from "@keepcv/schema";
+import type { Archive, CareerRecord, Store, Timestamp, Uuid } from "@keepcv/schema";
 import { and, eq } from "drizzle-orm";
 import type { PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
@@ -30,12 +31,16 @@ import {
   recordTag,
   resume,
   resumeContactChannel,
+  resumeContentRef,
   resumeEntry,
   resumeEntryPoint,
   resumeSection,
+  resumeSnapshot,
+  resumeVersion,
   tag,
 } from "../schema/index.js";
 import { owned } from "./owned-row.js";
+import { manifestHashOf } from "./resume-version.js";
 
 const everything = { includeArchived: true } as const;
 
@@ -88,7 +93,7 @@ export function createStoreRepository(
     }
   }
 
-  async function read(currentOnly = false): Promise<Store> {
+  async function readStore(currentOnly = false): Promise<Store> {
     return {
       profile: await repositories.profile.get(),
       contactChannels: await repositories.profile.listContactChannels(everything),
@@ -188,9 +193,19 @@ export function createStoreRepository(
     );
   }
 
+  // History is in the archive and not in the boot payload: it grows without
+  // bound (api-contract.md #3).
+  async function readArchive(): Promise<Archive> {
+    return {
+      ...(await readStore()),
+      resumeVersions: await repositories.versions.list(),
+      resumeSnapshots: await repositories.versions.listSnapshots(everything),
+    };
+  }
+
   // Reading the whole store covers a collection added to the format later.
   async function requireEmpty(): Promise<void> {
-    const current = await read();
+    const current = await readArchive();
     for (const [collection, value] of Object.entries(current)) {
       if (Array.isArray(value) && value.length > 0) {
         throw new StoreNotEmptyError(collection);
@@ -203,11 +218,12 @@ export function createStoreRepository(
   }
 
   return {
-    read: async () => await read(),
+    read: async () => await readArchive(),
 
-    readCurrent: async () => await read(true),
+    readCurrent: async () => await readStore(true),
 
-    async load(store) {
+    async load(archive) {
+      const store: Store = archive;
       await requireEmpty();
       const ownerId = currentOwnerId();
 
@@ -279,6 +295,43 @@ export function createStoreRepository(
       await insertAll(
         resumeContactChannel,
         store.resumeContactChannels.map((row) => ({ ...row, ownerId })),
+      );
+
+      // Derived again rather than trusted, so a hand-edited manifest cannot
+      // claim a hash it does not have.
+      await insertAll(
+        resumeVersion,
+        archive.resumeVersions.map((row) => ({
+          id: row.id,
+          ownerId,
+          resumeId: row.resumeId,
+          seq: row.seq,
+          trigger: row.trigger,
+          restoredFromVersionId: row.restoredFromVersionId,
+          manifest: row.manifest,
+          manifestHash: manifestHashOf(row.manifest),
+          createdAt: new Date(row.createdAt),
+        })),
+      );
+      await insertAll(
+        resumeSnapshot,
+        archive.resumeSnapshots.map((row) => ({
+          ...row,
+          ...standardRow(row, ownerId),
+          starredAt: new Date(row.starredAt),
+        })),
+      );
+      // Rebuilt rather than exported: a derived index in a file is a second copy
+      // of the manifests that could arrive disagreeing with them.
+      await insertAll(
+        resumeContentRef,
+        archive.resumeVersions.flatMap((row) =>
+          manifestRefs(row.manifest).map((ref) => ({
+            ownerId,
+            resumeVersionId: row.id,
+            ...ref,
+          })),
+        ),
       );
 
       // Last: a draft names a row above, and the repository checks it is there.

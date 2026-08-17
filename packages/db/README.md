@@ -11,8 +11,9 @@ queries, so there is no dialect drift to manage.
 
 > **Status: early development.** The public API is unstable and there is no
 > release yet. The whole record store is here - profile, organisations, records,
-> custom sections, points, phrasings, tags, drafts and the native export - and
-> the composition a resume is; versions and snapshots follow.
+> custom sections, points, phrasings, tags, drafts and the native export - the
+> composition a resume is, and its history: versions, snapshots and the usage
+> index. A diff between two versions and restore follow.
 
 ## Installation
 
@@ -60,6 +61,13 @@ take by accident.
 Mutations carry the `updatedAt` they were based on. A mismatch throws
 `ConcurrencyConflictError` carrying the timestamp the row actually has, so the
 caller can re-read and show a comparison. Neither side is dropped silently.
+
+### Append-only tables
+
+`phrasing_revision` and `resume_version` are never updated. Both are held that
+way by a trigger written by hand at the end of the migration that creates them,
+because a rule living only in the repository is one stray `set` away from
+rewriting what a version claims was sent.
 
 ### Archive, never delete
 

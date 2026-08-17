@@ -206,20 +206,31 @@ knowing where you were.
 
 ### 5.2 Record list
 
-Needs, per row: title, organisation name, date range, point count, tag
-chips, archived state.
+Needs, per row: title, organisation name, date range, point count, archived
+state.
 
-Served by a select over `record` plus a grouped point count. The count is the
-part that needs care - computing it per row in application code is an N+1 on the
-most-visited list in the product.
+Served by selectors over the cached payload, like everything else the client
+reads. **Grouped by kind, in the order the kinds are declared**, which is
+reading order: storage order puts Awards above Experience, and one flat list of
+sixty rows is a wall.
+
+**The kind list is navigation, not a filter bar.** It lives in the app frame
+beside Overview and All records, with a count per kind, so it is on every screen
+and costs no vertical space above the content. Eleven chips at the top of a list
+is more chrome than list, and worst at 390px where they wrap to four rows.
+Archived stays a segmented control on the list itself, because it is a mode over
+what is shown rather than a place to go.
 
 ### 5.3 Record detail
 
-Needs: the kind's own fields; ordered points, each with canonical current text
-and a phrasing count; tags; links; fields; summary phrasing set.
+Needs: the kind's own fields; ordered points, each with canonical current text,
+its metrics and its tags; tags; links; fields; summary phrasing set; and the
+resumes the record is placed on.
 
-Served by `point_display`, which resolves the four-level
-point -> set -> phrasing -> revision chain into one join.
+Served by selectors over the cached payload. **Every list in the app opens onto
+this screen** - the record list, the overview's "where you left off", and a
+search hit - because a store you can only look at is a dead end, and re-entry is
+the overview's whole job.
 
 Because points are uniform across every record kind, **this screen
 is built once** and serves experience, education, projects and everything
@@ -238,6 +249,13 @@ That last item is why `resume_content_ref` exists (data-model.md #9.2).
 Editing a phrasing without knowing which resumes depend on it is exactly the
 anxiety this product exists to remove.
 
+**Points are also a destination of their own**, listed with the record each is
+filed under, its metrics, its tags and how many resumes print it. The point is
+the atomic unit; a store that can only be browsed through records hides the one
+thing every resume is assembled from. Its filters are the overview's nudges made
+reachable - unplaced, and no metric - so a count on the overview is a link
+rather than a number nobody can act on.
+
 ### 5.5 Resume composer
 
 Three panes: the store with in/out toggles; the resume structure,
@@ -246,6 +264,18 @@ drag-and-drop; live preview.
 Needs: the full store (already cached); the working composition; a compiled
 `ResumeDocument`. Mutations are single-row patches with a fractional
 `sort_key`, so a drag sends one small request (data-model.md #3.4).
+
+Reading comes before dragging: the screen is **composition and preview, toggled**,
+and both halves answer from the cached payload. Composition shows every row the
+selection holds - including the ones toggled off, dimmed and marked, because off
+is a state the selection exists to hold and a row that vanished would read as a
+delete. It shows the **wording this resume chose**, since an entry point pins a
+phrasing rather than a set. Preview runs `compile()` in the browser, which is the
+whole reason `@keepcv/core` does no I/O: the preview and a server-side export are
+the same function over the same manifest.
+
+An entry links back to its record, and a record's "where it appears" links here,
+so the two directions of "what does this affect" both resolve.
 
 ### 5.6 Version timeline and compare
 
@@ -377,7 +407,13 @@ The web app and the API share an origin - the launcher serves the built app for
 everything outside `/v1` - so the client never has to be told where its store
 is, and there is no CORS surface at all.
 - Route loaders prefetch into the Query cache; components read from the cache.
-  No component fetches directly.
+  No component fetches directly. **The loader is on the root route**, because the
+  frame itself navigates by what the store holds: one payload serves the shell
+  and every screen under it.
+- **Search is a screen, and its field is in the frame.** `search(store, query)`
+  answers from the cache, so the URL is updated on every keystroke and replaced
+  rather than pushed - a search is one history entry, not thirty. `/` focuses the
+  field.
 
 ---
 

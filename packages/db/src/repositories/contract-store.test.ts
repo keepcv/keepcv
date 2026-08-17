@@ -1,10 +1,10 @@
-import { StoreNotEmptyError } from "@keepcv/core";
+import { captureManifest, newUuid, StoreNotEmptyError } from "@keepcv/core";
 import {
+  type Archive,
   CAREER_RECORD_KINDS,
   CURRENT_SCHEMA_VERSION,
   exportDocumentSchema,
   migrateDocument,
-  type Store,
 } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import {
@@ -205,10 +205,54 @@ async function fill(run: Run): Promise<void> {
     if (channel !== undefined) {
       await r.resumes.setContactChannel(applied.id, channel.id, false);
     }
+
+    const first = captureManifest(await r.store.readCurrent(), applied.id);
+    if (first === undefined) throw new Error("the resume just written is not there");
+    const sent = await r.versions.append({
+      id: newUuid(),
+      resumeId: applied.id,
+      trigger: "export",
+      restoredFromVersionId: null,
+      manifest: first,
+    });
+
+    const renamed = await r.resumes.get(applied.id);
+    await r.resumes.update(applied.id, { name: "For Acme, second pass" }, renamed.updatedAt);
+    const second = captureManifest(await r.store.readCurrent(), applied.id);
+    if (second === undefined) throw new Error("the resume just renamed is not there");
+    const saved = await r.versions.append({
+      id: newUuid(),
+      resumeId: applied.id,
+      trigger: "manual_save",
+      restoredFromVersionId: null,
+      manifest: second,
+    });
+    // What a restore writes: the older manifest again, saying where it came from.
+    await r.versions.append({
+      id: newUuid(),
+      resumeId: applied.id,
+      trigger: "restore",
+      restoredFromVersionId: sent.version.id,
+      manifest: first,
+    });
+
+    await r.versions.star({
+      id: newUuid(),
+      resumeVersionId: sent.version.id,
+      label: "Sent to Acme, March",
+      note: "the one they replied to",
+    });
+    const unstarred = await r.versions.star({
+      id: newUuid(),
+      resumeVersionId: saved.version.id,
+      label: "A label that did not last",
+      note: null,
+    });
+    await r.versions.archiveSnapshot(unstarred.id, unstarred.updatedAt);
   });
 }
 
-function reversed(store: Store): Store {
+function reversed(store: Archive): Archive {
   return {
     profile: store.profile,
     contactChannels: [...store.contactChannels].reverse(),
@@ -233,6 +277,8 @@ function reversed(store: Store): Store {
     resumeEntries: [...store.resumeEntries].reverse(),
     resumeEntryPoints: [...store.resumeEntryPoints].reverse(),
     resumeContactChannels: [...store.resumeContactChannels].reverse(),
+    resumeVersions: [...store.resumeVersions].reverse(),
+    resumeSnapshots: [...store.resumeSnapshots].reverse(),
   };
 }
 
@@ -273,6 +319,7 @@ eachDriver(({ run, otherOwner }) => {
       // an assignment holds nothing of its own, and a draft is discarded.
       const unarchivable = [
         "phrasingRevisions",
+        "resumeVersions",
         "pointRecordLinks",
         "recordTags",
         "pointTags",
@@ -358,6 +405,23 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
+    // The usage index is not in the file: it is derived, so a load that failed
+    // to rebuild it would round-trip perfectly and answer nothing afterwards.
+    it("rebuilds the usage index from the manifests it loaded", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const printed = exported.resumeVersions[0]?.manifest.sections[0]?.entries[0]?.record.id;
+      if (printed === undefined) throw new Error("the covering store prints no record");
+
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(exported));
+
+      expect(await other(async (r) => await r.versions.usage("record", printed))).toEqual(
+        await run(async (r) => await r.versions.usage("record", printed)),
+      );
+      expect(await run(async (r) => await r.versions.usage("record", printed))).not.toEqual([]);
+    });
+
     it("round-trips a store with nothing in it", async () => {
       const exported = await run(async (r) => await r.store.read());
       const other = await otherOwner();
@@ -374,10 +438,14 @@ eachDriver(({ run, otherOwner }) => {
       const current = await run(async (r) => await r.store.readCurrent());
 
       const pointsAt = new Set(exported.phrasings.map((entry) => entry.currentRevisionId));
+      const { resumeVersions, resumeSnapshots, ...store } = exported;
       expect(current).toEqual({
-        ...exported,
+        ...store,
         phrasingRevisions: exported.phrasingRevisions.filter((entry) => pointsAt.has(entry.id)),
       });
+      // History is the other difference, and it is absent rather than empty.
+      expect(resumeVersions.length).toBeGreaterThan(0);
+      expect(resumeSnapshots.length).toBeGreaterThan(0);
       // Otherwise the assertion above holds for a store that had no history to
       // drop, which is every store until somebody edits a wording twice.
       expect(current.phrasingRevisions.length).toBeLessThan(exported.phrasingRevisions.length);

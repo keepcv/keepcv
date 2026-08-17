@@ -12,10 +12,10 @@ RPC would not be.
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact
 > channels, organisations, custom sections, records, points, phrasings, tags,
-> drafts and everything hanging off them - the composition a resume is, and the
-> boot payload and the native export and import. Versions follow. There is no
-> search route and no composition route: both are pure functions over the boot
-> payload, in `@keepcv/core`.
+> drafts and everything hanging off them - the composition a resume is, its
+> history, and the boot payload and the native export and import. A diff between
+> two versions and restore follow. There is no search route and no composition
+> route: both are pure functions over the boot payload, in `@keepcv/core`.
 
 ## Installation
 
@@ -93,6 +93,14 @@ const response = await client.v1.profile.$get();
   wording chosen and the position it sat in survive, and a point can appear at
   most once on one resume. Reading a whole resume is `composition(store, id)` in
   `@keepcv/core`, not a route.
+- **A version records what was sent, and the store captures it.**
+  `POST /v1/resume-versions` takes the resume and the trigger, never a manifest:
+  the store freezes what the resume says, assigns the sequence, and answers `200`
+  with the current version rather than appending a duplicate when nothing has
+  moved. A version is immutable, so it has no `PATCH`; a snapshot is the label
+  you put on one, and `/v1/resume-snapshots` is an ordinary collection.
+  `/v1/points/{id}/usage` and `/v1/records/{id}/usage` answer which versions
+  printed a row, which is what "if I archive this, what does it affect?" reads.
 - **One request boots a client.** `GET /v1/store` answers the whole store,
   archived rows included, so filters and counts are selectors over cached data
   rather than requests. It carries the wording each phrasing says now and not the

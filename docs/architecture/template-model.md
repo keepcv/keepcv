@@ -265,6 +265,12 @@ Rules:
 - Sections a template chooses not to support must be **omitted visibly**
   (reported to the composer), never dropped silently. Silently losing a
   section is the destructive behaviour this product exists to eliminate.
+- **An empty section is said out loud, not dropped.** Capture emits a visible
+  section whose entries were all hidden or archived, and a heading with nothing
+  under it reads as a rendering fault unless the template names the gap.
+- **A grouped section prints every entry exactly once.** Groups only claim
+  entries that carry an organisation, so a template that renders groups must
+  also render whatever no group claimed.
 
 ### Test fixture
 
@@ -312,26 +318,38 @@ table - no template, exporter, or linter changes.
 ## 7. Compilation
 
 ```
-resume_version.manifest          -->  core.compile()  -->  ResumeDocument   (server: export)
-working composition + store      -->  core.compile()  -->  ResumeDocument   (browser: preview)
+store + resumeId  --captureManifest-->  manifest  --renderManifest-->  ResumeDocument
+resume_version.manifest ------------------^
 ```
 
-`compile(store, resumeId, { generatedAt, locale })` is the second of those and
-is what exists today; the manifest overload arrives with Versions. Both the
-browser and `GET /v1/resumes/:id/document` call this one function, which is what
-stops a preview and an export disagreeing.
+Two steps, not two paths. `captureManifest(store, resumeId)` resolves the
+selection and freezes it; `renderManifest(manifest, revisions, { generatedAt,
+locale })` formats it. `compile(store, resumeId, options)` is the pair, and is
+what the browser preview and `GET /v1/resumes/:id/document` call. A version
+pinned in March renders by handing its stored manifest to the same second step,
+so there is no second compiler to disagree with the first.
 
-The same pure function, two callers (`application-structure.md` #7). Compile
-does, in order:
+Both steps are pure (`application-structure.md` #7).
 
-1. resolve pinned phrasing revisions (manifest) or current ones (preview)
-2. apply visibility, archival and privacy filters
-3. run the presenter for each record kind
-4. resolve section headings - the section's own override, then a custom
+Capture does, in order:
+
+1. resolve the composition, and drop hidden sections, hidden entries, hidden
+   points and archived rows
+2. resolve section headings - the section's own override, then a custom
    section's heading, then the kind's default
-5. compute groups where the layout hint calls for it
-6. format dates, metrics and contacts for `meta.locale`
-7. assign keys and freeze
+3. pin the rows whole, and phrasing text by revision id
+4. freeze the target context the resume was aimed at
+
+Render does, in order:
+
+1. resolve each pinned revision id to its text
+2. run the presenter for each record kind
+3. compute groups where the layout hint calls for it
+4. format dates, metrics and contacts for `meta.locale`
+5. assign keys
+
+Nothing renders that capture did not pin, which is why every filter lives on one
+side of the line and every formatting decision on the other.
 
 Because compile is pure and deterministic, the same manifest always produces
 the same document - which is what makes render output content-addressable and

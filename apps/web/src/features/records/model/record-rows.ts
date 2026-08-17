@@ -1,5 +1,7 @@
-import { live, organisationOf, pointsOfRecord, textOfPoint } from "@keepcv/core";
+import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
+import { CAREER_RECORD_KINDS } from "@keepcv/schema";
+import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
 
 // Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
@@ -69,7 +71,7 @@ export function toRecordRow(store: Store, entry: CareerRecord): RecordRow {
 
 export interface RecordFilters {
   kind?: CareerRecordKind | undefined;
-  archived: "exclude" | "include" | "only";
+  archived: ArchivedFilter;
 }
 
 // Narrows without sorting: the store already returns a total order, and a list
@@ -77,16 +79,21 @@ export interface RecordFilters {
 export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
   return store.records
     .filter((entry) => filters.kind === undefined || entry.kind === filters.kind)
-    .filter((entry) =>
-      filters.archived === "include"
-        ? true
-        : filters.archived === "only"
-          ? entry.archivedAt !== null
-          : entry.archivedAt === null,
-    )
+    .filter((entry) => matchesArchived(entry, filters.archived))
     .map((entry) => toRecordRow(store, entry));
 }
 
-export function pointTextsOf(store: Store, recordId: Uuid): string[] {
-  return live(pointsOfRecord(store, recordId)).map((point) => textOfPoint(store, point));
+export interface RecordGroup {
+  kind: CareerRecordKind;
+  rows: RecordRow[];
+}
+
+// In the order the kinds are declared, which is reading order: storage order
+// puts Awards above Experience, and nobody reads a career that way.
+export function groupedRecordRows(store: Store, filters: RecordFilters): RecordGroup[] {
+  const rows = recordRows(store, filters);
+  return CAREER_RECORD_KINDS.map((kind) => ({
+    kind,
+    rows: rows.filter((row) => row.kind === kind),
+  })).filter((group) => group.rows.length > 0);
 }

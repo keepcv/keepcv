@@ -137,12 +137,13 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
 `evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
-`resume_section`, `resume_entry`, `resume_entry_point` and
-`resume_contact_channel`, and the port has ten repositories. That is the record
-store, its vocabulary, its editor state and the composition a resume is; the data
-model still describes tables that do not exist yet - versions, snapshots and the
-usage index; do not assume otherwise. There is no `search_document` and there
-will not be one: see below.
+`resume_section`, `resume_entry`, `resume_entry_point`,
+`resume_contact_channel`, `resume_version`, `resume_snapshot` and
+`resume_content_ref`, and the port has eleven repositories. That is the record
+store, its vocabulary, its editor state, the composition a resume is and its
+history. `resume_version` is append-only, like `phrasing_revision`, and held
+that way by the same hand-written trigger. There is no `search_document` and
+there will not be one: see below.
 
 The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
 `/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
@@ -153,16 +154,23 @@ overrides, and sixteen owned collections: `/v1/contact-channels`,
 `/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
 `/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/resumes`,
 `/v1/resume-sections`, `/v1/resume-entries` and `/v1/resume-entry-points`.
-It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`.
-Versions and templates are unbuilt.
+It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
+the resume timeline at `/v1/resume-versions`, `/v1/resume-snapshots`, and
+`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. A structural diff between
+two versions, restore, and templates are unbuilt.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-The web app is **read-only so far**: the shell, the store overview and the record
-list, both fed by one `GET /v1/store` on boot. Nothing in it writes, so there are
-no mutations, no optimistic updates and no conflict UI yet. React, TanStack
-Router and Query, Tailwind v4, Vite. Routes are declared in code rather than
-generated from filenames.
+The web app is **read-only so far**: an application frame - a navigation rail
+that lists the kinds the store holds, a search field, and a disclosure in place
+of the rail below `lg` - over the store overview, the record list, a record's
+detail, the point list, the resume list, a resume's composition and its compiled
+preview, and search results. All of it is fed by one `GET /v1/store` on the root
+route's loader, and the preview is `compile()` running in the browser over that
+same payload. Nothing in it writes, so there are no mutations, no optimistic
+updates and no conflict UI yet. React, TanStack Router and Query, Tailwind v4,
+Vite, and `components/ui/` for the primitives a screen needs. Routes are declared
+in code rather than generated from filenames.
 
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each
@@ -201,7 +209,10 @@ Do not add a `/v1/search`; add fields to the selector.
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
 validator cannot describe different shapes. A route added any other way is
-invisible to the document.
+invisible to the document. **A helper that builds routes takes the path as
+`<Path extends string>`, never `string`**: a widened path collapses the whole
+typed client into one `ClientRequest<string, string, ...>`, and the failure
+surfaces in the web app as "property does not exist" on an unrelated route.
 
 **An owned collection answers six routes, and their declarations come from
 `collectionRoutes`** in `routes/collection.ts` - path, tag, noun and four
@@ -215,7 +226,18 @@ another resource's declarations.
 Native export and import exist as `repositories.store`, and the round-trip test
 in `contract-store.test.ts` runs over a store built to cover every collection the
 format declares. **A slice that adds a table adds it to `storeSchema` and to that
-fixture**, or it ships a format that silently drops the user's data.
+fixture**, or it ships a format that silently drops the user's data. History goes
+in `archiveSchema` instead - `storeSchema` extended with versions and snapshots -
+because the boot payload must not carry it; `read()` answers the archive and
+`readCurrent()` the store. `resume_content_ref` is in neither: it is derived from
+the manifests and rebuilt on import.
+
+**A version pins the selection, and `compile()` is two steps.**
+`captureManifest(store, resumeId)` freezes what a resume says - rows whole, text
+by revision id, headings resolved - and `renderManifest(manifest, revisions,
+options)` turns that into the `ResumeDocument`. The preview, the export and a
+version captured months ago all render through the second step, so there is no
+second compiler to drift.
 
 ## Architecture
 
