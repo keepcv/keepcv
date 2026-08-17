@@ -1,4 +1,13 @@
-import type { CareerRecord, Metric, Point, Store, Tag, Uuid } from "@keepcv/schema";
+import type {
+  CareerRecord,
+  Metric,
+  Point,
+  ResumeEntry,
+  ResumeSection,
+  Store,
+  Tag,
+  Uuid,
+} from "@keepcv/schema";
 import {
   careerRecordSchema,
   metricSchema,
@@ -7,6 +16,10 @@ import {
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  resumeEntryPointSchema,
+  resumeEntrySchema,
+  resumeSchema,
+  resumeSectionSchema,
   storeSchema,
   tagSchema,
 } from "@keepcv/schema";
@@ -53,6 +66,11 @@ export function emptyStore(): Store {
     recordTags: [],
     pointTags: [],
     drafts: [],
+    resumes: [],
+    resumeSections: [],
+    resumeEntries: [],
+    resumeEntryPoints: [],
+    resumeContactChannels: [],
   });
 }
 
@@ -176,4 +194,82 @@ export function aTag(store: Store, label: string, overrides: Record<string, unkn
   });
   store.tags.push(tag);
   return tag;
+}
+
+export function aResume(store: Store, name: string, overrides: Record<string, unknown> = {}) {
+  const resume = resumeSchema.parse({
+    ...standard(),
+    name,
+    targetCompany: null,
+    targetRole: null,
+    targetUrl: null,
+    targetJdText: null,
+    appliedOn: null,
+    ...overrides,
+  });
+  store.resumes.push(resume);
+  return resume;
+}
+
+export function aSection(
+  store: Store,
+  resumeId: Uuid,
+  kind: string,
+  overrides: Record<string, unknown> = {},
+) {
+  const section = resumeSectionSchema.parse({
+    ...standard(),
+    resumeId,
+    kind,
+    customSectionId: null,
+    heading: null,
+    layout: null,
+    sortKey: "a0",
+    isVisible: true,
+    ...overrides,
+  });
+  store.resumeSections.push(section);
+  return section;
+}
+
+export function anEntry(
+  store: Store,
+  section: ResumeSection,
+  recordId: Uuid,
+  overrides: Record<string, unknown> = {},
+) {
+  const entry = resumeEntrySchema.parse({
+    ...standard(),
+    resumeId: section.resumeId,
+    resumeSectionId: section.id,
+    recordId,
+    sortKey: "a0",
+    isVisible: true,
+    ...overrides,
+  });
+  store.resumeEntries.push(entry);
+  return entry;
+}
+
+export function anEntryPoint(
+  store: Store,
+  entry: ResumeEntry,
+  point: Point,
+  overrides: Record<string, unknown> = {},
+) {
+  const phrasing = store.phrasings.find((row) => row.phrasingSetId === point.phrasingSetId);
+  if (phrasing === undefined) throw new Error("a point is written with the wording it holds");
+
+  const entryPoint = resumeEntryPointSchema.parse({
+    ...standard(),
+    resumeId: entry.resumeId,
+    resumeEntryId: entry.id,
+    pointId: point.id,
+    phrasingId: phrasing.id,
+    sortKey: "a0",
+    isVisible: true,
+    ...overrides,
+  });
+  store.resumeEntryPoints.push(entryPoint);
+  return entryPoint;
 }

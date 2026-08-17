@@ -11,6 +11,7 @@ import { phrasingRoutes } from "./routes/phrasings.js";
 import { pointRoutes } from "./routes/points.js";
 import { profileRoutes } from "./routes/profile.js";
 import { recordRoutes } from "./routes/records.js";
+import { resumeRoutes } from "./routes/resumes.js";
 import { storeRoutes } from "./routes/store.js";
 import { tagRoutes } from "./routes/tags.js";
 
@@ -84,6 +85,7 @@ export function createApi(options: ApiOptions) {
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))
     .route("/", tagRoutes(options.unitOfWork))
+    .route("/", resumeRoutes(options.unitOfWork))
     .route("/", draftRoutes(options.unitOfWork))
     .route("/", storeRoutes(options.unitOfWork));
 }

@@ -34,6 +34,11 @@ const current = {
     recordTags: [],
     pointTags: [],
     drafts: [],
+    resumes: [],
+    resumeSections: [],
+    resumeEntries: [],
+    resumeEntryPoints: [],
+    resumeContactChannels: [],
   },
 };
 

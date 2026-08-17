@@ -28,6 +28,11 @@ import {
   recordField,
   recordLink,
   recordTag,
+  resume,
+  resumeContactChannel,
+  resumeEntry,
+  resumeEntryPoint,
+  resumeSection,
   tag,
 } from "../schema/index.js";
 import { owned } from "./owned-row.js";
@@ -105,6 +110,11 @@ export function createStoreRepository(
       recordTags: await repositories.tags.listRecordTags(),
       pointTags: await repositories.tags.listPointTags(),
       drafts: await repositories.drafts.list(),
+      resumes: await repositories.resumes.list(everything),
+      resumeSections: await repositories.resumes.listSections(everything),
+      resumeEntries: await repositories.resumes.listEntries(everything),
+      resumeEntryPoints: await repositories.resumes.listEntryPoints(everything),
+      resumeContactChannels: await repositories.resumes.listContactChannels(),
     };
   }
 
@@ -249,6 +259,27 @@ export function createStoreRepository(
       );
 
       await loadPoints(store, ownerId);
+
+      await insertAll(
+        resume,
+        store.resumes.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        resumeSection,
+        store.resumeSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        resumeEntry,
+        store.resumeEntries.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        resumeEntryPoint,
+        store.resumeEntryPoints.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        resumeContactChannel,
+        store.resumeContactChannels.map((row) => ({ ...row, ownerId })),
+      );
 
       // Last: a draft names a row above, and the repository checks it is there.
       await insertAll(

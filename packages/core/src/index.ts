@@ -29,6 +29,7 @@ export {
   type PointRepository,
   type ProfileRepository,
   type Repositories,
+  type ResumeRepository,
   StoreNotEmptyError,
   type StoreRepository,
   TagMergedIntoItselfError,
@@ -41,6 +42,11 @@ export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
 export { type SearchHit, type SearchSubject, search } from "./store/search.js";
 export {
   archived,
+  type ComposedEntry,
+  type ComposedPoint,
+  type ComposedSection,
+  type Composition,
+  composition,
   draftFor,
   live,
   organisationOf,

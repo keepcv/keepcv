@@ -131,6 +131,11 @@ phrasing selection per point; section and entry reordering; section headings
 and visibility; per-resume contact visibility; deriving a resume from an
 existing one.
 
+**A resume is read through `composition(store, resumeId)` in `@keepcv/core`,
+not a route** (api-contract.md #3), for the reason search is a selector: every
+row it resolves is already in the boot payload. The three collections it reads
+are what a client writes through.
+
 ### Render and templates
 
 The `ResumeDocument` compiler and the shared template fixture

@@ -3,6 +3,7 @@ import { draftSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
+  composition,
   draftFor,
   live,
   organisationOf,
@@ -19,9 +20,13 @@ import {
 } from "./selectors.js";
 import {
   aMetric,
+  anEntry,
+  anEntryPoint,
   anOrganisation,
   aPoint,
   aRecord,
+  aResume,
+  aSection,
   aTag,
   EPOCH,
   emptyStore,
@@ -335,5 +340,79 @@ describe("draftFor", () => {
     expect(
       draftFor(emptyStore(), { targetKind: "record", targetId: newUuid(), field: "title" }),
     ).toBeUndefined();
+  });
+});
+
+describe("composition", () => {
+  function aComposedStore() {
+    const store = emptyStore();
+    const role = aRecord({ kind: "experience", title: "Staff Engineer" });
+    const project = aRecord({ kind: "project", title: "Ingest rewrite" });
+    store.records.push(role, project);
+
+    const resume = aResume(store, "Backend, Acme");
+    const experience = aSection(store, resume.id, "experience", { sortKey: "a0" });
+    const projects = aSection(store, resume.id, "project", { sortKey: "a1" });
+
+    const entry = anEntry(store, experience, role.id, { sortKey: "a0" });
+    anEntry(store, projects, project.id, { sortKey: "a0" });
+
+    const first = aPoint(store, "Cut p95 latency", { recordId: role.id });
+    const second = aPoint(store, "Halved the bill", { recordId: role.id, sortKey: "a1" });
+    anEntryPoint(store, entry, second, { sortKey: "a1" });
+    const placed = anEntryPoint(store, entry, first, { sortKey: "a0" });
+
+    return { store, resume, experience, entry, placed };
+  }
+
+  it("resolves a resume into ordered sections, entries and words", () => {
+    const { store, resume } = aComposedStore();
+    const composed = composition(store, resume.id);
+
+    expect(composed?.resume.name).toBe("Backend, Acme");
+    expect(composed?.sections.map((s) => s.section.kind)).toEqual(["experience", "project"]);
+
+    const [experience] = composed?.sections ?? [];
+    expect(experience?.entries.map((e) => e.record.title)).toEqual(["Staff Engineer"]);
+    expect(experience?.entries[0]?.points.map((p) => p.phrasing.id)).toHaveLength(2);
+    expect(experience?.entries[0]?.points.map((p) => p.entryPoint.sortKey)).toEqual(["a0", "a1"]);
+  });
+
+  // Composing another resume is what archiving a section is for, so a resume
+  // still holding one would print a heading the user removed.
+  it("leaves out what has been archived at any level", () => {
+    const { store, resume, experience, entry, placed } = aComposedStore();
+    const archive = (row: { archivedAt: string | null }): void => {
+      Object.assign(row, { archivedAt: EPOCH });
+    };
+
+    archive(placed);
+    expect(composition(store, resume.id)?.sections[0]?.entries[0]?.points).toHaveLength(1);
+
+    archive(entry);
+    expect(composition(store, resume.id)?.sections[0]?.entries).toEqual([]);
+
+    archive(experience);
+    expect(composition(store, resume.id)?.sections.map((s) => s.section.kind)).toEqual(["project"]);
+  });
+
+  // Hidden is a choice the user made and can undo, so the row has to reach the
+  // screen that shows it greyed out.
+  it("keeps what is merely hidden", () => {
+    const { store, resume } = aComposedStore();
+    for (const row of store.resumeSections) Object.assign(row, { isVisible: false });
+
+    expect(composition(store, resume.id)?.sections).toHaveLength(2);
+  });
+
+  it("holds only the sections of the resume asked for", () => {
+    const { store } = aComposedStore();
+    const other = aResume(store, "Platform, Zeta");
+    aSection(store, other.id, "education", { sortKey: "a0" });
+
+    expect(composition(store, other.id)?.sections.map((s) => s.section.kind)).toEqual([
+      "education",
+    ]);
+    expect(composition(store, newUuid())).toBeUndefined();
   });
 });

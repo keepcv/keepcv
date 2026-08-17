@@ -43,6 +43,19 @@ import type {
   RecordLinkInput,
   RecordLinkPatch,
   RecordTag,
+  Resume,
+  ResumeContactChannel,
+  ResumeEntry,
+  ResumeEntryInput,
+  ResumeEntryPatch,
+  ResumeEntryPoint,
+  ResumeEntryPointInput,
+  ResumeEntryPointPatch,
+  ResumeInput,
+  ResumePatch,
+  ResumeSection,
+  ResumeSectionInput,
+  ResumeSectionPatch,
   RichText,
   Store,
   Tag,
@@ -312,6 +325,72 @@ export interface TagRepository {
 
 // Keyed by what it drafts. `save` overwrites and takes no token; `discard` is
 // the one delete the store performs (data-model.md #5).
+// One aggregate: sections, entries and the points under them have no life apart
+// from the resume they compose (data-model.md #9.1).
+export interface ResumeRepository {
+  list(options?: { includeArchived?: boolean | undefined }): Promise<Resume[]>;
+  get(id: Uuid): Promise<Resume>;
+  create(input: ResumeInput): Promise<Resume>;
+  update(id: Uuid, patch: ResumePatch, expectedUpdatedAt: Timestamp): Promise<Resume>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Resume>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<Resume>;
+
+  // Nothing below deletes: toggling a record out sets `isVisible`, so the
+  // phrasing choice and the position survive it.
+  listSections(options?: {
+    resumeId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<ResumeSection[]>;
+  getSection(id: Uuid): Promise<ResumeSection>;
+  addSection(input: ResumeSectionInput): Promise<ResumeSection>;
+  updateSection(
+    id: Uuid,
+    patch: ResumeSectionPatch,
+    expectedUpdatedAt: Timestamp,
+  ): Promise<ResumeSection>;
+  archiveSection(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeSection>;
+  restoreSection(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeSection>;
+
+  listEntries(options?: {
+    resumeId?: Uuid | undefined;
+    resumeSectionId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<ResumeEntry[]>;
+  getEntry(id: Uuid): Promise<ResumeEntry>;
+  addEntry(input: ResumeEntryInput): Promise<ResumeEntry>;
+  updateEntry(
+    id: Uuid,
+    patch: ResumeEntryPatch,
+    expectedUpdatedAt: Timestamp,
+  ): Promise<ResumeEntry>;
+  archiveEntry(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntry>;
+  restoreEntry(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntry>;
+
+  listEntryPoints(options?: {
+    resumeId?: Uuid | undefined;
+    resumeEntryId?: Uuid | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<ResumeEntryPoint[]>;
+  getEntryPoint(id: Uuid): Promise<ResumeEntryPoint>;
+  addEntryPoint(input: ResumeEntryPointInput): Promise<ResumeEntryPoint>;
+  updateEntryPoint(
+    id: Uuid,
+    patch: ResumeEntryPointPatch,
+    expectedUpdatedAt: Timestamp,
+  ): Promise<ResumeEntryPoint>;
+  archiveEntryPoint(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntryPoint>;
+  restoreEntryPoint(id: Uuid, expectedUpdatedAt: Timestamp): Promise<ResumeEntryPoint>;
+
+  // An override: clearing one reverts to the channel's own `isDefaultVisible`.
+  listContactChannels(options?: { resumeId?: Uuid | undefined }): Promise<ResumeContactChannel[]>;
+  setContactChannel(
+    resumeId: Uuid,
+    contactChannelId: Uuid,
+    isVisible: boolean,
+  ): Promise<ResumeContactChannel>;
+  clearContactChannel(resumeId: Uuid, contactChannelId: Uuid): Promise<void>;
+}
+
 export interface DraftRepository {
   list(): Promise<Draft[]>;
   save(target: DraftTarget, body: DraftBody): Promise<Draft>;
@@ -350,6 +429,7 @@ export interface Repositories {
   points: PointRepository;
   phrasings: PhrasingRepository;
   tags: TagRepository;
+  resumes: ResumeRepository;
   drafts: DraftRepository;
   store: StoreRepository;
 }

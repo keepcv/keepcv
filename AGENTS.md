@@ -136,22 +136,26 @@ builds and `tsc` only checks.
 The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
-`evidence`, `tag`, `record_tag`, `point_tag` and `draft`, and the port has nine
-repositories. That is the record store, its vocabulary and its editor state; much
-of the data model describes tables that do not exist yet - resumes, versions; do
-not assume otherwise. There is no `search_document` and there will not be one:
-see below.
+`evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
+`resume_section`, `resume_entry`, `resume_entry_point` and
+`resume_contact_channel`, and the port has ten repositories. That is the record
+store, its vocabulary, its editor state and the composition a resume is; the data
+model still describes tables that do not exist yet - versions, snapshots and the
+usage index; do not assume otherwise. There is no `search_document` and there
+will not be one: see below.
 
 The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
 `/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
 assignment on records and points, `/v1/tags/{id}/merge`,
-`/v1/drafts/{targetKind}/{targetId}/{field}`, and twelve owned
-collections: `/v1/contact-channels`, `/v1/organisations`, `/v1/custom-sections`,
-`/v1/records`, `/v1/record-links`, `/v1/record-fields`, `/v1/points`,
-`/v1/metrics`, `/v1/evidence`, `/v1/phrasing-sets`, `/v1/phrasings` and
-`/v1/tags`. Resumes and versions are unbuilt. `createApi` takes the port, an
-owner scope and an `authenticate` function and knows nothing else - no driver, no
-token store, no port number.
+`/v1/drafts/{targetKind}/{targetId}/{field}`, a resume's contact-channel
+overrides, and sixteen owned collections: `/v1/contact-channels`,
+`/v1/organisations`, `/v1/custom-sections`, `/v1/records`, `/v1/record-links`,
+`/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
+`/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/resumes`,
+`/v1/resume-sections`, `/v1/resume-entries` and `/v1/resume-entry-points`.
+Versions are unbuilt, and so is anything that compiles a `ResumeDocument`.
+`createApi` takes the port, an owner scope and an `authenticate` function and
+knows nothing else - no driver, no token store, no port number.
 
 The web app is **read-only so far**: the shell, the store overview and the record
 list, both fed by one `GET /v1/store` on boot. Nothing in it writes, so there are
@@ -177,7 +181,10 @@ clears the address bar. A token in a query string would be in every log between
 here and nowhere.
 
 **Screens read the cached store through selectors in `@keepcv/core`**, never
-through a request of their own. Counting, filtering, tag usage, every
+through a request of their own. **What a resume is made of is one of them** -
+`composition(store, resumeId)`, not a route: every row it resolves is in the boot
+payload already, and the preview would otherwise resolve a resume twice, once per
+side. Counting, filtering, tag usage, every
 incompleteness nudge and **search itself** are pure functions there, so the same
 answer serves the browser, the CLI and anything server-side. Formatting is the
 opposite and lives in the web app's `model/`: a DTO is a contract, not a UI

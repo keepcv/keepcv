@@ -4,7 +4,12 @@ import type {
   Draft,
   DraftTarget,
   Organisation,
+  Phrasing,
   Point,
+  Resume,
+  ResumeEntry,
+  ResumeEntryPoint,
+  ResumeSection,
   Store,
   Tag,
   Uuid,
@@ -181,5 +186,72 @@ export function overview(
       ),
       unplacedPoints: unplacedPoints(store),
     },
+  };
+}
+
+export interface ComposedPoint {
+  entryPoint: ResumeEntryPoint;
+  point: Point;
+  phrasing: Phrasing;
+}
+
+export interface ComposedEntry {
+  entry: ResumeEntry;
+  record: CareerRecord;
+  points: ComposedPoint[];
+}
+
+export interface ComposedSection {
+  section: ResumeSection;
+  entries: ComposedEntry[];
+}
+
+export interface Composition {
+  resume: Resume;
+  sections: ComposedSection[];
+}
+
+function byId<T extends { id: Uuid }>(rows: readonly T[]): Map<Uuid, T> {
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+function inOrder<T extends { sortKey: string; id: Uuid }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id));
+}
+
+// What a resume is made of, resolved and ordered. There is no route for it
+// (api-contract.md #3).
+export function composition(store: Store, resumeId: Uuid): Composition | undefined {
+  const resume = store.resumes.find((row) => row.id === resumeId);
+  if (resume === undefined) return undefined;
+
+  const records = byId(store.records);
+  const points = byId(store.points);
+  const phrasings = byId(store.phrasings);
+
+  const entryPointsOf = (entryId: Uuid): ComposedPoint[] =>
+    inOrder(live(store.resumeEntryPoints).filter((row) => row.resumeEntryId === entryId)).flatMap(
+      (entryPoint) => {
+        const point = points.get(entryPoint.pointId);
+        const phrasing = phrasings.get(entryPoint.phrasingId);
+        return point === undefined || phrasing === undefined
+          ? []
+          : [{ entryPoint, point, phrasing }];
+      },
+    );
+
+  const entriesOf = (sectionId: Uuid): ComposedEntry[] =>
+    inOrder(live(store.resumeEntries).filter((row) => row.resumeSectionId === sectionId)).flatMap(
+      (entry) => {
+        const record = records.get(entry.recordId);
+        return record === undefined ? [] : [{ entry, record, points: entryPointsOf(entry.id) }];
+      },
+    );
+
+  return {
+    resume,
+    sections: inOrder(live(store.resumeSections).filter((row) => row.resumeId === resumeId)).map(
+      (section) => ({ section, entries: entriesOf(section.id) }),
+    ),
   };
 }

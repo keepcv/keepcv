@@ -12,4 +12,11 @@ export { point, pointRecordLink } from "./point.js";
 export { profile } from "./profile.js";
 export { recordField } from "./record-field.js";
 export { recordLink } from "./record-link.js";
+export {
+  resume,
+  resumeContactChannel,
+  resumeEntry,
+  resumeEntryPoint,
+  resumeSection,
+} from "./resume.js";
 export { pointTag, recordTag, tag } from "./tag.js";

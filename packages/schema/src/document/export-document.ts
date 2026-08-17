@@ -11,6 +11,13 @@ import { pointRecordLinkSchema, pointSchema } from "../entities/point.js";
 import { profileSchema } from "../entities/profile.js";
 import { recordFieldSchema } from "../entities/record-field.js";
 import { recordLinkSchema } from "../entities/record-link.js";
+import {
+  resumeContactChannelSchema,
+  resumeEntryPointSchema,
+  resumeEntrySchema,
+  resumeSchema,
+  resumeSectionSchema,
+} from "../entities/resume.js";
 import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
@@ -39,6 +46,11 @@ export const storeSchema = z
     pointTags: z.array(pointTagSchema),
     // In the boot payload too, unlike revision history (api-contract.md #3).
     drafts: z.array(draftSchema),
+    resumes: z.array(resumeSchema),
+    resumeSections: z.array(resumeSectionSchema),
+    resumeEntries: z.array(resumeEntrySchema),
+    resumeEntryPoints: z.array(resumeEntryPointSchema),
+    resumeContactChannels: z.array(resumeContactChannelSchema),
   })
   // Named, because two routes answer this shape and an anonymous one would be
   // inlined into the OpenAPI document twice.
