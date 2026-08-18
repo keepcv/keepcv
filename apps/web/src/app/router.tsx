@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
+import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
 import { MissingRecord, RecordDetail } from "../features/records/ui/record-detail.js";
 import { RecordForm } from "../features/records/ui/record-form.js";
@@ -118,6 +119,38 @@ const pointsRoute = createRoute({
   },
 });
 
+const newPointRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/points/new",
+  validateSearch: z.object({ recordId: uuidSchema.optional() }),
+  component: function NewPointScreen() {
+    const { api } = newPointRoute.useRouteContext();
+    const { recordId } = newPointRoute.useSearch();
+    return (
+      <PointForm
+        store={useStore(api)}
+        client={api}
+        {...(recordId === undefined ? {} : { recordId })}
+      />
+    );
+  },
+});
+
+const editPointRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/points/$pointId/edit",
+  params: { parse: ({ pointId }) => ({ pointId: uuidSchema.parse(pointId) }) },
+  component: function EditPointScreen() {
+    const { api } = editPointRoute.useRouteContext();
+    const store = useStore(api);
+    const { pointId } = editPointRoute.useParams();
+    const point = store.points.find((row) => row.id === pointId);
+
+    if (point === undefined) return <MissingPoint />;
+    return <PointForm store={store} client={api} point={point} />;
+  },
+});
+
 const resumesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/resumes",
@@ -164,6 +197,8 @@ const routeTree = rootRoute.addChildren([
   recordRoute,
   editRecordRoute,
   pointsRoute,
+  newPointRoute,
+  editPointRoute,
   resumesRoute,
   resumeRoute,
   searchRoute,

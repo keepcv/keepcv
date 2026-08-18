@@ -23,12 +23,14 @@ function Meta({ children }: { children: ReactNode }) {
 function Point({ point }: { point: PointRow }) {
   return (
     <li className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0">
-      <p
-        className="text-sm text-slate-800 data-[archived=true]:text-slate-400"
+      <Link
+        to="/points/$pointId/edit"
+        params={{ pointId: point.id }}
+        className="block text-sm text-slate-800 underline-offset-2 hover:underline data-[archived=true]:text-slate-400"
         data-archived={point.isArchived}
       >
         {point.text || "an empty point"}
-      </p>
+      </Link>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {point.metrics.map((metric) => (
           <Badge key={metric} tone="accent">
@@ -128,7 +130,11 @@ export function RecordDetail({
       <Panel>
         <PanelHeader
           title="Points"
-          aside={<span className="text-xs tabular-nums text-slate-400">{points.length}</span>}
+          aside={
+            <ButtonLink to="/points/new" search={{ recordId }}>
+              Add a point
+            </ButtonLink>
+          }
         >
           What you actually did. Wording is chosen per resume; this is the canonical one.
         </PanelHeader>

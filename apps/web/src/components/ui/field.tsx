@@ -82,6 +82,39 @@ export function TextField({
   );
 }
 
+export function TextAreaField({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  ...common
+}: Common & {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const controlId = useId();
+  const describedBy = `${controlId}-note`;
+
+  return (
+    <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
+      <textarea
+        id={controlId}
+        value={value}
+        rows={rows}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        placeholder={placeholder}
+        aria-invalid={common.error !== undefined}
+        aria-describedby={describedBy}
+        className={cn(CONTROL, "resize-y leading-relaxed")}
+      />
+    </Wrapper>
+  );
+}
+
 export interface Option {
   value: string;
   label: string;

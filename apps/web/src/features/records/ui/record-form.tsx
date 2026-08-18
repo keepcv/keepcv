@@ -19,13 +19,14 @@ import {
 } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
+import { sentenceCase } from "../../../lib/label.js";
+import { DATE_HINT } from "../../../lib/partial-date.js";
 import { useCreateRecord, useUpdateRecord } from "../api/use-records.js";
 import {
   blankValues,
   buildPatch,
   buildSubmission,
   creatableKinds,
-  DATE_HINT,
   type Difference,
   differences,
   EXTRA_FIELDS,
@@ -47,7 +48,7 @@ function optionsFor(store: Store, field: ExtraField): readonly Option[] | undefi
   }
   return field.options === undefined
     ? undefined
-    : [NONE, ...field.options.map((value) => ({ value, label: value }))];
+    : [NONE, ...field.options.map((value) => ({ value, label: sentenceCase(value) }))];
 }
 
 // Both sides of a stale write, named. Nothing is kept until one is chosen.

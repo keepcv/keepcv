@@ -1,4 +1,4 @@
-import { generateKeyBetween, live, newUuid } from "@keepcv/core";
+import { live, newUuid } from "@keepcv/core";
 import type {
   CareerRecord,
   CareerRecordInput,
@@ -16,8 +16,7 @@ import {
   WORK_MODES,
 } from "@keepcv/schema";
 import type { ZodError } from "zod";
-
-export const DATE_HINT = "A year, a month or a day: 2019, 2019-04 or 2019-04-01.";
+import { nextSortKey } from "../../../lib/sort.js";
 
 // The columns a kind carries beyond the shared ones. `record-form.test.ts`
 // checks this covers each kind's schema exactly, so a column added to the model
@@ -184,16 +183,6 @@ function organisationFor(
   return { id: created.id, created };
 }
 
-// New records go last: the list is the order they were put in, and inserting at
-// the top would reorder a store the user did not touch.
-export function nextRecordSortKey(store: Store): string {
-  const last = store.records
-    .map((row) => row.sortKey)
-    .sort((a, b) => a.localeCompare(b))
-    .at(-1);
-  return generateKeyBetween(last ?? null, null);
-}
-
 export function buildSubmission(
   store: Store,
   values: RecordFormValues,
@@ -201,7 +190,7 @@ export function buildSubmission(
   const organisation = organisationFor(store, values.organisation);
   const parsed = careerRecordInputSchema.safeParse({
     id: newUuid(),
-    sortKey: nextRecordSortKey(store),
+    sortKey: nextSortKey(store.records),
     summarySetId: null,
     ...sharedColumns(values, organisation.id),
   });

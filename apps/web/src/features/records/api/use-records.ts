@@ -56,12 +56,10 @@ export function useCreateRecord(client: ApiClient) {
     },
     optimistic: (store, { record, organisation }) => {
       const at = now();
-      return upsert(withOrganisation(store, organisation), {
-        ...record,
-        createdAt: at,
-        updatedAt: at,
-        archivedAt: null,
-      } as CareerRecord);
+      return upsert(
+        withOrganisation(store, organisation),
+        careerRecordSchema.parse({ ...record, createdAt: at, updatedAt: at, archivedAt: null }),
+      );
     },
   });
 }
@@ -89,11 +87,10 @@ export function useUpdateRecord(client: ApiClient) {
     optimistic: (store, { id, patch, organisation }) => {
       const existing = store.records.find((row) => row.id === id);
       if (existing === undefined) return store;
-      return upsert(withOrganisation(store, organisation), {
-        ...existing,
-        ...patch,
-        updatedAt: now(),
-      } as CareerRecord);
+      return upsert(
+        withOrganisation(store, organisation),
+        careerRecordSchema.parse({ ...existing, ...patch, updatedAt: now() }),
+      );
     },
   });
 }

@@ -1,4 +1,3 @@
-import { careerRecordSchema, organisationSchema, type Store } from "@keepcv/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -16,6 +15,7 @@ import {
   aFilledStore,
   emptyStore,
 } from "../store.harness.js";
+import { jsonOf, storeServer } from "../store-server.harness.js";
 import { buildRouter } from "./router.js";
 
 // Only the network is stubbed: the wiring is what a screen test would not touch.
@@ -34,71 +34,6 @@ function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-}
-
-function jsonOf(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": status < 400 ? "application/json" : "application/problem+json" },
-  });
-}
-
-interface Call {
-  method: string;
-  path: string;
-  body: unknown;
-}
-
-function create(store: Store, { path, body }: Call, at: string): Response {
-  const row = { ...(body as object), createdAt: at, updatedAt: at, archivedAt: null };
-  if (path === "/v1/organisations") {
-    store.organisations.push(organisationSchema.parse(row));
-  } else {
-    store.records.push(careerRecordSchema.parse(row));
-  }
-  return jsonOf(row, 201);
-}
-
-function amend(store: Store, { method, path, body }: Call, at: string): Response {
-  const id = /^\/v1\/records\/([^/]+)/.exec(path)?.[1];
-  const index = store.records.findIndex((row) => row.id === id);
-  const found = store.records[index];
-  if (found === undefined) return jsonOf({ status: 404 }, 404);
-
-  const patch =
-    method === "DELETE"
-      ? { archivedAt: at }
-      : path.endsWith("/restore")
-        ? { archivedAt: null }
-        : (body as { patch: object }).patch;
-  const row = careerRecordSchema.parse({ ...found, ...patch, updatedAt: at });
-  store.records.splice(index, 1, row);
-  return jsonOf(row);
-}
-
-// A stub that writes, so an optimistic row is checked against what comes back
-// rather than against itself.
-function storeServer(store: Store, intercept?: (call: Call) => Response | undefined) {
-  const calls: Call[] = [];
-
-  function answer(url: string, init?: RequestInit): Response {
-    const call: Call = {
-      method: init?.method ?? "GET",
-      path: new URL(url).pathname,
-      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
-    };
-    calls.push(call);
-
-    const forced = intercept?.(call);
-    if (forced !== undefined) return forced;
-    if (call.method === "GET") return jsonOf(store);
-
-    const at = new Date().toISOString();
-    const isCreate = call.path === "/v1/organisations" || call.path === "/v1/records";
-    return isCreate ? create(store, call, at) : amend(store, call, at);
-  }
-
-  return { answer, calls };
 }
 
 function type(label: string, value: string): void {
@@ -350,6 +285,98 @@ describe("points", () => {
 
     expect(await screen.findByText("Somewhere, eventually")).toBeInTheDocument();
     expect(screen.queryByText("Cut p95 latency from 800ms to 120ms")).not.toBeInTheDocument();
+  });
+});
+
+describe("writing a point", () => {
+  it("writes the words and the point together", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const server = storeServer(store);
+    mount(server.answer, `/points/new?recordId=${record.id}`);
+
+    expect(await screen.findByRole("heading", { name: "New point" })).toBeInTheDocument();
+    type("Point", "Cut p95 latency from 800ms to 120ms");
+    press("Add point");
+
+    // Back on the record it was filed under, with the words it holds: the set,
+    // the phrasing and the first revision are one request.
+    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
+    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(store.points[0]?.recordId).toBe(record.id);
+    expect(store.phrasingRevisions[0]?.plainText).toBe("Cut p95 latency from 800ms to 120ms");
+  });
+
+  // Editing text appends; it never overwrites. A resume sent in March goes on
+  // saying what it said.
+  it("appends a revision when the words change, and keeps the old one", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Rewrote the scheduler", { recordId: record.id });
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
+    type("Point", "Rewrote the scheduler, halving tail latency");
+    press("Save");
+
+    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
+    expect(store.phrasingRevisions).toHaveLength(2);
+    expect(store.phrasingRevisions[0]?.plainText).toBe("Rewrote the scheduler");
+    expect(store.phrasingRevisions[1]?.plainText).toBe(
+      "Rewrote the scheduler, halving tail latency",
+    );
+  });
+
+  // A history of revisions that say the same thing is not history.
+  it("appends nothing when only the filing changed", async () => {
+    const store = emptyStore();
+    addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Rewrote the scheduler");
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Confidence"), { target: { value: "verified" } });
+    press("Save");
+
+    expect(await screen.findByRole("heading", { name: "Points" })).toBeInTheDocument();
+    expect(store.points[0]?.confidence).toBe("verified");
+    expect(store.phrasingRevisions).toHaveLength(1);
+    expect(server.calls.filter((call) => call.path.endsWith("/revisions"))).toHaveLength(0);
+  });
+
+  it("measures a point without leaving the screen", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Cut p95 latency");
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
+    type("Label", "p95 latency");
+    type("Value", "120");
+    type("Unit", "ms");
+    type("Was", "800");
+    press("Add metric");
+
+    expect(await screen.findByText("p95 latency 800ms -> 120ms")).toBeInTheDocument();
+    expect(store.metrics[0]?.pointId).toBe(point.id);
+  });
+
+  it("archives a point and restores it again", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Somewhere, eventually");
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    await screen.findByRole("button", { name: "Archive" });
+    press("Archive");
+    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+    expect(store.points[0]?.archivedAt).not.toBeNull();
+
+    press("Restore");
+    await screen.findByRole("button", { name: "Archive" });
+    expect(store.points[0]?.archivedAt).toBeNull();
   });
 });
 

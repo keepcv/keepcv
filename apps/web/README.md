@@ -4,9 +4,9 @@ The browser app for [KeepCV](https://github.com/keepcv/keepcv). Not published:
 the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** The application frame, the store overview,
-> records with the form that writes them, points, resumes with a compiled
-> preview, and search. Points, phrasings and dragging a resume into shape are
-> still read-only.
+> records and points with the forms that write them, resumes with a compiled
+> preview, and search. Tags, phrasing variants and dragging a resume into shape
+> are still read-only.
 
 ## Running it
 
@@ -52,6 +52,9 @@ pnpm --filter @keepcv/web dev
   each side says, field by field, and saves nothing until you pick one.
 - **Nothing is deleted.** Archiving is the only removal, and it reverses from the
   same button.
+- **Rewording a point appends.** The edit sends a new revision and moves a
+  pointer, so a resume you sent in March goes on saying what it said. Retyping a
+  word and undoing it sends nothing at all.
 
 ## The session token
 

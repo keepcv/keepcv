@@ -284,6 +284,25 @@ thing every resume is assembled from. Its filters are the overview's nudges made
 reachable - unplaced, and no metric - so a count on the overview is a link
 rather than a number nobody can act on.
 
+**A point is created with the words it holds**, in one request: the set, the
+phrasing and the first revision are the store's to write together, and a point
+that exists but says nothing is not a state worth being able to reach.
+
+**Changing what a point says appends.** The editor compares the typed text to
+what the phrasing currently says and sends nothing when they match, which the
+unique `(phrasing_id, content_hash)` index would enforce anyway - not sending it
+keeps the round trip off the wire too. The store mints the revision's id, unlike
+every other create, because the content hash is what makes an append idempotent
+and a second id would be a second answer to "which revision is this". The
+optimistic cache therefore rewrites the current revision row in place: the boot
+payload narrows revisions to what each phrasing currently says, so that row is
+that projection, and the re-read brings back the new revision's own id.
+
+**Metrics are written as they are added, not staged with the rest of the form.**
+A metric belongs to a point that already exists, so there is nothing to roll
+back and nothing to save; the panel says so, because a Save button above it would
+otherwise look like it covered them.
+
 ### 5.5 Resume composer
 
 Three panes: the store with in/out toggles; the resume structure,
@@ -408,11 +427,13 @@ apps/web/src/
 
 Rules:
 
-- A feature may not import another feature's internals. Shared logic moves to
-  `@keepcv/core` if it is domain logic, or `lib/` if it is presentation. **The
-  boot payload's cache is one of those** - its query key, its loader and the
-  optimistic-mutation helper every feature writes through are `lib/`, not a
-  `store` feature the others would have to reach into.
+- A feature may not import another feature's internals - its `ui/` and its
+  `api/`. A feature's `model/` is its interface for the concept it owns, so the
+  point form naming a record uses the records feature's row model rather than
+  writing a second one. Anything neither feature owns moves to `@keepcv/core` if
+  it is domain logic, or `lib/` if it is presentation: the boot payload's cache,
+  the optimistic-mutation helper every feature writes through, sort-key
+  arithmetic and partial-date formatting are all `lib/`.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - **Directories arrive with something in them.** `components/ui/` appears with

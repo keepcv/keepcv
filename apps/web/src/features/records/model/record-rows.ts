@@ -1,7 +1,8 @@
 import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
-import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
+import type { CareerRecord, CareerRecordKind, Store, Uuid } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
+import { formatPartialDate } from "../../../lib/partial-date.js";
 
 // Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
@@ -13,18 +14,6 @@ export interface RecordRow {
   period: string | null;
   pointCount: number;
   isArchived: boolean;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// A real precision, not a full date with the tail unknown: rendering "2019" as
-// "1 January 2019" invents a claim the user never made.
-export function formatPartialDate(value: PartialDate): string {
-  const [year, month, day] = value.split("-");
-  if (year === undefined) return value;
-  if (month === undefined) return year;
-  const name = MONTHS[Number(month) - 1] ?? month;
-  return day === undefined ? `${name} ${year}` : `${String(Number(day))} ${name} ${year}`;
 }
 
 // An ongoing period reads "Present"; an unfinished one is left visibly open.
