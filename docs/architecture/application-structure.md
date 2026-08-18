@@ -434,6 +434,15 @@ Rules:
   it is domain logic, or `lib/` if it is presentation: the boot payload's cache,
   the optimistic-mutation helper every feature writes through, sort-key
   arithmetic and partial-date formatting are all `lib/`.
+- **A date reads the same on a screen as on a resume, so it is formatted once.**
+  `lib/partial-date.ts` binds `core.formatPartialDate` to the app's locale and
+  adds nothing else; the app's chrome is English and untranslated, while a
+  resume's locale is a per-resume option `compile()` takes, so the two callers
+  differ only in which locale they pass. **A *period* is not the same fact.** A
+  screen says `2019 -` to show a record nobody has finished and `until Apr 2024`
+  when only an end is known, because leaving a record open is a state the
+  overview nudges about; a resume must print neither. So `formatPeriod` has one
+  version per contract and the date inside it has one version full stop.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - **Directories arrive with something in them.** `components/ui/` appears with
