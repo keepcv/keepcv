@@ -161,16 +161,25 @@ two versions, restore, and templates are unbuilt.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-The web app is **read-only so far**: an application frame - a navigation rail
-that lists the kinds the store holds, a search field, and a disclosure in place
-of the rail below `lg` - over the store overview, the record list, a record's
-detail, the point list, the resume list, a resume's composition and its compiled
-preview, and search results. All of it is fed by one `GET /v1/store` on the root
-route's loader, and the preview is `compile()` running in the browser over that
-same payload. Nothing in it writes, so there are no mutations, no optimistic
-updates and no conflict UI yet. React, TanStack Router and Query, Tailwind v4,
-Vite, and `components/ui/` for the primitives a screen needs. Routes are declared
-in code rather than generated from filenames.
+The web app is an application frame - a navigation rail that lists the kinds the
+store holds, a search field, and a disclosure in place of the rail below `lg` -
+over the store overview, the record list, a record's detail and its form, the
+point list, the resume list, a resume's composition and its compiled preview, and
+search results. All of it is fed by one `GET /v1/store` on the root route's
+loader, and the preview is `compile()` running in the browser over that same
+payload. React, TanStack Router and Query, Tailwind v4, Vite, and
+`components/ui/` for the primitives a screen needs. Routes are declared in code
+rather than generated from filenames.
+
+**Records and points write.** Create, edit, archive and restore go through
+`useStoreMutation` in `lib/store-cache.ts`, which patches the cached `Store`
+before the request leaves, puts it back when the request is refused, and re-reads
+once it settles. A `409` opens a field-by-field comparison offering both
+resolutions and taking neither. Changing what a point says appends a
+`phrasing_revision` and sends nothing when the words did not change; metrics are
+written as they are added rather than staged with the form. Tags, evidence,
+phrasing variants and the composition are still read-only, so there is no
+drag-to-reorder, no draft handling and no phrasing editor state machine yet.
 
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each

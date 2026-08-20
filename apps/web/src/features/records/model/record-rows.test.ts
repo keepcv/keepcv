@@ -1,7 +1,8 @@
 import { partialDateSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
+import { formatPartialDate } from "../../../lib/partial-date.js";
 import { addOrganisation, addPoint, addRecord, emptyStore } from "../../../store.harness.js";
-import { formatPartialDate, formatPeriod, recordRows, toRecordRow } from "./record-rows.js";
+import { formatPeriod, recordRows, toRecordRow } from "./record-rows.js";
 
 describe("formatting a partial date", () => {
   // A partial date is a precision the user chose, not a full date with the tail

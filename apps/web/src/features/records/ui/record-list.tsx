@@ -2,6 +2,7 @@ import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
+import { ButtonLink } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import {
   groupedRecordRows,
@@ -15,6 +16,12 @@ const ARCHIVED_OPTIONS = [
   { value: "include", label: "All" },
   { value: "only", label: "Archived" },
 ] as const;
+
+// The kind being browsed is the kind being added: adding a talk from the talks
+// list should not open the form on "experience".
+function newRecordSearch(filters: RecordFilters): Record<string, unknown> {
+  return filters.kind === undefined ? {} : { kind: filters.kind };
+}
 
 function Row({ row }: { row: RecordRow }) {
   return (
@@ -66,30 +73,45 @@ export function RecordList({ store, filters }: { store: Store; filters: RecordFi
             {total === 0 ? "Nothing here" : `${String(total)} shown`}
           </p>
         </div>
-        {/* Archived content is reachable, never hidden: "where did my old entry
-            go" must always have an answer. */}
-        <Segmented label="Archived">
-          {ARCHIVED_OPTIONS.map((option) => (
-            <Segment
-              key={option.value}
-              to="/records"
-              search={{
-                ...(filters.kind === undefined ? {} : { kind: filters.kind }),
-                archived: option.value,
-              }}
-              active={filters.archived === option.value}
-            >
-              {option.label}
-            </Segment>
-          ))}
-        </Segmented>
+        <div className="flex items-center gap-2">
+          {/* Archived content is reachable, never hidden: "where did my old entry
+              go" must always have an answer. */}
+          <Segmented label="Archived">
+            {ARCHIVED_OPTIONS.map((option) => (
+              <Segment
+                key={option.value}
+                to="/records"
+                search={{
+                  ...(filters.kind === undefined ? {} : { kind: filters.kind }),
+                  archived: option.value,
+                }}
+                active={filters.archived === option.value}
+              >
+                {option.label}
+              </Segment>
+            ))}
+          </Segmented>
+          <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
+            New record
+          </ButtonLink>
+        </div>
       </div>
 
       {total === 0 ? (
         <Empty title={filters.archived === "only" ? "Nothing archived here" : "No records yet"}>
-          {filters.archived === "only"
-            ? "Archiving keeps a record out of the way without destroying it. Nothing here has been put away."
-            : "A record is a job, a degree, a project, a talk - anything you might one day want on a resume. Points attach to it afterwards."}
+          {filters.archived === "only" ? (
+            "Archiving keeps a record out of the way without destroying it. Nothing here has been put away."
+          ) : (
+            <>
+              A record is a job, a degree, a project, a talk - anything you might one day want on a
+              resume. Points attach to it afterwards.
+              <span className="mt-4 block">
+                <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
+                  Add the first one
+                </ButtonLink>
+              </span>
+            </>
+          )}
         </Empty>
       ) : (
         <div className="space-y-6">

@@ -1,7 +1,8 @@
 import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
-import type { CareerRecord, CareerRecordKind, PartialDate, Store, Uuid } from "@keepcv/schema";
+import type { CareerRecord, CareerRecordKind, Store, Uuid } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
+import { formatPartialDate } from "../../../lib/partial-date.js";
 
 // Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
@@ -13,18 +14,6 @@ export interface RecordRow {
   period: string | null;
   pointCount: number;
   isArchived: boolean;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// A real precision, not a full date with the tail unknown: rendering "2019" as
-// "1 January 2019" invents a claim the user never made.
-export function formatPartialDate(value: PartialDate): string {
-  const [year, month, day] = value.split("-");
-  if (year === undefined) return value;
-  if (month === undefined) return year;
-  const name = MONTHS[Number(month) - 1] ?? month;
-  return day === undefined ? `${name} ${year}` : `${String(Number(day))} ${name} ${year}`;
 }
 
 // An ongoing period reads "Present"; an unfinished one is left visibly open.
@@ -40,6 +29,22 @@ export function formatPeriod(entry: CareerRecord): string | null {
   if (started === null) return `until ${ended ?? ""}`;
   return ended === null ? `${started} -` : `${started} - ${ended}`;
 }
+
+// One record, not a heading over several: a badge on a single row reading
+// "Certifications" is the plural table used in a place it does not fit.
+export const KIND_NAMES: Record<CareerRecordKind, string> = {
+  experience: "Experience",
+  education: "Education",
+  project: "Project",
+  skill: "Skill",
+  certification: "Certification",
+  publication: "Publication",
+  award: "Award",
+  language: "Language",
+  volunteering: "Volunteering",
+  speaking: "Speaking",
+  custom_entry: "Custom entry",
+};
 
 export const KIND_LABELS: Record<CareerRecordKind, string> = {
   experience: "Experience",

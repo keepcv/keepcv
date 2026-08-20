@@ -3,16 +3,18 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
+import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
-import { RecordDetail } from "../features/records/ui/record-detail.js";
+import { MissingRecord, RecordDetail } from "../features/records/ui/record-detail.js";
+import { RecordForm } from "../features/records/ui/record-form.js";
 import { RecordList } from "../features/records/ui/record-list.js";
 import { RESUME_VIEWS, ResumeDetailScreen } from "../features/resumes/ui/resume-detail.js";
 import { ResumeList } from "../features/resumes/ui/resume-list.js";
 import { SearchResults } from "../features/search/ui/search-results.js";
-import { prefetchStore, useStore } from "../features/store/api/use-store.js";
 import { Overview } from "../features/store/ui/overview.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
+import { prefetchStore, useStore } from "../lib/store-cache.js";
 import { Shell } from "./shell.js";
 import { Failure, Skeleton } from "./states.js";
 
@@ -65,13 +67,45 @@ const recordsRoute = createRoute({
   },
 });
 
+// Before the parameterised one: "new" is a screen, not a record id.
+const newRecordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/records/new",
+  validateSearch: z.object({ kind: careerRecordKindSchema.default("experience") }),
+  component: function NewRecordScreen() {
+    const { api } = newRecordRoute.useRouteContext();
+    return <RecordForm store={useStore(api)} client={api} kind={newRecordRoute.useSearch().kind} />;
+  },
+});
+
 const recordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/records/$recordId",
   params: { parse: ({ recordId }) => ({ recordId: uuidSchema.parse(recordId) }) },
   component: function RecordScreen() {
-    const store = useStore(recordRoute.useRouteContext().api);
-    return <RecordDetail store={store} recordId={recordRoute.useParams().recordId} />;
+    const { api } = recordRoute.useRouteContext();
+    return (
+      <RecordDetail
+        store={useStore(api)}
+        client={api}
+        recordId={recordRoute.useParams().recordId}
+      />
+    );
+  },
+});
+
+const editRecordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/records/$recordId/edit",
+  params: { parse: ({ recordId }) => ({ recordId: uuidSchema.parse(recordId) }) },
+  component: function EditRecordScreen() {
+    const { api } = editRecordRoute.useRouteContext();
+    const store = useStore(api);
+    const { recordId } = editRecordRoute.useParams();
+    const record = store.records.find((row) => row.id === recordId);
+
+    if (record === undefined) return <MissingRecord />;
+    return <RecordForm store={store} client={api} record={record} kind={record.kind} />;
   },
 });
 
@@ -82,6 +116,38 @@ const pointsRoute = createRoute({
   component: function PointsScreen() {
     const store = useStore(pointsRoute.useRouteContext().api);
     return <PointList store={store} filter={pointsRoute.useSearch().filter} />;
+  },
+});
+
+const newPointRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/points/new",
+  validateSearch: z.object({ recordId: uuidSchema.optional() }),
+  component: function NewPointScreen() {
+    const { api } = newPointRoute.useRouteContext();
+    const { recordId } = newPointRoute.useSearch();
+    return (
+      <PointForm
+        store={useStore(api)}
+        client={api}
+        {...(recordId === undefined ? {} : { recordId })}
+      />
+    );
+  },
+});
+
+const editPointRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/points/$pointId/edit",
+  params: { parse: ({ pointId }) => ({ pointId: uuidSchema.parse(pointId) }) },
+  component: function EditPointScreen() {
+    const { api } = editPointRoute.useRouteContext();
+    const store = useStore(api);
+    const { pointId } = editPointRoute.useParams();
+    const point = store.points.find((row) => row.id === pointId);
+
+    if (point === undefined) return <MissingPoint />;
+    return <PointForm store={store} client={api} point={point} />;
   },
 });
 
@@ -127,8 +193,12 @@ const searchRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   overviewRoute,
   recordsRoute,
+  newRecordRoute,
   recordRoute,
+  editRecordRoute,
   pointsRoute,
+  newPointRoute,
+  editPointRoute,
   resumesRoute,
   resumeRoute,
   searchRoute,

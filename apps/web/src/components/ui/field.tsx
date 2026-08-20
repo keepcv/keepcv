@@ -1,0 +1,192 @@
+import { type ReactNode, useId } from "react";
+import { cn } from "../../lib/cn.js";
+
+const CONTROL =
+  "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 aria-[invalid=true]:border-red-400";
+
+interface Common {
+  label: string;
+  hint?: string;
+  error?: string | undefined;
+}
+
+// The label, the hint and the error are wired to the control by id here, so no
+// screen has to remember to do it.
+function Wrapper({
+  label,
+  hint,
+  error,
+  controlId,
+  describedBy,
+  children,
+}: Common & { controlId: string; describedBy: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={controlId} className="block text-xs font-medium text-slate-600">
+        {label}
+      </label>
+      {children}
+      {error === undefined ? (
+        hint === undefined ? null : (
+          <p id={describedBy} className="text-xs text-slate-500">
+            {hint}
+          </p>
+        )
+      ) : (
+        <p id={describedBy} className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function TextField({
+  value,
+  onChange,
+  placeholder,
+  suggestions,
+  ...common
+}: Common & {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  suggestions?: readonly string[];
+}) {
+  const controlId = useId();
+  const describedBy = `${controlId}-note`;
+  const listId = `${controlId}-list`;
+
+  return (
+    <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
+      <input
+        id={controlId}
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        placeholder={placeholder}
+        list={suggestions === undefined ? undefined : listId}
+        aria-invalid={common.error !== undefined}
+        aria-describedby={describedBy}
+        className={CONTROL}
+      />
+      {suggestions === undefined ? null : (
+        <datalist id={listId}>
+          {suggestions.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+      )}
+    </Wrapper>
+  );
+}
+
+export function TextAreaField({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  ...common
+}: Common & {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const controlId = useId();
+  const describedBy = `${controlId}-note`;
+
+  return (
+    <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
+      <textarea
+        id={controlId}
+        value={value}
+        rows={rows}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        placeholder={placeholder}
+        aria-invalid={common.error !== undefined}
+        aria-describedby={describedBy}
+        className={cn(CONTROL, "resize-y leading-relaxed")}
+      />
+    </Wrapper>
+  );
+}
+
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export function SelectField({
+  value,
+  onChange,
+  options,
+  ...common
+}: Common & {
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly Option[];
+}) {
+  const controlId = useId();
+  const describedBy = `${controlId}-note`;
+
+  return (
+    <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
+      <select
+        id={controlId}
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        aria-invalid={common.error !== undefined}
+        aria-describedby={describedBy}
+        className={CONTROL}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </Wrapper>
+  );
+}
+
+export function CheckboxField({
+  label,
+  hint,
+  checked,
+  onChange,
+  className,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  const controlId = useId();
+
+  return (
+    <div className={cn("flex items-start gap-2", className)}>
+      <input
+        id={controlId}
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => {
+          onChange(event.target.checked);
+        }}
+        className="mt-0.5 size-4 rounded border-slate-300"
+      />
+      <div>
+        <label htmlFor={controlId} className="text-sm text-slate-800">
+          {label}
+        </label>
+        {hint === undefined ? null : <p className="text-xs text-slate-500">{hint}</p>}
+      </div>
+    </div>
+  );
+}

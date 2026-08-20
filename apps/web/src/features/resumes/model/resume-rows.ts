@@ -1,7 +1,7 @@
 import { composition } from "@keepcv/core";
 import type { Resume, Store, Uuid } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
-import { formatPartialDate } from "../../records/model/record-rows.js";
+import { formatPartialDate } from "../../../lib/partial-date.js";
 
 export interface ResumeRow {
   id: Uuid;

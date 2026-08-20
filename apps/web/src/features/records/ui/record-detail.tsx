@@ -1,11 +1,14 @@
 import type { Store, Uuid } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Empty } from "../../../app/states.js";
+import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
+import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import type { ApiClient } from "../../../lib/api.js";
+import { useSetArchived } from "../api/use-records.js";
 import { type PointRow, recordDetail } from "../model/record-detail.js";
-import { KIND_LABELS } from "../model/record-rows.js";
+import { KIND_NAMES } from "../model/record-rows.js";
 
 // Divided by a rule rather than a separator character, so a date range inside
 // one part cannot read as two.
@@ -20,12 +23,14 @@ function Meta({ children }: { children: ReactNode }) {
 function Point({ point }: { point: PointRow }) {
   return (
     <li className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0">
-      <p
-        className="text-sm text-slate-800 data-[archived=true]:text-slate-400"
+      <Link
+        to="/points/$pointId/edit"
+        params={{ pointId: point.id }}
+        className="block text-sm text-slate-800 underline-offset-2 hover:underline data-[archived=true]:text-slate-400"
         data-archived={point.isArchived}
       >
         {point.text || "an empty point"}
-      </p>
+      </Link>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {point.metrics.map((metric) => (
           <Badge key={metric} tone="accent">
@@ -42,19 +47,30 @@ function Point({ point }: { point: PointRow }) {
   );
 }
 
-export function RecordDetail({ store, recordId }: { store: Store; recordId: Uuid }) {
+export function MissingRecord() {
+  return (
+    <Empty title="No record with that id">
+      It may have been on another store, or the link may be older than the row. Everything the store
+      holds is on the records list.
+    </Empty>
+  );
+}
+
+export function RecordDetail({
+  store,
+  client,
+  recordId,
+}: {
+  store: Store;
+  client: ApiClient;
+  recordId: Uuid;
+}) {
+  const setArchived = useSetArchived(client);
   const detail = recordDetail(store, recordId);
 
-  if (detail === undefined) {
-    return (
-      <Empty title="No record with that id">
-        It may have been on another store, or the link may be older than the row. Everything the
-        store holds is on the records list.
-      </Empty>
-    );
-  }
+  if (detail === undefined) return <MissingRecord />;
 
-  const { row, points, links, fields, tags, placements } = detail;
+  const { record, row, points, links, fields, tags, placements } = detail;
 
   return (
     <div className="space-y-5">
@@ -66,10 +82,26 @@ export function RecordDetail({ store, recordId }: { store: Store; recordId: Uuid
         >
           Records
         </Link>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-xl font-semibold tracking-tight">{row.title}</h1>
-          <Badge>{KIND_LABELS[row.kind]}</Badge>
+          <Badge>{KIND_NAMES[row.kind]}</Badge>
           {row.isArchived ? <Badge tone="warning">Archived, and kept</Badge> : null}
+          <div className="ml-auto flex gap-2">
+            <ButtonLink to="/records/$recordId/edit" params={{ recordId }}>
+              Edit
+            </ButtonLink>
+            {/* Archiving is the only removal there is, and it reverses from the
+                same button. */}
+            <Button
+              tone={row.isArchived ? "secondary" : "danger"}
+              disabled={setArchived.isPending}
+              onClick={() => {
+                setArchived.mutate({ record, archived: !row.isArchived });
+              }}
+            >
+              {row.isArchived ? "Restore" : "Archive"}
+            </Button>
+          </div>
         </div>
         <p className="mt-1 flex flex-wrap gap-x-2">
           {[row.organisation, row.subtitle, row.period, detail.record.location]
@@ -87,6 +119,8 @@ export function RecordDetail({ store, recordId }: { store: Store; recordId: Uuid
         )}
       </div>
 
+      {setArchived.error === null ? null : <Failure error={setArchived.error} />}
+
       {detail.summary === "" ? null : (
         <Panel>
           <PanelBody className="text-sm text-slate-700">{detail.summary}</PanelBody>
@@ -96,7 +130,11 @@ export function RecordDetail({ store, recordId }: { store: Store; recordId: Uuid
       <Panel>
         <PanelHeader
           title="Points"
-          aside={<span className="text-xs tabular-nums text-slate-400">{points.length}</span>}
+          aside={
+            <ButtonLink to="/points/new" search={{ recordId }}>
+              Add a point
+            </ButtonLink>
+          }
         >
           What you actually did. Wording is chosen per resume; this is the canonical one.
         </PanelHeader>

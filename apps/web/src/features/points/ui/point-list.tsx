@@ -2,6 +2,7 @@ import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
+import { ButtonLink } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import {
   POINT_FILTER_LABELS,
@@ -21,12 +22,14 @@ const BLURBS: Record<PointFilter, string> = {
 function Row({ row }: { row: PointListRow }) {
   return (
     <li className="border-t border-slate-100 px-3 py-2.5 first:border-t-0">
-      <p
-        className="text-sm text-slate-800 data-[archived=true]:text-slate-400"
+      <Link
+        to="/points/$pointId/edit"
+        params={{ pointId: row.id }}
+        className="block text-sm text-slate-800 underline-offset-2 hover:underline data-[archived=true]:text-slate-400"
         data-archived={row.isArchived}
       >
         {row.text || "an empty point"}
-      </p>
+      </Link>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
         {row.recordId === null ? (
           <Badge tone="warning">Unplaced</Badge>
@@ -67,25 +70,40 @@ export function PointList({ store, filter }: { store: Store; filter: PointFilter
           <h1 className="text-xl font-semibold tracking-tight">Points</h1>
           <p className="text-xs text-slate-500">{BLURBS[filter]}</p>
         </div>
-        <Segmented label="Points">
-          {POINT_FILTERS.map((option) => (
-            <Segment
-              key={option}
-              to="/points"
-              search={{ filter: option }}
-              active={filter === option}
-            >
-              {POINT_FILTER_LABELS[option]}
-            </Segment>
-          ))}
-        </Segmented>
+        <div className="flex items-center gap-2">
+          <Segmented label="Points">
+            {POINT_FILTERS.map((option) => (
+              <Segment
+                key={option}
+                to="/points"
+                search={{ filter: option }}
+                active={filter === option}
+              >
+                {POINT_FILTER_LABELS[option]}
+              </Segment>
+            ))}
+          </Segmented>
+          <ButtonLink tone="primary" to="/points/new">
+            New point
+          </ButtonLink>
+        </div>
       </div>
 
       {rows.length === 0 ? (
         <Empty title={filter === "all" ? "No points yet" : "Nothing here"}>
-          {filter === "all"
-            ? "A point is the atomic unit: one thing you did, and what it moved. Records hold them; resumes select them."
-            : "Nothing matches that filter, which on this screen is usually good news."}
+          {filter === "all" ? (
+            <>
+              A point is the atomic unit: one thing you did, and what it moved. Records hold them;
+              resumes select them.
+              <span className="mt-4 block">
+                <ButtonLink tone="primary" to="/points/new">
+                  Write the first one
+                </ButtonLink>
+              </span>
+            </>
+          ) : (
+            "Nothing matches that filter, which on this screen is usually good news."
+          )}
         </Empty>
       ) : (
         <ul className="rounded-xl border border-slate-200 bg-white">

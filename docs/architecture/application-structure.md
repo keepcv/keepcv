@@ -179,7 +179,17 @@ reconciliation, no key churn when the response arrives.
 
 Conflicts use the `updated_at` token: a `409` returns current server state and
 the UI surfaces a comparison rather than silently discarding either side.
-Silent last-write-wins is unacceptable in this product specifically.
+Silent last-write-wins is unacceptable in this product specifically. The
+comparison is field by field, naming what each side says and what matched, and
+it offers exactly two resolutions - save mine over it, or keep what is stored.
+Neither is taken until one is chosen.
+
+**Optimistic is about the cache, not about navigation.** The row is written into
+`['store']` before the request leaves, and put back if the request is refused -
+without that, a screen goes on claiming a write that never landed, and goes on
+claiming it if the re-read fails too. But a mutation that *navigates* waits for
+the response first: arriving on a record's page and then being thrown off it is
+worse than a pause on a button that says "Saving".
 
 ---
 
@@ -236,6 +246,24 @@ Because points are uniform across every record kind, **this screen
 is built once** and serves experience, education, projects and everything
 else. Only the kind-specific field block above it differs.
 
+Editing is a route of its own rather than a dialog, so a half-written record
+survives a reload and can be linked to. **The form is built once too**: the
+shared columns are laid out by hand and a kind's own columns come from a declared
+table, checked against the schema so a column added to the model cannot stay
+unreachable from the only screen that writes one. A kind is chosen when a record
+is created and fixed afterwards, because the kind decides which columns the row
+has and the store cannot move a row between them.
+
+**An organisation is typed, not chosen.** The field suggests the names the store
+already has and creates the one it does not, in the same submit; a picker with no
+way to add would leave every employer unnameable until some other screen existed.
+Matching is case-insensitive on the trimmed name, so retyping an employer does
+not make a second one.
+
+**Archiving is the only removal, and it reverses from the same button.** It is on
+the record, not on the list: a destructive-looking control on a row is one a
+mis-tap reaches.
+
 ### 5.4 Point / phrasing editor - the highest-risk interface
 
 The highest-risk interface in the product: get it wrong and maintaining the
@@ -255,6 +283,25 @@ the atomic unit; a store that can only be browsed through records hides the one
 thing every resume is assembled from. Its filters are the overview's nudges made
 reachable - unplaced, and no metric - so a count on the overview is a link
 rather than a number nobody can act on.
+
+**A point is created with the words it holds**, in one request: the set, the
+phrasing and the first revision are the store's to write together, and a point
+that exists but says nothing is not a state worth being able to reach.
+
+**Changing what a point says appends.** The editor compares the typed text to
+what the phrasing currently says and sends nothing when they match, which the
+unique `(phrasing_id, content_hash)` index would enforce anyway - not sending it
+keeps the round trip off the wire too. The store mints the revision's id, unlike
+every other create, because the content hash is what makes an append idempotent
+and a second id would be a second answer to "which revision is this". The
+optimistic cache therefore rewrites the current revision row in place: the boot
+payload narrows revisions to what each phrasing currently says, so that row is
+that projection, and the re-read brings back the new revision's own id.
+
+**Metrics are written as they are added, not staged with the rest of the form.**
+A metric belongs to a point that already exists, so there is nothing to roll
+back and nothing to save; the panel says so, because a Save button above it would
+otherwise look like it covered them.
 
 ### 5.5 Resume composer
 
@@ -374,14 +421,28 @@ apps/web/src/
       ui/               components
       routes/           route definitions and loaders
   components/ui/        shadcn-owned primitives
-  lib/                  api client, formatting, date helpers
+  lib/                  api client, the store cache, formatting, date helpers
   styles/               tokens, themes
 ```
 
 Rules:
 
-- A feature may not import another feature's internals. Shared logic moves to
-  `@keepcv/core` if it is domain logic, or `lib/` if it is presentation.
+- A feature may not import another feature's internals - its `ui/` and its
+  `api/`. A feature's `model/` is its interface for the concept it owns, so the
+  point form naming a record uses the records feature's row model rather than
+  writing a second one. Anything neither feature owns moves to `@keepcv/core` if
+  it is domain logic, or `lib/` if it is presentation: the boot payload's cache,
+  the optimistic-mutation helper every feature writes through, sort-key
+  arithmetic and partial-date formatting are all `lib/`.
+- **A date reads the same on a screen as on a resume, so it is formatted once.**
+  `lib/partial-date.ts` binds `core.formatPartialDate` to the app's locale and
+  adds nothing else; the app's chrome is English and untranslated, while a
+  resume's locale is a per-resume option `compile()` takes, so the two callers
+  differ only in which locale they pass. **A *period* is not the same fact.** A
+  screen says `2019 -` to show a record nobody has finished and `until Apr 2024`
+  when only an end is known, because leaving a record open is a state the
+  overview nudges about; a resume must print neither. So `formatPeriod` has one
+  version per contract and the date inside it has one version full stop.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - **Directories arrive with something in them.** `components/ui/` appears with
