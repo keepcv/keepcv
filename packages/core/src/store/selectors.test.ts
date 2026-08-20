@@ -8,10 +8,13 @@ import {
   live,
   organisationOf,
   overview,
+  phrasingsOfSet,
   pointsOfRecord,
   pointsWithTag,
   recordCounts,
   recordsWithTag,
+  resumesUsingPhrasing,
+  resumesUsingPoint,
   tagsOfPoint,
   tagsOfRecord,
   tagUsage,
@@ -23,6 +26,7 @@ import {
   anEntry,
   anEntryPoint,
   anOrganisation,
+  aPhrasing,
   aPoint,
   aRecord,
   aResume,
@@ -414,5 +418,78 @@ describe("composition", () => {
       "education",
     ]);
     expect(composition(store, newUuid())).toBeUndefined();
+  });
+});
+
+describe("the wordings a set holds", () => {
+  it("orders them by sort key and leaves other sets alone", () => {
+    const store = emptyStore();
+    const point = aPoint(store, "the canonical wording");
+    const other = aPoint(store, "another point");
+    aPhrasing(store, point.phrasingSetId, "the short one", { sortKey: "a1" });
+    aPhrasing(store, point.phrasingSetId, "shelved", { sortKey: "a2", archivedAt: EPOCH });
+
+    expect(phrasingsOfSet(store, point.phrasingSetId).map((row) => row.sortKey)).toEqual([
+      "a0",
+      "a1",
+      "a2",
+    ]);
+    expect(phrasingsOfSet(store, other.phrasingSetId)).toHaveLength(1);
+  });
+});
+
+describe("what a rewording changes", () => {
+  function aPlacedPoint() {
+    const store = emptyStore();
+    const record = aRecord({ kind: "experience" });
+    store.records.push(record);
+
+    const point = aPoint(store, "Cut p95 latency", { recordId: record.id });
+    const [canonical] = phrasingsOfSet(store, point.phrasingSetId);
+    const short = aPhrasing(store, point.phrasingSetId, "Cut latency", { sortKey: "a1" });
+
+    const resume = aResume(store, "Backend, Acme");
+    const entry = anEntry(store, aSection(store, resume.id, "experience", {}), record.id, {});
+    const on = (into: typeof entry, wording = short) =>
+      anEntryPoint(store, into, point, { phrasingId: wording.id });
+
+    return { store, point, canonical, short, resume, entry, record, on };
+  }
+
+  // An entry pins a wording, not the set, so a variant nothing printed must not
+  // claim to change a resume printing the canonical one.
+  it("names only the resumes that pinned the wording being edited", () => {
+    const { store, canonical, short, resume, entry, on } = aPlacedPoint();
+    if (canonical === undefined) throw new Error("a point is written with the wording it holds");
+    on(entry, canonical);
+
+    expect(resumesUsingPhrasing(store, canonical.id).map((row) => row.name)).toEqual([resume.name]);
+    expect(resumesUsingPhrasing(store, short.id)).toEqual([]);
+  });
+
+  it("names every resume holding the point, whichever wording each chose", () => {
+    const { store, point, canonical, entry, record, on } = aPlacedPoint();
+    if (canonical === undefined) throw new Error("a point is written with the wording it holds");
+    on(entry);
+
+    const second = aResume(store, "Platform, Zeta");
+    const elsewhere = anEntry(store, aSection(store, second.id, "experience", {}), record.id, {});
+    on(elsewhere, canonical);
+
+    expect(resumesUsingPoint(store, point.id).map((row) => row.name)).toEqual([
+      "Backend, Acme",
+      "Platform, Zeta",
+    ]);
+  });
+
+  it("leaves out a resume that no longer holds it, and one that is archived", () => {
+    const { store, point, entry, record } = aPlacedPoint();
+    anEntryPoint(store, entry, point, { archivedAt: EPOCH });
+
+    const shelved = aResume(store, "Shelved", { archivedAt: EPOCH });
+    const there = anEntry(store, aSection(store, shelved.id, "experience", {}), record.id, {});
+    anEntryPoint(store, there, point, {});
+
+    expect(resumesUsingPoint(store, point.id)).toEqual([]);
   });
 });

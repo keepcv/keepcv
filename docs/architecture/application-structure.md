@@ -79,9 +79,10 @@ the entire WYSIWYG premise.
                  - canonicalise(RichText) + contentHash
                  - projectPlainText(RichText)
                  - search(store, query) and the store selectors: counts,
-                       nudges, tag usage and draftFor(store, target) are pure
-                       functions of the boot payload, so no screen asks the
-                       server a question it already holds the answer to
+                       nudges, tag usage, draftFor(store, target), the wordings
+                       a set holds and the resumes a point or a wording is on
+                       are pure functions of the boot payload, so no screen asks
+                       the server a question it already holds the answer to
                  - estimateLength(ResumeDocument, TemplateConfig)
                        estimate only - Paged.js in the preview is authoritative
                        for actual page count and overflow
@@ -147,11 +148,18 @@ draft is waiting before it opens rather than asking after it has.
 ['record', recordId]
 ['points', { recordId }]
 ['phrasingSet', phrasingSetId]
+['phrasing', id, 'revisions', currentRevisionId]
 ['resumes']
 ['resume', resumeId]                       // working composition
 ['resume', resumeId, 'versions']
 ['resume', resumeId, 'version', versionId]
 ```
+
+**A phrasing's history is keyed by the revision it points at.** History is the one
+thing an editor needs that the boot payload deliberately does not carry, and it
+only ever changes by an append that moves the pointer - so a commit lands on a
+key that has never been fetched, and the list refreshes without an invalidation
+of its own.
 
 The store is kilobytes, so `['store']` is fetched once on boot
 with a long `staleTime` and most screens read from it via selectors. There is
@@ -286,22 +294,45 @@ rather than a number nobody can act on.
 
 **A point is created with the words it holds**, in one request: the set, the
 phrasing and the first revision are the store's to write together, and a point
-that exists but says nothing is not a state worth being able to reach.
+that exists but says nothing is not a state worth being able to reach. Creating
+one is the only screen that writes text through a form; every later change to
+what a point says goes through the editor, so the create form is a plain box and
+the point's own screen is the editor.
 
-**Changing what a point says appends.** The editor compares the typed text to
-what the phrasing currently says and sends nothing when they match, which the
-unique `(phrasing_id, content_hash)` index would enforce anyway - not sending it
-keeps the round trip off the wire too. The store mints the revision's id, unlike
-every other create, because the content hash is what makes an append idempotent
-and a second id would be a second answer to "which revision is this". The
-optimistic cache therefore rewrites the current revision row in place: the boot
-payload narrows revisions to what each phrasing currently says, so that row is
-that projection, and the re-read brings back the new revision's own id.
+**Changing what a point says appends**, and the editor decides when. Its state
+machine is #6. The store mints the revision's id, unlike every other create,
+because the content hash is what makes an append idempotent and a second id
+would be a second answer to "which revision is this". The optimistic cache
+therefore rewrites the current revision row in place: the boot payload narrows
+revisions to what each phrasing currently says, so that row is that projection,
+and the re-read brings back the new revision's own id.
 
-**Metrics are written as they are added, not staged with the rest of the form.**
+**A set holds more than one wording and points at one of them.** A variant is
+added from the wording it varies rather than from an empty box, since a phrasing
+that says nothing is not a state worth reaching. Switching which is canonical is
+one row on the set and changes nothing a resume already pinned - that is the
+whole reason an entry pins a phrasing rather than a set. The canonical wording
+cannot be archived, because a set with nothing to say has no text for any screen
+to show.
+
+**Nothing on that screen navigates when it saves.** The wording commits itself,
+metrics save as they are added, and only the filing - record, confidence, date -
+has a Save button. A point is a place you stay and work, not a form you submit;
+arriving somewhere else because a textarea lost focus would be worse than any
+saving indicator.
+
+**Metrics are written as they are added, not staged with the rest of the screen.**
 A metric belongs to a point that already exists, so there is nothing to roll
 back and nothing to save; the panel says so, because a Save button above it would
 otherwise look like it covered them.
+
+**"Where this is used" is a selector, not a request.** The resumes a point is on,
+and the resumes that pinned one particular wording, are both derivable from the
+boot payload the screen already holds. The per-wording answer is the one the
+editor needs: editing a variant nothing printed changes nothing, and saying
+otherwise would manufacture the anxiety this screen exists to remove. The
+`/v1/points/{id}/usage` route answers a different question - which *versions*
+pinned it - and is for the timeline.
 
 ### 5.5 Resume composer
 
@@ -378,6 +409,15 @@ Rules that fall out of append-only revisions:
 - **Reopening with a draft present is explicit.** The editor says a draft
   exists and offers restore or discard; it never silently resurrects text the
   user believed they had abandoned.
+- **Nothing runs until the user types.** The timers start on the first
+  keystroke, not on open. An editor that started them on open would reach
+  "content == current" while the offer above was still unanswered, and throw the
+  draft away before the user had read it.
+- **A draft holds the field it will commit to.** It is stored under the
+  `body` field of the phrasing and carries a `RichText` value, so the AST-bound
+  editor writes exactly what the plain one does. The `draft` table is
+  deliberately unvalidated (data-model.md #5), so a body this build does not
+  recognise reads as no draft rather than as a crash on the screen that opens it.
 - **The editor is bound to the AST, not to a string**. Bold, italic
   and link are the only marks; the input rejects anything else at the schema
   boundary rather than sanitising after the fact.
@@ -405,6 +445,14 @@ composition change
   One implementation, two callers.
 - **Page count feeds the length budget** rather than being discovered at
   export time - warning *before* rendering rather than after.
+
+**The app ships as one chunk, and the warning limit says so.** The launcher
+serves it over loopback beside `/v1`, so the whole bundle is one local read and
+splitting it by route would buy a suspense boundary per screen and no measurable
+time. The limit in `vite.config.ts` is set above today's size rather than
+removed, so it still trips on a real regression. The split worth making later is
+this pipeline: Paged.js and the templates are large, are needed on one screen,
+and are the first dependency in the app that a user might never load at all.
 
 ---
 
@@ -442,7 +490,10 @@ Rules:
   screen says `2019 -` to show a record nobody has finished and `until Apr 2024`
   when only an end is known, because leaving a record open is a state the
   overview nudges about; a resume must print neither. So `formatPeriod` has one
-  version per contract and the date inside it has one version full stop.
+  version per contract and the date inside it has one version full stop. **A
+  moment is a third fact**: `lib/timestamp.ts` formats the instants the store
+  recorded - when a revision was written - which no resume ever prints, so it
+  binds nothing from `core` and shares nothing with either of the above.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
 - **Directories arrive with something in them.** `components/ui/` appears with

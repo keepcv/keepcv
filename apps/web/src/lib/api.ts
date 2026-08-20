@@ -28,6 +28,9 @@ export function apiClient(sessionToken: string | undefined): ApiClient {
 // A mismatched build is the normal state of self-hosted software, so this gets
 // a problem rather than a parse error.
 export async function unwrap(response: Response): Promise<unknown> {
+  // Discarding a draft answers 204, and parsing an empty body as JSON throws -
+  // which surfaced as an error panel on a write that had in fact landed.
+  if (response.status === 204) return undefined;
   if (response.ok) return await response.json();
 
   const body: unknown = await response.json().catch(() => undefined);

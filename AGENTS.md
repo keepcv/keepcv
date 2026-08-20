@@ -171,15 +171,22 @@ payload. React, TanStack Router and Query, Tailwind v4, Vite, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
 rather than generated from filenames.
 
-**Records and points write.** Create, edit, archive and restore go through
-`useStoreMutation` in `lib/store-cache.ts`, which patches the cached `Store`
-before the request leaves, puts it back when the request is refused, and re-reads
-once it settles. A `409` opens a field-by-field comparison offering both
-resolutions and taking neither. Changing what a point says appends a
-`phrasing_revision` and sends nothing when the words did not change; metrics are
-written as they are added rather than staged with the form. Tags, evidence,
-phrasing variants and the composition are still read-only, so there is no
-drag-to-reorder, no draft handling and no phrasing editor state machine yet.
+**Records, points and their wording write.** Create, edit, archive and restore go
+through `useStoreMutation` in `lib/store-cache.ts`, which patches the cached
+`Store` before the request leaves, puts it back when the request is refused, and
+re-reads once it settles. A `409` opens a field-by-field comparison offering both
+resolutions and taking neither. Metrics are written as they are added rather than
+staged with a form. Tags, evidence and the composition are still read-only, so
+there is no drag-to-reorder.
+
+**A point's screen is the phrasing editor** (`application-structure.md` #6). Text
+is never submitted: a keystroke starts an 800ms debounce that writes a `draft`,
+and blur or thirty seconds idle commits, appending a `phrasing_revision` and
+dropping the draft in one go. Typing back what was already there discards the
+draft and appends nothing. A draft found on open is offered, never restored, and
+the timers do not start until the first keystroke - otherwise the editor would
+throw the draft away before the offer was read. A set holds variants, points at
+one of them, and each wording says which resumes pinned it.
 
 **`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
 answer the same `Store` shape; the first narrows `phrasingRevisions` to what each

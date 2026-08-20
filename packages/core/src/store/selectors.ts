@@ -70,6 +70,30 @@ export function textOfPhrasing(store: Store, phrasing: Phrasing): string {
   return revision?.plainText ?? "";
 }
 
+// Archived wordings come back too: `live` is the caller's filter to apply.
+export function phrasingsOfSet(store: Store, phrasingSetId: Uuid): Phrasing[] {
+  return inOrder(store.phrasings.filter((row) => row.phrasingSetId === phrasingSetId));
+}
+
+function resumesPinning(store: Store, pins: (row: ResumeEntryPoint) => boolean): Resume[] {
+  const holding = new Set(
+    live(store.resumeEntryPoints)
+      .filter(pins)
+      .map((row) => row.resumeId),
+  );
+  return live(store.resumes).filter((resume) => holding.has(resume.id));
+}
+
+// What rewording changes, answered before it is reworded
+// (application-structure.md #5.4).
+export function resumesUsingPhrasing(store: Store, phrasingId: Uuid): Resume[] {
+  return resumesPinning(store, (row) => row.phrasingId === phrasingId);
+}
+
+export function resumesUsingPoint(store: Store, pointId: Uuid): Resume[] {
+  return resumesPinning(store, (row) => row.pointId === pointId);
+}
+
 // Archived tags come back too: `live` is the caller's filter to apply.
 export function tagsOfRecord(store: Store, recordId: Uuid): Tag[] {
   const assigned = new Set(

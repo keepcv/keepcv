@@ -5,13 +5,13 @@ import type {
   PointConfidence,
   PointInput,
   PointPatch,
-  RichText,
   Store,
   Uuid,
 } from "@keepcv/schema";
 import { metricInputSchema, pointInputSchema, pointPatchSchema } from "@keepcv/schema";
 import type { ZodError } from "zod";
 import { nextSortKey } from "../../../lib/sort.js";
+import { bodyOf } from "../../phrasings/model/editor.js";
 
 export const CONFIDENCE_HINTS: Record<PointConfidence, string> = {
   verified: "Backed by something you could show.",
@@ -51,13 +51,6 @@ function fieldErrors(error: ZodError): FieldErrors {
   return errors;
 }
 
-// One paragraph and no marks yet: the editor that produces the rest is its own
-// piece of work (application-structure.md #6).
-export function bodyOf(text: string): RichText {
-  const trimmed = text.trim();
-  return trimmed === "" ? [] : [{ t: "text", v: trimmed }];
-}
-
 function columns(values: PointFormValues) {
   return {
     recordId: values.recordId === "" ? null : values.recordId,
@@ -94,19 +87,6 @@ export function buildPointPatch(
 ): { patch: PointPatch } | { errors: FieldErrors } {
   const parsed = pointPatchSchema.safeParse(columns(values));
   return parsed.success ? { patch: parsed.data } : { errors: fieldErrors(parsed.error) };
-}
-
-// The phrasing an edit appends to. A point whose set has no canonical phrasing
-// has nothing to revise, and the editor has to be able to say so.
-export function canonicalPhrasingId(store: Store, point: Point): Uuid | undefined {
-  const set = store.phrasingSets.find((row) => row.id === point.phrasingSetId);
-  return set?.canonicalPhrasingId ?? undefined;
-}
-
-// Null when the words did not change: text is append-only, and retyping a word
-// and undoing it must not add to the history.
-export function changedBody(store: Store, point: Point, text: string): RichText | null {
-  return textOfPoint(store, point) === text.trim() ? null : bodyOf(text);
 }
 
 export interface MetricFormValues {

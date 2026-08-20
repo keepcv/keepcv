@@ -3,6 +3,7 @@ import {
   type CareerRecord,
   careerRecordSchema,
   contactChannelSchema,
+  draftSchema,
   metricSchema,
   organisationSchema,
   type Phrasing,
@@ -137,6 +138,39 @@ export function addPhrasing(
     }),
   );
   return phrasing;
+}
+
+// Appended and the pointer moved, which is the only way text ever changes.
+export function addRevision(store: Store, phrasing: Phrasing, text: string): void {
+  const revision = phrasingRevisionSchema.parse({
+    id: newUuid(),
+    createdAt: EPOCH,
+    phrasingId: phrasing.id,
+    body: [{ t: "text", v: text }],
+    plainText: text,
+    charCount: text.length,
+    contentHash: "1".repeat(64),
+  });
+  store.phrasingRevisions.push(revision);
+
+  const index = store.phrasings.findIndex((row) => row.id === phrasing.id);
+  const found = store.phrasings[index];
+  if (found !== undefined) {
+    store.phrasings.splice(index, 1, { ...found, currentRevisionId: revision.id });
+  }
+}
+
+export function addDraft(store: Store, phrasingId: Uuid, text: string): void {
+  store.drafts.push(
+    draftSchema.parse({
+      targetKind: "phrasing",
+      targetId: phrasingId,
+      field: "body",
+      createdAt: EPOCH,
+      updatedAt: EPOCH,
+      body: { body: [{ t: "text", v: text }] },
+    }),
+  );
 }
 
 // A point arrives with the words it holds, so the fixture writes all four rows

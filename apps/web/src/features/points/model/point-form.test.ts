@@ -5,8 +5,6 @@ import {
   blankPointValues,
   buildMetric,
   buildPointSubmission,
-  canonicalPhrasingId,
-  changedBody,
   pointValuesOf,
 } from "./point-form.js";
 
@@ -50,19 +48,6 @@ describe("the point form", () => {
       confidence: "verified",
       occurredOn: "",
     });
-    expect(canonicalPhrasingId(store, point)).toBe(store.phrasings[0]?.id);
-  });
-
-  // The unique (phrasing_id, content_hash) index would refuse it anyway; not
-  // sending it keeps the round trip off the wire as well.
-  it("says nothing changed when the words are the same but for spacing", () => {
-    const store = emptyStore();
-    const point = addPoint(store, "Rewrote the scheduler");
-
-    expect(changedBody(store, point, "  Rewrote the scheduler  ")).toBeNull();
-    expect(changedBody(store, point, "Rewrote the scheduler again")).toEqual([
-      { t: "text", v: "Rewrote the scheduler again" },
-    ]);
   });
 
   it("names the field a metric was refused on", () => {

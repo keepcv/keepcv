@@ -5,6 +5,7 @@ import { z } from "zod";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
 import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
+import { PointScreen } from "../features/points/ui/point-screen.js";
 import { MissingRecord, RecordDetail } from "../features/records/ui/record-detail.js";
 import { RecordForm } from "../features/records/ui/record-form.js";
 import { RecordList } from "../features/records/ui/record-list.js";
@@ -147,7 +148,7 @@ const editPointRoute = createRoute({
     const point = store.points.find((row) => row.id === pointId);
 
     if (point === undefined) return <MissingPoint />;
-    return <PointForm store={store} client={api} point={point} />;
+    return <PointScreen store={store} client={api} point={point} />;
   },
 });
 
