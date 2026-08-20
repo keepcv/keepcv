@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DRAFT_AFTER_MS } from "../features/phrasings/model/editor.js";
 import { apiClient } from "../lib/api.js";
 import {
+  addDraft,
   addEntry,
   addEntryPoint,
   addMetric,
@@ -11,6 +13,7 @@ import {
   addPoint,
   addRecord,
   addResume,
+  addRevision,
   addSection,
   aFilledStore,
   emptyStore,
@@ -299,48 +302,25 @@ describe("writing a point", () => {
     type("Point", "Cut p95 latency from 800ms to 120ms");
     press("Add point");
 
-    // Back on the record it was filed under, with the words it holds: the set,
-    // the phrasing and the first revision are one request.
-    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
-    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    // On the point it just made, with the words it holds: the set, the phrasing
+    // and the first revision are one request.
+    expect(await screen.findByRole("heading", { name: "Point" })).toBeInTheDocument();
     expect(store.points[0]?.recordId).toBe(record.id);
     expect(store.phrasingRevisions[0]?.plainText).toBe("Cut p95 latency from 800ms to 120ms");
   });
 
-  // Editing text appends; it never overwrites. A resume sent in March goes on
-  // saying what it said.
-  it("appends a revision when the words change, and keeps the old one", async () => {
-    const store = emptyStore();
-    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
-    const point = addPoint(store, "Rewrote the scheduler", { recordId: record.id });
-    const server = storeServer(store);
-    mount(server.answer, `/points/${point.id}/edit`);
-
-    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
-    type("Point", "Rewrote the scheduler, halving tail latency");
-    press("Save");
-
-    expect(await screen.findByRole("heading", { name: "Engine lead" })).toBeInTheDocument();
-    expect(store.phrasingRevisions).toHaveLength(2);
-    expect(store.phrasingRevisions[0]?.plainText).toBe("Rewrote the scheduler");
-    expect(store.phrasingRevisions[1]?.plainText).toBe(
-      "Rewrote the scheduler, halving tail latency",
-    );
-  });
-
-  // A history of revisions that say the same thing is not history.
-  it("appends nothing when only the filing changed", async () => {
+  it("files a point without touching what it says", async () => {
     const store = emptyStore();
     addRecord(store, { kind: "experience", title: "Engine lead" });
     const point = addPoint(store, "Rewrote the scheduler");
     const server = storeServer(store);
     mount(server.answer, `/points/${point.id}/edit`);
 
-    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Point" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Confidence"), { target: { value: "verified" } });
     press("Save");
 
-    expect(await screen.findByRole("heading", { name: "Points" })).toBeInTheDocument();
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(store.points[0]?.confidence).toBe("verified");
     expect(store.phrasingRevisions).toHaveLength(1);
     expect(server.calls.filter((call) => call.path.endsWith("/revisions"))).toHaveLength(0);
@@ -352,7 +332,7 @@ describe("writing a point", () => {
     const server = storeServer(store);
     mount(server.answer, `/points/${point.id}/edit`);
 
-    expect(await screen.findByRole("heading", { name: "Edit point" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Point" })).toBeInTheDocument();
     type("Label", "p95 latency");
     type("Value", "120");
     type("Unit", "ms");
@@ -377,6 +357,128 @@ describe("writing a point", () => {
     press("Restore");
     await screen.findByRole("button", { name: "Archive" });
     expect(store.points[0]?.archivedAt).toBeNull();
+  });
+});
+
+describe("the phrasing editor", () => {
+  function anOpenPoint(text = "Rewrote the scheduler") {
+    const store = emptyStore();
+    const point = addPoint(store, text);
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+    return { store, point, server };
+  }
+
+  const wrote = (server: ReturnType<typeof storeServer>) =>
+    server.calls.filter((call) => call.method === "POST" && call.path.endsWith("/revisions"));
+
+  // Keystrokes never create revisions: a history of 400 single-character
+  // revisions is not history (application-structure.md #6).
+  it("keeps a draft while you type and appends only once you stop", async () => {
+    const { store, server } = anOpenPoint();
+    const box = await screen.findByLabelText("Wording, standard");
+
+    fireEvent.change(box, { target: { value: "Rewrote the scheduler, halving tail latency" } });
+    expect(await screen.findByText("Kept as a draft", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(store.drafts).toHaveLength(1);
+    expect(wrote(server)).toHaveLength(0);
+    // The draft this editor just wrote is not one it found waiting, and offering
+    // it back would be the editor interrupting itself mid-sentence.
+    expect(screen.queryByText("You were part-way through rewording this.")).not.toBeInTheDocument();
+
+    fireEvent.blur(box);
+    await waitFor(() => {
+      expect(store.phrasingRevisions).toHaveLength(2);
+    });
+    expect(store.phrasingRevisions[1]?.plainText).toBe(
+      "Rewrote the scheduler, halving tail latency",
+    );
+    // A draft that outlived the revision it became would offer to restore text
+    // the phrasing already says.
+    expect(store.drafts).toEqual([]);
+    // Discarding the draft answers 204, and a client that parsed that as JSON
+    // apologised for a write that had landed.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("throws the draft away when the words come back, rather than appending", async () => {
+    const { store, server } = anOpenPoint();
+    const box = await screen.findByLabelText("Wording, standard");
+
+    fireEvent.change(box, { target: { value: "Rewrote the scheduler again" } });
+    await screen.findByText("Kept as a draft", {}, { timeout: 3000 });
+
+    fireEvent.change(box, { target: { value: "  Rewrote the scheduler  " } });
+    await waitFor(
+      () => {
+        expect(store.drafts).toEqual([]);
+      },
+      { timeout: 3000 },
+    );
+
+    fireEvent.blur(box);
+    expect(wrote(server)).toHaveLength(0);
+    expect(store.phrasingRevisions).toHaveLength(1);
+  });
+
+  it("offers a waiting draft rather than resurrecting it", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Rewrote the scheduler");
+    const phrasing = store.phrasings[0];
+    if (phrasing === undefined) throw new Error("a point is written with the wording it holds");
+    addDraft(store, phrasing.id, "Rewrote the scheduler, twice");
+    mount(storeServer(store).answer, `/points/${point.id}/edit`);
+
+    const box = await screen.findByLabelText("Wording, standard");
+    expect(box).toHaveValue("Rewrote the scheduler");
+    expect(screen.getByText("Rewrote the scheduler, twice")).toBeInTheDocument();
+
+    // An editor that started its timers on open would throw the draft away
+    // before the offer to keep it had been answered.
+    await new Promise((resolve) => setTimeout(resolve, DRAFT_AFTER_MS + 400));
+    expect(store.drafts).toHaveLength(1);
+
+    press("Put it back");
+    expect(box).toHaveValue("Rewrote the scheduler, twice");
+  });
+
+  it("adds a wording from the one it varies, and switches which is canonical", async () => {
+    const { store, server } = anOpenPoint();
+    await screen.findByLabelText("Wording, standard");
+
+    fireEvent.change(screen.getByLabelText("New variant"), { target: { value: "short" } });
+    type("New label", "for infra roles");
+    press("Add a wording");
+
+    expect(await screen.findByLabelText("Wording, short")).toHaveValue("Rewrote the scheduler");
+    expect(store.phrasings[1]?.label).toBe("for infra roles");
+    // A variant is a wording, not a revision: nothing was appended to make one.
+    expect(wrote(server)).toHaveLength(0);
+
+    press("Make canonical");
+    await waitFor(() => {
+      expect(store.phrasingSets[0]?.canonicalPhrasingId).toBe(store.phrasings[1]?.id);
+    });
+  });
+
+  it("shows everything a wording has said, newest first", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Rewrote the scheduler");
+    const phrasing = store.phrasings[0];
+    if (phrasing === undefined) throw new Error("a point is written with the wording it holds");
+    addRevision(store, phrasing, "Rewrote the scheduler, halving tail latency");
+    mount(storeServer(store).answer, `/points/${point.id}/edit`);
+
+    await screen.findByLabelText("Wording, standard");
+    press("History");
+
+    const history = await screen.findByRole("list", { name: "Everything this wording has said" });
+    const said = within(history).getAllByRole("listitem");
+    expect(said[0]?.textContent).toContain("halving tail latency");
+    expect(said[0]?.textContent).toContain("what it says now");
+    // Superseded wordings are kept, never overwritten.
+    expect(said[1]?.textContent).toContain("Rewrote the scheduler");
+    expect(said[1]?.textContent).not.toContain("what it says now");
   });
 });
 

@@ -2,6 +2,7 @@ import { deriveRevision, newUuid } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
 import {
   careerRecordSchema,
+  draftSchema,
   metricSchema,
   organisationSchema,
   phrasingRevisionSchema,
@@ -37,7 +38,7 @@ function revisionOf(phrasingId: string, body: unknown, at: string) {
   });
 }
 
-// Points are not here: creating one writes a set, a phrasing and a revision too.
+// Points and phrasings are not here: creating either writes a revision too.
 function createRow(store: Store, path: string, body: unknown, at: string): Response | undefined {
   const row = stamp(body, at);
   if (path === "/v1/organisations") {
@@ -49,6 +50,16 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
   } else {
     return undefined;
   }
+  return jsonOf(row, 201);
+}
+
+function createPhrasing(store: Store, body: unknown, at: string): Response {
+  const { body: text, ...columns } = body as { id: string; body: unknown };
+  const revision = revisionOf(columns.id, text, at);
+  const row = phrasingSchema.parse({ ...stamp(columns, at), currentRevisionId: revision.id });
+
+  store.phrasings.push(row);
+  store.phrasingRevisions.push(revision);
   return jsonOf(row, 201);
 }
 
@@ -124,7 +135,61 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   if (collection === "metrics") {
     return amendIn(store.metrics, id, merged, (value) => metricSchema.parse(value));
   }
+  if (collection === "phrasings") {
+    return amendIn(store.phrasings, id, merged, (value) => phrasingSchema.parse(value));
+  }
+  if (collection === "phrasing-sets") {
+    return amendIn(store.phrasingSets, id, merged, (value) => phrasingSetSchema.parse(value));
+  }
   return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
+}
+
+const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;
+const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
+
+// Addressed by what it drafts, so saving twice replaces rather than appends.
+function onDraft(store: Store, target: RegExpExecArray, call: Call, at: string): Response {
+  const [, targetKind, targetId, field] = target;
+  const index = store.drafts.findIndex(
+    (row) => row.targetKind === targetKind && row.targetId === targetId && row.field === field,
+  );
+
+  if (call.method === "DELETE") {
+    if (index >= 0) store.drafts.splice(index, 1);
+    return new Response(null, { status: 204 });
+  }
+
+  const draft = draftSchema.parse({
+    targetKind,
+    targetId,
+    field,
+    createdAt: at,
+    updatedAt: at,
+    ...(call.body as object),
+  });
+  store.drafts.splice(index >= 0 ? index : store.drafts.length, index >= 0 ? 1 : 0, draft);
+  return jsonOf(draft);
+}
+
+// Everything but a phrasing's history is in the boot payload.
+function read(store: Store, path: string): Response {
+  const revisions = REVISIONS.exec(path);
+  if (revisions === null) return jsonOf(store);
+  return jsonOf({
+    items: store.phrasingRevisions.filter((row) => row.phrasingId === revisions[1]),
+  });
+}
+
+function write(store: Store, call: Call, at: string): Response {
+  const target = DRAFT.exec(call.path);
+  if (target !== null) return onDraft(store, target, call, at);
+
+  const created = createRow(store, call.path, call.body, at);
+  if (created !== undefined) return created;
+  if (call.path === "/v1/points") return createPoint(store, call.body, at);
+  if (call.path === "/v1/phrasings") return createPhrasing(store, call.body, at);
+  if (REVISIONS.test(call.path)) return addRevision(store, call.path, call.body, at);
+  return amend(store, call, at);
 }
 
 // A stub that writes, so an optimistic row is checked against what comes back
@@ -142,14 +207,8 @@ export function storeServer(store: Store, intercept?: (call: Call) => Response |
 
     const forced = intercept?.(call);
     if (forced !== undefined) return forced;
-    if (call.method === "GET") return jsonOf(store);
-
-    const at = new Date().toISOString();
-    const created = createRow(store, call.path, call.body, at);
-    if (created !== undefined) return created;
-    if (call.path === "/v1/points") return createPoint(store, call.body, at);
-    if (call.path.endsWith("/revisions")) return addRevision(store, call.path, call.body, at);
-    return amend(store, call, at);
+    if (call.method === "GET") return read(store, call.path);
+    return write(store, call, new Date().toISOString());
   }
 
   return { answer, calls };
