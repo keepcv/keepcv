@@ -1,6 +1,7 @@
 import type {
   CareerRecord,
   Metric,
+  Phrasing,
   Point,
   ResumeEntry,
   ResumeSection,
@@ -104,43 +105,49 @@ export function aRecord(overrides: Record<string, unknown> = {}): CareerRecord {
   });
 }
 
-// A phrasing set with one wording in it, which is the shape a point and a
-// summary both reach their words through.
-export function aPhrasingSet(store: Store, purpose: string, text: string): Uuid {
-  const phrasingId = newUuid();
+export function aPhrasing(
+  store: Store,
+  phrasingSetId: Uuid,
+  text: string,
+  overrides: Record<string, unknown> = {},
+): Phrasing {
   const revisionId = newUuid();
-  const setId = newUuid();
+  const phrasing = phrasingSchema.parse({
+    ...standard(),
+    phrasingSetId,
+    variant: "standard",
+    label: null,
+    sortKey: "a0",
+    currentRevisionId: revisionId,
+    ...overrides,
+  });
 
-  store.phrasingSets.push(
-    phrasingSetSchema.parse({
-      ...standard(),
-      id: setId,
-      purpose,
-      canonicalPhrasingId: phrasingId,
-    }),
-  );
-  store.phrasings.push(
-    phrasingSchema.parse({
-      ...standard(),
-      id: phrasingId,
-      phrasingSetId: setId,
-      variant: "standard",
-      label: null,
-      sortKey: "a0",
-      currentRevisionId: revisionId,
-    }),
-  );
+  store.phrasings.push(phrasing);
   store.phrasingRevisions.push(
     phrasingRevisionSchema.parse({
       id: revisionId,
       createdAt: EPOCH,
-      phrasingId,
+      phrasingId: phrasing.id,
       body: [{ t: "text", v: text }],
       plainText: text,
       charCount: text.length,
       contentHash: "0".repeat(64),
     }),
   );
+  return phrasing;
+}
+
+// A phrasing set with one wording in it, which is the shape a point and a
+// summary both reach their words through.
+export function aPhrasingSet(store: Store, purpose: string, text: string): Uuid {
+  const setId = newUuid();
+  store.phrasingSets.push(
+    phrasingSetSchema.parse({ ...standard(), id: setId, purpose, canonicalPhrasingId: null }),
+  );
+
+  const canonical = aPhrasing(store, setId, text);
+  const set = store.phrasingSets.find((row) => row.id === setId);
+  if (set !== undefined) set.canonicalPhrasingId = canonical.id;
   return setId;
 }
 
