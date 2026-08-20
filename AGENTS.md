@@ -155,17 +155,17 @@ overrides, and sixteen owned collections: `/v1/contact-channels`,
 `/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/resumes`,
 `/v1/resume-sections`, `/v1/resume-entries` and `/v1/resume-entry-points`.
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
-the resume timeline at `/v1/resume-versions`, `/v1/resume-snapshots`, and
-`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. A structural diff between
-two versions, restore, and templates are unbuilt.
+the resume timeline at `/v1/resume-versions`, `/v1/resume-snapshots`,
+`GET /v1/resume-versions/diff`, `POST /v1/resume-versions/{id}/restore`, and
+`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. Templates are unbuilt.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
 The web app is an application frame - a navigation rail that lists the kinds the
 store holds, a search field, and a disclosure in place of the rail below `lg` -
 over the store overview, the record list, a record's detail and its form, the
-point list, the resume list, a resume's composition and its compiled preview, and
-search results. All of it is fed by one `GET /v1/store` on the root route's
+point list, the resume list, a resume's composition, its compiled preview and its
+history, and search results. All of it is fed by one `GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
 payload. React, TanStack Router and Query, Tailwind v4, Vite, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
@@ -254,6 +254,18 @@ by revision id, headings resolved - and `renderManifest(manifest, revisions,
 options)` turns that into the `ResumeDocument`. The preview, the export and a
 version captured months ago all render through the second step, so there is no
 second compiler to drift.
+
+**A restore puts back the selection, not the words, and never rewinds.**
+`restorePlan(store, resumeId, manifest, revisions)` in `@keepcv/core` answers the
+changes to make and the route applies them in one transaction, so the awkward
+part is tested without a database and no repository method is added. It
+reconciles rather than replaces - the uniqueness constraints cover archived rows,
+so archive-and-reinsert would be refused by the index - toggles off what the
+manifest does not name rather than archiving it, and rewrites sort keys only when
+the order is actually wrong. Restoring a resume nothing has moved on writes
+nothing. `diffManifests(a, b, revisions)` is the other half, and it is a route
+rather than a selector because manifests are the one thing the boot payload
+deliberately does not carry.
 
 ## Architecture
 

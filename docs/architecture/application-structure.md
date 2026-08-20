@@ -153,6 +153,7 @@ draft is waiting before it opens rather than asking after it has.
 ['resume', resumeId]                       // working composition
 ['resume', resumeId, 'versions']
 ['resume', resumeId, 'version', versionId]
+['resume', resumeId, 'diff', a, b]
 ```
 
 **A phrasing's history is keyed by the revision it points at.** History is the one
@@ -160,6 +161,10 @@ thing an editor needs that the boot payload deliberately does not carry, and it
 only ever changes by an append that moves the pointer - so a commit lands on a
 key that has never been fetched, and the list refreshes without an invalidation
 of its own.
+
+**A diff is keyed by the pair and never goes stale.** Two versions are immutable,
+so `staleTime` is infinite: what they say differently was decided the moment the
+second one was captured.
 
 The store is kilobytes, so `['store']` is fetched once on boot
 with a long `staleTime` and most screens read from it via selectors. There is
@@ -173,6 +178,13 @@ this project treats as its primary threat.
 | Phrasing revision committed | `['phrasingSet', id]`, any `['resume', *]` whose preview uses it |
 | Composition patched | `['resume', id]` only - **never** `['store']` |
 | Version created | `['resume', id, 'versions']`, `['resume', id]` |
+| Version restored | `['resume', id, 'versions']`, `['store']` |
+
+**A restore is the one write with no optimistic patch.** It rewrites sections,
+entries, points, contact overrides and the target context in one transaction, and
+the client cannot know which of those the store actually changed - so the boot
+payload is re-read rather than guessed at. It is also rare enough that the round
+trip costs nothing anyone notices, which is not true of the row above it.
 
 That last row is the one to get right: composition changes are frequent
 (every drag, every toggle) and must not invalidate the store. Getting this
@@ -357,13 +369,34 @@ so the two directions of "what does this affect" both resolve.
 
 ### 5.6 Version timeline and compare
 
-Needs: versions ordered by `seq desc` with trigger and snapshot label;
-a structural diff between any two.
+The resume screen's third view, beside composition and preview. Needs: versions
+ordered by `seq desc` with the trigger and, for a restore, the number it came
+from; a structural diff between any two; a Save and a Restore.
 
-`diff(a, b)` is a pure function in `@keepcv/core` over two immutable
-manifests: entries added/removed/reordered, phrasing revisions swapped,
-template config changed. Because manifests are stored whole, it
-needs no history replay.
+`diffManifests(a, b, revisions)` is a pure function in `@keepcv/core` over two
+immutable manifests: sections, entries and points added, removed, moved or
+changed. Because manifests are stored whole it needs no history replay, and
+because the two are immutable the answer is cacheable forever.
+
+**It is reached through a route rather than a selector**, unlike `composition()`
+and `search()`, and for the reason those two are not: manifests are the one thing
+the boot payload deliberately does not carry. The revisions a manifest pins are
+resolved to text server-side, so a diff arrives readable rather than as a list of
+ids the client would then have to fetch.
+
+**Only what differs is in the answer.** Two versions that print the same produce
+three empty lists. `moved` is measured against the other rows that are on both
+sides, not against raw indices, so inserting one entry at the top does not report
+every entry below it as having moved and bury the one thing that happened.
+
+**A point is named by its words**, having no title, so a reworded point shows the
+change and nothing else - printing the new wording as a heading above a line that
+already contains it says the same sentence twice.
+
+Restoring is a button per row and the newest is not restorable, since restoring
+what a resume already says is a no-op the user would have to be told about.
+Snapshot labels are not shown yet: snapshots are in the archive rather than the
+boot payload, and starring has no screen.
 
 ### 5.7 Export and data
 

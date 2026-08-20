@@ -158,14 +158,16 @@ LaTeX and Typst. Full-store backup and restore.
 
 ### Versions and snapshots
 
-Capture, the timeline, snapshots and the usage index are built:
-`captureManifest(store, resumeId)` in `@keepcv/core` freezes what a resume says,
-the store assigns the sequence and refuses a duplicate of the current manifest,
-and `resume_content_ref` answers "where is this used?" for records and points.
+Built. `captureManifest(store, resumeId)` in `@keepcv/core` freezes what a resume
+says, the store assigns the sequence and refuses a duplicate of the current
+manifest, and `resume_content_ref` answers "where is this used?" for records and
+points. `diffManifests(a, b, revisions)` compares any two, and a restore writes
+the older selection back over the working composition and appends a version
+saying where it came from. The resume screen's third view is the timeline, the
+comparison and the restore.
 
-What remains is **a structural diff between any two versions** and **restore as
-a forward operation** - a restore writes the older manifest back over the
-working composition and appends a version saying where it came from.
+What remains is **starring** - a snapshot is an ordinary owned row with routes
+already, and no screen - and **exporting a version**, which waits for a renderer.
 
 ### Import
 

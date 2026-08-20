@@ -1010,6 +1010,42 @@ Restoring never rewinds: it appends a new version whose manifest equals the old
 one, with `trigger = 'restore'` and `restored_from_version_id` set, so the
 timeline records that a restore happened.
 
+**A restore reconciles the working composition; it does not replace it.** The
+uniqueness constraints decide this rather than taste: `resume_section_kind_unique`,
+`resume_entry_record_unique` and `resume_entry_point_unique` cover archived rows
+too, so archiving the old composition and inserting a fresh one would be refused
+by the index. So each level is matched by the identity those constraints name - a
+section by its kind, or by its heading when it is `custom`; an entry by its
+record; a point by itself, across the whole resume - and then patched.
+
+Three consequences worth writing down:
+
+- **A row the manifest does not name is toggled off, not archived.** `is_visible`
+  is what taking something off a resume means (#9.1), and it leaves the phrasing
+  choice and the position intact.
+- **Sort keys are only rewritten when the order is actually wrong**, and then as
+  a fresh band above every key in the scope. Reassigning inside the range in use
+  collides with a key still on a row, and none of the sort-key unique indexes is
+  deferrable. Restoring a resume nothing has moved on writes nothing at all -
+  which matters, because every write bumps a concurrency token that some other
+  open editor would then be refused on.
+- **What a restore cannot place, it reports.** A manifest names rows by id and a
+  `custom` section by heading; if the store no longer holds one, the restore puts
+  back everything else and says what it left out. Refusing whole would make the
+  first purge in a store's life un-restorable.
+
+**A restore puts back the selection, not the words.** A version pins
+`phrasing_revision_id`s and a resume selects a `phrasing`, so a restored
+composition prints whatever that phrasing says now. That is the same rule as
+everywhere else - a version records what was sent and nothing rewrites the
+present from it - and it means restoring is not a route back to an earlier
+wording. A phrasing's own history is.
+
+**A restore appends even when it lands on the manifest already current.** The
+duplicate rule below compares against the current version, and a restore is an
+event rather than a state: if pressing Restore left no trace, it would look like
+it had done nothing.
+
 **Identical exports do not create duplicate versions.** If a new manifest's
 `manifest_hash` equals the *current* version's, no version is written and the
 existing one is returned. Exporting the same resume three times to send to
@@ -1074,11 +1110,18 @@ extending a second shape, and a presenter reads a pinned record unchanged.
 
 **Ordering is the array**, not a `sort_key` on each element: the manifest is
 already in printing order, and a key beside it would be the same fact twice.
-Restoring generates fresh keys from the order.
+Restoring generates fresh keys from the order, and only when the order is wrong.
 
 **The heading and the layout are resolved at capture.** A section carrying no
 override pins the heading its kind or its custom section printed under, so
 renaming that custom section later cannot reword what a version says.
+
+Both are therefore **resolved back to `null` on restore** when they equal what
+the section would print anyway. Writing them back verbatim would pin an override
+on a section that only ever carried a default, and the next change to that
+default would then reach every section but the restored ones. The two defaults
+have one definition each - `sectionHeading()` and `DEFAULT_SECTION_LAYOUT`, both
+in `@keepcv/core` - so capture and restore cannot disagree about them.
 
 **Text is pinned by reference, not by copy.** A manifest names
 `phrasing_revision_id`s; revisions are append-only and never deleted, so what a

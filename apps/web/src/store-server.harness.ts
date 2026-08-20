@@ -1,5 +1,12 @@
-import { deriveRevision, newUuid } from "@keepcv/core";
-import type { Store } from "@keepcv/schema";
+import {
+  captureManifest,
+  contentHash,
+  deriveRevision,
+  diffManifests,
+  type JsonValue,
+  newUuid,
+} from "@keepcv/core";
+import type { ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
   careerRecordSchema,
   draftSchema,
@@ -9,6 +16,7 @@ import {
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  resumeVersionSchema,
   richTextSchema,
 } from "@keepcv/schema";
 
@@ -146,6 +154,45 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
 
 const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
+const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
+
+interface CaptureInput {
+  id: Uuid;
+  resumeId: Uuid;
+  trigger: VersionTrigger;
+  restoredFromVersionId: Uuid | null;
+}
+
+// Versions are not in the boot payload, so the stub keeps them beside it. The
+// manifest is captured here for the reason the store captures it: a version
+// records what the resume said, which no client can assert. Answers the current
+// version unchanged, exactly as the store does, unless it is a restore.
+function appendVersion(
+  versions: ResumeVersion[],
+  store: Store,
+  input: CaptureInput,
+  at: string,
+): ResumeVersion | undefined {
+  const manifest = captureManifest(store, input.resumeId);
+  if (manifest === undefined) return undefined;
+
+  const manifestHash = contentHash(manifest as unknown as JsonValue);
+  const current = versions.filter((row) => row.resumeId === input.resumeId).at(-1);
+  if (current?.manifestHash === manifestHash && input.restoredFromVersionId === null) {
+    return current;
+  }
+
+  const version = resumeVersionSchema.parse({
+    ...input,
+    createdAt: at,
+    seq: (current?.seq ?? 0) + 1,
+    restoredFromVersionId: input.restoredFromVersionId ?? null,
+    manifest,
+    manifestHash,
+  });
+  versions.push(version);
+  return version;
+}
 
 // Addressed by what it drafts, so saving twice replaces rather than appends.
 function onDraft(store: Store, target: RegExpExecArray, call: Call, at: string): Response {
@@ -171,18 +218,63 @@ function onDraft(store: Store, target: RegExpExecArray, call: Call, at: string):
   return jsonOf(draft);
 }
 
-// Everything but a phrasing's history is in the boot payload.
-function read(store: Store, path: string): Response {
-  const revisions = REVISIONS.exec(path);
-  if (revisions === null) return jsonOf(store);
-  return jsonOf({
-    items: store.phrasingRevisions.filter((row) => row.phrasingId === revisions[1]),
-  });
+// Everything but a phrasing's history and a resume's is in the boot payload.
+function read(store: Store, versions: ResumeVersion[], url: URL): Response {
+  const revisions = REVISIONS.exec(url.pathname);
+  if (revisions !== null) {
+    return jsonOf({
+      items: store.phrasingRevisions.filter((row) => row.phrasingId === revisions[1]),
+    });
+  }
+
+  if (url.pathname === "/v1/resume-versions/diff") {
+    const a = versions.find((row) => row.id === url.searchParams.get("a"));
+    const b = versions.find((row) => row.id === url.searchParams.get("b"));
+    if (a === undefined || b === undefined) return jsonOf({ status: 404 }, 404);
+    return jsonOf(diffManifests(a.manifest, b.manifest, store.phrasingRevisions));
+  }
+
+  if (url.pathname === "/v1/resume-versions") {
+    const resumeId = url.searchParams.get("resumeId");
+    return jsonOf({
+      items: versions.filter((row) => resumeId === null || row.resumeId === resumeId),
+    });
+  }
+
+  return jsonOf(store);
 }
 
-function write(store: Store, call: Call, at: string): Response {
+// The composition rewrite a restore performs is the store's, and it is tested
+// there; what the app answers for is the request and the re-read that follows.
+function onVersion(versions: ResumeVersion[], store: Store, call: Call, at: string): Response {
+  const restoring = RESTORE.exec(call.path);
+  if (restoring === null) {
+    const version = appendVersion(versions, store, call.body as CaptureInput, at);
+    return version === undefined ? jsonOf({ status: 404 }, 404) : jsonOf(version, 201);
+  }
+
+  const source = versions.find((row) => row.id === restoring[1]);
+  if (source === undefined) return jsonOf({ status: 404 }, 404);
+  const version = appendVersion(
+    versions,
+    store,
+    {
+      ...(call.body as { id: Uuid }),
+      resumeId: source.resumeId,
+      trigger: "restore",
+      restoredFromVersionId: source.id,
+    },
+    at,
+  );
+  return version === undefined
+    ? jsonOf({ status: 404 }, 404)
+    : jsonOf({ version, omissions: [] }, 201);
+}
+
+function write(store: Store, versions: ResumeVersion[], call: Call, at: string): Response {
   const target = DRAFT.exec(call.path);
   if (target !== null) return onDraft(store, target, call, at);
+  if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
 
   const created = createRow(store, call.path, call.body, at);
   if (created !== undefined) return created;
@@ -196,20 +288,22 @@ function write(store: Store, call: Call, at: string): Response {
 // rather than against itself.
 export function storeServer(store: Store, intercept?: (call: Call) => Response | undefined) {
   const calls: Call[] = [];
+  const versions: ResumeVersion[] = [];
 
   function answer(url: string, init?: RequestInit): Response {
+    const parsed = new URL(url);
     const call: Call = {
       method: init?.method ?? "GET",
-      path: new URL(url).pathname,
+      path: parsed.pathname,
       body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
     };
     calls.push(call);
 
     const forced = intercept?.(call);
     if (forced !== undefined) return forced;
-    if (call.method === "GET") return read(store, call.path);
-    return write(store, call, new Date().toISOString());
+    if (call.method === "GET") return read(store, versions, parsed);
+    return write(store, versions, call, new Date().toISOString());
   }
 
-  return { answer, calls };
+  return { answer, calls, versions };
 }

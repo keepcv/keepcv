@@ -168,10 +168,11 @@ const resumeRoute = createRoute({
   params: { parse: ({ resumeId }) => ({ resumeId: uuidSchema.parse(resumeId) }) },
   validateSearch: z.object({ view: z.enum(RESUME_VIEWS).default("composition") }),
   component: function ResumeScreen() {
-    const store = useStore(resumeRoute.useRouteContext().api);
+    const { api } = resumeRoute.useRouteContext();
     return (
       <ResumeDetailScreen
-        store={store}
+        store={useStore(api)}
+        client={api}
         resumeId={resumeRoute.useParams().resumeId}
         view={resumeRoute.useSearch().view}
         asOf={new Date().toISOString()}
