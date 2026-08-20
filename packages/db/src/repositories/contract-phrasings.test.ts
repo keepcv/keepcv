@@ -207,6 +207,18 @@ eachDriver(({ run, otherOwner }) => {
       ).toHaveLength(2);
     });
 
+    // What a restore reads: a manifest names revisions, and the phrasing each
+    // belongs to is what a resume selects.
+    it("reads named revisions back, and nothing for an empty list", async () => {
+      const first = newPhrasing("a0", "Designs engines");
+      await run(async (r) => await r.phrasings.createSet(phrasingSetInput("point", first)));
+      const later = await run(async (r) => await r.phrasings.addRevision(first.id, rewritten));
+
+      const named = await run(async (r) => await r.phrasings.listRevisions({ ids: [later.id] }));
+      expect(named.map((row) => [row.id, row.phrasingId])).toEqual([[later.id, first.id]]);
+      expect(await run(async (r) => await r.phrasings.listRevisions({ ids: [] }))).toEqual([]);
+    });
+
     // Retyping a word and undoing it must not add to the history, and reverting
     // to an earlier wording must not add a second copy of it either (I3).
     it("stores one revision per distinct text, whatever order they arrive in", async () => {

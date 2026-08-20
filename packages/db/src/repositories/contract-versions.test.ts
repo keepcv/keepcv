@@ -89,6 +89,23 @@ eachDriver(({ run, otherOwner }) => {
       expect(restored.version.restoredFromVersionId).toBe(first.version.id);
     });
 
+    // A restore is an event rather than a state: landing on the manifest that is
+    // already current still has to show, or pressing it appears to do nothing.
+    it("appends a restore that lands on the current manifest", async () => {
+      const { resumeId } = await compose(run);
+      const manifest = await manifestOf(run, resumeId);
+      const first = await append(run, resumeId, manifest);
+
+      const again = await append(run, resumeId, manifest, {
+        trigger: "restore",
+        restoredFromVersionId: first.version.id,
+      });
+
+      expect(again.created).toBe(true);
+      expect(again.version.seq).toBe(2);
+      expect(again.version.manifestHash).toBe(first.version.manifestHash);
+    });
+
     it("pins what the resume said, so later edits do not rewrite it", async () => {
       const { resumeId, recordId } = await compose(run);
       const version = await append(run, resumeId, await manifestOf(run, resumeId));

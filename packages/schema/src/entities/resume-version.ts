@@ -129,6 +129,26 @@ export const resumeSnapshotPatchSchema = resumeSnapshotInputSchema
   .omit({ id: true, resumeVersionId: true })
   .partial();
 
+export const RESTORE_SUBJECTS = ["section", "entry", "point"] as const;
+
+export const restoreSubjectSchema = z.enum(RESTORE_SUBJECTS);
+
+// A restore places what it can and says what it could not, rather than refusing
+// whole: a manifest names rows by id, and the store may no longer hold one.
+export const restoreOmissionSchema = z
+  .object({
+    subject: restoreSubjectSchema,
+    reference: z.string(),
+  })
+  .meta({ id: "RestoreOmission", title: "Omitted on restore" });
+
+export const restoredResumeSchema = z
+  .object({
+    version: resumeVersionSchema,
+    omissions: z.array(restoreOmissionSchema),
+  })
+  .meta({ id: "RestoredResume", title: "Restored resume" });
+
 export const CONTENT_REF_KINDS = [
   "record",
   "point",
@@ -163,3 +183,6 @@ export type ResumeSnapshotInput = z.infer<typeof resumeSnapshotInputSchema>;
 export type ResumeSnapshotPatch = z.infer<typeof resumeSnapshotPatchSchema>;
 export type ContentRefKind = z.infer<typeof contentRefKindSchema>;
 export type VersionRef = z.infer<typeof versionRefSchema>;
+export type RestoreSubject = z.infer<typeof restoreSubjectSchema>;
+export type RestoreOmission = z.infer<typeof restoreOmissionSchema>;
+export type RestoredResume = z.infer<typeof restoredResumeSchema>;

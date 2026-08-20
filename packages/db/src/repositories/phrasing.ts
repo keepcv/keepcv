@@ -9,7 +9,7 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { phrasingRevisionSchema, phrasingSchema, phrasingSetSchema } from "@keepcv/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { phrasing, phrasingRevision, phrasingSet } from "../schema/index.js";
@@ -246,6 +246,12 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
             options?.phrasingId === undefined
               ? undefined
               : eq(phrasingRevision.phrasingId, options.phrasingId),
+            // An empty list asks for nothing, which `inArray` cannot express.
+            options?.ids === undefined
+              ? undefined
+              : options.ids.length === 0
+                ? sql`false`
+                : inArray(phrasingRevision.id, [...options.ids]),
           ),
         )
         .orderBy(

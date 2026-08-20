@@ -12,7 +12,13 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { MANIFEST_SCHEMA_VERSION, resumeManifestSchema } from "@keepcv/schema";
-import { type ComposedEntry, composition, live, sectionHeading } from "../store/selectors.js";
+import {
+  type ComposedEntry,
+  composition,
+  DEFAULT_SECTION_LAYOUT,
+  live,
+  sectionHeading,
+} from "../store/selectors.js";
 
 function inOrder<T extends { sortKey: string; id: Uuid }>(rows: readonly T[]): T[] {
   return [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id));
@@ -107,7 +113,7 @@ export function captureManifest(store: Store, resumeId: Uuid): ResumeManifest | 
       return {
         kind: row.section.kind,
         heading: sectionHeading(store, row.section),
-        layout: row.section.layout ?? "entries",
+        layout: row.section.layout ?? DEFAULT_SECTION_LAYOUT,
         entries: row.entries
           .filter((entry) => entry.entry.isVisible && entry.record.archivedAt === null)
           .map((entry) => entryOf(store, entry)),
