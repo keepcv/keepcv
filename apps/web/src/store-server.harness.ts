@@ -6,7 +6,7 @@ import {
   type JsonValue,
   newUuid,
 } from "@keepcv/core";
-import type { ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
+import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
   careerRecordSchema,
   draftSchema,
@@ -16,6 +16,11 @@ import {
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  resumeContactChannelSchema,
+  resumeEntryPointSchema,
+  resumeEntrySchema,
+  resumeSectionSchema,
+  resumeSnapshotSchema,
   resumeVersionSchema,
   richTextSchema,
 } from "@keepcv/schema";
@@ -55,6 +60,12 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.records.push(careerRecordSchema.parse(row));
   } else if (path === "/v1/metrics") {
     store.metrics.push(metricSchema.parse(row));
+  } else if (path === "/v1/resume-sections") {
+    store.resumeSections.push(resumeSectionSchema.parse(row));
+  } else if (path === "/v1/resume-entries") {
+    store.resumeEntries.push(resumeEntrySchema.parse(row));
+  } else if (path === "/v1/resume-entry-points") {
+    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row));
   } else {
     return undefined;
   }
@@ -149,12 +160,24 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   if (collection === "phrasing-sets") {
     return amendIn(store.phrasingSets, id, merged, (value) => phrasingSetSchema.parse(value));
   }
+  if (collection === "resume-sections") {
+    return amendIn(store.resumeSections, id, merged, (value) => resumeSectionSchema.parse(value));
+  }
+  if (collection === "resume-entries") {
+    return amendIn(store.resumeEntries, id, merged, (value) => resumeEntrySchema.parse(value));
+  }
+  if (collection === "resume-entry-points") {
+    return amendIn(store.resumeEntryPoints, id, merged, (value) =>
+      resumeEntryPointSchema.parse(value),
+    );
+  }
   return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
 }
 
 const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
+const CONTACT = /^\/v1\/resumes\/([^/]+)\/contact-channels\/([^/]+)$/;
 
 interface CaptureInput {
   id: Uuid;
@@ -218,8 +241,14 @@ function onDraft(store: Store, target: RegExpExecArray, call: Call, at: string):
   return jsonOf(draft);
 }
 
+export interface Archive {
+  versions: ResumeVersion[];
+  snapshots: ResumeSnapshot[];
+}
+
 // Everything but a phrasing's history and a resume's is in the boot payload.
-function read(store: Store, versions: ResumeVersion[], url: URL): Response {
+function read(store: Store, archive: Archive, url: URL): Response {
+  const { versions, snapshots } = archive;
   const revisions = REVISIONS.exec(url.pathname);
   if (revisions !== null) {
     return jsonOf({
@@ -238,6 +267,17 @@ function read(store: Store, versions: ResumeVersion[], url: URL): Response {
     const resumeId = url.searchParams.get("resumeId");
     return jsonOf({
       items: versions.filter((row) => resumeId === null || row.resumeId === resumeId),
+    });
+  }
+
+  if (url.pathname === "/v1/resume-snapshots") {
+    const of = new Set(
+      versions
+        .filter((row) => row.resumeId === url.searchParams.get("resumeId"))
+        .map((row) => row.id),
+    );
+    return jsonOf({
+      items: snapshots.filter((row) => row.archivedAt === null && of.has(row.resumeVersionId)),
     });
   }
 
@@ -271,9 +311,53 @@ function onVersion(versions: ResumeVersion[], store: Store, call: Call, at: stri
     : jsonOf({ version, omissions: [] }, 201);
 }
 
-function write(store: Store, versions: ResumeVersion[], call: Call, at: string): Response {
+// An override keyed by the pair, so setting it twice replaces rather than appends.
+function onContactChannel(store: Store, pair: RegExpExecArray, call: Call): Response {
+  const [, resumeId, contactChannelId] = pair;
+  const index = store.resumeContactChannels.findIndex(
+    (row) => row.resumeId === resumeId && row.contactChannelId === contactChannelId,
+  );
+
+  if (call.method === "DELETE") {
+    if (index >= 0) store.resumeContactChannels.splice(index, 1);
+    return new Response(null, { status: 204 });
+  }
+
+  const override = resumeContactChannelSchema.parse({
+    resumeId,
+    contactChannelId,
+    ...(call.body as object),
+  });
+  store.resumeContactChannels.splice(
+    index >= 0 ? index : store.resumeContactChannels.length,
+    index >= 0 ? 1 : 0,
+    override,
+  );
+  return jsonOf(override);
+}
+
+// A version the user named, which is an ordinary owned row: unstarring archives.
+function onSnapshot(snapshots: ResumeSnapshot[], call: Call, at: string): Response {
+  if (call.path === "/v1/resume-snapshots") {
+    const row = resumeSnapshotSchema.parse({ ...stamp(call.body, at), starredAt: at });
+    snapshots.push(row);
+    return jsonOf(row, 201);
+  }
+  return amendIn(
+    snapshots,
+    /^\/v1\/resume-snapshots\/([^/]+)/.exec(call.path)?.[1],
+    { archivedAt: call.method === "DELETE" ? at : null, updatedAt: at },
+    (value) => resumeSnapshotSchema.parse(value),
+  );
+}
+
+function write(store: Store, archive: Archive, call: Call, at: string): Response {
+  const { versions, snapshots } = archive;
   const target = DRAFT.exec(call.path);
   if (target !== null) return onDraft(store, target, call, at);
+  const pair = CONTACT.exec(call.path);
+  if (pair !== null) return onContactChannel(store, pair, call);
+  if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
 
   const created = createRow(store, call.path, call.body, at);
@@ -288,7 +372,7 @@ function write(store: Store, versions: ResumeVersion[], call: Call, at: string):
 // rather than against itself.
 export function storeServer(store: Store, intercept?: (call: Call) => Response | undefined) {
   const calls: Call[] = [];
-  const versions: ResumeVersion[] = [];
+  const archive: Archive = { versions: [], snapshots: [] };
 
   function answer(url: string, init?: RequestInit): Response {
     const parsed = new URL(url);
@@ -301,9 +385,9 @@ export function storeServer(store: Store, intercept?: (call: Call) => Response |
 
     const forced = intercept?.(call);
     if (forced !== undefined) return forced;
-    if (call.method === "GET") return read(store, versions, parsed);
-    return write(store, versions, call, new Date().toISOString());
+    if (call.method === "GET") return read(store, archive, parsed);
+    return write(store, archive, call, new Date().toISOString());
   }
 
-  return { answer, calls, versions };
+  return { answer, calls, ...archive };
 }

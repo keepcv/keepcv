@@ -1,4 +1,4 @@
-import { type Store, storeSchema } from "@keepcv/schema";
+import { type Store, storeSchema, type Timestamp } from "@keepcv/schema";
 import {
   type QueryClient,
   queryOptions,
@@ -9,6 +9,11 @@ import {
 import { type ApiClient, unwrap } from "./api.js";
 
 export const STORE_KEY = ["store"] as const;
+
+// What an optimistic row claims until the answer arrives with the real one.
+export function now(): Timestamp {
+  return new Date().toISOString() as Timestamp;
+}
 
 // One request boots the app (application-structure.md #4). Only this client
 // writes, so it stays fresh until a mutation says otherwise.
@@ -32,9 +37,12 @@ export async function prefetchStore(queries: QueryClient, client: ApiClient): Pr
 
 // Ids are minted on the client, so the row a screen shows before the response
 // arrives is the row the store ends up holding (application-structure.md #4).
+// `settle` writes the answer back instead of re-reading the payload, which is
+// what keeps a composition change off the network twice.
 export function useStoreMutation<Variables, Result>(options: {
   send: (variables: Variables) => Promise<Result>;
   optimistic: (store: Store, variables: Variables) => Store;
+  settle?: (store: Store, result: Result) => Store;
 }) {
   const queries = useQueryClient();
 
@@ -48,10 +56,17 @@ export function useStoreMutation<Variables, Result>(options: {
       }
       return previous;
     },
+    onSuccess: (result) => {
+      const settle = options.settle;
+      const current = queries.getQueryData<Store>(STORE_KEY);
+      if (settle === undefined || current === undefined) return;
+      queries.setQueryData(STORE_KEY, settle(current, result));
+    },
     onError: (_error, _variables, previous) => {
       if (previous !== undefined) queries.setQueryData(STORE_KEY, previous);
     },
-    onSettled: async () => {
+    onSettled: async (_result, error) => {
+      if (options.settle !== undefined && error === null) return;
       await queries.invalidateQueries({ queryKey: STORE_KEY });
     },
   });

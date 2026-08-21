@@ -6,13 +6,9 @@ import type {
   Store,
   Uuid,
 } from "@keepcv/schema";
-import { careerRecordSchema, organisationSchema, type Timestamp } from "@keepcv/schema";
+import { careerRecordSchema, organisationSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { useStoreMutation } from "../../../lib/store-cache.js";
-
-function now(): Timestamp {
-  return new Date().toISOString() as Timestamp;
-}
+import { now, useStoreMutation } from "../../../lib/store-cache.js";
 
 function upsert(store: Store, record: CareerRecord): Store {
   const known = store.records.some((row) => row.id === record.id);

@@ -1,4 +1,4 @@
-import { newUuid, phrasingsOfSet, projectPlainText } from "@keepcv/core";
+import { keyForPosition, newUuid, phrasingsOfSet, projectPlainText } from "@keepcv/core";
 import type {
   Draft,
   DraftTarget,
@@ -10,7 +10,6 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { phrasingInputSchema, richTextSchema } from "@keepcv/schema";
-import { nextSortKey } from "../../../lib/sort.js";
 
 export const DRAFT_AFTER_MS = 800;
 export const COMMIT_AFTER_MS = 30_000;
@@ -71,12 +70,13 @@ export interface NewVariant {
 // Started from the wording it is a variant of: a blank box is a phrasing that
 // says nothing, which is not a state worth being able to reach.
 export function buildVariant(store: Store, variant: NewVariant): PhrasingInput {
+  const siblings = phrasingsOfSet(store, variant.phrasingSetId);
   return phrasingInputSchema.parse({
     id: newUuid(),
     phrasingSetId: variant.phrasingSetId,
     variant: variant.variant,
     label: variant.label.trim() === "" ? null : variant.label.trim(),
-    sortKey: nextSortKey(phrasingsOfSet(store, variant.phrasingSetId)),
+    sortKey: keyForPosition(siblings, null, siblings.length),
     body: bodyOf(variant.text),
   });
 }

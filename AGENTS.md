@@ -171,13 +171,28 @@ payload. React, TanStack Router and Query, Tailwind v4, Vite, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
 rather than generated from filenames.
 
-**Records, points and their wording write.** Create, edit, archive and restore go
-through `useStoreMutation` in `lib/store-cache.ts`, which patches the cached
-`Store` before the request leaves, puts it back when the request is refused, and
-re-reads once it settles. A `409` opens a field-by-field comparison offering both
-resolutions and taking neither. Metrics are written as they are added rather than
-staged with a form. Tags, evidence and the composition are still read-only, so
-there is no drag-to-reorder.
+**Records, points, their wording and the composition all write.** Create, edit,
+archive and restore go through `useStoreMutation` in `lib/store-cache.ts`, which
+patches the cached `Store` before the request leaves, puts it back when the
+request is refused, and re-reads once it settles. A `409` opens a field-by-field
+comparison offering both resolutions and taking neither. Metrics are written as
+they are added rather than staged with a form. Tags and evidence are still
+read-only.
+
+**A composition write settles by merging its answer instead of re-reading.** A
+toggle, a move, a placement or a wording choice writes one row and the response
+*is* that row, `updated_at` included, so `useStoreMutation` takes a `settle` and
+skips the invalidation - otherwise every move would cost a whole-store refetch.
+Adding and taking off are one control: every uniqueness index on the composition
+covers archived rows, so placing is a create or a put-back and never a second
+row. Order is changed by keyboard, not by dragging; `keyForPosition` in
+`@keepcv/core` answers the key, clears any an archived row in the gap still
+holds, and answers nothing when the row is already there.
+
+**Sort keys compare by code unit, never by locale.** A row moved above the first
+one takes a key in the upper-case magnitude, and `"Zz".localeCompare("a0")` is
+positive. Comparisons go through `bySortKey`, and the repositories order
+`sort_key collate "C"`.
 
 **A point's screen is the phrasing editor** (`application-structure.md` #6). Text
 is never submitted: a keystroke starts an 800ms debounce that writes a `draft`,

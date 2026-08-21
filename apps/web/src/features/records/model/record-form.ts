@@ -1,4 +1,4 @@
-import { live, newUuid } from "@keepcv/core";
+import { keyForPosition, live, newUuid } from "@keepcv/core";
 import type {
   CareerRecord,
   CareerRecordInput,
@@ -16,7 +16,6 @@ import {
   WORK_MODES,
 } from "@keepcv/schema";
 import type { ZodError } from "zod";
-import { nextSortKey } from "../../../lib/sort.js";
 
 // The columns a kind carries beyond the shared ones. `record-form.test.ts`
 // checks this covers each kind's schema exactly, so a column added to the model
@@ -190,7 +189,7 @@ export function buildSubmission(
   const organisation = organisationFor(store, values.organisation);
   const parsed = careerRecordInputSchema.safeParse({
     id: newUuid(),
-    sortKey: nextSortKey(store.records),
+    sortKey: keyForPosition(store.records, null, store.records.length),
     summarySetId: null,
     ...sharedColumns(values, organisation.id),
   });

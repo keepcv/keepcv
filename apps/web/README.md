@@ -5,9 +5,8 @@ the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** The application frame, the store overview,
 > records and points with the forms that write them, the phrasing editor with
-> its drafts and variants, resumes with a compiled preview and a history you can
-> compare and restore from, and search. Tags, evidence and dragging a resume into
-> shape are still read-only.
+> its drafts and variants, resumes you can compose, preview, compare and restore
+> from, and search. Tags and evidence are still read-only.
 
 ## Running it
 
@@ -64,11 +63,18 @@ pnpm --filter @keepcv/web dev
   wording plus short, long or angled variants, and points at one of them. A
   resume pins the wording it chose, so changing which is canonical rewrites
   nothing that was already sent.
+- **Composing a resume costs one small request per change.** A toggle, a move or
+  a placement writes one row, and the answer goes straight into the cache rather
+  than sending the whole store back down the wire.
+- **Taking something off a resume puts it back where it was.** Removing is
+  archiving, so adding the same record again revives the row that is already
+  there - with its position, its visibility and the wording it had chosen.
 - **A resume remembers what it said.** Every version is kept, any two can be
   compared, and restoring one puts its selection back without erasing what came
   after: the restore is a new entry on the timeline saying where it came from. It
   restores which points were on the resume and in what order - not their words,
-  which the version keeps and the point's own history holds.
+  which the version keeps and the point's own history holds. Star one to give it
+  a name you will recognise later.
 
 ## The session token
 
