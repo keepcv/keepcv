@@ -1,6 +1,6 @@
 import { ConcurrencyConflictError, NotFoundError } from "@keepcv/core";
 import type { Timestamp, Uuid } from "@keepcv/schema";
-import { and, eq, isNull, type SQL } from "drizzle-orm";
+import { and, eq, isNull, type SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
@@ -17,6 +17,12 @@ export type OwnedTable = PgTable & {
 export interface OwnedRow {
   id: string;
   updatedAt: Date;
+}
+
+// Sort keys order by code unit, and a database initialised under a locale
+// collation puts a key in the upper-case magnitude last (data-model.md #3.4).
+export function bySortKey(column: PgColumn): SQL {
+  return sql`${column} collate "C" asc`;
 }
 
 export function toTimestamp(value: Date): Timestamp {

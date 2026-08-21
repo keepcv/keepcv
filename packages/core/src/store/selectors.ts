@@ -16,6 +16,7 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
+import { bySortKey } from "../ordering/sort-key.js";
 
 // Screens read the cached store through these rather than through requests of
 // their own (application-structure.md #4).
@@ -57,10 +58,18 @@ export function textOfPoint(store: Store, point: Point): string {
 }
 
 export function textOfPhrasingSet(store: Store, phrasingSetId: Uuid | null): string {
-  if (phrasingSetId === null) return "";
-  const set = store.phrasingSets.find((row) => row.id === phrasingSetId);
-  const phrasing = store.phrasings.find((row) => row.id === set?.canonicalPhrasingId);
+  const phrasing = canonicalPhrasingOf(store, phrasingSetId);
   return phrasing === undefined ? "" : textOfPhrasing(store, phrasing);
+}
+
+// What a set says when nothing has chosen otherwise, which is the wording an
+// entry point takes when a point is first placed.
+export function canonicalPhrasingOf(
+  store: Store,
+  phrasingSetId: Uuid | null,
+): Phrasing | undefined {
+  const set = store.phrasingSets.find((row) => row.id === phrasingSetId);
+  return store.phrasings.find((row) => row.id === set?.canonicalPhrasingId);
 }
 
 // A resume pins the phrasing, not the set, so what it says is this and not the
@@ -274,7 +283,7 @@ function byId<T extends { id: Uuid }>(rows: readonly T[]): Map<Uuid, T> {
 }
 
 function inOrder<T extends { sortKey: string; id: Uuid }>(rows: T[]): T[] {
-  return [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id));
+  return [...rows].sort(bySortKey);
 }
 
 // What a resume is made of, resolved and ordered. There is no route for it

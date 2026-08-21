@@ -15,6 +15,7 @@ import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { record, recordField, recordLink, recordTag } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -129,7 +130,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
             live(record, options?.includeArchived),
           ),
         )
-        .orderBy(asc(record.kind), asc(record.sortKey));
+        .orderBy(asc(record.kind), bySortKey(record.sortKey));
       return rows.map(toCareerRecord);
     },
 
@@ -175,7 +176,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
             live(recordLink, options?.includeArchived),
           ),
         )
-        .orderBy(asc(recordLink.recordId), asc(recordLink.sortKey));
+        .orderBy(asc(recordLink.recordId), bySortKey(recordLink.sortKey));
       return rows.map(toRecordLink);
     },
 
@@ -212,7 +213,7 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
             live(recordField, options?.includeArchived),
           ),
         )
-        .orderBy(asc(recordField.recordId), asc(recordField.sortKey));
+        .orderBy(asc(recordField.recordId), bySortKey(recordField.sortKey));
       return rows.map(toRecordField);
     },
 

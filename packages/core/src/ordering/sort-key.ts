@@ -193,6 +193,14 @@ export function generateKeyBetween(
   return keyWithin(lower, upper);
 }
 
+// Keys order by code unit and never by locale: `"Zz".localeCompare("a0")` is
+// positive, and `Zz` is exactly the key a row moved above the first one takes.
+export function bySortKey<T extends { sortKey: string; id: string }>(a: T, b: T): number {
+  if (a.sortKey !== b.sortKey) return a.sortKey < b.sortKey ? -1 : 1;
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? -1 : 1;
+}
+
 // Bisects rather than chains, so key length stays logarithmic in `count`.
 export function generateNKeysBetween(
   lower: SortKey | string | null,
