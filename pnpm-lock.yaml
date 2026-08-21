@@ -177,6 +177,9 @@ importers:
       '@keepcv/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@keepcv/templates':
+        specifier: workspace:*
+        version: link:../../packages/templates
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.4(react@19.2.8)
@@ -326,6 +329,31 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@26.1.2)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.11)(yaml@2.9.0))
+
+  packages/templates:
+    dependencies:
+      '@keepcv/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.4(@types/react@19.2.18)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
