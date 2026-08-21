@@ -1,8 +1,10 @@
 import { newUuid } from "@keepcv/core";
 import {
+  manifestDiffSchema,
   PROBLEM_TYPES,
   type ResumeSnapshot,
   type ResumeVersion,
+  restoredResumeSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
   type Uuid,
@@ -28,6 +30,8 @@ interface Composed {
   resumeId: Uuid;
   recordId: Uuid;
   pointId: Uuid;
+  phrasingId: Uuid;
+  entryId: Uuid;
 }
 
 // One resume with one point on it, built through the routes a client uses.
@@ -114,7 +118,25 @@ async function compose(name: string, sortKey = "a0"): Promise<Composed> {
       isVisible: true,
     }),
   );
-  return { resumeId: resume.id, recordId: record.id, pointId: point.id };
+  return {
+    resumeId: resume.id,
+    recordId: record.id,
+    pointId: point.id,
+    phrasingId,
+    entryId: entry.id,
+  };
+}
+
+async function read(path: string): Promise<Record<string, unknown>> {
+  const response = await send("GET", path);
+  expect(response.status).toBe(200);
+  return (await response.json()) as Record<string, unknown>;
+}
+
+async function amend(path: string, patch: Record<string, unknown>): Promise<void> {
+  const row = await read(path);
+  const response = await send("PATCH", path, { expectedUpdatedAt: row["updatedAt"], patch });
+  expect(response.status).toBe(200);
 }
 
 async function capture(
@@ -191,6 +213,78 @@ describe("resume versions", () => {
     expect(await items(await intruder("GET", "/v1/resume-versions"), resumeVersionSchema)).toEqual(
       [],
     );
+  });
+});
+
+describe("comparing and restoring versions", () => {
+  // Declared before `/v1/resume-versions/{id}`, or the id route claims it and
+  // the whole thing answers 422 on a word that is not a uuid.
+  it("compares two versions, with the pinned wordings resolved", async () => {
+    const { resumeId, phrasingId } = await compose("For Acme");
+    const before = await capture(resumeId);
+    await send("POST", `/v1/phrasings/${phrasingId}/revisions`, {
+      body: [{ t: "text", v: "Cut p95 latency to 120ms" }],
+    });
+    const after = await capture(resumeId, "manual_save");
+
+    const response = await send(
+      "GET",
+      `/v1/resume-versions/diff?a=${before.version.id}&b=${after.version.id}`,
+    );
+    expect(response.status).toBe(200);
+    const diff = manifestDiffSchema.parse(await response.json());
+
+    expect(diff.sections[0]?.entries[0]?.points[0]?.fields).toEqual([
+      {
+        field: "wording",
+        a: "Cut p95 latency from 800ms to 120ms",
+        b: "Cut p95 latency to 120ms",
+      },
+    ]);
+  });
+
+  it("refuses a diff naming a version that is not there", async () => {
+    const { resumeId } = await compose("For Acme");
+    const { version } = await capture(resumeId);
+
+    const response = await send("GET", `/v1/resume-versions/diff?a=${version.id}&b=${newUuid()}`);
+    expect(response.status).toBe(404);
+    expect((await problemOf(response)).type).toBe(PROBLEM_TYPES.notFound);
+  });
+
+  // Never rewinds: the timeline keeps what happened in between, and the restore
+  // is a third entry saying where it came from (data-model.md #9.2).
+  it("writes an older selection back and appends a version saying so", async () => {
+    const { resumeId, entryId } = await compose("For Acme");
+    const original = await capture(resumeId);
+
+    await amend(`/v1/resume-entries/${entryId}`, { isVisible: false });
+    await amend(`/v1/resumes/${resumeId}`, { name: "For Zeta" });
+    await capture(resumeId, "manual_save");
+
+    const response = await send("POST", `/v1/resume-versions/${original.version.id}/restore`, {
+      id: newUuid(),
+    });
+    expect(response.status).toBe(201);
+    const restored = restoredResumeSchema.parse(await response.json());
+
+    expect(restored.version.trigger).toBe("restore");
+    expect(restored.version.seq).toBe(3);
+    expect(restored.version.restoredFromVersionId).toBe(original.version.id);
+    expect(restored.version.manifestHash).toBe(original.version.manifestHash);
+    expect(restored.omissions).toEqual([]);
+
+    expect(await read(`/v1/resume-entries/${entryId}`)).toMatchObject({ isVisible: true });
+    expect(await read(`/v1/resumes/${resumeId}`)).toMatchObject({ name: "For Acme" });
+  });
+
+  it("refuses a restore of a version that is not there", async () => {
+    const response = await send("POST", `/v1/resume-versions/${newUuid()}/restore`, {
+      id: newUuid(),
+    });
+
+    expect(response.status).toBe(404);
+    expect((await problemOf(response)).type).toBe(PROBLEM_TYPES.notFound);
   });
 });
 

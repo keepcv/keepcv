@@ -164,15 +164,18 @@ function Wording({
         <DraftWaiting text={text.waiting} onRestore={text.restore} onDiscard={text.discard} />
       )}
 
+      {/* Read-only once archived: appending to a wording nothing reaches would
+          write history for a variant the user has put away. */}
       <textarea
         value={text.typed}
         rows={3}
+        readOnly={isArchived}
         aria-label={`Wording, ${phrasing.variant}`}
         onChange={(event) => {
           text.onChange(event.target.value);
         }}
         onBlur={text.onBlur}
-        className="w-full resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-relaxed text-slate-900 outline-none focus:border-slate-900"
+        className="w-full resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-relaxed text-slate-900 outline-none read-only:bg-slate-50 focus:border-slate-900"
       />
 
       {text.error === null ? null : <Failure error={text.error} />}

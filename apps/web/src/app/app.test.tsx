@@ -566,6 +566,127 @@ describe("a resume", () => {
   });
 });
 
+describe("a resume's history", () => {
+  function aVersionedResume() {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    return { store, server: storeServer(store), resumeId: resume.id };
+  }
+
+  it("saves a version, and saving again with nothing changed keeps one", async () => {
+    const { server, resumeId } = aVersionedResume();
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    const timeline = await screen.findByRole("list", { name: "Versions of this resume" });
+    expect(await within(timeline).findByText("#1")).toBeInTheDocument();
+
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(1);
+    });
+    expect(within(timeline).queryByText("#2")).not.toBeInTheDocument();
+  });
+
+  // The pinned wordings come back resolved, so reading what changed costs no
+  // further request (api-contract.md #3).
+  it("compares two versions and shows the wording on both sides", async () => {
+    const { store, server, resumeId } = aVersionedResume();
+    const point = store.points[0];
+    const phrasing = store.phrasings.find((row) => row.phrasingSetId === point?.phrasingSetId);
+    if (phrasing === undefined) throw new Error("a point is written with the wording it holds");
+
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(1);
+    });
+
+    addRevision(store, phrasing, "Cut p95 latency to 120ms");
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(2);
+    });
+
+    const changes = await screen.findByRole("list", { name: "What changed between these two" });
+    expect(within(changes).getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(within(changes).getByText("Cut p95 latency to 120ms")).toBeInTheDocument();
+    expect(within(changes).getByText("Wording")).toBeInTheDocument();
+  });
+
+  // Never rewinds: the restore is a third entry saying where it came from, and
+  // what happened in between is still on the timeline (data-model.md #9.2).
+  it("restores an older version by appending one that says where it came from", async () => {
+    const { store, server, resumeId } = aVersionedResume();
+    const point = store.points[0];
+    const phrasing = store.phrasings.find((row) => row.phrasingSetId === point?.phrasingSetId);
+    if (phrasing === undefined) throw new Error("a point is written with the wording it holds");
+
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(1);
+    });
+    addRevision(store, phrasing, "Reworded since");
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(2);
+    });
+
+    const timeline = screen.getByRole("list", { name: "Versions of this resume" });
+    const first = within(timeline).getByText("#1").closest("li");
+    if (first === null) throw new Error("the timeline lists every version");
+    fireEvent.click(within(first).getByRole("button", { name: "Restore" }));
+
+    expect(await within(timeline).findByText("#3")).toBeInTheDocument();
+    expect(within(timeline).getByText(/from #1/)).toBeInTheDocument();
+    expect(within(timeline).getByText("Restored")).toBeInTheDocument();
+    expect(within(timeline).getByText("#2")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // Every column of a removed entry trivially differs, and the badge beside its
+  // name already says so: listing them buries the one word that matters.
+  it("names what left without listing every field of it", async () => {
+    const { store, server, resumeId } = aVersionedResume();
+    const entry = store.resumeEntries[0];
+    if (entry === undefined) throw new Error("the filled store places a record");
+
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(1);
+    });
+
+    entry.isVisible = false;
+    press("Save a version");
+    await waitFor(() => {
+      expect(server.versions).toHaveLength(2);
+    });
+
+    const changes = await screen.findByRole("list", { name: "What changed between these two" });
+    // The entry and the point that went with it, each named once.
+    expect(within(changes).getAllByText("Removed")).toHaveLength(2);
+    expect(within(changes).getByText("Engine lead")).toBeInTheDocument();
+    expect(within(changes).getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(within(changes).queryByText("Title")).not.toBeInTheDocument();
+    expect(within(changes).queryByText("nothing")).not.toBeInTheDocument();
+  });
+
+  it("says so before anything has been saved", async () => {
+    const { server, resumeId } = aVersionedResume();
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+
+    expect(await screen.findByText("Versions are what a resume said")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Compare from")).not.toBeInTheDocument();
+  });
+});
+
 describe("search", () => {
   // Records and points together, and answered from the cached store: the whole
   // interaction is one request rather than one per keystroke.

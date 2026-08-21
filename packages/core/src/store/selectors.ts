@@ -235,7 +235,14 @@ const SECTION_HEADINGS: Record<SectionKind, string> = {
   custom: "Other",
 };
 
-export function sectionHeading(store: Store, section: ResumeSection): string {
+export const DEFAULT_SECTION_LAYOUT = "entries";
+
+// Structural rather than a whole row, so a restore can ask what a section would
+// print under before it exists (application-structure.md #5.5).
+export function sectionHeading(
+  store: Store,
+  section: Pick<ResumeSection, "kind" | "customSectionId" | "heading">,
+): string {
   const custom = store.customSections.find((row) => row.id === section.customSectionId);
   return section.heading ?? custom?.heading ?? SECTION_HEADINGS[section.kind];
 }

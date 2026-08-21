@@ -4,17 +4,20 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import type { ApiClient } from "../../../lib/api.js";
 import type { CompositionEntry, CompositionSection } from "../model/resume-detail.js";
 import { resumeDetail } from "../model/resume-detail.js";
 import { DocumentPreview } from "./document-preview.js";
+import { ResumeHistory } from "./resume-history.js";
 
-export const RESUME_VIEWS = ["composition", "preview"] as const;
+export const RESUME_VIEWS = ["composition", "preview", "history"] as const;
 
 export type ResumeView = (typeof RESUME_VIEWS)[number];
 
 const VIEW_LABELS: Record<ResumeView, string> = {
   composition: "Composition",
   preview: "Preview",
+  history: "History",
 };
 
 // Off is a state, not an absence: the row stays visible so the selection can be
@@ -97,11 +100,13 @@ function Section({ section }: { section: CompositionSection }) {
 
 export function ResumeDetailScreen({
   store,
+  client,
   resumeId,
   view,
   asOf,
 }: {
   store: Store;
+  client: ApiClient;
   resumeId: Uuid;
   view: ResumeView;
   asOf: string;
@@ -160,7 +165,9 @@ export function ResumeDetailScreen({
         </p>
       </div>
 
-      {view === "preview" ? (
+      {view === "history" ? (
+        <ResumeHistory client={client} resumeId={resumeId} />
+      ) : view === "preview" ? (
         document === undefined ? (
           <Empty title="Nothing to compile yet" />
         ) : (

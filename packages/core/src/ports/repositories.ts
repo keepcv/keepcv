@@ -233,8 +233,11 @@ export interface PhrasingRepository {
   // No concurrency token, unlike every other write: rejecting a second appended
   // wording is the loss append-only exists to prevent.
   addRevision(phrasingId: Uuid, body: RichText): Promise<PhrasingRevision>;
+  // `ids` is what a restore reads: a manifest names revisions and the phrasing
+  // each belongs to is what a resume selects, so the lookup is by revision.
   listRevisions(options?: {
     phrasingId?: Uuid | undefined;
+    ids?: readonly Uuid[] | undefined;
     currentOnly?: boolean | undefined;
   }): Promise<PhrasingRevision[]>;
 }

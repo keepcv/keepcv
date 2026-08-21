@@ -137,6 +137,22 @@ export function aPhrasing(
   return phrasing;
 }
 
+// Appended and the pointer moved, which is the only way text ever changes.
+export function reword(store: Store, phrasing: Phrasing, text: string): Phrasing {
+  const revision = phrasingRevisionSchema.parse({
+    id: newUuid(),
+    createdAt: EPOCH,
+    phrasingId: phrasing.id,
+    body: [{ t: "text", v: text }],
+    plainText: text,
+    charCount: text.length,
+    contentHash: "1".repeat(64),
+  });
+  store.phrasingRevisions.push(revision);
+  phrasing.currentRevisionId = revision.id;
+  return phrasing;
+}
+
 // A phrasing set with one wording in it, which is the shape a point and a
 // summary both reach their words through.
 export function aPhrasingSet(store: Store, purpose: string, text: string): Uuid {

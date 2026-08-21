@@ -162,9 +162,9 @@ GET    /v1/resumes/:id/document        ?locale=  compiled ResumeDocument
 
 GET    /v1/resume-versions             ?resumeId=
 POST   /v1/resume-versions             { id, resumeId, trigger } - the store captures the manifest
+GET    /v1/resume-versions/diff        ?a=&b=  only what differs, wordings resolved
 GET    /v1/resume-versions/:id         the version and the manifest it pinned
-GET    /v1/resume-versions/diff        ?a=&b=
-POST   /v1/resume-versions/:id/restore
+POST   /v1/resume-versions/:id/restore { id } - the version this appends
 CRUD   /v1/resume-snapshots            ?resumeId=&archived=
 
 POST   /v1/render                      ResumeDocument -> PDF/HTML
@@ -294,12 +294,39 @@ Notes on the non-obvious ones:
 - **`GET /v1/resumes/:id/document` returns a uniform `ResumeDocument`**
   (template-model.md), not the manifest. The manifest is storage-shaped; the
   document is template-shaped, and only the latter is a public contract.
-- **A version is three routes, not six, and a snapshot is a collection.** A
+- **A version is five routes, not six, and a snapshot is a collection.** A
   version is keyed by its own id like everything else, so it is flat and narrowed
   by `?resumeId=` for the reason links and fields are; it has no `PATCH` and no
-  archive because it is immutable. A snapshot is an ordinary owned row - a label
-  on a version - so it is the usual six, and starring, relabelling and unstarring
-  are its create, patch and archive rather than three verbs of their own.
+  archive because it is immutable. `diff` and `restore` are the other two. A
+  snapshot is an ordinary owned row - a label on a version - so it is the usual
+  six, and starring, relabelling and unstarring are its create, patch and archive
+  rather than three verbs of their own.
+- **`GET /v1/resume-versions/diff` is declared before `/v1/resume-versions/{id}`**,
+  or the parameterised route claims it and the whole thing answers `422` on a word
+  that is not a uuid. It compares any two versions, of one resume or of two: the
+  answer is only what differs, and both are immutable, so it never goes stale.
+  The pinned wordings come back **resolved to text**, because a diff whose reader
+  has to fetch two revisions to find out what changed has not answered the
+  question. It is a route rather than a selector - the exception to
+  `composition()` and `search()` - because manifests are the one thing the boot
+  payload deliberately does not carry.
+- **`POST /v1/resume-versions/{id}/restore` writes the selection back and appends.**
+  It never rewinds: what happened in between stays on the timeline and the new
+  entry names the version it came from. The id in the body is the version it
+  appends; the one in the path is the version it comes from. It answers `201` with
+  that version and with **what it could not place** - a manifest names rows by id,
+  and the store may no longer hold one - rather than refusing whole.
+
+  **A restore puts back the selection, not the words.** A version pins
+  `phrasing_revision_id`s; a resume selects a `phrasing`. So a restored
+  composition prints whatever that phrasing says today, and the version keeps the
+  text it recorded. Restoring is not a way to undo an edit to a point - that is
+  what a phrasing's own history is for.
+
+  **It leaves the record store alone** for the same reason: the manifest pins
+  whole records so that history cannot be rewritten, not so that history can
+  rewrite the present. What it does write is the resume's sections, entries,
+  points, contact-channel overrides and target context.
 - **The manifest is captured by the store, not sent by the client.** A version
   records what the resume said, which the client is in no position to assert. The
   body carries the id, the resume and the trigger only. `POST` answers `201` with
@@ -370,7 +397,6 @@ interface Repositories {
   // token, and `discard` is the one delete the store performs.
   drafts:       DraftRepository;
   resumes:      ResumeRepository;
-  versions:     ResumeVersionRepository;
   // Append-only, and the usage index projected out of every manifest it holds.
   versions:     ResumeVersionRepository;
   // The native export, whole: `read` returns every row the owner has including
@@ -426,6 +452,16 @@ Rules:
   conflict-free by construction, and moving `current_revision_id` is derived
   state that no rename actually races - bumping `updated_at` there would reject
   an edit that was never in conflict.
+- **`phrasings.listRevisions` narrows by `ids` as well as by phrasing.** A
+  manifest names revisions, and both a diff and a restore need the ones it names
+  rather than every revision of some phrasing. An empty list asks for nothing and
+  answers nothing.
+- **A restore is planned in `@keepcv/core` and applied through `ResumeRepository`**,
+  so it adds no method of its own. `restorePlan(store, resumeId, manifest,
+  revisions)` answers the changes to make - what to add, what to patch, what to
+  toggle off, and what it could not place - and the route applies them inside one
+  `UnitOfWork.run`. The planning is pure, so the awkward parts are tested without
+  a database, and the writing stays where every other write is.
 
 **Native import loads a whole store or nothing.** It requires the target to be
 empty - no rows in any collection, and a profile nobody has filled in - and
