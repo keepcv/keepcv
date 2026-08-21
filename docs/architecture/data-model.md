@@ -193,7 +193,21 @@ sort_key text not null       -- base-62 fractional index, e.g. "a0", "a0V", "a1"
 ```
 
 A move writes **one row**: the client computes a key strictly between its two
-new neighbours and sends a single patch.
+new neighbours and sends a single patch. `keyForPosition` in `@keepcv/core` is
+the one place that computes one, and it answers nothing at all when the row is
+already where the move would put it.
+
+**Keys order by code unit, never by locale.** The magnitude prefix runs
+`A`...`Z` then `a`...`z`, so a row moved above the first one takes a key like
+`Zz` - and `"Zz".localeCompare("a0")` is positive while `"Zz" < "a0"` is true.
+Every comparison therefore goes through `bySortKey`, and the repositories order
+`sort_key collate "C"` so that a Postgres initialised under a locale collation
+sorts the same list the client does.
+
+**The scope is every row, archived included.** The uniqueness indexes below carry
+no predicate on `archived_at`, so a row taken off a list keeps its key: a new key
+computed from the live neighbours alone can collide with one an archived row is
+still holding, which is exactly the key it was given when it was placed there.
 
 Uniqueness (I11) is per parent scope, and the scope is the list the key is
 dragged within - not the owner. That is `(owner_id, kind, custom_section_id)` for
@@ -942,6 +956,20 @@ the choice is frozen to a specific revision and can never change.
 `is_visible` rather than deleting rows: toggling a record out of a resume must
 not discard its phrasing choice and position, or every toggle would be
 destructive - the precise pattern the product exists to eliminate.
+
+**None of the four uniqueness indexes above carries a predicate on
+`archived_at`,** and that decides what "add" means. A section, an entry or an
+entry point taken off a resume is archived, and the index still holds its slot -
+so putting the same record back is a *restore of the row that is there*, and
+inserting a second one is refused. `placeableSections`, `placeableRecords` and
+`placeablePoints` in `@keepcv/core` answer what is not currently placed, and
+`sectionFor`, `entryFor` and `entryPointFor` answer which row a put-back would
+revive. The same rule governs the sort key: see #3.5.
+
+**A point put away under one entry is not offered under another.** No patch moves
+an entry point between entries - `resume_entry_id` is omitted from the patch
+schema - so restoring it would put it back where it was rather than where it was
+asked for. It is offered again only under the entry that held it.
 
 ### 9.2 Versions, snapshots, and the usage index
 

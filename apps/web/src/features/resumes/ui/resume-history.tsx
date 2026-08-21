@@ -6,12 +6,21 @@ import { Button } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import {
+  type Star,
   useCaptureVersion,
   useRestoreVersion,
+  useSnapshots,
+  useStarVersion,
   useVersionDiff,
   useVersions,
 } from "../api/use-versions.js";
-import { CHANGE_LABELS, type ChangeLine, diffLines, versionRows } from "../model/version-rows.js";
+import {
+  CHANGE_LABELS,
+  type ChangeLine,
+  diffLines,
+  type VersionRow,
+  versionRows,
+} from "../model/version-rows.js";
 
 const INDENTS = ["pl-0", "pl-4", "pl-8"];
 
@@ -84,18 +93,74 @@ function Omissions({ omissions }: { omissions: readonly RestoreOmission[] }) {
   );
 }
 
+// A snapshot is a version the user named, so starring one asks for the name
+// rather than setting a flag.
+function Starring({ row, onStar }: { row: VersionRow; onStar: (star: Star) => void }) {
+  const [typed, setTyped] = useState<string | null>(null);
+
+  if (row.snapshot !== undefined) {
+    return (
+      <Button
+        onClick={() => {
+          onStar({ snapshot: row.snapshot, resumeVersionId: row.id, label: "" });
+        }}
+      >
+        Unstar
+      </Button>
+    );
+  }
+
+  if (typed === null) {
+    return (
+      <Button
+        onClick={() => {
+          setTyped("");
+        }}
+      >
+        Star
+      </Button>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-2">
+      <input
+        aria-label={`A name for version ${String(row.seq)}`}
+        value={typed}
+        placeholder="What this version was for"
+        onChange={(event) => {
+          setTyped(event.target.value);
+        }}
+        className="w-48 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+      />
+      <Button
+        tone="primary"
+        disabled={typed.trim() === ""}
+        onClick={() => {
+          onStar({ snapshot: undefined, resumeVersionId: row.id, label: typed.trim() });
+          setTyped(null);
+        }}
+      >
+        Save
+      </Button>
+    </span>
+  );
+}
+
 // The timeline, a comparison of any two entries, and a restore. A restore never
 // rewinds: it appends an entry saying where it came from (data-model.md #9.2).
 export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeId: Uuid }) {
   const versions = useVersions(client, resumeId);
+  const snapshots = useSnapshots(client, resumeId);
   const capture = useCaptureVersion(client, resumeId);
   const restore = useRestoreVersion(client, resumeId);
+  const star = useStarVersion(client, resumeId);
   const [chosen, setChosen] = useState<{ a: Uuid; b: Uuid } | null>(null);
 
   if (versions.error !== null) return <Failure error={versions.error} />;
   if (versions.data === undefined) return <Skeleton rows={3} />;
 
-  const rows = versionRows(versions.data);
+  const rows = versionRows(versions.data, snapshots.data ?? []);
   const newest = rows[0];
   const previous = rows[1];
   const compare =
@@ -118,6 +183,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
         <PanelBody>
           {restore.error === null ? null : <Failure error={restore.error} />}
           {capture.error === null ? null : <Failure error={capture.error} />}
+          {star.error === null ? null : <Failure error={star.error} />}
 
           {rows.length === 0 ? (
             <Empty title="Versions are what a resume said">
@@ -135,10 +201,17 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
                     #{row.seq}
                   </span>
                   <Badge>{row.trigger}</Badge>
+                  {row.label === null ? null : <Badge tone="accent">{row.label}</Badge>}
                   <span className="min-w-0 flex-1 text-xs tabular-nums text-slate-500">
                     {row.when}
                     {row.restoredFrom === null ? "" : ` - from #${String(row.restoredFrom)}`}
                   </span>
+                  <Starring
+                    row={row}
+                    onStar={(next) => {
+                      star.mutate(next);
+                    }}
+                  />
                   <Button
                     disabled={restore.isPending || row.seq === newest?.seq}
                     onClick={() => {

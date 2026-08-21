@@ -12,6 +12,7 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { MANIFEST_SCHEMA_VERSION, resumeManifestSchema } from "@keepcv/schema";
+import { bySortKey } from "../ordering/sort-key.js";
 import {
   type ComposedEntry,
   composition,
@@ -21,7 +22,7 @@ import {
 } from "../store/selectors.js";
 
 function inOrder<T extends { sortKey: string; id: Uuid }>(rows: readonly T[]): T[] {
-  return [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id));
+  return [...rows].sort(bySortKey);
 }
 
 function revisionOf(store: Store, phrasing: Phrasing | undefined): Uuid | null {

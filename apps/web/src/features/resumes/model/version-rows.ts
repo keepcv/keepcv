@@ -4,6 +4,7 @@ import type {
   FieldChange,
   ManifestDiff,
   PointChange,
+  ResumeSnapshot,
   ResumeVersion,
   Uuid,
   VersionTrigger,
@@ -17,6 +18,9 @@ export interface VersionRow {
   trigger: string;
   // The version it came from, by the number the user sees rather than by id.
   restoredFrom: number | null;
+  // The snapshot that stars it, which is a row of its own rather than a flag.
+  snapshot: ResumeSnapshot | undefined;
+  label: string | null;
 }
 
 const TRIGGERS: Record<VersionTrigger, string> = {
@@ -26,8 +30,14 @@ const TRIGGERS: Record<VersionTrigger, string> = {
 };
 
 // Newest first: the timeline is read from what happened last.
-export function versionRows(versions: readonly ResumeVersion[]): VersionRow[] {
+export function versionRows(
+  versions: readonly ResumeVersion[],
+  snapshots: readonly ResumeSnapshot[] = [],
+): VersionRow[] {
   const seqOf = new Map(versions.map((row) => [row.id, row.seq]));
+  const starring = new Map(
+    snapshots.filter((row) => row.archivedAt === null).map((row) => [row.resumeVersionId, row]),
+  );
 
   return [...versions]
     .sort((a, b) => b.seq - a.seq)
@@ -38,6 +48,8 @@ export function versionRows(versions: readonly ResumeVersion[]): VersionRow[] {
       trigger: TRIGGERS[row.trigger],
       restoredFrom:
         row.restoredFromVersionId === null ? null : (seqOf.get(row.restoredFromVersionId) ?? null),
+      snapshot: starring.get(row.id),
+      label: starring.get(row.id)?.label ?? null,
     }));
 }
 

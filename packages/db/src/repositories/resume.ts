@@ -26,6 +26,7 @@ import {
   resumeSection,
 } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -145,7 +146,7 @@ export function createResumeRepository(db: Database): ResumeRepository {
               : eq(resumeSection.resumeId, options.resumeId),
           ),
         )
-        .orderBy(asc(resumeSection.resumeId), asc(resumeSection.sortKey));
+        .orderBy(asc(resumeSection.resumeId), bySortKey(resumeSection.sortKey));
       return rows.map(toSection);
     },
 
@@ -196,7 +197,7 @@ export function createResumeRepository(db: Database): ResumeRepository {
               : eq(resumeEntry.resumeSectionId, options.resumeSectionId),
           ),
         )
-        .orderBy(asc(resumeEntry.resumeSectionId), asc(resumeEntry.sortKey));
+        .orderBy(asc(resumeEntry.resumeSectionId), bySortKey(resumeEntry.sortKey));
       return rows.map(toEntry);
     },
 
@@ -247,7 +248,7 @@ export function createResumeRepository(db: Database): ResumeRepository {
               : eq(resumeEntryPoint.resumeEntryId, options.resumeEntryId),
           ),
         )
-        .orderBy(asc(resumeEntryPoint.resumeEntryId), asc(resumeEntryPoint.sortKey));
+        .orderBy(asc(resumeEntryPoint.resumeEntryId), bySortKey(resumeEntryPoint.sortKey));
       return rows.map(toEntryPoint);
     },
 

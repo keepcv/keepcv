@@ -278,6 +278,25 @@ eachDriver(({ run, otherOwner }) => {
       expect(listed[1]?.recordId).toBe(second);
     });
 
+    // Sort keys order by code unit: a row moved above the first one takes a key
+    // in the upper-case magnitude, which a locale-aware collation sorts last.
+    it("orders a key moved above the first one first", async () => {
+      const { sectionId } = await run(async (r) => {
+        const resume = await r.resumes.create(resumeInput("Backend, Acme"));
+        const section = await r.resumes.addSection(sectionInput(resume.id, "experience", "a0"));
+        const first = await r.records.create(recordInput("experience", "a0"));
+        const next = await r.records.create(recordInput("experience", "a1"));
+        await r.resumes.addEntry(entryInput(section.id, resume.id, first.id, "a0"));
+        await r.resumes.addEntry(entryInput(section.id, resume.id, next.id, "Zz"));
+        return { sectionId: section.id };
+      });
+
+      const listed = await run(
+        async (r) => await r.resumes.listEntries({ resumeSectionId: sectionId }),
+      );
+      expect(listed.map((entry) => entry.sortKey)).toEqual(["Zz", "a0"]);
+    });
+
     it("refuses one record twice in one section", async () => {
       const { sectionId, resumeId, recordId } = await run(async (r) => {
         const resume = await r.resumes.create(resumeInput("Backend, Acme"));

@@ -1,9 +1,10 @@
 import type { CustomSectionRepository } from "@keepcv/core";
 import { type CustomSection, customSectionSchema, type Timestamp, type Uuid } from "@keepcv/schema";
-import { and, asc } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { customSection } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -47,7 +48,7 @@ export function createCustomSectionRepository(db: Database): CustomSectionReposi
         .select()
         .from(customSection)
         .where(and(owned(customSection), live(customSection, options?.includeArchived)))
-        .orderBy(asc(customSection.sortKey));
+        .orderBy(bySortKey(customSection.sortKey));
       return rows.map(toCustomSection);
     },
 

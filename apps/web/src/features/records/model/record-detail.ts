@@ -1,4 +1,5 @@
 import {
+  bySortKey,
   formatMetric,
   live,
   pointsOfRecord,
@@ -76,8 +77,8 @@ export function recordDetail(store: Store, recordId: Uuid): RecordDetail | undef
   const record = store.records.find((entry) => entry.id === recordId);
   if (record === undefined) return undefined;
 
-  const inOrder = <T extends { sortKey: string }>(rows: T[]): T[] =>
-    [...rows].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const inOrder = <T extends { sortKey: string; id: Uuid }>(rows: T[]): T[] =>
+    [...rows].sort(bySortKey);
 
   return {
     record,

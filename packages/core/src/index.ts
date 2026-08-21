@@ -16,6 +16,7 @@ export {
 export { contentHash } from "./hashing/content-hash.js";
 export { newUuid } from "./identity/uuid.js";
 export {
+  bySortKey,
   generateKeyBetween,
   generateNKeysBetween,
   SortKeyError,
@@ -48,6 +49,16 @@ export {
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
 export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
+export {
+  entryFor,
+  entryPointFor,
+  keyForPosition,
+  type PlaceableSection,
+  placeablePoints,
+  placeableRecords,
+  placeableSections,
+  sectionFor,
+} from "./store/placement.js";
 export { type SearchHit, type SearchSubject, search } from "./store/search.js";
 export {
   archived,
@@ -55,6 +66,7 @@ export {
   type ComposedPoint,
   type ComposedSection,
   type Composition,
+  canonicalPhrasingOf,
   composition,
   draftFor,
   live,

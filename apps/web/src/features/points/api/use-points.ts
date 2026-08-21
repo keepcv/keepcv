@@ -1,20 +1,8 @@
 import { deriveRevision, newUuid } from "@keepcv/core";
-import type {
-  Metric,
-  MetricInput,
-  Point,
-  PointInput,
-  PointPatch,
-  Timestamp,
-  Uuid,
-} from "@keepcv/schema";
+import type { Metric, MetricInput, Point, PointInput, PointPatch, Uuid } from "@keepcv/schema";
 import { metricSchema, phrasingSchema, phrasingSetSchema, pointSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { useStoreMutation } from "../../../lib/store-cache.js";
-
-function now(): Timestamp {
-  return new Date().toISOString() as Timestamp;
-}
+import { now, useStoreMutation } from "../../../lib/store-cache.js";
 
 function replace<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
   return rows.map((existing) => (existing.id === row.id ? row : existing));

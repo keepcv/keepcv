@@ -1,6 +1,17 @@
 import { newUuid } from "@keepcv/core";
-import type { ManifestDiff, RestoredResume, ResumeVersion, Uuid } from "@keepcv/schema";
-import { manifestDiffSchema, restoredResumeSchema, resumeVersionSchema } from "@keepcv/schema";
+import type {
+  ManifestDiff,
+  RestoredResume,
+  ResumeSnapshot,
+  ResumeVersion,
+  Uuid,
+} from "@keepcv/schema";
+import {
+  manifestDiffSchema,
+  restoredResumeSchema,
+  resumeSnapshotSchema,
+  resumeVersionSchema,
+} from "@keepcv/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
@@ -50,6 +61,61 @@ export function useCaptureVersion(client: ApiClient, resumeId: Uuid) {
       ),
     onSettled: async () => {
       await queries.invalidateQueries({ queryKey: versionsKey(resumeId) });
+    },
+  });
+}
+
+const snapshotList = z.object({ items: z.array(resumeSnapshotSchema) });
+
+function snapshotsKey(resumeId: Uuid) {
+  return ["resume", resumeId, "snapshots"] as const;
+}
+
+// In the archive rather than the boot payload, alongside the versions each one
+// stars (api-contract.md #3).
+export function useSnapshots(client: ApiClient, resumeId: Uuid) {
+  return useQuery({
+    queryKey: snapshotsKey(resumeId),
+    queryFn: async (): Promise<ResumeSnapshot[]> =>
+      snapshotList.parse(
+        await unwrap(await client.v1["resume-snapshots"].$get({ query: { resumeId } })),
+      ).items,
+  });
+}
+
+export interface Star {
+  // The snapshot already on the version, if starring is being undone.
+  snapshot: ResumeSnapshot | undefined;
+  resumeVersionId: Uuid;
+  label: string;
+}
+
+// Starring and unstarring through one hook: a snapshot is an owned row, so
+// unstarring archives it rather than reaching for a second route.
+export function useStarVersion(client: ApiClient, resumeId: Uuid) {
+  const queries = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ snapshot, resumeVersionId, label }: Star): Promise<ResumeSnapshot> => {
+      const of = client.v1["resume-snapshots"];
+      if (snapshot === undefined) {
+        return resumeSnapshotSchema.parse(
+          await unwrap(
+            await of.$post({ json: { id: newUuid(), resumeVersionId, label, note: null } }),
+          ),
+        );
+      }
+      return resumeSnapshotSchema.parse(
+        await unwrap(
+          await of[":id"].$delete({
+            param: { id: snapshot.id },
+            json: { expectedUpdatedAt: snapshot.updatedAt },
+          }),
+        ),
+      );
+    },
+    onSettled: async () => {
+      await queries.invalidateQueries({ queryKey: snapshotsKey(resumeId) });
     },
   });
 }

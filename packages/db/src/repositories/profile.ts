@@ -7,11 +7,12 @@ import {
   type Timestamp,
   type Uuid,
 } from "@keepcv/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { contactChannel, profile } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -97,7 +98,7 @@ export function createProfileRepository(db: Database): ProfileRepository {
         .select()
         .from(contactChannel)
         .where(and(owned(contactChannel), live(contactChannel, options?.includeArchived)))
-        .orderBy(asc(contactChannel.sortKey));
+        .orderBy(bySortKey(contactChannel.sortKey));
       return rows.map(toContactChannel);
     },
 

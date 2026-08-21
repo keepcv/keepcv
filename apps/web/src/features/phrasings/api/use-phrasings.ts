@@ -6,17 +6,12 @@ import type {
   PhrasingSet,
   RichText,
   Store,
-  Timestamp,
   Uuid,
 } from "@keepcv/schema";
 import { draftSchema, phrasingSchema, phrasingSetSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { useStoreMutation } from "../../../lib/store-cache.js";
+import { now, useStoreMutation } from "../../../lib/store-cache.js";
 import { bodyOf, draftTarget } from "../model/editor.js";
-
-function now(): Timestamp {
-  return new Date().toISOString() as Timestamp;
-}
 
 function replace<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
   return rows.map((existing) => (existing.id === row.id ? row : existing));

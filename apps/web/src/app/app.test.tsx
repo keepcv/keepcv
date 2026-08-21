@@ -537,9 +537,11 @@ describe("a resume", () => {
 
     mount(() => jsonOf(store), `/resumes/${resume.id}`);
 
-    expect(await screen.findByText("Angled for this application")).toBeInTheDocument();
-    expect(screen.queryByText("Canonical wording")).not.toBeInTheDocument();
-    expect(screen.getByText("for Acme")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Angled for this application" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Canonical wording" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Wording for Angled for this application")).toHaveValue(angled.id);
   });
 
   // Silently losing a section is the destructive behaviour the product exists
@@ -563,6 +565,174 @@ describe("a resume", () => {
     mount(() => jsonOf(aFilledStore()), "/resumes/01a00ff5-0000-7000-8000-000000000000");
 
     expect(await screen.findByText("No resume with that id")).toBeInTheDocument();
+  });
+});
+
+describe("composing a resume", () => {
+  function aComposedResume() {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    return { store, server: storeServer(store), resumeId: resume.id };
+  }
+
+  function addFrom(label: string, option = "0"): void {
+    const select = screen.getByLabelText(label);
+    fireEvent.change(select, { target: { value: option } });
+    const picker = select.closest("div");
+    if (picker === null) throw new Error("the picker sits beside its select");
+    fireEvent.click(within(picker).getByRole("button", { name: "Add" }));
+  }
+
+  function methods(server: ReturnType<typeof storeServer>): string[] {
+    return server.calls.map((call) => call.method);
+  }
+
+  // The row that turns a drag into a full refetch: a composition write answers
+  // with the row it wrote, so the boot payload takes that and is not re-read.
+  it("toggles a point off with one request and no re-read", async () => {
+    const { server, resumeId } = aComposedResume();
+    mount(server.answer, `/resumes/${resumeId}`);
+
+    await screen.findByText("Cut p95 latency from 800ms to 120ms");
+    press("Stop printing Cut p95 latency from 800ms to 120ms");
+
+    await waitFor(() => {
+      expect(methods(server)).toEqual(["GET", "PATCH"]);
+    });
+    expect(await screen.findByText(/2 placed and toggled off/)).toBeInTheDocument();
+  });
+
+  it("moves an entry with one row, because the key is fractional", async () => {
+    const { store, server, resumeId } = aComposedResume();
+    const projects = store.resumeSections[1];
+    if (projects === undefined) throw new Error("the filled store holds two sections");
+
+    mount(server.answer, `/resumes/${resumeId}`);
+    await screen.findByText("Difference Engine");
+    press("Move Projects up");
+
+    await waitFor(() => {
+      const headings = screen.getAllByRole("heading", { level: 2 }).map((row) => row.textContent);
+      expect(headings.slice(0, 2)).toEqual(["Projects", "Experience"]);
+    });
+    expect(methods(server)).toEqual(["GET", "PATCH"]);
+    expect(store.resumeSections.find((row) => row.id === projects.id)?.sortKey).not.toBe("a1");
+  });
+
+  it("writes nothing when the move would put a row back where it is", async () => {
+    const { server, resumeId } = aComposedResume();
+    mount(server.answer, `/resumes/${resumeId}`);
+
+    await screen.findByRole("heading", { name: "Experience", level: 2 });
+    expect(screen.getByRole("button", { name: "Move Experience up" })).toBeDisabled();
+  });
+
+  // `resume_entry_record_unique` covers archived rows, so a second insert is
+  // refused by the index: putting one back is a restore of the row that is there.
+  it("takes an entry off and puts the same row back", async () => {
+    const { store, server, resumeId } = aComposedResume();
+    mount(server.answer, `/resumes/${resumeId}`);
+
+    await screen.findByText("Engine lead");
+    press("Take Engine lead off this resume");
+    await waitFor(() => {
+      expect(screen.queryByText("Cut p95 latency from 800ms to 120ms")).not.toBeInTheDocument();
+    });
+
+    addFrom("Add a record to Experience");
+    await waitFor(() => {
+      expect(server.calls.some((call) => call.path.endsWith("/restore"))).toBe(true);
+    });
+    expect(store.resumeEntries).toHaveLength(2);
+    expect(await screen.findByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+  });
+
+  it("places a record and stops offering it", async () => {
+    const { store, server, resumeId } = aComposedResume();
+    addRecord(store, { kind: "experience", title: "Platform engineer" });
+
+    mount(server.answer, `/resumes/${resumeId}`);
+    await screen.findByText("Engine lead");
+    addFrom("Add a record to Experience");
+
+    expect(await screen.findByText("Platform engineer")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Add a record to Experience")).not.toBeInTheDocument();
+    });
+    expect(store.resumeEntries).toHaveLength(3);
+  });
+
+  // An entry point pins a phrasing rather than a set, so this changes what one
+  // resume says and nothing else.
+  it("chooses which wording this resume prints", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Canonical wording", { recordId: record.id });
+    const angled = addPhrasing(store, point.phrasingSetId, "Angled for this application", {
+      label: "for Acme",
+      sortKey: "a1",
+    });
+    const resume = addResume(store, { name: "Angled" });
+    addEntryPoint(store, addEntry(store, addSection(store, resume.id), record.id), point);
+    const server = storeServer(store);
+
+    mount(server.answer, `/resumes/${resume.id}`);
+    fireEvent.change(await screen.findByLabelText("Wording for Canonical wording"), {
+      target: { value: angled.id },
+    });
+
+    expect(await screen.findByText("Angled for this application")).toBeInTheDocument();
+    expect(store.resumeEntryPoints[0]?.phrasingId).toBe(angled.id);
+  });
+
+  it("renames a section, and prints the kind's own heading again when emptied", async () => {
+    const { server, resumeId } = aComposedResume();
+    mount(server.answer, `/resumes/${resumeId}`);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: 'Rename, currently the default "Experience"' }),
+    );
+    fireEvent.change(screen.getByLabelText("Heading for Experience"), {
+      target: { value: "What I have done" },
+    });
+    press("Save");
+    expect(
+      await screen.findByRole("heading", { name: "What I have done", level: 2 }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: 'Rename, or empty the box to print "What I have done" no more',
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Heading for What I have done"), {
+      target: { value: "  " },
+    });
+    press("Save");
+    expect(
+      await screen.findByRole("heading", { name: "Experience", level: 2 }),
+    ).toBeInTheDocument();
+  });
+
+  // An override on top of the channel's own default, which is why following the
+  // default again is a third choice and not the same as hiding it.
+  it("overrides a contact channel, then follows its default again", async () => {
+    const { store, server, resumeId } = aComposedResume();
+    mount(server.answer, `/resumes/${resumeId}`);
+
+    await screen.findByText("ada@example.org");
+    press("Stop printing ada@example.org");
+    await waitFor(() => {
+      expect(store.resumeContactChannels).toHaveLength(1);
+    });
+    expect(store.resumeContactChannels[0]?.isVisible).toBe(false);
+
+    press("Follow the default for ada@example.org");
+    await waitFor(() => {
+      expect(store.resumeContactChannels).toHaveLength(0);
+    });
+    expect(screen.queryByRole("button", { name: /Follow the default/ })).not.toBeInTheDocument();
   });
 });
 
@@ -676,6 +846,30 @@ describe("a resume's history", () => {
     expect(within(changes).getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
     expect(within(changes).queryByText("Title")).not.toBeInTheDocument();
     expect(within(changes).queryByText("nothing")).not.toBeInTheDocument();
+  });
+
+  // A snapshot is a version the user named, and it is an owned row rather than a
+  // flag - so unstarring archives it and the label stops being shown.
+  it("stars a version with a name, and unstars it again", async () => {
+    const { server, resumeId } = aVersionedResume();
+    mount(server.answer, `/resumes/${resumeId}?view=history`);
+
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await screen.findByRole("button", { name: "Star" });
+
+    press("Star");
+    type("A name for version 1", "What I sent Babbage");
+    press("Save");
+
+    expect(await screen.findByText("What I sent Babbage")).toBeInTheDocument();
+    expect(server.snapshots).toHaveLength(1);
+
+    press("Unstar");
+    await waitFor(() => {
+      expect(screen.queryByText("What I sent Babbage")).not.toBeInTheDocument();
+    });
+    expect(server.snapshots[0]?.archivedAt).not.toBeNull();
   });
 
   it("says so before anything has been saved", async () => {

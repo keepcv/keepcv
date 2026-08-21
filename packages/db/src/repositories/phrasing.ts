@@ -14,6 +14,7 @@ import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { phrasing, phrasingRevision, phrasingSet } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -195,7 +196,7 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
             live(phrasing, options?.includeArchived),
           ),
         )
-        .orderBy(asc(phrasing.phrasingSetId), asc(phrasing.sortKey));
+        .orderBy(asc(phrasing.phrasingSetId), bySortKey(phrasing.sortKey));
       return rows.map(toPhrasing);
     },
 

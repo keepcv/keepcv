@@ -1,4 +1,4 @@
-import { live, newUuid, textOfPoint } from "@keepcv/core";
+import { keyForPosition, newUuid, textOfPoint } from "@keepcv/core";
 import type {
   MetricInput,
   Point,
@@ -10,7 +10,6 @@ import type {
 } from "@keepcv/schema";
 import { metricInputSchema, pointInputSchema, pointPatchSchema } from "@keepcv/schema";
 import type { ZodError } from "zod";
-import { nextSortKey } from "../../../lib/sort.js";
 import { bodyOf } from "../../phrasings/model/editor.js";
 
 export const CONFIDENCE_HINTS: Record<PointConfidence, string> = {
@@ -68,7 +67,7 @@ export function buildPointSubmission(
   const parsed = pointInputSchema.safeParse({
     id: newUuid(),
     phrasingSetId: newUuid(),
-    sortKey: nextSortKey(store.points),
+    sortKey: keyForPosition(store.points, null, store.points.length),
     ...columns(values),
     phrasing: {
       id: newUuid(),
@@ -116,6 +115,7 @@ export function buildMetric(
   const value = optionalNumber(values.value);
   if (value === undefined || value === null) return { errors: { value: "expected a number" } };
 
+  const metrics = store.metrics.filter((row) => row.pointId === pointId);
   const parsed = metricInputSchema.safeParse({
     id: newUuid(),
     pointId,
@@ -125,7 +125,7 @@ export function buildMetric(
     baseline,
     direction: null,
     period: null,
-    sortKey: nextSortKey(live(store.metrics).filter((row) => row.pointId === pointId)),
+    sortKey: keyForPosition(metrics, null, metrics.length),
   });
 
   return parsed.success ? { metric: parsed.data } : { errors: fieldErrors(parsed.error) };

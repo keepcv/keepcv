@@ -19,6 +19,7 @@ import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import { evidence, metric, point, pointRecordLink, pointTag } from "../schema/index.js";
 import {
+  bySortKey,
   type Changes,
   insertOwned,
   live,
@@ -141,7 +142,7 @@ export function createPointRepository(
             live(point, options?.includeArchived),
           ),
         )
-        .orderBy(asc(point.recordId), asc(point.sortKey));
+        .orderBy(asc(point.recordId), bySortKey(point.sortKey));
       return rows.map(toPoint);
     },
 
@@ -220,7 +221,7 @@ export function createPointRepository(
             live(metric, options?.includeArchived),
           ),
         )
-        .orderBy(asc(metric.pointId), asc(metric.sortKey));
+        .orderBy(asc(metric.pointId), bySortKey(metric.sortKey));
       return rows.map(toMetric);
     },
 

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { generateKeyBetween, generateNKeysBetween, SortKeyError } from "./sort-key.js";
+import { bySortKey, generateKeyBetween, generateNKeysBetween, SortKeyError } from "./sort-key.js";
 
 describe("generateKeyBetween", () => {
   it("produces the first key for an empty list", () => {
@@ -134,5 +134,25 @@ describe("ordering invariants", () => {
       ),
       { numRuns: 200 },
     );
+  });
+});
+
+describe("bySortKey", () => {
+  // `"Zz".localeCompare("a0")` is positive, and `Zz` is exactly the key
+  // `generateKeyBetween(null, "a0")` produces for a row moved above the first.
+  it("orders an upper-case magnitude before a lower-case one", () => {
+    const rows = [
+      { id: "1", sortKey: "a0" },
+      { id: "2", sortKey: generateKeyBetween(null, "a0") },
+    ];
+    expect([...rows].sort(bySortKey).map((row) => row.id)).toEqual(["2", "1"]);
+  });
+
+  it("breaks a tie on the id, so the order does not depend on the input", () => {
+    const rows = [
+      { id: "b", sortKey: "a0" },
+      { id: "a", sortKey: "a0" },
+    ];
+    expect([...rows].sort(bySortKey).map((row) => row.id)).toEqual(["a", "b"]);
   });
 });

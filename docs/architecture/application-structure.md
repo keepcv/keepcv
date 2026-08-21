@@ -150,11 +150,16 @@ draft is waiting before it opens rather than asking after it has.
 ['phrasingSet', phrasingSetId]
 ['phrasing', id, 'revisions', currentRevisionId]
 ['resumes']
-['resume', resumeId]                       // working composition
 ['resume', resumeId, 'versions']
+['resume', resumeId, 'snapshots']
 ['resume', resumeId, 'version', versionId]
 ['resume', resumeId, 'diff', a, b]
 ```
+
+**There is no key for the working composition.** It is `composition(store, resumeId)`
+over the boot payload, for the reason there is no route for it (`api-contract.md`
+#3): every row it resolves is already cached. A key here would be the same rows
+fetched twice and a second thing to keep in step.
 
 **A phrasing's history is keyed by the revision it points at.** History is the one
 thing an editor needs that the boot payload deliberately does not carry, and it
@@ -176,19 +181,26 @@ this project treats as its primary threat.
 | Record created/updated/archived | `['records', kind, *]`, `['record', id]`, `['store']` |
 | Point changed | `['points', ...]`, `['record', parentId]` |
 | Phrasing revision committed | `['phrasingSet', id]`, any `['resume', *]` whose preview uses it |
-| Composition patched | `['resume', id]` only - **never** `['store']` |
-| Version created | `['resume', id, 'versions']`, `['resume', id]` |
+| Composition patched | nothing - the answer is written into `['store']` |
+| Version created | `['resume', id, 'versions']` |
+| Version starred | `['resume', id, 'snapshots']` |
 | Version restored | `['resume', id, 'versions']`, `['store']` |
 
-**A restore is the one write with no optimistic patch.** It rewrites sections,
-entries, points, contact overrides and the target context in one transaction, and
-the client cannot know which of those the store actually changed - so the boot
-payload is re-read rather than guessed at. It is also rare enough that the round
-trip costs nothing anyone notices, which is not true of the row above it.
+**A composition write settles by merging its answer, not by invalidating.** A
+toggle, a move, a placement and a wording choice each write one row and the
+response *is* that row, carrying the `updated_at` the next write has to present.
+Writing it into the cached payload is therefore exact, and re-reading the whole
+store per drag would be a request that could only tell the client what it already
+knows. `useStoreMutation` takes a `settle` for this; a mutation without one falls
+back to invalidating, because its answer does not cover everything it changed -
+creating a record may also have created an organisation.
 
-That last row is the one to get right: composition changes are frequent
-(every drag, every toggle) and must not invalidate the store. Getting this
-wrong turns a drag-and-drop interaction into a full refetch.
+**A restore is the one write with no optimistic patch at all.** It rewrites
+sections, entries, points, contact overrides and the target context in one
+transaction, and the client cannot know which of those the store actually
+changed - so the boot payload is re-read rather than guessed at. It is also rare
+enough that the round trip costs nothing anyone notices, which is not true of the
+row above it.
 
 ### Optimistic updates
 
@@ -355,17 +367,36 @@ Needs: the full store (already cached); the working composition; a compiled
 `ResumeDocument`. Mutations are single-row patches with a fractional
 `sort_key`, so a drag sends one small request (data-model.md #3.4).
 
-Reading comes before dragging: the screen is **composition and preview, toggled**,
-and both halves answer from the cached payload. Composition shows every row the
-selection holds - including the ones toggled off, dimmed and marked, because off
-is a state the selection exists to hold and a row that vanished would read as a
-delete. It shows the **wording this resume chose**, since an entry point pins a
-phrasing rather than a set. Preview runs `compile()` in the browser, which is the
-whole reason `@keepcv/core` does no I/O: the preview and a server-side export are
-the same function over the same manifest.
+The screen is **composition and preview, toggled**, and both halves answer from
+the cached payload. Composition shows every row the selection holds - including
+the ones toggled off, dimmed and marked, because off is a state the selection
+exists to hold and a row that vanished would read as a delete. It shows the
+**wording this resume chose**, since an entry point pins a phrasing rather than a
+set. Preview runs `compile()` in the browser, which is the whole reason
+`@keepcv/core` does no I/O: the preview and a server-side export are the same
+function over the same manifest.
+
+**Adding and taking off are one control, because placing is a create or a
+put-back.** Every uniqueness index on the composition covers archived rows
+(`data-model.md` #9.1), so a record taken off a section and added again is the
+row that is already there, restored. The picker offers what is not currently
+placed and the write decides which of the two it is; a second "removed" list
+beside it would be the same rows shown twice.
+
+**Moving is one row and one request.** `keyForPosition` in `@keepcv/core` answers
+the fractional key a row takes at a position, clears any key an archived row in
+the gap still holds, and answers `undefined` when the row is already there - so a
+move that changes nothing writes nothing. Ordering compares keys **by code unit,
+never by locale**: a row moved above the first one takes a key in the upper-case
+magnitude, and `"Zz".localeCompare("a0")` is positive.
 
 An entry links back to its record, and a record's "where it appears" links here,
 so the two directions of "what does this affect" both resolve.
+
+**Contact visibility is three-valued**, not a checkbox: on, off, or the channel's
+own default. Following the default again clears the override row rather than
+writing `true` into it, so changing the channel's default later still reaches
+this resume.
 
 ### 5.6 Version timeline and compare
 
@@ -395,8 +426,11 @@ already contains it says the same sentence twice.
 
 Restoring is a button per row and the newest is not restorable, since restoring
 what a resume already says is a no-op the user would have to be told about.
-Snapshot labels are not shown yet: snapshots are in the archive rather than the
-boot payload, and starring has no screen.
+
+**Starring asks for a name.** A snapshot is a version the user marked, so it is a
+row with a label rather than a flag, and unstarring archives it like any other
+owned row. Snapshots are in the archive rather than the boot payload, so the
+screen fetches them beside the versions.
 
 ### 5.7 Export and data
 

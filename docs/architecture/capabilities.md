@@ -126,15 +126,24 @@ same call serves the browser, the CLI and anything server-side.
 
 ### Composition
 
-The resume entity and its target context; include and exclude toggles;
-phrasing selection per point; section and entry reordering; section headings
-and visibility; per-resume contact visibility; deriving a resume from an
-existing one.
+Built. The resume entity and its target context; include and exclude toggles at
+all three levels; phrasing selection per point; section, entry and point
+reordering; section headings and visibility; per-resume contact visibility.
 
 **A resume is read through `composition(store, resumeId)` in `@keepcv/core`,
 not a route** (api-contract.md #3), for the reason search is a selector: every
 row it resolves is already in the boot payload. The three collections it reads
-are what a client writes through.
+are what a client writes through, and a write settles by merging the row it
+answered with rather than re-reading the payload
+(application-structure.md #4).
+
+Adding and taking off are one control, because every uniqueness index on the
+composition covers archived rows and placing is therefore a create or a put-back
+(data-model.md #9.1).
+
+What remains is **deriving a resume from an existing one**, and dragging: the
+order is changed by keyboard today, which is the accessible half and the half the
+sort-key arithmetic actually needs.
 
 ### Render and templates
 
@@ -166,8 +175,9 @@ the older selection back over the working composition and appends a version
 saying where it came from. The resume screen's third view is the timeline, the
 comparison and the restore.
 
-What remains is **starring** - a snapshot is an ordinary owned row with routes
-already, and no screen - and **exporting a version**, which waits for a renderer.
+Starring is there too: a snapshot is a version the user named, so it asks for a
+label, and unstarring archives the row. What remains is **exporting a version**,
+which waits for a renderer.
 
 ### Import
 
