@@ -100,4 +100,10 @@ export {
   type Unfinished,
   unplacedPoints,
 } from "./store/selectors.js";
+export {
+  type TargetMatch,
+  type TargetPoint,
+  type TargetTerm,
+  targetMatch,
+} from "./store/target.js";
 export { tagSlug } from "./tags/slug.js";

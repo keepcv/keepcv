@@ -180,8 +180,14 @@ Create, edit, archive and restore go through `useStoreMutation` in
 `lib/store-cache.ts`, which patches the cached `Store` before the request leaves,
 puts it back when the request is refused, and re-reads once it settles. A `409`
 opens a field-by-field comparison offering both resolutions and taking neither.
-Metrics are written as they are added rather than staged with a form. Tags,
-evidence and a resume's target context are still read-only.
+Metrics are written as they are added rather than staged with a form. Tags and
+evidence are still read-only.
+
+**A resume's target is the one form that stages rather than writing as it is
+typed.** A posting is pasted in one motion, and the match below it would re-rank
+on every keystroke; Save sends one patch carrying the whole form, so Revert can
+clear a field. The `409` comparison is shared with the record form and reduces
+the posting to a length rather than showing two pages of prose side by side.
 
 **A template is code, and the resume names it.** `@keepcv/templates` holds the
 contract, the shared fixture that decides what "is a template" means, and
@@ -262,6 +268,15 @@ derived `search_document` would have been one fact stored twice, written by ever
 mutation and kept honest by a rebuild-and-compare test - and it would have cost a
 round trip per keystroke. Prefix matching does what the trigram index was for.
 Do not add a `/v1/search`; add fields to the selector.
+
+**Reading the posting is the same shape: `targetMatch(store, resumeId)`.** It
+ranks the terms a posting leans on, says which the resume answers, and names the
+placed points that answer least. It is deliberately shallow - term frequency over
+a stopword list, prefix matching bounded to an inflection, and a weighting for
+what the store already files work under. No stemmer, no embeddings, no model
+call: the output is a list of words the user can check against the posting in
+front of them, and the posting never has to leave the machine. It misses matches
+rather than inventing them, which is the direction to keep it wrong in.
 
 **Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
 schemas from `@keepcv/schema` directly, so the OpenAPI document and the request

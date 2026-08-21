@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
+import { Conflict } from "../../../components/ui/conflict.js";
 import {
   CheckboxField,
   type Option,
@@ -19,6 +20,7 @@ import {
 } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
+import type { FieldErrors } from "../../../lib/form.js";
 import { sentenceCase } from "../../../lib/label.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
 import { useCreateRecord, useUpdateRecord } from "../api/use-records.js";
@@ -27,11 +29,9 @@ import {
   buildPatch,
   buildSubmission,
   creatableKinds,
-  type Difference,
   differences,
   EXTRA_FIELDS,
   type ExtraField,
-  type FieldErrors,
   type RecordFormValues,
   valuesOf,
 } from "../model/record-form.js";
@@ -49,56 +49,6 @@ function optionsFor(store: Store, field: ExtraField): readonly Option[] | undefi
   return field.options === undefined
     ? undefined
     : [NONE, ...field.options.map((value) => ({ value, label: sentenceCase(value) }))];
-}
-
-// Both sides of a stale write, named. Nothing is kept until one is chosen.
-function Conflict({
-  rows,
-  onKeepTheirs,
-  onKeepMine,
-}: {
-  rows: Difference[];
-  onKeepTheirs: () => void;
-  onKeepMine: () => void;
-}) {
-  return (
-    <Panel className="border-amber-300 bg-amber-50">
-      <PanelHeader title="This record changed while you were editing it">
-        Nothing has been saved. Both versions are below.
-      </PanelHeader>
-      <PanelBody className="space-y-3">
-        {rows.length === 0 ? (
-          <p className="text-sm text-amber-900">
-            The change was to a field this form does not show.
-          </p>
-        ) : (
-          <dl className="space-y-2 text-sm">
-            {rows.map((row) => (
-              <div key={row.label} className="grid gap-1 sm:grid-cols-3">
-                <dt className="text-xs font-medium uppercase tracking-wide text-amber-800">
-                  {row.label}
-                </dt>
-                <dd className="text-slate-800">
-                  <span className="text-xs text-slate-500">yours: </span>
-                  {row.mine}
-                </dd>
-                <dd className="text-slate-800">
-                  <span className="text-xs text-slate-500">stored: </span>
-                  {row.theirs}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button tone="primary" onClick={onKeepMine}>
-            Save mine over it
-          </Button>
-          <Button onClick={onKeepTheirs}>Keep what is stored</Button>
-        </div>
-      </PanelBody>
-    </Panel>
-  );
 }
 
 export function RecordForm({
@@ -194,6 +144,7 @@ export function RecordForm({
 
       {conflict === undefined ? null : (
         <Conflict
+          title="This record changed while you were editing it"
           rows={differences(store, values, conflict)}
           onKeepTheirs={() => {
             openRecord(conflict.id);

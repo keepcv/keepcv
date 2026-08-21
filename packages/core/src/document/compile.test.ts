@@ -309,7 +309,7 @@ describe("compile", () => {
     const { store, resume } = aComposedStore();
     const period = compile(store, resume.id, { generatedAt: AT, locale: "de-DE" })?.sections[0]
       ?.entries[0]?.period;
-    expect(period?.display).toBe("März 2024 - Present");
+    expect(period?.display).toBe("M\u00e4rz 2024 - Present");
   });
 });
 

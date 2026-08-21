@@ -1022,4 +1022,99 @@ describe("a resume and its template", () => {
     expect(await screen.findByText("What this template does")).toBeInTheDocument();
     expect(screen.getByText(/never images or table cells/)).toBeInTheDocument();
   });
+
+  const POSTING = "We use Kubernetes and Terraform. Kubernetes above all.";
+
+  it("keeps the posting, then measures the resume against it", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=target`);
+
+    expect(await screen.findByLabelText("Company")).toHaveValue("Babbage Ltd");
+    expect(screen.getByLabelText("Role")).toHaveValue("Staff engineer");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    type("Job description", POSTING);
+    press("Save");
+
+    await waitFor(() => {
+      expect(patched(server)).toHaveLength(1);
+    });
+    // The whole form, not only the box that changed: absent would leave the
+    // stored value alone, and Revert has to be able to clear one.
+    expect(patched(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: {
+        targetCompany: "Babbage Ltd",
+        targetRole: "Staff engineer",
+        targetUrl: null,
+        appliedOn: "2026-02-10",
+        targetJdText: POSTING,
+      },
+    });
+
+    // The role counts as part of the posting, so four terms are asked for:
+    // only "engineer" lands, through the record the entry prints.
+    expect(await screen.findByText("1 of 4 answered")).toBeInTheDocument();
+    expect(screen.getByText("Kubernetes")).toBeInTheDocument();
+    expect(screen.getByText("Terraform")).toBeInTheDocument();
+  });
+
+  it("takes the point that answers least off the page, without deleting it", async () => {
+    const { server, store, resume } = aResumeToPrint();
+    const placed = store.resumeEntryPoints.filter((row) => row.isVisible);
+    mount(server.answer, `/resumes/${resume.id}?view=target`);
+
+    await screen.findByLabelText("Job description");
+    type("Job description", POSTING);
+    press("Save");
+
+    expect(await screen.findByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    // Named with the record it sits under: one wording can be placed on three
+    // jobs, and the list cannot be acted on without saying which this is.
+    expect(screen.getByText("Engine lead - Answers engineer.")).toBeInTheDocument();
+    press("Take off the page");
+
+    await waitFor(() => {
+      expect(patched(server)).toHaveLength(2);
+    });
+    expect(patched(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: { isVisible: false },
+    });
+    // Still on the resume, and still holding where it sat.
+    expect(store.resumeEntryPoints).toHaveLength(placed.length + 1);
+  });
+
+  it("offers both sides when the resume changed under a posting being written", async () => {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    const server = storeServer(store, (call) =>
+      call.method === "PATCH"
+        ? jsonOf(
+            {
+              type: "https://keepcv.app/problems/stale-write",
+              title: "Stale write",
+              status: 409,
+              detail: "the resume changed after it was read",
+              instance: `/v1/resumes/${resume.id}`,
+              current: { ...resume, targetCompany: "Babbage and Sons" },
+            },
+            409,
+          )
+        : undefined,
+    );
+
+    mount(server.answer, `/resumes/${resume.id}?view=target`);
+    expect(await screen.findByLabelText("Company")).toHaveValue("Babbage Ltd");
+    type("Company", "Babbage Ltd, Soho");
+    press("Save");
+
+    expect(
+      await screen.findByText("This resume changed while you were editing it"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Babbage Ltd, Soho/)).toBeInTheDocument();
+    expect(screen.getByText(/Babbage and Sons/)).toBeInTheDocument();
+    expect(store.resumes[0]?.targetCompany).toBe("Babbage Ltd");
+  });
 });

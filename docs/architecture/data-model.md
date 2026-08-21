@@ -844,6 +844,28 @@ The judgement this rests on is "the whole store is kilobytes", which is the same
 assumption the boot payload already makes. If that ever stops holding, the boot
 payload is what breaks first, and the two are then one decision rather than two.
 
+### Matching a posting is the same shape
+
+`target_jd_text` is stored whole and read by `targetMatch(store, resumeId)`, a
+selector beside `search` rather than an index, a route or a service. It ranks
+the terms the posting leans on, marks which the resume answers, and scores each
+placed point against them; `tag.label` and the titles of `skill` records weight
+a term up, which is the only place the store's own vocabulary is used to read
+someone else's prose.
+
+**It is shallow on purpose.** Term frequency over a stopword list, and prefix
+matching bounded to an inflection so `engineer` finds `engineering` but `data`
+does not find `database`. No stemmer, no embeddings, no model call. The output
+is a list of words the user can check against the posting they are looking at,
+which is a claim they can falsify - a similarity score is not. It is also why
+the posting never leaves the machine: matching it needs no service, so there is
+nothing to send.
+
+Where it is wrong it is wrong visibly and in one direction: it misses matches
+rather than inventing them (`mentoring` does not find `mentored`). A missed term
+shows up as "nothing placed answers this" next to a resume that plainly does,
+which reads as a prompt rather than as an error.
+
 ---
 
 ## 9. Resumes

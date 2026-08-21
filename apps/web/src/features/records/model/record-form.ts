@@ -16,6 +16,7 @@ import {
   WORK_MODES,
 } from "@keepcv/schema";
 import type { ZodError } from "zod";
+import { type Difference, differing, type FieldErrors, trimmed } from "../../../lib/form.js";
 
 // The columns a kind carries beyond the shared ones. `record-form.test.ts`
 // checks this covers each kind's schema exactly, so a column added to the model
@@ -72,8 +73,6 @@ export interface RecordFormValues {
   extras: Record<string, string>;
 }
 
-export type FieldErrors = Record<string, string>;
-
 export interface RecordSubmission {
   record: CareerRecordInput;
   organisation: OrganisationInput | null;
@@ -117,11 +116,6 @@ export function valuesOf(store: Store, record: CareerRecord): RecordFormValues {
 export function creatableKinds(store: Store): CareerRecordKind[] {
   const hasSection = live(store.customSections).length > 0;
   return CAREER_RECORD_KINDS.filter((kind) => kind !== "custom_entry" || hasSection);
-}
-
-function trimmed(value: string): string | null {
-  const text = value.trim();
-  return text === "" ? null : text;
 }
 
 function fieldErrors(error: ZodError): FieldErrors {
@@ -198,12 +192,6 @@ export function buildSubmission(
   return { submission: { record: parsed.data, organisation: organisation.created } };
 }
 
-export interface Difference {
-  label: string;
-  mine: string;
-  theirs: string;
-}
-
 const SHARED_LABELS: Record<string, string> = {
   title: "Title",
   subtitle: "Subtitle",
@@ -221,34 +209,24 @@ export function differences(
   current: CareerRecord,
 ): Difference[] {
   const theirs = valuesOf(store, current);
-  const shown = (value: string): string => (value === "" ? "empty" : value);
 
-  const shared = Object.entries(SHARED_LABELS).flatMap(([name, label]) => {
-    const a = mine[name as keyof RecordFormValues];
-    const b = theirs[name as keyof RecordFormValues];
-    return a === b || typeof a !== "string" || typeof b !== "string"
-      ? []
-      : [{ label, mine: shown(a), theirs: shown(b) }];
-  });
-
-  const ongoing =
-    mine.isCurrent === theirs.isCurrent
-      ? []
-      : [
-          {
-            label: "Ongoing",
-            mine: mine.isCurrent ? "yes" : "no",
-            theirs: theirs.isCurrent ? "yes" : "no",
-          },
-        ];
-
-  const extras = EXTRA_FIELDS[mine.kind].flatMap((field) => {
-    const a = mine.extras[field.name] ?? "";
-    const b = theirs.extras[field.name] ?? "";
-    return a === b ? [] : [{ label: field.label, mine: shown(a), theirs: shown(b) }];
-  });
-
-  return [...shared, ...ongoing, ...extras];
+  return differing([
+    ...Object.entries(SHARED_LABELS).flatMap(([name, label]) => {
+      const a = mine[name as keyof RecordFormValues];
+      const b = theirs[name as keyof RecordFormValues];
+      return typeof a !== "string" || typeof b !== "string" ? [] : [{ label, mine: a, theirs: b }];
+    }),
+    {
+      label: "Ongoing",
+      mine: mine.isCurrent ? "yes" : "no",
+      theirs: theirs.isCurrent ? "yes" : "no",
+    },
+    ...EXTRA_FIELDS[mine.kind].map((field) => ({
+      label: field.label,
+      mine: mine.extras[field.name] ?? "",
+      theirs: theirs.extras[field.name] ?? "",
+    })),
+  ]);
 }
 
 // No `summarySetId` and no `sortKey`: absent leaves them alone, and sending
