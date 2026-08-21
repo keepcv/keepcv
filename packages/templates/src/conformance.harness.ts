@@ -22,7 +22,10 @@ function subtreeOf(html: string, key: string): string {
 }
 
 function textOf(html: string): string {
-  return html.replaceAll(/<[^>]*>/g, " ").replaceAll(/\s+/g, " ").trim();
+  return html
+    .replaceAll(/<[^>]*>/g, " ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
 }
 
 function keysOf(document: ResumeDocument): string[] {
