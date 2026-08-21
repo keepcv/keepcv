@@ -122,9 +122,9 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 ## Current state
 
-`packages/schema`, `packages/core`, `packages/db` and `packages/api` exist,
-`apps/cli` is the `keepcv` launcher and `apps/web` is the browser app.
-`interop`, `templates`, `render` and `ats-lint` are specified but deliberately
+`packages/schema`, `packages/core`, `packages/db`, `packages/api` and
+`packages/templates` exist, `apps/cli` is the `keepcv` launcher and `apps/web` is
+the browser app. `interop`, `render` and `ats-lint` are specified but deliberately
 **not scaffolded** - empty packages are noise, and a sub-feature is either not
 started or complete. Create each one when its capability is built, and add it to
 the root `tsconfig.json` references then.
@@ -157,7 +157,9 @@ overrides, and sixteen owned collections: `/v1/contact-channels`,
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
 the resume timeline at `/v1/resume-versions`, `/v1/resume-snapshots`,
 `GET /v1/resume-versions/diff`, `POST /v1/resume-versions/{id}/restore`, and
-`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. Templates are unbuilt.
+`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. A template is code rather
+than a row, so it has no routes: the resume carries `template_id` and
+`template_config`, and both travel in the boot payload.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
@@ -167,17 +169,28 @@ over the store overview, the record list, a record's detail and its form, the
 point list, the resume list, a resume's composition, its compiled preview and its
 history, and search results. All of it is fed by one `GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
-payload. React, TanStack Router and Query, Tailwind v4, Vite, and
+payload, handed to a template in an iframe of its own. React, TanStack Router and
+Query, Tailwind v4, Vite, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
 rather than generated from filenames.
 
-**Records, points, their wording and the composition all write.** Create, edit,
-archive and restore go through `useStoreMutation` in `lib/store-cache.ts`, which
-patches the cached `Store` before the request leaves, puts it back when the
-request is refused, and re-reads once it settles. A `409` opens a field-by-field
-comparison offering both resolutions and taking neither. Metrics are written as
-they are added rather than staged with a form. Tags and evidence are still
-read-only.
+**Records, points, their wording, resumes and the composition all write.**
+Create, edit, archive and restore go through `useStoreMutation` in
+`lib/store-cache.ts`, which patches the cached `Store` before the request leaves,
+puts it back when the request is refused, and re-reads once it settles. A `409`
+opens a field-by-field comparison offering both resolutions and taking neither.
+Metrics are written as they are added rather than staged with a form. Tags,
+evidence and a resume's target context are still read-only.
+
+**A template is code, and the resume names it.** `@keepcv/templates` holds the
+contract, the shared fixture that decides what "is a template" means, and
+`ats-single-column`. A template is handed a `ResumeDocument` and its config and
+returns markup plus its own stylesheet, so the preview mounts it in an iframe the
+app's CSS cannot reach, at the size it will print at. Settings are declared as
+`fields`, which is what both the validator and the settings panel read; the
+resume stores only what differs from the template's defaults; and the manifest
+pins the choice, so a template swapped later cannot rewrite what a version says
+was sent.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response

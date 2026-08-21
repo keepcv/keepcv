@@ -157,8 +157,10 @@ const resumesRoute = createRoute({
   path: "/resumes",
   validateSearch: z.object({ archived: z.enum(ARCHIVED_FILTERS).default("exclude") }),
   component: function ResumesScreen() {
-    const store = useStore(resumesRoute.useRouteContext().api);
-    return <ResumeList store={store} archived={resumesRoute.useSearch().archived} />;
+    const { api } = resumesRoute.useRouteContext();
+    return (
+      <ResumeList store={useStore(api)} client={api} archived={resumesRoute.useSearch().archived} />
+    );
   },
 });
 

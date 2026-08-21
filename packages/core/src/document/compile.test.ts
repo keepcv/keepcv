@@ -18,6 +18,7 @@ import {
   EPOCH,
   emptyStore,
 } from "../store/store.harness.js";
+import { captureManifest } from "./capture.js";
 import { compile } from "./compile.js";
 import { PRESENTED_KINDS } from "./presenters.js";
 
@@ -53,6 +54,32 @@ function aComposedStore() {
 describe("compile", () => {
   it("answers with nothing for a resume that is not in the store", () => {
     expect(compile(emptyStore(), newUuid(), { generatedAt: AT })).toBeUndefined();
+  });
+
+  // Pinned like the wording is: a template swapped in June must not change how
+  // a version captured in March prints.
+  it("names the template the resume chose, and carries it through the manifest", () => {
+    const { store, resume } = aComposedStore();
+    resume.templateId = "ats-single-column";
+    resume.templateConfig = { pageSize: "letter" };
+
+    const manifest = captureManifest(store, resume.id);
+    expect(manifest?.template).toEqual({
+      id: "ats-single-column",
+      config: { pageSize: "letter" },
+    });
+
+    const doc = compile(store, resume.id, { generatedAt: AT });
+    expect(doc?.meta.templateId).toBe("ats-single-column");
+    expect(doc?.meta.templateConfig).toEqual({ pageSize: "letter" });
+  });
+
+  it("names no template when the resume chose none", () => {
+    const { store, resume } = aComposedStore();
+    const doc = compile(store, resume.id, { generatedAt: AT });
+
+    expect(doc?.meta.templateId).toBeUndefined();
+    expect(doc?.meta.templateConfig).toBeUndefined();
   });
 
   it("resolves a resume into a document a template can render", () => {

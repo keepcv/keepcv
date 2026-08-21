@@ -866,7 +866,9 @@ resume (
   target_role      text null,
   target_url       text null,
   target_jd_text   text null,
-  applied_on       partial_date null
+  applied_on       partial_date null,
+  template_id      text null,               -- null = whatever the build defaults to
+  template_config  jsonb not null default '{}'
 )
 
 resume_section (
@@ -921,11 +923,19 @@ resume_contact_channel (
 )
 ```
 
-**No template columns.** A `template_config` has nothing to validate against
-until a template package exists, so `template_id`, `template_version` and
-`template_config` arrive with that capability, by the expand step of an
-expand/contract migration. There is no `current_version_id` either, and #9.2
-says why.
+**`template_config` holds the overrides, not the settings.** Only what differs
+from the template's own defaults is stored, so a default that moves in a later
+version moves with it; the template validates what it finds against the fields it
+declares and ignores the rest (template-model.md #5). There is no
+`template_version` column: a version string would name a build of this package
+rather than anything the store can resolve, and the only thing that can render an
+old template is old code.
+
+**`template_id` is a plain `text` with no foreign key.** Templates live in code,
+not in a table, and a store must survive being opened by a build that does not
+have the one it names - which is why resolving falls back rather than refusing.
+
+There is no `current_version_id`, and #9.2 says why.
 
 **A point may appear at most once per resume**, which is why `resume_id` is
 carried down onto entries and entry points rather than reached through the

@@ -1,9 +1,14 @@
+import { newUuid } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
+import { Button } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
+import { useCreateResume } from "../api/use-resumes.js";
 import { type ResumeRow, resumeRows } from "../model/resume-rows.js";
 
 function counted(value: number, singular: string, plural: string): string {
@@ -44,7 +49,77 @@ function Row({ row }: { row: ResumeRow }) {
   );
 }
 
-export function ResumeList({ store, archived }: { store: Store; archived: ArchivedFilter }) {
+// The name is all a resume needs to exist; everything else about it is chosen on
+// the resume itself.
+function NewResume({ client }: { client: ApiClient }) {
+  const create = useCreateResume(client);
+  const navigate = useNavigate();
+  const [typed, setTyped] = useState<string | null>(null);
+
+  if (typed === null) {
+    return (
+      <Button
+        tone="primary"
+        onClick={() => {
+          setTyped("");
+        }}
+      >
+        New resume
+      </Button>
+    );
+  }
+
+  const start = () => {
+    const id = newUuid();
+    create.mutate({
+      id,
+      name: typed.trim(),
+      targetCompany: null,
+      targetRole: null,
+      targetUrl: null,
+      targetJdText: null,
+      appliedOn: null,
+      templateId: null,
+      templateConfig: {},
+    });
+    setTyped(null);
+    void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        aria-label="A name for the new resume"
+        value={typed}
+        placeholder="Backend, Acme"
+        onChange={(event) => {
+          setTyped(event.target.value);
+        }}
+        className="min-w-0 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+      />
+      <Button tone="primary" disabled={typed.trim() === ""} onClick={start}>
+        Start it
+      </Button>
+      <Button
+        onClick={() => {
+          setTyped(null);
+        }}
+      >
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
+export function ResumeList({
+  store,
+  client,
+  archived,
+}: {
+  store: Store;
+  client: ApiClient;
+  archived: ArchivedFilter;
+}) {
   const rows = resumeRows(store, archived);
 
   return (
@@ -56,18 +131,21 @@ export function ResumeList({ store, archived }: { store: Store; archived: Archiv
             A resume is a selection over the store, not a copy of it.
           </p>
         </div>
-        <Segmented label="Archived">
-          {ARCHIVED_FILTERS.map((option) => (
-            <Segment
-              key={option}
-              to="/resumes"
-              search={{ archived: option }}
-              active={archived === option}
-            >
-              {ARCHIVED_LABELS[option]}
-            </Segment>
-          ))}
-        </Segmented>
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented label="Archived">
+            {ARCHIVED_FILTERS.map((option) => (
+              <Segment
+                key={option}
+                to="/resumes"
+                search={{ archived: option }}
+                active={archived === option}
+              >
+                {ARCHIVED_LABELS[option]}
+              </Segment>
+            ))}
+          </Segmented>
+          <NewResume client={client} />
+        </div>
       </div>
 
       {rows.length === 0 ? (

@@ -47,6 +47,18 @@ function press(name: string): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+// A template renders into a document of its own, so what printed is queried
+// through the frame rather than through the app around it.
+async function printed(): Promise<ReturnType<typeof within>> {
+  const frame = await screen.findByTitle<HTMLIFrameElement>(/as it prints$/);
+  const page = frame.contentDocument?.body;
+  if (page === null || page === undefined) throw new Error("the preview frame has no document");
+  await waitFor(() => {
+    expect(page.childElementCount).toBeGreaterThan(0);
+  });
+  return within(page);
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -513,11 +525,12 @@ describe("a resume", () => {
     const answer = vi.fn(() => jsonOf(store));
 
     mount(answer, `/resumes/${resumeId}?view=preview`);
+    const page = await printed();
 
-    expect(await screen.findByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Experience", level: 3 })).toBeInTheDocument();
-    expect(screen.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
-    expect(screen.queryByText("Rewrote the scheduler")).not.toBeInTheDocument();
+    expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
+    expect(page.getByRole("heading", { name: "Experience", level: 2 })).toBeInTheDocument();
+    expect(page.getByText("Cut p95 latency from 800ms to 120ms")).toBeInTheDocument();
+    expect(page.queryByText("Rewrote the scheduler")).not.toBeInTheDocument();
     expect(answer).toHaveBeenCalledTimes(1);
   });
 
@@ -554,11 +567,10 @@ describe("a resume", () => {
     addEntry(store, section, record.id, { isVisible: false });
 
     mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
+    const page = await printed();
 
-    expect(
-      await screen.findByRole("heading", { name: "Experience", level: 3 }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Nothing under this heading prints.")).toBeInTheDocument();
+    expect(page.getByRole("heading", { name: "Experience", level: 2 })).toBeInTheDocument();
+    expect(page.getByText("Nothing under this heading prints yet.")).toBeInTheDocument();
   });
 
   it("says so when the id is not in the store", async () => {
@@ -904,5 +916,88 @@ describe("search", () => {
     mount(() => jsonOf(aFilledStore()), "/search?q=shelved");
 
     expect(await screen.findByText(/Nothing matches/)).toBeInTheDocument();
+  });
+});
+
+describe("a resume and its template", () => {
+  function aResumeToPrint() {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    return { store, server: storeServer(store), resume };
+  }
+
+  function patched(server: ReturnType<typeof storeServer>): unknown[] {
+    return server.calls.filter((call) => call.method === "PATCH").map((call) => call.body);
+  }
+
+  it("starts a resume from the list and opens it", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/resumes");
+
+    await screen.findByText("No resumes yet");
+    press("New resume");
+    type("A name for the new resume", "Backend, Acme");
+    press("Start it");
+
+    expect(await screen.findByRole("heading", { name: "Backend, Acme" })).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.method === "POST")).toHaveLength(1);
+  });
+
+  it("renames a resume, archives it and puts it back", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}`);
+
+    await screen.findByRole("heading", { name: resume.name });
+    press("Rename");
+    type(`A name for ${resume.name}`, "Staff engineer, Babbage");
+    press("Save");
+    expect(
+      await screen.findByRole("heading", { name: "Staff engineer, Babbage" }),
+    ).toBeInTheDocument();
+
+    press("Archive this resume");
+    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+
+    press("Put this resume back");
+    await waitFor(() => {
+      expect(screen.queryByText("Archived, and kept")).not.toBeInTheDocument();
+    });
+    expect(server.calls.map((call) => call.method)).toEqual(["GET", "PATCH", "DELETE", "POST"]);
+  });
+
+  // The template is a column on the resume, so tuning it is an ordinary write and
+  // the preview recompiles from the cached store rather than asking again.
+  it("tunes the template without a request per pixel", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    await printed();
+    expect(screen.getByLabelText("Template")).toHaveValue("ats-single-column");
+    expect(patched(server)).toHaveLength(0);
+
+    type("Body size", "9");
+    type("Body size", "12");
+
+    await waitFor(
+      () => {
+        expect(patched(server)).toHaveLength(1);
+      },
+      { timeout: 2000 },
+    );
+    // Two changes, one write, carrying the second value: without the debounce
+    // each would go out on its own and race the other's `updatedAt`.
+    expect(patched(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: { templateId: "ats-single-column", templateConfig: { fontSize: 12 } },
+    });
+  });
+
+  it("says what the template does rather than claiming a certification", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    expect(await screen.findByText("What this template does")).toBeInTheDocument();
+    expect(screen.getByText(/never images or table cells/)).toBeInTheDocument();
   });
 });

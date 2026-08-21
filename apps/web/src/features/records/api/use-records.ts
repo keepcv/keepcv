@@ -8,16 +8,10 @@ import type {
 } from "@keepcv/schema";
 import { careerRecordSchema, organisationSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { now, useStoreMutation } from "../../../lib/store-cache.js";
+import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
 function upsert(store: Store, record: CareerRecord): Store {
-  const known = store.records.some((row) => row.id === record.id);
-  return {
-    ...store,
-    records: known
-      ? store.records.map((row) => (row.id === record.id ? record : row))
-      : [...store.records, record],
-  };
+  return { ...store, records: replaceRow(store.records, record) };
 }
 
 function withOrganisation(store: Store, input: OrganisationInput | null): Store {

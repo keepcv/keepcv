@@ -155,6 +155,50 @@ export function SelectField({
   );
 }
 
+export function RangeField({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  unit,
+  ...common
+}: Common & {
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+}) {
+  const controlId = useId();
+  const describedBy = `${controlId}-note`;
+
+  return (
+    <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
+      <div className="flex items-center gap-2">
+        <input
+          id={controlId}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => {
+            onChange(Number(event.target.value));
+          }}
+          aria-describedby={describedBy}
+          className="h-4 flex-1 cursor-pointer accent-slate-900"
+        />
+        <span className="w-12 shrink-0 text-right text-xs tabular-nums text-slate-600">
+          {value}
+          {unit}
+        </span>
+      </div>
+    </Wrapper>
+  );
+}
+
 export function CheckboxField({
   label,
   hint,

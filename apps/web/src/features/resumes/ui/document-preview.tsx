@@ -1,160 +1,129 @@
-import { projectPlainText } from "@keepcv/core";
-import type { DocumentEntry, DocumentSection, ResumeDocument, RichText } from "@keepcv/schema";
+import type { Resume, ResumeDocument } from "@keepcv/schema";
+import type { ConfigField, Template, TemplateConfig } from "@keepcv/templates";
+import { resolveTemplate, TEMPLATES } from "@keepcv/templates";
+import { useEffect, useState } from "react";
+import { RangeField, SelectField } from "../../../components/ui/field.js";
+import type { ApiClient } from "../../../lib/api.js";
+import { usePatchResume } from "../api/use-resumes.js";
+import { TemplateFrame } from "./template-frame.js";
 
-function Prose({ body }: { body: RichText }) {
-  return (
-    <p className="mt-1 text-[13px] leading-relaxed text-slate-700">{projectPlainText(body)}</p>
+// Long enough that dragging a slider is one write rather than forty. Each one
+// carries the row's `updatedAt`, and a burst would race its own answers.
+const SETTLES_AFTER = 500;
+
+// Only what differs from the template's own defaults, so a default that moves in
+// a later version moves with it (application-structure.md #5.5).
+function overrides(template: Template, config: TemplateConfig): TemplateConfig {
+  return Object.fromEntries(
+    Object.entries(config).filter(([key, value]) => template.defaultConfig[key] !== value),
   );
 }
 
-function Points({ entry }: { entry: DocumentEntry }) {
-  if (entry.points.length === 0) return null;
-  return (
-    <ul className="mt-1.5 list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-slate-800 marker:text-slate-400">
-      {entry.points.map((point) => (
-        <li key={point.key}>{point.plainText}</li>
-      ))}
-    </ul>
-  );
-}
+function Control({
+  field,
+  config,
+  onChange,
+}: {
+  field: ConfigField;
+  config: TemplateConfig;
+  onChange: (value: string | number) => void;
+}) {
+  const value = config[field.key];
 
-function Entry({ entry, showOrganisation }: { entry: DocumentEntry; showOrganisation: boolean }) {
-  const left = [entry.title, showOrganisation ? entry.organisation?.name : undefined]
-    .filter((part) => part !== undefined && part !== "")
-    .join(" - ");
-  const right = [entry.period?.display, entry.location]
-    .filter((part) => part !== undefined && part !== "")
-    .join(" - ");
-
-  return (
-    <article className="break-inside-avoid">
-      <div className="flex items-baseline justify-between gap-4">
-        <h4 className="text-sm font-semibold">{left}</h4>
-        {right === "" ? null : (
-          <span className="shrink-0 text-xs tabular-nums text-slate-500">{right}</span>
-        )}
-      </div>
-      {entry.subtitle === undefined ? null : (
-        <p className="text-[13px] italic text-slate-600">{entry.subtitle}</p>
-      )}
-      {entry.summary === undefined ? null : <Prose body={entry.summary} />}
-      <Points entry={entry} />
-    </article>
-  );
-}
-
-// Three rules of the template contract meet here: an empty section is said out
-// loud rather than dropped, a grouped section prints its organisation once, and
-// an entry no group claimed still prints (template-model.md #5).
-function Body({ section }: { section: DocumentSection }) {
-  if (section.entries.length === 0) {
-    return <p className="text-[13px] italic text-slate-400">Nothing under this heading prints.</p>;
-  }
-
-  if (section.layout === "inline") {
+  if (field.kind === "choice") {
     return (
-      <p className="text-[13px] leading-relaxed text-slate-800">
-        {section.entries.map((entry) => entry.title ?? "").join(", ")}
-      </p>
+      <SelectField
+        label={field.label}
+        options={field.options}
+        value={typeof value === "string" ? value : field.default}
+        onChange={onChange}
+      />
     );
   }
 
-  if (section.groups === undefined) {
-    return (
-      <div className="space-y-3">
-        {section.entries.map((entry) => (
-          <Entry key={entry.key} entry={entry} showOrganisation />
+  return (
+    <RangeField
+      label={field.label}
+      min={field.min}
+      max={field.max}
+      step={field.step}
+      unit={field.unit}
+      value={typeof value === "number" ? value : field.default}
+      onChange={onChange}
+    />
+  );
+}
+
+export function DocumentPreview({
+  client,
+  resume,
+  document,
+}: {
+  client: ApiClient;
+  resume: Resume;
+  document: ResumeDocument;
+}) {
+  const stored = resolveTemplate(document);
+  const patch = usePatchResume(client);
+  const [pending, setPending] = useState<TemplateConfig | null>(null);
+  const config = pending ?? stored.config;
+  const { mutate } = patch;
+
+  useEffect(() => {
+    if (pending === null) return;
+    const timer = setTimeout(() => {
+      mutate({
+        resume,
+        patch: {
+          templateId: stored.template.id,
+          templateConfig: overrides(stored.template, pending),
+        },
+      });
+      setPending(null);
+    }, SETTLES_AFTER);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [pending, resume, stored.template, mutate]);
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
+      <aside className="space-y-4">
+        <SelectField
+          label="Template"
+          options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
+          value={stored.template.id}
+          onChange={(templateId) => {
+            setPending(null);
+            mutate({ resume, patch: { templateId, templateConfig: {} } });
+          }}
+        />
+
+        {stored.template.fields.map((field) => (
+          <Control
+            key={field.key}
+            field={field}
+            config={config}
+            onChange={(value) => {
+              setPending({ ...config, [field.key]: value });
+            }}
+          />
         ))}
-      </div>
-    );
-  }
 
-  const byKey = new Map(section.entries.map((entry) => [entry.key, entry]));
-  const grouped = new Set(section.groups.flatMap((group) => group.entryKeys));
-
-  return (
-    <div className="space-y-3">
-      {section.groups.map((group) => (
-        <div key={group.key}>
-          <div className="flex items-baseline justify-between gap-4">
-            <h4 className="text-sm font-semibold">{group.title}</h4>
-            <span className="shrink-0 text-xs tabular-nums text-slate-500">
-              {[group.period?.display, group.subtitle].filter(Boolean).join(" - ")}
-            </span>
-          </div>
-          <div className="mt-1 space-y-2 border-l border-slate-200 pl-3">
-            {group.entryKeys.map((key) => {
-              const entry = byKey.get(key);
-              return entry === undefined ? null : (
-                <Entry key={key} entry={entry} showOrganisation={false} />
-              );
-            })}
-          </div>
+        <div className="rounded-lg bg-slate-50 p-3">
+          <h3 className="text-xs font-medium text-slate-600">What this template does</h3>
+          <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-slate-500">
+            {stored.template.complianceNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
         </div>
-      ))}
-      {section.entries
-        .filter((entry) => !grouped.has(entry.key))
-        .map((entry) => (
-          <Entry key={entry.key} entry={entry} showOrganisation />
-        ))}
+      </aside>
+
+      <TemplateFrame title={`${resume.name}, as it prints`} styles={stored.template.styles(config)}>
+        {stored.template.render(document, config)}
+      </TemplateFrame>
     </div>
-  );
-}
-
-// The same `ResumeDocument` a template renders and an export writes, compiled in
-// the browser from the cached store (application-structure.md #2).
-export function DocumentPreview({ document }: { document: ResumeDocument }) {
-  const { header } = document;
-
-  return (
-    <article className="mx-auto w-full max-w-[46rem] rounded-lg bg-white px-6 py-8 shadow-sm ring-1 ring-slate-200 sm:px-12 sm:py-10">
-      <header className="border-b border-slate-300 pb-4">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          {header.fullName ?? "Your name is not in the store yet"}
-        </h2>
-        {header.headline === undefined ? null : (
-          <p className="mt-0.5 text-sm text-slate-600">{header.headline}</p>
-        )}
-        <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-600">
-          {[header.location, header.pronouns].filter(Boolean).map((part) => (
-            <span key={part}>{part}</span>
-          ))}
-          {header.contacts.map((contact) => (
-            <span key={contact.key}>
-              {contact.href === undefined ? (
-                contact.value
-              ) : (
-                <a
-                  href={contact.href}
-                  className="underline underline-offset-2 hover:text-slate-900"
-                  rel="noreferrer noopener"
-                  target="_blank"
-                >
-                  {contact.label ?? contact.value}
-                </a>
-              )}
-            </span>
-          ))}
-        </p>
-        {header.summary === undefined ? null : <Prose body={header.summary} />}
-      </header>
-
-      {document.sections.length === 0 ? (
-        <p className="pt-6 text-sm text-slate-500">
-          Nothing prints yet. Every section is hidden, or none has an entry that survived.
-        </p>
-      ) : (
-        <div className="space-y-5 pt-5">
-          {document.sections.map((section) => (
-            <section key={section.key}>
-              <h3 className="mb-2 border-b border-slate-200 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                {section.heading}
-              </h3>
-              <Body section={section} />
-            </section>
-          ))}
-        </div>
-      )}
-    </article>
   );
 }

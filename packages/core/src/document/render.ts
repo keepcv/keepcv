@@ -209,7 +209,15 @@ export function renderManifest(
 
   return {
     schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
-    meta: { generatedAt: options.generatedAt, resumeName: manifest.resume.name, locale },
+    meta: {
+      generatedAt: options.generatedAt,
+      resumeName: manifest.resume.name,
+      locale,
+      ...(manifest.template.id === null ? {} : { templateId: manifest.template.id }),
+      ...(Object.keys(manifest.template.config).length === 0
+        ? {}
+        : { templateConfig: manifest.template.config }),
+    },
     header: {
       ...(manifest.profile.fullName === null ? {} : { fullName: manifest.profile.fullName }),
       ...(manifest.profile.headline === null ? {} : { headline: manifest.profile.headline }),

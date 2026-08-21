@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/schema" },
     { "path": "packages/core" },
+    { "path": "packages/templates" },
     { "path": "packages/db" },
     { "path": "packages/api" },
     { "path": "apps/cli" }

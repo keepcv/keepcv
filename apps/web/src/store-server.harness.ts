@@ -19,6 +19,7 @@ import {
   resumeContactChannelSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
+  resumeSchema,
   resumeSectionSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
@@ -58,6 +59,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.organisations.push(organisationSchema.parse(row));
   } else if (path === "/v1/records") {
     store.records.push(careerRecordSchema.parse(row));
+  } else if (path === "/v1/resumes") {
+    store.resumes.push(resumeSchema.parse(row));
   } else if (path === "/v1/metrics") {
     store.metrics.push(metricSchema.parse(row));
   } else if (path === "/v1/resume-sections") {
@@ -160,6 +163,9 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   if (collection === "phrasing-sets") {
     return amendIn(store.phrasingSets, id, merged, (value) => phrasingSetSchema.parse(value));
   }
+  if (collection === "resumes") {
+    return amendIn(store.resumes, id, merged, (value) => resumeSchema.parse(value));
+  }
   if (collection === "resume-sections") {
     return amendIn(store.resumeSections, id, merged, (value) => resumeSectionSchema.parse(value));
   }
@@ -171,7 +177,12 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
       resumeEntryPointSchema.parse(value),
     );
   }
-  return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
+  if (collection === "records") {
+    return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
+  }
+  // Named rather than defaulted: a path this stub has never heard of used to
+  // amend a record, so a typo in a test passed while writing to the wrong table.
+  throw new Error(`the store stub has no collection ${String(collection)}`);
 }
 
 const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;

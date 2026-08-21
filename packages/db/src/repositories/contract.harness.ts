@@ -250,6 +250,8 @@ export function resumeInput(name: string, overrides: Record<string, unknown> = {
     targetUrl: null,
     targetJdText: null,
     appliedOn: null,
+    templateId: null,
+    templateConfig: {},
     ...overrides,
   } as ResumeInput;
 }
