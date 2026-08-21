@@ -86,6 +86,9 @@ the entire WYSIWYG premise.
                  - paginate(blocks, usable) and lengthBudget(doc, pages, limit)
                        fed real geometry by whatever laid the document out,
                        so the answer is measured rather than estimated (#7)
+                 - targetMatch(store, resumeId): what the posting asks for,
+                       which of it the resume answers, and which placed point
+                       answers least (#5.6)
                  - fractional sort-key arithmetic
                  - the Repository PORT (interfaces only)
                  No I/O. Runs unchanged in Node and in the browser.
@@ -418,13 +421,42 @@ wants one page" is a fact about the application rather than about typography.
 Null means no limit and is the default: a resume that nags before the user has
 said what they are aiming at is a resume that nags for nothing.
 
-**The target context - company, role, URL, applied date - is still read-only.**
-It is a form about the application rather than part of composing one, and it has
-no screen yet.
+### 5.6 Resume target
 
-### 5.6 Version timeline and compare
+The resume screen's second view, between composition and preview. Needs: the
+application's own facts - company, role, posting URL, applied date - and the
+posting text itself; then what the posting asks for and how much of it the
+resume answers.
 
-The resume screen's third view, beside composition and preview. Needs: versions
+**The form is staged, not written as it is typed.** Every other write in the app
+is optimistic and immediate; this one is not, because a posting is pasted in one
+motion and the panel below it re-ranks on every keystroke otherwise. Save sends
+one patch carrying the whole form, so Revert can clear a field - an absent key
+would leave the stored value alone. A `409` opens the same comparison the record
+form uses, with the posting reduced to a length: two pages of prose side by side
+is not a comparison anyone reads.
+
+**`targetMatch(store, resumeId)` in `@keepcv/core` is what reads it.** It ranks
+the terms the posting leans on by how often it says them, weighting up any the
+store already files work under; marks each as answered or not by what the resume
+actually prints; and scores every visible placed point against them, weakest
+first. The role counts as part of the posting, so a resume with no pasted text
+still says what it is for.
+
+**It is deliberately shallow, and says so.** Term frequency over a stopword list,
+prefix matching bounded to an inflection, no stemmer and no model. The answer it
+gives is a list of words with a covered flag, which the user can check against
+the posting in front of them - not a score they would have to trust. Where it is
+wrong it is wrong visibly: "mentoring" does not find "mentored".
+
+**Dropping is toggling off, not removing.** The weakest points are listed with
+the record each sits under, and taking one off the page writes `is_visible`
+false on the entry point. Nothing is archived and nothing is deleted, so the
+selection still holds what was chosen and where it sat.
+
+### 5.7 Version timeline and compare
+
+The resume screen's fourth view, beside composition, target and preview. Needs: versions
 ordered by `seq desc` with the trigger and, for a restore, the number it came
 from; a structural diff between any two; a Save and a Restore.
 
@@ -456,7 +488,7 @@ row with a label rather than a flag, and unstarring archives it like any other
 owned row. Snapshots are in the archive rather than the boot payload, so the
 screen fetches them beside the versions.
 
-### 5.7 Export and data
+### 5.8 Export and data
 
 Needs: format list with explicit lossiness warnings; mirror status
 and location; restore.

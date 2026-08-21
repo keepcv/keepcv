@@ -7,17 +7,19 @@ import { Button } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { usePatchResume, useSetResumeArchived } from "../api/use-resumes.js";
-import { resumeDetail } from "../model/resume-detail.js";
+import { type ResumeDetail, resumeDetail } from "../model/resume-detail.js";
 import { Composer } from "./composer.js";
 import { DocumentPreview } from "./document-preview.js";
 import { ResumeHistory } from "./resume-history.js";
+import { TargetScreen } from "./target.js";
 
-export const RESUME_VIEWS = ["composition", "preview", "history"] as const;
+export const RESUME_VIEWS = ["composition", "target", "preview", "history"] as const;
 
 export type ResumeView = (typeof RESUME_VIEWS)[number];
 
 const VIEW_LABELS: Record<ResumeView, string> = {
   composition: "Composition",
+  target: "Target",
   preview: "Preview",
   history: "History",
 };
@@ -70,6 +72,35 @@ function Rename({ resume, onRename }: { resume: Resume; onRename: (name: string)
   );
 }
 
+function Chosen({
+  store,
+  client,
+  detail,
+  view,
+}: {
+  store: Store;
+  client: ApiClient;
+  detail: ResumeDetail;
+  view: ResumeView;
+}) {
+  const { resume, document } = detail;
+
+  switch (view) {
+    case "history":
+      return <ResumeHistory client={client} resumeId={resume.id} />;
+    case "target":
+      return <TargetScreen store={store} client={client} resume={resume} />;
+    case "preview":
+      return document === undefined ? (
+        <Empty title="Nothing to compile yet" />
+      ) : (
+        <DocumentPreview client={client} resume={resume} document={document} />
+      );
+    case "composition":
+      return <Composer store={store} client={client} detail={detail} resumeId={resume.id} />;
+  }
+}
+
 export function ResumeDetailScreen({
   store,
   client,
@@ -96,7 +127,7 @@ export function ResumeDetailScreen({
     );
   }
 
-  const { header, resume, document } = detail;
+  const { header, resume } = detail;
 
   return (
     <div className="space-y-5">
@@ -152,17 +183,7 @@ export function ResumeDetailScreen({
         </p>
       </div>
 
-      {view === "history" ? (
-        <ResumeHistory client={client} resumeId={resumeId} />
-      ) : view === "preview" ? (
-        document === undefined ? (
-          <Empty title="Nothing to compile yet" />
-        ) : (
-          <DocumentPreview client={client} resume={resume} document={document} />
-        )
-      ) : (
-        <Composer store={store} client={client} detail={detail} resumeId={resumeId} />
-      )}
+      <Chosen store={store} client={client} detail={detail} view={view} />
     </div>
   );
 }

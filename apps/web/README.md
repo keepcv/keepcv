@@ -83,6 +83,14 @@ pnpm --filter @keepcv/web dev
   the answer to "it is too long" is something to act on rather than a number. The
   page count comes from measuring the page the template actually laid out, not
   from guessing at the text.
+- **A resume knows what job it is for, and says how well it answers it.** Paste
+  the posting and it names the terms the posting leans on, marks which of them
+  anything you placed actually answers, and lists the points that answer least -
+  each with the job it sits under, and a way to take it off the page without
+  deleting it. The matching is deliberately plain: word frequency against a list
+  of the phrases every posting uses, and nothing that needs sending anywhere. It
+  will miss a match before it invents one, so the words are there to be checked
+  rather than trusted.
 - **A resume remembers what it said.** Every version is kept, any two can be
   compared, and restoring one puts its selection back without erasing what came
   after: the restore is a new entry on the timeline saying where it came from. It

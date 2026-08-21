@@ -174,8 +174,17 @@ rule where each page begins, and `lengthBudget` names what sits past the
 `page_limit` the resume asked for. No pagination library is involved and the
 arithmetic is a pure function with its own tests (application-structure.md #7).
 
-What remains is **ranking what to drop**, which waits for the target context to
-make "least relevant" mean something, and **further templates**.
+Ranking what to drop is built on top of that again. A resume carries the posting
+it is written against, and `targetMatch(store, resumeId)` in `@keepcv/core` reads
+it: it ranks the terms the posting leans on, says which of them anything placed
+answers, and scores every placed point against them so the weakest are named
+first. It is a pure function over the boot payload, like `search` beside it, and
+it is deliberately shallow - term frequency over a stopword list, prefix matching
+bounded to an inflection, and a weighting for what the store already files work
+under. There is no model and no service call; see
+`application-structure.md` #8.
+
+What remains is **further templates**.
 
 ### Export
 
