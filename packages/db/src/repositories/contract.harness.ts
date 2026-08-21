@@ -252,6 +252,7 @@ export function resumeInput(name: string, overrides: Record<string, unknown> = {
     appliedOn: null,
     templateId: null,
     templateConfig: {},
+    pageLimit: null,
     ...overrides,
   } as ResumeInput;
 }

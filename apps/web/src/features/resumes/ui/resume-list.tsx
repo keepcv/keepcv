@@ -81,6 +81,7 @@ function NewResume({ client }: { client: ApiClient }) {
       appliedOn: null,
       templateId: null,
       templateConfig: {},
+      pageLimit: null,
     });
     setTyped(null);
     void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });

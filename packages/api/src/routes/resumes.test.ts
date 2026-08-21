@@ -172,6 +172,36 @@ describe("resumes", () => {
     expect(resumeSchema.parse(await read.json())).toEqual(resume);
   });
 
+  // A patch schema built by `.partial()` over defaulted fields fills those
+  // defaults in, so renaming a resume used to clear its template and its limit.
+  it("changes what a patch names and leaves the rest of the row alone", async () => {
+    const resume = await addResume("Backend, Acme");
+    const chosen = resumeSchema.parse(
+      await (
+        await send("PATCH", `/v1/resumes/${resume.id}`, {
+          expectedUpdatedAt: resume.updatedAt,
+          patch: { templateId: "ats-single-column", templateConfig: { margin: 22 }, pageLimit: 1 },
+        })
+      ).json(),
+    );
+
+    const renamed = resumeSchema.parse(
+      await (
+        await send("PATCH", `/v1/resumes/${resume.id}`, {
+          expectedUpdatedAt: chosen.updatedAt,
+          patch: { name: "Platform, Zeta" },
+        })
+      ).json(),
+    );
+
+    expect(renamed).toMatchObject({
+      name: "Platform, Zeta",
+      templateId: "ats-single-column",
+      templateConfig: { margin: 22 },
+      pageLimit: 1,
+    });
+  });
+
   it("archives and restores without losing what is on it", async () => {
     const { resume, section } = await compose();
 

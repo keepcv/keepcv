@@ -53,6 +53,7 @@ function toResume(row: ResumeRow): Resume {
     appliedOn: row.appliedOn,
     templateId: row.templateId,
     templateConfig: row.templateConfig,
+    pageLimit: row.pageLimit,
   });
 }
 

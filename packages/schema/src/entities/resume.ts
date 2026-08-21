@@ -25,6 +25,12 @@ export const SECTION_LAYOUTS = ["entries", "inline", "grouped"] as const;
 
 export const sectionLayoutSchema = z.enum(SECTION_LAYOUTS);
 
+// Defaulted on the row so an export written before the column existed still
+// parses; named here so the patch schema can take the same type undefaulted.
+const templateId = z.string().nullable();
+const templateConfig = z.record(z.string(), z.unknown());
+const pageLimit = z.number().int().positive().nullable();
+
 // data-model.md #9.1.
 export const resumeSchema = z
   .object({
@@ -35,8 +41,9 @@ export const resumeSchema = z
     targetUrl: z.string().nullable(),
     targetJdText: z.string().nullable(),
     appliedOn: partialDateSchema.nullable(),
-    templateId: z.string().nullable().default(null),
-    templateConfig: z.record(z.string(), z.unknown()).default({}),
+    templateId: templateId.default(null),
+    templateConfig: templateConfig.default({}),
+    pageLimit: pageLimit.default(null),
   })
   .meta({ id: "Resume", title: "Resume" });
 
@@ -46,7 +53,12 @@ export const resumeInputSchema = resumeSchema.omit({
   archivedAt: true,
 });
 
-export const resumePatchSchema = resumeInputSchema.omit({ id: true }).partial();
+// `.partial()` leaves a `.default()` in place, so an absent key would still
+// parse to the default and renaming a resume would reset its template.
+export const resumePatchSchema = resumeInputSchema
+  .omit({ id: true })
+  .extend({ templateId, templateConfig, pageLimit })
+  .partial();
 
 // `resumeId` is on every level below, not reached through the parent
 // (data-model.md #9.1).

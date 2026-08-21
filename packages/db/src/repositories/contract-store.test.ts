@@ -181,6 +181,7 @@ async function fill(run: Run): Promise<void> {
       resumeInput("For Acme", {
         templateId: "ats-single-column",
         templateConfig: { fontSize: 10.5, pageSize: "letter" },
+        pageLimit: 1,
       }),
     );
     const shelvedResume = await r.resumes.create(resumeInput("An older draft"));
