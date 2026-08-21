@@ -119,11 +119,16 @@ export const documentHeaderSchema = z
   })
   .meta({ id: "DocumentHeader", title: "Header" });
 
+// The template is named rather than resolved: a document is what a renderer
+// binds to, and which renderer that is has to survive being stored and read back
+// by a build that holds different templates (template-model.md #5).
 export const documentMetaSchema = z
   .object({
     generatedAt: z.string(),
     resumeName: z.string(),
     locale: z.string(),
+    templateId: z.string().optional(),
+    templateConfig: z.record(z.string(), z.unknown()).optional(),
   })
   .meta({ id: "DocumentMeta", title: "Document metadata" });
 

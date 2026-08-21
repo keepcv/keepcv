@@ -177,7 +177,12 @@ async function fill(run: Run): Promise<void> {
       { value: "Staff Engineer" },
     );
 
-    const applied = await r.resumes.create(resumeInput("For Acme"));
+    const applied = await r.resumes.create(
+      resumeInput("For Acme", {
+        templateId: "ats-single-column",
+        templateConfig: { fontSize: 10.5, pageSize: "letter" },
+      }),
+    );
     const shelvedResume = await r.resumes.create(resumeInput("An older draft"));
     await r.resumes.archive(shelvedResume.id, shelvedResume.updatedAt);
 

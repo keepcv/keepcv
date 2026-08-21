@@ -5,6 +5,7 @@ import {
   type ResumeSnapshot,
   type ResumeVersion,
   restoredResumeSchema,
+  resumeSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
   type Uuid,
@@ -191,6 +192,28 @@ describe("resume versions", () => {
         resumeVersionSchema,
       ),
     ).toHaveLength(1);
+  });
+
+  // The template is part of what was sent, so swapping it is a move like any
+  // other rather than a change no version records.
+  it("captures again when the resume changes template", async () => {
+    const { resumeId } = await compose("For Acme");
+    const first = await capture(resumeId);
+
+    const current = resumeSchema.parse(await (await send("GET", `/v1/resumes/${resumeId}`)).json());
+    await send("PATCH", `/v1/resumes/${resumeId}`, {
+      expectedUpdatedAt: current.updatedAt,
+      patch: { templateId: "ats-single-column", templateConfig: { pageSize: "letter" } },
+    });
+
+    const again = await capture(resumeId, "manual_save");
+
+    expect(again.status).toBe(201);
+    expect(again.version.id).not.toBe(first.version.id);
+    expect(again.version.manifest.template).toEqual({
+      id: "ats-single-column",
+      config: { pageSize: "letter" },
+    });
   });
 
   it("refuses a capture of a resume that is not there", async () => {

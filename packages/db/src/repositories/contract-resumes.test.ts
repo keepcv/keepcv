@@ -46,6 +46,8 @@ eachDriver(({ run, otherOwner }) => {
               targetUrl: "https://acme.example/jobs/1",
               targetJdText: "You will own the ingest pipeline.",
               appliedOn: "2026-03",
+              templateId: "ats-single-column",
+              templateConfig: { pageSize: "letter", fontSize: 10.5 },
             }),
           ),
       );
@@ -54,8 +56,37 @@ eachDriver(({ run, otherOwner }) => {
         name: "Backend, Acme",
         targetCompany: "Acme",
         appliedOn: "2026-03",
+        templateId: "ats-single-column",
+        templateConfig: { pageSize: "letter", fontSize: 10.5 },
       });
       expect(await run(async (r) => await r.resumes.get(created.id))).toEqual(created);
+    });
+
+    it("keeps the template a resume was given, and takes it back off", async () => {
+      const created = await run(async (r) => await r.resumes.create(resumeInput("Backend, Acme")));
+      expect(created.templateId).toBeNull();
+      expect(created.templateConfig).toEqual({});
+
+      const chosen = await run(
+        async (r) =>
+          await r.resumes.update(
+            created.id,
+            { templateId: "ats-single-column", templateConfig: { margin: 22 } },
+            created.updatedAt,
+          ),
+      );
+      expect(chosen.templateConfig).toEqual({ margin: 22 });
+
+      const cleared = await run(
+        async (r) =>
+          await r.resumes.update(
+            chosen.id,
+            { templateId: null, templateConfig: {} },
+            chosen.updatedAt,
+          ),
+      );
+      expect(cleared.templateId).toBeNull();
+      expect(cleared.templateConfig).toEqual({});
     });
 
     it("lists by name and hides the archived ones", async () => {

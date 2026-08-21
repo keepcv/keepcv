@@ -35,6 +35,8 @@ export const resumeSchema = z
     targetUrl: z.string().nullable(),
     targetJdText: z.string().nullable(),
     appliedOn: partialDateSchema.nullable(),
+    templateId: z.string().nullable().default(null),
+    templateConfig: z.record(z.string(), z.unknown()).default({}),
   })
   .meta({ id: "Resume", title: "Resume" });
 

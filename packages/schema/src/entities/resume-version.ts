@@ -71,12 +71,22 @@ export const manifestTargetSchema = z
   })
   .meta({ id: "ManifestTarget", title: "Pinned target context" });
 
+// Pinned like everything else a version claims: a template swapped in June must
+// not change how a March version prints.
+export const manifestTemplateSchema = z
+  .object({
+    id: z.string().nullable(),
+    config: z.record(z.string(), z.unknown()),
+  })
+  .meta({ id: "ManifestTemplate", title: "Pinned template" });
+
 // Storage-shaped, not template-shaped: `renderManifest` turns it into the
 // uniform document (template-model.md #7).
 export const resumeManifestSchema = z
   .object({
     schemaVersion: z.number().int().positive(),
     resume: manifestTargetSchema,
+    template: manifestTemplateSchema.default({ id: null, config: {} }),
     profile: manifestProfileSchema,
     sections: z.array(manifestSectionSchema),
   })
@@ -174,6 +184,7 @@ export type ManifestEntry = z.infer<typeof manifestEntrySchema>;
 export type ManifestSection = z.infer<typeof manifestSectionSchema>;
 export type ManifestProfile = z.infer<typeof manifestProfileSchema>;
 export type ManifestTarget = z.infer<typeof manifestTargetSchema>;
+export type ManifestTemplate = z.infer<typeof manifestTemplateSchema>;
 export type ResumeManifest = z.infer<typeof resumeManifestSchema>;
 export type VersionTrigger = z.infer<typeof versionTriggerSchema>;
 export type ResumeVersion = z.infer<typeof resumeVersionSchema>;

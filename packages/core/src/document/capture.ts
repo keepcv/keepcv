@@ -133,6 +133,7 @@ export function captureManifest(store: Store, resumeId: Uuid): ResumeManifest | 
       targetUrl: composed.resume.targetUrl,
       appliedOn: composed.resume.appliedOn,
     },
+    template: { id: composed.resume.templateId, config: composed.resume.templateConfig },
     profile: {
       fullName: profile.fullName,
       headline: profile.headline,

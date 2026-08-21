@@ -51,6 +51,8 @@ function toResume(row: ResumeRow): Resume {
     targetUrl: row.targetUrl,
     targetJdText: row.targetJdText,
     appliedOn: row.appliedOn,
+    templateId: row.templateId,
+    templateConfig: row.templateConfig,
   });
 }
 

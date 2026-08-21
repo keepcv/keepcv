@@ -3193,6 +3193,25 @@
               "type": "null"
             }
           ]
+        },
+        "templateId": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "templateConfig": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -3205,7 +3224,9 @@
         "targetRole",
         "targetUrl",
         "targetJdText",
-        "appliedOn"
+        "appliedOn",
+        "templateId",
+        "templateConfig"
       ],
       "additionalProperties": false,
       "title": "Resume"
@@ -3568,6 +3589,13 @@
         "resume": {
           "$ref": "#/$defs/ManifestTarget"
         },
+        "template": {
+          "default": {
+            "id": null,
+            "config": {}
+          },
+          "$ref": "#/$defs/ManifestTemplate"
+        },
         "profile": {
           "$ref": "#/$defs/ManifestProfile"
         },
@@ -3581,6 +3609,7 @@
       "required": [
         "schemaVersion",
         "resume",
+        "template",
         "profile",
         "sections"
       ],
@@ -3644,6 +3673,34 @@
       ],
       "additionalProperties": false,
       "title": "Pinned target context"
+    },
+    "ManifestTemplate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "id",
+        "config"
+      ],
+      "additionalProperties": false,
+      "title": "Pinned template"
     },
     "ManifestProfile": {
       "type": "object",
