@@ -11,9 +11,9 @@ const STACKS: Record<AtsConfig["fontFamily"], string> = {
   times: "'Times New Roman', Times, serif",
 };
 
-const PAGES: Record<AtsConfig["pageSize"], { name: string; width: string; height: string }> = {
-  a4: { name: "A4", width: "210mm", height: "297mm" },
-  letter: { name: "Letter", width: "215.9mm", height: "279.4mm" },
+const PAGES: Record<AtsConfig["pageSize"], { name: string; width: string; height: number }> = {
+  a4: { name: "A4", width: "210mm", height: 297 },
+  letter: { name: "Letter", width: "215.9mm", height: 279.4 },
 };
 
 // Physical units throughout, so the preview and the printed page are the same
@@ -27,6 +27,8 @@ export function styles(config: TemplateConfig): string {
 
   return `
 @page { size: ${page.name}; margin: ${margin}mm; }
+
+:root { --kc-page-content-height: ${String(page.height - margin * 2)}mm; }
 
 .kc-doc {
   font-family: ${STACKS[fontFamily]};
@@ -42,7 +44,7 @@ export function styles(config: TemplateConfig): string {
 
 .kc-page {
   width: ${page.width};
-  min-height: ${page.height};
+  min-height: ${String(page.height)}mm;
   padding: ${margin}mm;
   background: #fff;
 }
@@ -52,7 +54,7 @@ export function styles(config: TemplateConfig): string {
 .kc-contacts { display: flex; flex-wrap: wrap; margin-top: 3pt; }
 .kc-contacts li + li::before { content: "  |  "; white-space: pre; }
 .kc-summary { margin-top: 4pt; }
-.kc-header { padding-bottom: 5pt; border-bottom: 1.2pt solid #101418; }
+.kc-header { padding-bottom: 5pt; border-bottom: 1.2pt solid #101418; break-inside: avoid; }
 
 .kc-section { margin-top: ${sectionGap}pt; }
 .kc-heading {
@@ -63,6 +65,8 @@ export function styles(config: TemplateConfig): string {
   border-bottom: 0.6pt solid #6b7280;
   padding-bottom: 1.5pt;
   margin-bottom: 3pt;
+  break-inside: avoid;
+  break-after: avoid;
 }
 .kc-empty { color: #6b7280; font-style: italic; }
 

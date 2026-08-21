@@ -1,7 +1,9 @@
+import type { LengthBudget, Pagination } from "@keepcv/core";
+import { lengthBudget } from "@keepcv/core";
 import type { Resume, ResumeDocument } from "@keepcv/schema";
 import type { ConfigField, Template, TemplateConfig } from "@keepcv/templates";
 import { resolveTemplate, TEMPLATES } from "@keepcv/templates";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RangeField, SelectField } from "../../../components/ui/field.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { usePatchResume } from "../api/use-resumes.js";
@@ -54,6 +56,60 @@ function Control({
   );
 }
 
+const LIMITS = [
+  { value: "", label: "No limit" },
+  { value: "1", label: "One page" },
+  { value: "2", label: "Two pages" },
+  { value: "3", label: "Three pages" },
+];
+
+// Enough to act on. The whole tail of a long resume is over the limit, and
+// listing it would push the template's own settings off the screen.
+const NAMES_AT_MOST = 5;
+
+const pages = (count: number) => `${String(count)} ${count === 1 ? "page" : "pages"}`;
+
+// Named rather than counted, because the answer to "it is too long" is which
+// point to drop (template-model.md #4).
+function Budget({ budget }: { budget: LengthBudget }) {
+  if (budget.limit === null) {
+    return <p className="text-xs text-slate-500">This is {pages(budget.pages)} long.</p>;
+  }
+
+  if (budget.fits) {
+    return (
+      <p className="text-xs text-emerald-700">
+        {pages(budget.pages)}, within the {pages(budget.limit)} you asked for.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs text-amber-800">
+        {pages(budget.pages)}, which is {pages(budget.pages - budget.limit)} over.
+      </p>
+      {budget.over.length === 0 ? null : (
+        <>
+          <p className="text-xs text-slate-500">Past the break:</p>
+          <ul className="space-y-1 text-xs leading-relaxed text-slate-600">
+            {budget.over.slice(0, NAMES_AT_MOST).map((piece) => (
+              <li key={piece.key} className="line-clamp-2">
+                <span className="text-slate-400">{piece.kind}</span> {piece.label}
+              </li>
+            ))}
+          </ul>
+          {budget.over.length > NAMES_AT_MOST ? (
+            <p className="text-xs text-slate-500">
+              and {String(budget.over.length - NAMES_AT_MOST)} more.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function DocumentPreview({
   client,
   resume,
@@ -66,8 +122,13 @@ export function DocumentPreview({
   const stored = resolveTemplate(document);
   const patch = usePatchResume(client);
   const [pending, setPending] = useState<TemplateConfig | null>(null);
+  const [pagination, setPagination] = useState<Pagination>({ pages: 1, pageOf: {}, breaks: [] });
   const config = pending ?? stored.config;
   const { mutate } = patch;
+  const budget = lengthBudget(document, pagination, resume.pageLimit);
+  const onPaginate = useCallback((measured: Pagination) => {
+    setPagination(measured);
+  }, []);
 
   useEffect(() => {
     if (pending === null) return;
@@ -90,6 +151,18 @@ export function DocumentPreview({
   return (
     <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
       <aside className="space-y-4">
+        <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+          <SelectField
+            label="How long it may be"
+            options={LIMITS}
+            value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
+            onChange={(chosen) => {
+              mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
+            }}
+          />
+          <Budget budget={budget} />
+        </div>
+
         <SelectField
           label="Template"
           options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
@@ -121,7 +194,12 @@ export function DocumentPreview({
         </div>
       </aside>
 
-      <TemplateFrame title={`${resume.name}, as it prints`} styles={stored.template.styles(config)}>
+      <TemplateFrame
+        title={`${resume.name}, as it prints`}
+        styles={stored.template.styles(config)}
+        overflowsFrom={resume.pageLimit ?? undefined}
+        onPaginate={onPaginate}
+      >
         {stored.template.render(document, config)}
       </TemplateFrame>
     </div>

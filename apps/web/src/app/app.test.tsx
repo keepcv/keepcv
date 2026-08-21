@@ -993,6 +993,28 @@ describe("a resume and its template", () => {
     });
   });
 
+  // The limit is a column on the resume, not a template setting, so it survives
+  // a template swap and travels with the export.
+  it("keeps how long the resume may be, and reads the length back", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    await printed();
+    expect(screen.getByLabelText("How long it may be")).toHaveValue("");
+    expect(screen.getByText(/^This is 1 page long\.$/)).toBeInTheDocument();
+
+    type("How long it may be", "1");
+
+    await waitFor(() => {
+      expect(patched(server)).toHaveLength(1);
+    });
+    expect(patched(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: { pageLimit: 1 },
+    });
+    expect(await screen.findByText(/within the 1 page you asked for/)).toBeInTheDocument();
+  });
+
   it("says what the template does rather than claiming a certification", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);

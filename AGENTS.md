@@ -169,7 +169,8 @@ over the store overview, the record list, a record's detail and its form, the
 point list, the resume list, a resume's composition, its compiled preview and its
 history, and search results. All of it is fed by one `GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
-payload, handed to a template in an iframe of its own. React, TanStack Router and
+payload, handed to a template in an iframe of its own that reports back how many
+pages it came to. React, TanStack Router and
 Query, Tailwind v4, Vite, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
 rather than generated from filenames.
@@ -191,6 +192,18 @@ app's CSS cannot reach, at the size it will print at. Settings are declared as
 resume stores only what differs from the template's defaults; and the manifest
 pins the choice, so a template swapped later cannot rewrite what a version says
 was sent.
+
+**The browser lays the page out and `@keepcv/core` counts the pages.** The frame
+walks the column the template rendered and reports one `FlowBlock` per box - its
+offset, its height, and whether the stylesheet said `break-inside: avoid` or
+`break-after: avoid`, read with `getComputedStyle` so the host declares no break
+behaviour of its own. `paginate` fills pages from that geometry and `lengthBudget`
+names what sits past the resume's `page_limit`. The page height comes from
+`--kc-page-content-height`, which the stylesheet sets and a throwaway probe
+resolves, so no unit arithmetic happens in the host. There is deliberately no
+pagination library: one would fragment the DOM React owns, weigh megabytes, and
+be untestable in jsdom, which has no layout. The preview draws a labelled rule at
+each boundary rather than splitting the page into sheets.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response

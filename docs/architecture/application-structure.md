@@ -83,9 +83,9 @@ the entire WYSIWYG premise.
                        a set holds and the resumes a point or a wording is on
                        are pure functions of the boot payload, so no screen asks
                        the server a question it already holds the answer to
-                 - estimateLength(ResumeDocument, TemplateConfig)
-                       estimate only - Paged.js in the preview is authoritative
-                       for actual page count and overflow
+                 - paginate(blocks, usable) and lengthBudget(doc, pages, limit)
+                       fed real geometry by whatever laid the document out,
+                       so the answer is measured rather than estimated (#7)
                  - fractional sort-key arithmetic
                  - the Repository PORT (interfaces only)
                  No I/O. Runs unchanged in Node and in the browser.
@@ -183,7 +183,7 @@ this project treats as its primary threat.
 | Point changed | `['points', ...]`, `['record', parentId]` |
 | Phrasing revision committed | `['phrasingSet', id]`, any `['resume', *]` whose preview uses it |
 | Composition patched | nothing - the answer is written into `['store']` |
-| Resume renamed, archived or retemplated | nothing - the answer is written into `['store']` |
+| Resume renamed, archived, retemplated or recapped | nothing - the answer is written into `['store']` |
 | Version created | `['resume', id, 'versions']` |
 | Version starred | `['resume', id, 'snapshots']` |
 | Version restored | `['resume', id, 'versions']`, `['store']` |
@@ -412,6 +412,12 @@ moves in a later version moves with it (template-model.md #5). The write is
 debounced: each patch carries the row's `updatedAt`, and a slider that wrote per
 pixel would race its own answers into a conflict.
 
+**How long it may be is a column, not a template setting.** `page_limit`
+survives a template swap and travels with the export, because "this application
+wants one page" is a fact about the application rather than about typography.
+Null means no limit and is the default: a resume that nags before the user has
+said what they are aiming at is a resume that nags for nothing.
+
 **The target context - company, role, URL, applied date - is still read-only.**
 It is a form about the application rather than part of composing one, and it has
 no screen yet.
@@ -517,8 +523,9 @@ composition change
       +-> core.compile(composition, store)  --> ResumeDocument   [pure, client-side]
          +-> template.render(doc, config)   --> React element
             +-> mount into isolated iframe
-               +-> Paged.js paginate
-                  +-> page count + overflow  --> length budget indicator
+               +-> measure the laid-out column  --> FlowBlock[]
+                  +-> core.paginate(blocks, usable)   --> page of every key
+                     +-> core.lengthBudget(doc, ...)  --> what is past the limit
 ```
 
 - **The preview iframe is style-isolated.** App CSS cannot reach it. If it
@@ -536,14 +543,35 @@ composition change
   One implementation, two callers.
 - **Page count feeds the length budget** rather than being discovered at
   export time - warning *before* rendering rather than after.
+- **The browser lays the document out and `@keepcv/core` fills the pages.** The
+  frame walks the column it just rendered and reports one `FlowBlock` per box -
+  its offset, its height, and whether the stylesheet said `break-inside: avoid`
+  or `break-after: avoid`. `paginate` then fills pages from that geometry: a
+  block that may not be broken and will not fit moves whole, and everything
+  after it shifts with it. The rules come from the template's own stylesheet
+  through `getComputedStyle`, so the host declares no break behaviour of its own
+  and the printer reads the same declarations.
+- **A pagination library was the alternative and lost.** Paged.js fragments the
+  DOM into page elements, which means fighting React over the tree it owns,
+  re-running on every keystroke, and shipping several megabytes with a
+  deprecated transitive dependency - and none of it could be tested, because the
+  suite runs in jsdom, which has no layout. Splitting it the way above puts the
+  arithmetic in a pure function with real tests and leaves the host with a DOM
+  walk short enough to read. What is given up is fragmenting the preview into
+  separate sheets: the frame draws a labelled rule where each page begins
+  instead.
+- **The page box comes from the template, as a CSS length.** The stylesheet sets
+  `--kc-page-content-height` on `:root`, the frame resolves it by laying out a
+  throwaway probe, and no unit arithmetic happens in the host. A template that
+  does not declare it fails `isATemplate`.
 
 **The app ships as one chunk, and the warning limit says so.** The launcher
 serves it over loopback beside `/v1`, so the whole bundle is one local read and
 splitting it by route would buy a suspense boundary per screen and no measurable
 time. The limit in `vite.config.ts` is set above today's size rather than
 removed, so it still trips on a real regression. The split worth making later is
-this pipeline: Paged.js and the templates are large, are needed on one screen,
-and are the first dependency in the app that a user might never load at all.
+this pipeline: the templates are large, are needed on one screen, and are the
+first thing in the app that a user might never load at all.
 
 ---
 

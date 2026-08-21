@@ -167,9 +167,15 @@ preview mounts it in an iframe of its own at the size it will print at.
 A resume pins the template it chose along with everything else it says, so a
 template swapped later cannot change what an older version claims was sent.
 
-What remains is **Paged.js pagination in that iframe**, and the length budgeting
-it makes possible - page count, overflow warnings and drop suggestions - plus
-further templates.
+Length budgeting is built on top of that. The frame measures the column the
+template just laid out and `paginate` in `@keepcv/core` fills pages from it,
+honouring the break rules the stylesheet declares; the preview draws a labelled
+rule where each page begins, and `lengthBudget` names what sits past the
+`page_limit` the resume asked for. No pagination library is involved and the
+arithmetic is a pure function with its own tests (application-structure.md #7).
+
+What remains is **ranking what to drop**, which waits for the target context to
+make "least relevant" mean something, and **further templates**.
 
 ### Export
 

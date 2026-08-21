@@ -868,7 +868,8 @@ resume (
   target_jd_text   text null,
   applied_on       partial_date null,
   template_id      text null,               -- null = whatever the build defaults to
-  template_config  jsonb not null default '{}'
+  template_config  jsonb not null default '{}',
+  page_limit       int null                 -- null = no length to hold it to
 )
 
 resume_section (
@@ -934,6 +935,14 @@ old template is old code.
 **`template_id` is a plain `text` with no foreign key.** Templates live in code,
 not in a table, and a store must survive being opened by a build that does not
 have the one it names - which is why resolving falls back rather than refusing.
+
+**`page_limit` is a column rather than a template setting.** How long a resume
+may be is a fact about the application, so it has to survive swapping the
+template and has to travel with the export; putting it in `template_config`
+would tie it to whichever template happened to be chosen when it was set. It is
+nullable and null by default, and no length is enforced anywhere - the store
+holds what the user wrote and the preview says whether it fits
+(application-structure.md #7).
 
 There is no `current_version_id`, and #9.2 says why.
 

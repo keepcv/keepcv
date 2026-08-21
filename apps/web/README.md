@@ -77,6 +77,12 @@ pnpm --filter @keepcv/web dev
   records the one it was sent under. Only what differs from the template's own
   defaults is stored, and what the template says about itself is an observation,
   not a claim that some product accepts it.
+- **The preview says how long it is, and what will not fit.** Tell a resume how
+  many pages it may run to and it says whether it does, marks where each page
+  begins, and names what sits past the break - which entries and which points, so
+  the answer to "it is too long" is something to act on rather than a number. The
+  page count comes from measuring the page the template actually laid out, not
+  from guessing at the text.
 - **A resume remembers what it said.** Every version is kept, any two can be
   compared, and restoring one puts its selection back without erasing what came
   after: the restore is a new entry on the timeline saying where it came from. It

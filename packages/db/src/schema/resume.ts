@@ -4,6 +4,7 @@ import {
   check,
   foreignKey,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -49,6 +50,7 @@ export const resume = pgTable(
     appliedOn: partialDate("applied_on"),
     templateId: text("template_id"),
     templateConfig: jsonb("template_config").notNull().default({}),
+    pageLimit: integer("page_limit"),
   },
   (table) => [primaryKey({ columns: [table.ownerId, table.id] })],
 );

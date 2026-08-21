@@ -123,6 +123,14 @@ export function isATemplate(template: Template): void {
     }
   });
 
+  // Without it the host cannot say how long the document is, because nothing
+  // else in the stylesheet states the page box in a place CSS can resolve.
+  it("states the height of one page's content", () => {
+    for (const config of [template.defaultConfig, ...configsToTry(template)]) {
+      expect(template.styles(config)).toMatch(/--kc-page-content-height:\s*[^;]+;/);
+    }
+  });
+
   it("renders at both ends of every value it offers", () => {
     for (const config of configsToTry(template)) {
       expect(markup(template, config).length).toBeGreaterThan(0);

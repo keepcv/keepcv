@@ -2,6 +2,14 @@ export { captureManifest, type ManifestRef, manifestRefs } from "./document/capt
 export { compile } from "./document/compile.js";
 export { diffManifests } from "./document/diff.js";
 export { contactHref, formatMetric, formatPartialDate, formatPeriod } from "./document/format.js";
+export {
+  type FlowBlock,
+  type LengthBudget,
+  lengthBudget,
+  type OverPiece,
+  type Pagination,
+  paginate,
+} from "./document/pagination.js";
 export { PRESENTED_KINDS, type Presented, present } from "./document/presenters.js";
 export { type CompileOptions, renderManifest } from "./document/render.js";
 export { type RestoreChange, type RestorePlan, restorePlan } from "./document/restore.js";

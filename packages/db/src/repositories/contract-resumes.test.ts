@@ -48,6 +48,7 @@ eachDriver(({ run, otherOwner }) => {
               appliedOn: "2026-03",
               templateId: "ats-single-column",
               templateConfig: { pageSize: "letter", fontSize: 10.5 },
+              pageLimit: 1,
             }),
           ),
       );
@@ -58,6 +59,7 @@ eachDriver(({ run, otherOwner }) => {
         appliedOn: "2026-03",
         templateId: "ats-single-column",
         templateConfig: { pageSize: "letter", fontSize: 10.5 },
+        pageLimit: 1,
       });
       expect(await run(async (r) => await r.resumes.get(created.id))).toEqual(created);
     });
@@ -87,6 +89,21 @@ eachDriver(({ run, otherOwner }) => {
       );
       expect(cleared.templateId).toBeNull();
       expect(cleared.templateConfig).toEqual({});
+    });
+
+    it("keeps the page limit a resume was given, and takes it back off", async () => {
+      const created = await run(async (r) => await r.resumes.create(resumeInput("Backend, Acme")));
+      expect(created.pageLimit).toBeNull();
+
+      const capped = await run(
+        async (r) => await r.resumes.update(created.id, { pageLimit: 2 }, created.updatedAt),
+      );
+      expect(capped.pageLimit).toBe(2);
+
+      const uncapped = await run(
+        async (r) => await r.resumes.update(capped.id, { pageLimit: null }, capped.updatedAt),
+      );
+      expect(uncapped.pageLimit).toBeNull();
     });
 
     it("lists by name and hides the archived ones", async () => {

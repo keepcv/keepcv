@@ -243,10 +243,17 @@ carry the same one. It is emitted as `data-field`, so `data-key` stays unique
 within the document and can be resolved back to exactly one thing.
 
 That is what lets the preview map a rendered element back to the thing that
-produced it, which in turn makes these expressible:
+produced it. `paginate` in `@keepcv/core` answers which page every key landed
+on, and `lengthBudget` walks the document against that answer, so *"this point
+is what pushed you onto page two"* is a lookup rather than a guess. A key the
+layout never measured is reported as nothing at all, never as page one.
 
-- *"This point is what pushed you onto page two."*
-- *"Drop these three lowest-tagged points to fit."*
+An element that is not a page-breaking box of its own - a metric inside a point,
+a link inside an entry - takes the page of the block that contains it, and a
+container that is split across pages takes the page its first block landed on.
+Ranking what to drop is not built: it needs the target context to be worth
+anything, and until then the budget names what sits past the limit in document
+order and leaves the choice to the user.
 
 Keys are **not** store identifiers, and a test asserts no id reaches the
 document. Positional keys are why: there is nothing to resolve through, so
@@ -294,6 +301,16 @@ physical units, print rules - because none of that can be an inline style and
 none of it should depend on the host's fonts, resets or colour scheme. The
 preview therefore mounts a template inside an `iframe` of its own; fitting an A4
 page into a browser panel is scaling, not restyling.
+
+**The stylesheet is also where the page box is declared.** `styles(config)` sets
+`--kc-page-content-height` on `:root` - the height of one page's content, in
+whatever CSS length suits - and states its break rules the ordinary way, with
+`break-inside: avoid` on anything that must not be split and `break-after:
+avoid` on anything that must not end a page. The host resolves the length by
+laying out a probe and reads the break rules with `getComputedStyle`, so it
+converts no units, knows no template's class names, and cannot disagree with
+what the printer will do. A template that declares no page height fails
+`isATemplate`, because nothing else in the stylesheet says how long a page is.
 
 Rules:
 
