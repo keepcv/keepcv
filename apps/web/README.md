@@ -5,8 +5,9 @@ the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** The application frame, the store overview,
 > records and points with the forms that write them, the phrasing editor with
-> its drafts and variants, resumes you can compose, preview, compare and restore
-> from, and search. Tags and evidence are still read-only.
+> its drafts and variants, resumes you can start, compose, template, preview,
+> compare and restore from, and search. Tags, evidence and a resume's target
+> context are still read-only.
 
 ## Running it
 
@@ -69,6 +70,13 @@ pnpm --filter @keepcv/web dev
 - **Taking something off a resume puts it back where it was.** Removing is
   archiving, so adding the same record again revives the row that is already
   there - with its position, its visibility and the wording it had chosen.
+- **A template renders the preview, in a document of its own.** The page is an
+  iframe the app's stylesheet cannot reach, laid out at the size it will print
+  at and scaled to fit. Picking a template and tuning its typeface, size, line
+  height and margins are writes on the resume, so a version captured afterwards
+  records the one it was sent under. Only what differs from the template's own
+  defaults is stored, and what the template says about itself is an observation,
+  not a claim that some product accepts it.
 - **A resume remembers what it said.** Every version is kept, any two can be
   compared, and restoring one puts its selection back without erasing what came
   after: the restore is a new entry on the timeline saying where it came from. It

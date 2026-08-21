@@ -141,9 +141,13 @@ Adding and taking off are one control, because every uniqueness index on the
 composition covers archived rows and placing is therefore a create or a put-back
 (data-model.md #9.1).
 
-What remains is **deriving a resume from an existing one**, and dragging: the
-order is changed by keyboard today, which is the accessible half and the half the
-sort-key arithmetic actually needs.
+A resume is created, renamed, archived and put back from the app as well, which
+is what stopped the composer being reachable only by a resume somebody else had
+made.
+
+What remains is **deriving a resume from an existing one**, a screen for the
+target context, and dragging: the order is changed by keyboard today, which is
+the accessible half and the half the sort-key arithmetic actually needs.
 
 ### Render and templates
 
@@ -152,13 +156,20 @@ The `ResumeDocument` compiler is built as two steps in `@keepcv/core`:
 `renderManifest(manifest, revisions, options)` formats it. `compile()` is the
 pair, one presenter per record kind, and `GET /v1/resumes/:id/document`. A live
 preview and a version pinned months ago therefore render through one path.
-What remains is the template contract itself.
 
-The shared template fixture
-([`template-model.md`](template-model.md)); the template contract and config
-schemas; an ATS-strict single-column template; a Paged.js live preview in an
-isolated iframe; typography and spacing configuration; further templates; and
-length budgeting with overflow warnings and drop suggestions.
+The template contract is built too, in `@keepcv/templates`: a template declares
+its settings as fields, ships its own stylesheet, and passes `isATemplate` over
+the shared fixture, which is what "is a template" means
+([`template-model.md`](template-model.md) #5). `ats-single-column` is the first
+one, the resume screen picks it and tunes its typography and spacing, and the
+preview mounts it in an iframe of its own at the size it will print at.
+
+A resume pins the template it chose along with everything else it says, so a
+template swapped later cannot change what an older version claims was sent.
+
+What remains is **Paged.js pagination in that iframe**, and the length budgeting
+it makes possible - page count, overflow warnings and drop suggestions - plus
+further templates.
 
 ### Export
 

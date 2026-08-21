@@ -1,4 +1,4 @@
-import { type Store, storeSchema, type Timestamp } from "@keepcv/schema";
+import { type Store, storeSchema, type Timestamp, type Uuid } from "@keepcv/schema";
 import {
   type QueryClient,
   queryOptions,
@@ -13,6 +13,14 @@ export const STORE_KEY = ["store"] as const;
 // What an optimistic row claims until the answer arrives with the real one.
 export function now(): Timestamp {
   return new Date().toISOString() as Timestamp;
+}
+
+// Every optimistic write puts one row into one collection, and a create puts one
+// there the payload did not have yet.
+export function replaceRow<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
+  return rows.some((existing) => existing.id === row.id)
+    ? rows.map((existing) => (existing.id === row.id ? row : existing))
+    : [...rows, row];
 }
 
 // One request boots the app (application-structure.md #4). Only this client

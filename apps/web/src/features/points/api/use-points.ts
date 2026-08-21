@@ -1,12 +1,8 @@
 import { deriveRevision, newUuid } from "@keepcv/core";
-import type { Metric, MetricInput, Point, PointInput, PointPatch, Uuid } from "@keepcv/schema";
+import type { Metric, MetricInput, Point, PointInput, PointPatch } from "@keepcv/schema";
 import { metricSchema, phrasingSchema, phrasingSetSchema, pointSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { now, useStoreMutation } from "../../../lib/store-cache.js";
-
-function replace<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
-  return rows.map((existing) => (existing.id === row.id ? row : existing));
-}
+import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
 export interface CreatePoint {
   point: PointInput;
@@ -79,7 +75,7 @@ export function useUpdatePoint(client: ApiClient) {
       ),
     optimistic: (store, { point, patch }) => ({
       ...store,
-      points: replace(store.points, pointSchema.parse({ ...point, ...patch, updatedAt: now() })),
+      points: replaceRow(store.points, pointSchema.parse({ ...point, ...patch, updatedAt: now() })),
     }),
   });
 }
@@ -101,7 +97,7 @@ export function useSetPointArchived(client: ApiClient) {
     },
     optimistic: (store, { point, archived }) => ({
       ...store,
-      points: replace(store.points, {
+      points: replaceRow(store.points, {
         ...point,
         archivedAt: archived ? now() : null,
         updatedAt: now(),
@@ -142,7 +138,7 @@ export function useArchiveMetric(client: ApiClient) {
       ),
     optimistic: (store, metric) => ({
       ...store,
-      metrics: replace(store.metrics, { ...metric, archivedAt: now(), updatedAt: now() }),
+      metrics: replaceRow(store.metrics, { ...metric, archivedAt: now(), updatedAt: now() }),
     }),
   });
 }

@@ -37,6 +37,8 @@ type ResumeDocument = {
     generatedAt: string;          // ISO 8601
     resumeName: string;
     locale: string;               // date and list formatting
+    templateId?: string;          // absent when the resume named none
+    templateConfig?: Record<string, unknown>;
   };
 
   header: {
@@ -52,10 +54,16 @@ type ResumeDocument = {
 };
 ```
 
-**No `templateId` or `templateVersion` in `meta` yet.** There is no template
-package for them to name, and a resume carries no template columns
-(data-model.md #9.1). They arrive with the Templates capability, alongside the
-columns.
+**The document names its template rather than resolving it.** A document is
+what a renderer binds to, and which renderer that is has to survive being stored
+and read back by a build holding a different set of templates. `templateConfig`
+carries only the resume's overrides, so a template default that moves in a later
+version moves with it.
+
+**There is no `templateVersion`.** `renderManifest` lives in `@keepcv/core`,
+which has no registry to ask, and a version string naming a build of
+`@keepcv/templates` would resolve to nothing on the way back in. A slot nothing
+can fill is the `links[]` mistake below.
 
 **The header has one list, not two.** A contact channel that is a URL - a
 website, a LinkedIn, a GitHub - is a `Contact` with an `href`, so a second
@@ -227,7 +235,12 @@ field.
 
 Every section, entry and point carries an opaque `key`, stable within the
 document and derived from its position in it - `s0`, `s0e1`, `s0e1p2`, and the
-same for a group, link, field or metric. Templates emit it as `data-key`.
+same for a group, link or metric. Templates emit it as `data-key`.
+
+**A field is the exception**: its key is the machine-readable name from #3,
+because that is what a specialised template addresses it by, and two entries can
+carry the same one. It is emitted as `data-field`, so `data-key` stays unique
+within the document and can be resolved back to exactly one thing.
 
 That is what lets the preview map a rendered element back to the thing that
 produced it, which in turn makes these expressible:
@@ -245,26 +258,55 @@ manifest will key the same way, since the manifest carries the same order.
 ## 5. The template contract
 
 ```ts
-type Template<C> = {
+type ConfigField =
+  | { key: string; label: string; kind: 'choice'; options: ConfigOption[]; default: string }
+  | { key: string; label: string; kind: 'number';
+      min: number; max: number; step: number; unit: string; default: number };
+
+type Template = {
   id: string;
+  name: string;
   version: string;
   documentVersions: number[];     // ResumeDocument schemaVersions supported
-  configSchema: ZodType<C>;
-  defaultConfig: C;
+  fields: ConfigField[];
+  defaultConfig: TemplateConfig;  // derived from the fields
   complianceNotes: string[];      // observations, never certification claims
-  render(doc: ResumeDocument, config: C): ReactElement;
+  styles(config: TemplateConfig): string;
+  render(doc: ResumeDocument, config: TemplateConfig): ReactElement;
 };
 ```
 
+**A template declares its settings rather than validating them.** `fields` is
+the one statement of what a template can be configured with, and both the
+validator (`configFor`) and the settings panel read it - so a template that adds
+a setting needs no change in the app, and there is no second schema to drift.
+That is why `Template` is not generic over a config type: config values are flat
+scalars, `ConfigOf<typeof FIELDS>` recovers the exact keys and choice values for
+the template's own code, and the registry stays a plain array.
+
+**A stored config outlives the version that wrote it.** `configFor` ignores a
+key the template no longer declares, fills in one it has added, and refuses a
+value outside the declared range. A resume stores only its overrides
+(data-model.md #9.1), so template defaults move under it.
+
+**A template ships its own stylesheet.** `styles(config)` returns CSS - `@page`,
+physical units, print rules - because none of that can be an inline style and
+none of it should depend on the host's fonts, resets or colour scheme. The
+preview therefore mounts a template inside an `iframe` of its own; fitting an A4
+page into a browser panel is scaling, not restyling.
+
 Rules:
 
-- A template may not fetch, query, or reach outside its two arguments.
+- A template may not fetch, query, or reach outside its two arguments. Its
+  stylesheet may not `@import`, and may not name a URL that is not a `data:`
+  one; its markup may not link to an address the document does not carry.
 - A template must render an entry it does not recognise. Falling back to
   `title / subtitle / period / summary / points / fields` is always valid,
   which is exactly what the uniform envelope guarantees.
-- Sections a template chooses not to support must be **omitted visibly**
-  (reported to the composer), never dropped silently. Silently losing a
-  section is the destructive behaviour this product exists to eliminate.
+- **Every section, entry and point prints exactly once**, tagged with its
+  `data-key`. Sections a template chooses not to support must be **omitted
+  visibly** (reported to the composer), never dropped silently. Silently losing
+  a section is the destructive behaviour this product exists to eliminate.
 - **An empty section is said out loud, not dropped.** Capture emits a visible
   section whose entries were all hidden or archived, and a heading with nothing
   under it reads as a rendering fault unless the template names the gap.
@@ -275,12 +317,15 @@ Rules:
 ### Test fixture
 
 One `ResumeDocument` fixture in `@keepcv/templates` exercises every slot, every
-`Field.kind`, all three inline marks, grouped and inline layouts,
-empty sections, entries with no points, and points with no metrics.
+`Field.kind`, all three inline marks, all three layouts, empty sections, entries
+with no points, points with no metrics, an entry no group claims, and an entry of
+a kind no presenter in this build emits.
 
-**Passing that fixture is the definition of "is a template".** It is also what
-every new export format must render, so the fixture is shared
-between templates and exporters.
+**Passing that fixture is the definition of "is a template".** `isATemplate` is
+the suite that asserts the rules above over it. It is also what every new export
+format must render, so the fixture is shared between templates and exporters -
+and the fixture has a test of its own asserting it still covers all of that,
+because a template only proves as much as the fixture asks of it.
 
 ---
 
@@ -338,7 +383,9 @@ Capture does, in order:
 2. resolve section headings - the section's own override, then a custom
    section's heading, then the kind's default
 3. pin the rows whole, and phrasing text by revision id
-4. freeze the target context the resume was aimed at
+4. freeze the target context the resume was aimed at, and the template it chose
+   with the configuration it chose - a template swapped in June must not change
+   how a version captured in March prints
 
 Render does, in order:
 

@@ -34,6 +34,7 @@
     "@keepcv/api": "workspace:*",
     "@keepcv/core": "workspace:*",
     "@keepcv/schema": "workspace:*",
+    "@keepcv/templates": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "clsx": "catalog:",

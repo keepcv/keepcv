@@ -10,12 +10,8 @@ import type {
 } from "@keepcv/schema";
 import { draftSchema, phrasingSchema, phrasingSetSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { now, useStoreMutation } from "../../../lib/store-cache.js";
+import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 import { bodyOf, draftTarget } from "../model/editor.js";
-
-function replace<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
-  return rows.map((existing) => (existing.id === row.id ? row : existing));
-}
 
 function withoutDraft(store: Store, phrasingId: Uuid): Store {
   return {
@@ -160,7 +156,7 @@ export function useUpdatePhrasing(client: ApiClient) {
       ),
     optimistic: (store, { phrasing, patch }) => ({
       ...store,
-      phrasings: replace(
+      phrasings: replaceRow(
         store.phrasings,
         phrasingSchema.parse({ ...phrasing, ...patch, updatedAt: now() }),
       ),
@@ -188,7 +184,7 @@ export function useSetCanonical(client: ApiClient) {
       ),
     optimistic: (store, { set, phrasingId }) => ({
       ...store,
-      phrasingSets: replace(store.phrasingSets, {
+      phrasingSets: replaceRow(store.phrasingSets, {
         ...set,
         canonicalPhrasingId: phrasingId,
         updatedAt: now(),
@@ -214,7 +210,7 @@ export function useSetPhrasingArchived(client: ApiClient) {
     },
     optimistic: (store, { phrasing, archived }) => ({
       ...store,
-      phrasings: replace(store.phrasings, {
+      phrasings: replaceRow(store.phrasings, {
         ...phrasing,
         archivedAt: archived ? now() : null,
         updatedAt: now(),

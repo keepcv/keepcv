@@ -96,7 +96,8 @@ the entire WYSIWYG premise.
 @keepcv/api      Hono routes, Zod validation, error mapping, typed client.
 
 @keepcv/render   ResumeDocument -> HTML -> paginated -> PDF.
-@keepcv/templates  Template implementations + config schemas.
+@keepcv/templates  The template contract, the shared fixture that defines what
+                 passing it means, and the templates themselves.
 @keepcv/interop  The lossy adapters - JSON Resume, RenderCV, PDF and DOCX
                  parsing. Native export/import is not here: it is a whole-store
                  read and write, so it is the store repository.
@@ -182,6 +183,7 @@ this project treats as its primary threat.
 | Point changed | `['points', ...]`, `['record', parentId]` |
 | Phrasing revision committed | `['phrasingSet', id]`, any `['resume', *]` whose preview uses it |
 | Composition patched | nothing - the answer is written into `['store']` |
+| Resume renamed, archived or retemplated | nothing - the answer is written into `['store']` |
 | Version created | `['resume', id, 'versions']` |
 | Version starred | `['resume', id, 'snapshots']` |
 | Version restored | `['resume', id, 'versions']`, `['store']` |
@@ -398,6 +400,22 @@ own default. Following the default again clears the override row rather than
 writing `true` into it, so changing the channel's default later still reaches
 this resume.
 
+**The resume row itself writes here too** - created from the list with nothing
+but a name, renamed in place, archived and put back from its own header. A
+template chosen on the resume screen is a patch like any of those, and because
+the choice is a column the preview follows it through the boot payload rather
+than through a second piece of state.
+
+**Only the overrides are stored.** A settings panel reads `template.fields` and
+writes back what differs from the template's own defaults, so a default that
+moves in a later version moves with it (template-model.md #5). The write is
+debounced: each patch carries the row's `updatedAt`, and a slider that wrote per
+pixel would race its own answers into a conflict.
+
+**The target context - company, role, URL, applied date - is still read-only.**
+It is a form about the application rather than part of composing one, and it has
+no screen yet.
+
 ### 5.6 Version timeline and compare
 
 The resume screen's third view, beside composition and preview. Needs: versions
@@ -505,7 +523,13 @@ composition change
 
 - **The preview iframe is style-isolated.** App CSS cannot reach it. If it
   could, the preview would stop being a faithful representation of the
-  exported document and the whole WYSIWYG premise would be false.
+  exported document and the whole WYSIWYG premise would be false. The template
+  supplies the only stylesheet in that document, which is why `styles(config)`
+  is on the contract rather than the markup carrying classes the host defines.
+- **The template renders at its real size and the host scales it.** A page is
+  `210mm` wide because that is what it is; the frame measures what the template
+  laid out and applies one `transform` to fit the panel. Restyling to fit would
+  make the preview a different document from the printed one.
 - **Compilation is client-side and pure**, so dragging an entry updates the
   preview without a network round trip.
 - **Export uses the same functions**, server-side, over a pinned manifest.

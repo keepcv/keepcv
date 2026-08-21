@@ -20,7 +20,7 @@ export function Shell({ store }: { store: Store }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 lg:px-8">
+          <div className="mx-auto flex h-14 w-full max-w-[96rem] items-center gap-3 px-4 lg:px-8">
             <Brand className="lg:hidden" />
             <SearchField query={currentQuery(search)} />
           </div>
@@ -37,7 +37,7 @@ export function Shell({ store }: { store: Store }) {
           </div>
         </details>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 lg:px-8">
+        <main className="mx-auto w-full max-w-[96rem] flex-1 px-4 py-6 lg:px-8">
           <Outlet />
         </main>
       </div>

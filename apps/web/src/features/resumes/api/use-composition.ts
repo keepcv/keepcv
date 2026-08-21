@@ -19,7 +19,7 @@ import {
   resumeSectionSchema,
 } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
-import { now, useStoreMutation } from "../../../lib/store-cache.js";
+import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
 // The three levels of a composition are written the same way, so they share
 // these hooks rather than each having its own set of six.
@@ -28,22 +28,16 @@ export type Placed =
   | { level: "entry"; row: ResumeEntry }
   | { level: "point"; row: ResumeEntryPoint };
 
-function replace<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
-  return rows.some((existing) => existing.id === row.id)
-    ? rows.map((existing) => (existing.id === row.id ? row : existing))
-    : [...rows, row];
-}
-
 // Also the settle: a composition write answers with the row it wrote, so the
 // boot payload takes that rather than being read again (application-structure.md #4).
 function writeInto(store: Store, placed: Placed): Store {
   switch (placed.level) {
     case "section":
-      return { ...store, resumeSections: replace(store.resumeSections, placed.row) };
+      return { ...store, resumeSections: replaceRow(store.resumeSections, placed.row) };
     case "entry":
-      return { ...store, resumeEntries: replace(store.resumeEntries, placed.row) };
+      return { ...store, resumeEntries: replaceRow(store.resumeEntries, placed.row) };
     case "point":
-      return { ...store, resumeEntryPoints: replace(store.resumeEntryPoints, placed.row) };
+      return { ...store, resumeEntryPoints: replaceRow(store.resumeEntryPoints, placed.row) };
   }
 }
 
