@@ -69,6 +69,7 @@ const EPOCH_ISO = "2026-01-01T00:00:00.000Z";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("the app", () => {
@@ -1894,5 +1895,56 @@ describe("sending an old version", () => {
     expect(screen.getByText(/Version #1, in the words it pinned/)).toBeInTheDocument();
     // Nothing was restored: the composition is exactly what it was.
     expect(server.calls.some((call) => call.path.endsWith("/restore"))).toBe(false);
+  });
+});
+
+describe("your data", () => {
+  // The archive rather than the boot payload: a backup carries superseded
+  // wordings and every version, which `/v1/store` deliberately does not.
+  it("reads the export rather than the payload the app already holds", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    const downloaded: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:kept");
+    vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded.push(this.download);
+    });
+    mount(server.answer, "/data");
+
+    await screen.findByRole("button", { name: "Download a backup" });
+    press("Download a backup");
+
+    await waitFor(() => {
+      expect(downloaded).toHaveLength(1);
+    });
+    expect(downloaded[0]).toMatch(/^keepcv-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(server.calls.some((call) => call.path === "/v1/export")).toBe(true);
+  });
+
+  it("counts what a backup would carry rather than promising everything", async () => {
+    mount(() => jsonOf(aFilledStore()), "/data");
+
+    expect(
+      await screen.findByText(/Currently 2 records, 3 points, 1 resume\./),
+    ).toBeInTheDocument();
+  });
+
+  it("says a load will be refused while the store still holds something", async () => {
+    mount(() => jsonOf(aFilledStore()), "/data");
+
+    expect(
+      await screen.findByText(/already holds something, so a load will be refused/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers to load straight in when nothing has been written yet", async () => {
+    mount(() => jsonOf(emptyStore()), "/data");
+
+    expect(
+      await screen.findByText(/empty, so a backup will load straight into it/),
+    ).toBeInTheDocument();
   });
 });

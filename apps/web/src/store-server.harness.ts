@@ -11,6 +11,7 @@ import {
 } from "@keepcv/core";
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
+  CURRENT_SCHEMA_VERSION,
   careerRecordSchema,
   contactChannelSchema,
   customSectionSchema,
@@ -422,6 +423,15 @@ function read(store: Store, archive: Archive, url: URL): Response {
     });
   }
 
+  // The archive rather than the boot payload: an export carries history too.
+  if (url.pathname === "/v1/export") {
+    return jsonOf({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      store: { ...store, resumeVersions: versions, resumeSnapshots: snapshots },
+    });
+  }
+
   return jsonOf(store);
 }
 
@@ -545,6 +555,24 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
 
   const deriving = DERIVE.exec(call.path);
   if (deriving !== null) return onDerive(store, deriving, call, at);
+
+  // All or nothing, and only into a store nothing has been written to yet.
+  if (call.path === "/v1/import") {
+    if (store.records.length > 0 || store.resumes.length > 0) {
+      return jsonOf(
+        {
+          type: "https://keepcv.app/problems/conflict",
+          title: "Conflict",
+          status: 409,
+          detail: "The store already holds something.",
+          instance: "/v1/import",
+        },
+        409,
+      );
+    }
+    Object.assign(store, (call.body as { store: Store }).store);
+    return new Response(null, { status: 204 });
+  }
 
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);

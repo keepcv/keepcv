@@ -70,6 +70,7 @@ export function Navigation({ store }: { store: Store }) {
           Resumes
           <Count>{live(store.resumes).length}</Count>
         </NavLink>
+        <NavLink to="/data">Your data</NavLink>
       </div>
 
       {counts.length === 0 ? null : (

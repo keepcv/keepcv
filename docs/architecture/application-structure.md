@@ -533,8 +533,26 @@ screen fetches them beside the versions.
 
 ### 5.9 Export and data
 
-Needs: format list with explicit lossiness warnings; mirror status
-and location; restore.
+Built. Two panels: take a copy, and put one back. The copy is `GET /v1/export`,
+which is the archive rather than the boot payload - superseded wordings and
+every version come with it - written to a file from the tab that read it. Putting
+one back is `POST /v1/import`, all or nothing and only into a store nothing has
+been written to yet, because merging two career histories needs a review step in
+front of it.
+
+**What it would carry is counted, not described.** "Everything" is what every
+backup screen says and the sentence nobody believes; "2 records, 3 points, 1
+resume" is one somebody reads. The same panel says whether a load would be
+refused, before a file is chosen rather than after.
+
+**The mirror belongs to the launcher, not to the API.** `keepcv serve` writes a
+readable copy of the whole store beside the data directory as it starts, on a
+timer, and as it stops, skipping the write when the store says exactly what the
+file already says. It is written whole and moved into place, so a crash mid-write
+leaves the previous copy rather than half a file. `keepcv backup` and
+`keepcv restore` are the same two things without a browser open. There is no
+`/v1/backup/*`: those routes would have handed `createApi` a filesystem
+(`api-contract.md` #3).
 
 Export is never gated by any auth or entitlement state.
 

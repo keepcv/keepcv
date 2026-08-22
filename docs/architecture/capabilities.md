@@ -232,8 +232,16 @@ There is no `?format=jsonresume` on `/v1/export`: the native export is a
 whole-store read and belongs to the server, but a resume in somebody else's
 format is a pure function of a document the caller is already holding.
 
-What remains is JSON Resume **import** with the reconciliation interface; DOCX,
-LaTeX and Typst; and full-store backup and restore.
+Full-store backup and restore is built too, and it is the launcher's rather than
+the API's. `keepcv serve` writes a readable copy of the whole store beside the
+data directory as it starts, on a timer and as it stops; `keepcv backup` and
+`keepcv restore` do the same on demand; and the app's own data screen downloads
+one through `/v1/export` and reads one back through `/v1/import`. There is no
+`/v1/backup/*`, because those routes would have handed `createApi` a filesystem
+(application-structure.md #5.9).
+
+What remains is JSON Resume **import** with the reconciliation interface, and
+DOCX, LaTeX and Typst.
 
 ### Versions and snapshots
 

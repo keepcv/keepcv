@@ -171,10 +171,6 @@ GET    /v1/export                      the whole store, natively
 POST   /v1/import                      ?format=native - all or nothing, into an empty store
 POST   /v1/import?format=jsonresume    returns a reconciliation plan, not a result
 POST   /v1/import/:planId/apply
-
-GET    /v1/backup/status               mirror location, last written
-POST   /v1/backup/now
-POST   /v1/backup/restore
 ```
 
 Notes on the non-obvious ones:
@@ -193,6 +189,16 @@ Notes on the non-obvious ones:
   it wants a verdict. A route would ship the whole resume to the machine it came
   from and answer with a list the caller could have computed. See
   `application-structure.md` #7.2.
+- **There is no `/v1/backup/*`.** It used to list three: `status`, `now` and
+  `restore`. All three would have handed `createApi` a filesystem, which is the
+  one thing it is built not to have - it takes the port, an owner scope and an
+  `authenticate` function and nothing else, which is what lets a hosted adapter
+  reuse it unchanged. The mirror is the launcher's: `keepcv serve` writes a
+  readable copy of the whole store beside the data directory when it starts, on
+  a timer, and when it stops, and `keepcv backup` and `keepcv restore` do the
+  same two things on demand. The app reaches the same behaviour through
+  `/v1/export` and `/v1/import`, which already exist and already carry the whole
+  archive. See `application-structure.md` #5.9.
 - **`/v1/export` has no `?format=jsonresume`.** It used to be listed with one.
   The native export is a whole-store read, which is genuinely the server's, but
   JSON Resume describes a *resume* - `toJsonResume(document)` in

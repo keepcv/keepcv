@@ -2,6 +2,7 @@ import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import { DataScreen } from "../features/data/ui/data-screen.js";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
 import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
@@ -68,6 +69,15 @@ const profileRoute = createRoute({
   component: function ProfilePage() {
     const { api } = profileRoute.useRouteContext();
     return <ProfileScreen store={useStore(api)} client={api} />;
+  },
+});
+
+const dataRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/data",
+  component: function DataPage() {
+    const { api } = dataRoute.useRouteContext();
+    return <DataScreen store={useStore(api)} client={api} />;
   },
 });
 
@@ -243,6 +253,7 @@ const searchRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   overviewRoute,
   profileRoute,
+  dataRoute,
   recordsRoute,
   newRecordRoute,
   recordRoute,
