@@ -7,13 +7,9 @@ import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
+import type { FieldErrors } from "../../../lib/form.js";
 import { useAddMetric, useArchiveMetric } from "../api/use-points.js";
-import {
-  BLANK_METRIC,
-  buildMetric,
-  type FieldErrors,
-  type MetricFormValues,
-} from "../model/point-form.js";
+import { BLANK_METRIC, buildMetric, type MetricFormValues } from "../model/point-form.js";
 
 // Written straight away rather than staged with the rest of the screen: a metric
 // belongs to a point that already exists, and there is nothing to roll back.

@@ -15,8 +15,13 @@ import {
   SKILL_PROFICIENCIES,
   WORK_MODES,
 } from "@keepcv/schema";
-import type { ZodError } from "zod";
-import { type Difference, differing, type FieldErrors, trimmed } from "../../../lib/form.js";
+import {
+  type Difference,
+  differing,
+  type FieldErrors,
+  fieldErrors,
+  trimmed,
+} from "../../../lib/form.js";
 
 // The columns a kind carries beyond the shared ones. `record-form.test.ts`
 // checks this covers each kind's schema exactly, so a column added to the model
@@ -112,19 +117,10 @@ export function valuesOf(store: Store, record: CareerRecord): RecordFormValues {
 }
 
 // Which kinds a new record may be: a custom entry needs a section to sit under,
-// and nothing in the app makes one yet.
+// so the kind appears once one has been made on /sections.
 export function creatableKinds(store: Store): CareerRecordKind[] {
   const hasSection = live(store.customSections).length > 0;
   return CAREER_RECORD_KINDS.filter((kind) => kind !== "custom_entry" || hasSection);
-}
-
-function fieldErrors(error: ZodError): FieldErrors {
-  const errors: FieldErrors = {};
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join(".");
-    errors[key] ??= issue.message;
-  }
-  return errors;
 }
 
 function columnsOf(values: RecordFormValues): Record<string, string | null> {

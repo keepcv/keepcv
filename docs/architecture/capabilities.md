@@ -100,6 +100,20 @@ kind.
 Cross-cutting throughout: partial dates, archive and restore, drag-and-drop
 ordering, and incompleteness nudges.
 
+**Links, fields and custom sections are written from the app.** A link and a
+field are sub-collections of a record that already exists, so they are added on
+the record's own screen as they are typed rather than staged with the form
+above them, exactly as a metric is on a point. `record_field_key_unique` covers
+archived rows, so naming a removed field again puts that row back instead of
+writing a second one - the same shape as placing something on a resume.
+
+Custom sections have a screen of their own: create, rename, archive and put
+back, with a count of what is filed under each. Until it existed the record
+form's section picker had nothing in it and `custom_entry` was hidden, so a
+whole record kind was unreachable.
+
+What remains is dragging, here as elsewhere.
+
 ### Points and phrasings
 
 The heart of the product. Point records with primary and secondary parents;

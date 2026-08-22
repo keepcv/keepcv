@@ -12,6 +12,7 @@ import { RecordList } from "../features/records/ui/record-list.js";
 import { RESUME_VIEWS, ResumeDetailScreen } from "../features/resumes/ui/resume-detail.js";
 import { ResumeList } from "../features/resumes/ui/resume-list.js";
 import { SearchResults } from "../features/search/ui/search-results.js";
+import { SectionList } from "../features/sections/ui/section-list.js";
 import { Overview } from "../features/store/ui/overview.js";
 import { TAG_FILTERS } from "../features/tags/model/tag-rows.js";
 import { TagList } from "../features/tags/ui/tag-list.js";
@@ -137,6 +138,22 @@ const tagsRoute = createRoute({
   },
 });
 
+const sectionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sections",
+  validateSearch: z.object({ archived: z.boolean().default(false) }),
+  component: function SectionsScreen() {
+    const { api } = sectionsRoute.useRouteContext();
+    return (
+      <SectionList
+        store={useStore(api)}
+        client={api}
+        archived={sectionsRoute.useSearch().archived}
+      />
+    );
+  },
+});
+
 const newPointRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/points/new",
@@ -221,6 +238,7 @@ const routeTree = rootRoute.addChildren([
   newPointRoute,
   editPointRoute,
   tagsRoute,
+  sectionsRoute,
   resumesRoute,
   resumeRoute,
   searchRoute,

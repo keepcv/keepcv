@@ -3,10 +3,20 @@ import type {
   CareerRecordInput,
   CareerRecordPatch,
   OrganisationInput,
+  RecordField,
+  RecordFieldInput,
+  RecordFieldPatch,
+  RecordLink,
+  RecordLinkInput,
   Store,
   Uuid,
 } from "@keepcv/schema";
-import { careerRecordSchema, organisationSchema } from "@keepcv/schema";
+import {
+  careerRecordSchema,
+  organisationSchema,
+  recordFieldSchema,
+  recordLinkSchema,
+} from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
 import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
@@ -104,5 +114,106 @@ export function useSetArchived(client: ApiClient) {
     },
     optimistic: (store, { record, archived }) =>
       upsert(store, { ...record, archivedAt: archived ? now() : null, updatedAt: now() }),
+  });
+}
+
+export function useAddRecordLink(client: ApiClient) {
+  return useStoreMutation<RecordLinkInput, RecordLink>({
+    send: async (link) =>
+      recordLinkSchema.parse(await unwrap(await client.v1["record-links"].$post({ json: link }))),
+    optimistic: (store, link) => {
+      const at = now();
+      return {
+        ...store,
+        recordLinks: [
+          ...store.recordLinks,
+          recordLinkSchema.parse({ ...link, createdAt: at, updatedAt: at, archivedAt: null }),
+        ],
+      };
+    },
+  });
+}
+
+export function useArchiveRecordLink(client: ApiClient) {
+  return useStoreMutation<RecordLink, RecordLink>({
+    send: async (link) =>
+      recordLinkSchema.parse(
+        await unwrap(
+          await client.v1["record-links"][":id"].$delete({
+            param: { id: link.id },
+            json: { expectedUpdatedAt: link.updatedAt },
+          }),
+        ),
+      ),
+    optimistic: (store, link) => ({
+      ...store,
+      recordLinks: replaceRow(store.recordLinks, { ...link, archivedAt: now(), updatedAt: now() }),
+    }),
+  });
+}
+
+// A field named again after being removed is the row put back, because
+// `record_field_key_unique` covers archived rows.
+export type AddField =
+  | { create: RecordFieldInput }
+  | { restore: RecordField; patch: RecordFieldPatch };
+
+export function useAddRecordField(client: ApiClient) {
+  return useStoreMutation<AddField, RecordField>({
+    send: async (plan) => {
+      if ("create" in plan) {
+        return recordFieldSchema.parse(
+          await unwrap(await client.v1["record-fields"].$post({ json: plan.create })),
+        );
+      }
+      const param = { id: plan.restore.id };
+      const back = recordFieldSchema.parse(
+        await unwrap(
+          await client.v1["record-fields"][":id"].restore.$post({
+            param,
+            json: { expectedUpdatedAt: plan.restore.updatedAt },
+          }),
+        ),
+      );
+      return recordFieldSchema.parse(
+        await unwrap(
+          await client.v1["record-fields"][":id"].$patch({
+            param,
+            json: { expectedUpdatedAt: back.updatedAt, patch: plan.patch },
+          }),
+        ),
+      );
+    },
+    optimistic: (store, plan) => {
+      const at = now();
+      const row = recordFieldSchema.parse(
+        "create" in plan
+          ? { ...plan.create, createdAt: at, updatedAt: at, archivedAt: null }
+          : { ...plan.restore, ...plan.patch, archivedAt: null, updatedAt: at },
+      );
+      return { ...store, recordFields: replaceRow(store.recordFields, row) };
+    },
+  });
+}
+
+export function useArchiveRecordField(client: ApiClient) {
+  return useStoreMutation<RecordField, RecordField>({
+    send: async (field) =>
+      recordFieldSchema.parse(
+        await unwrap(
+          await client.v1["record-fields"][":id"].$delete({
+            param: { id: field.id },
+            json: { expectedUpdatedAt: field.updatedAt },
+          }),
+        ),
+      ),
+    optimistic: (store, field) => ({
+      ...store,
+      recordFields: replaceRow(store.recordFields, {
+        ...field,
+        archivedAt: now(),
+        updatedAt: now(),
+      }),
+    }),
   });
 }

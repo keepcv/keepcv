@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button.js";
 import { SelectField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
+import type { FieldErrors } from "../../../lib/form.js";
 import { useAddEvidence, useArchiveEvidence } from "../api/use-points.js";
 import {
   BLANK_EVIDENCE,
@@ -17,7 +18,6 @@ import {
   evidenceOfPoint,
   hrefOf,
 } from "../model/evidence-form.js";
-import type { FieldErrors } from "../model/point-form.js";
 
 const KIND_OPTIONS = EVIDENCE_KINDS.map((kind) => ({
   value: kind,

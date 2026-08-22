@@ -10,6 +10,8 @@ import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetArchived } from "../api/use-records.js";
 import { type PointRow, recordDetail } from "../model/record-detail.js";
 import { KIND_NAMES } from "../model/record-rows.js";
+import { RecordFields } from "./record-fields.js";
+import { RecordLinks } from "./record-links.js";
 
 // Divided by a rule rather than a separator character, so a date range inside
 // one part cannot read as two.
@@ -157,47 +159,10 @@ export function RecordDetail({
         </PanelBody>
       </Panel>
 
-      {links.length === 0 && fields.length === 0 ? null : (
-        <div className="grid gap-5 sm:grid-cols-2">
-          {links.length === 0 ? null : (
-            <Panel>
-              <PanelHeader title="Links" />
-              <PanelBody>
-                <ul className="space-y-1.5">
-                  {links.map((link) => (
-                    <li key={link.id} className="truncate text-sm">
-                      <a
-                        href={link.url}
-                        className="text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
-                        rel="noreferrer noopener"
-                        target="_blank"
-                      >
-                        {link.label ?? link.url}
-                      </a>
-                      <span className="ml-2 text-xs text-slate-400">{link.kind}</span>
-                    </li>
-                  ))}
-                </ul>
-              </PanelBody>
-            </Panel>
-          )}
-          {fields.length === 0 ? null : (
-            <Panel>
-              <PanelHeader title="Fields" />
-              <PanelBody>
-                <dl className="space-y-1.5 text-sm">
-                  {fields.map((field) => (
-                    <div key={field.id} className="flex justify-between gap-4">
-                      <dt className="text-slate-500">{field.label}</dt>
-                      <dd className="text-right text-slate-800">{field.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </PanelBody>
-            </Panel>
-          )}
-        </div>
-      )}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <RecordLinks store={store} client={client} recordId={recordId} links={links} />
+        <RecordFields store={store} client={client} recordId={recordId} fields={fields} />
+      </div>
 
       <Panel>
         <PanelHeader title="Where it appears">
