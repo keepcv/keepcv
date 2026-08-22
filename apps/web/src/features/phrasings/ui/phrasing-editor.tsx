@@ -13,8 +13,10 @@ import { Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { sentenceCase } from "../../../lib/label.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
 import {
   useAddVariant,
   useSetCanonical,
@@ -114,11 +116,13 @@ function Wording({
   client,
   set,
   phrasing,
+  order,
 }: {
   store: Store;
   client: ApiClient;
   set: PhrasingSet;
   phrasing: Phrasing;
+  order: Reorder<Phrasing>;
 }) {
   const text = usePhrasingText(client, store, phrasing);
   const update = useUpdatePhrasing(client);
@@ -131,10 +135,12 @@ function Wording({
 
   return (
     <div
+      {...order.rowProps(phrasing)}
       data-archived={isArchived}
-      className="space-y-2 rounded-lg border border-slate-200 p-3 data-[archived=true]:opacity-60"
+      className="space-y-2 rounded-lg border border-slate-200 p-3 data-[archived=true]:opacity-60 data-[held=true]:opacity-40"
     >
       <div className="flex flex-wrap items-center gap-2">
+        <DragGrip />
         <select
           value={phrasing.variant}
           aria-label="Variant"
@@ -155,8 +161,13 @@ function Wording({
         <Label client={client} phrasing={phrasing} />
         {isCanonical ? <Badge tone="accent">Canonical</Badge> : null}
         {isArchived ? <Badge tone="warning">Archived</Badge> : null}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-2">
           <UsedBy store={store} phrasingId={phrasing.id} />
+          <ReorderControls
+            order={order}
+            row={phrasing}
+            subject={`the ${phrasing.variant} wording`}
+          />
         </span>
       </div>
 
@@ -293,9 +304,16 @@ export function PhrasingEditor({
   phrasingSetId: Uuid;
   subject?: keyof typeof TITLES;
 }) {
+  const update = useUpdatePhrasing(client);
   const set = store.phrasingSets.find((row) => row.id === phrasingSetId);
   const wordings = phrasingsOfSet(store, phrasingSetId);
   const canonical = wordings.find((row) => row.id === set?.canonicalPhrasingId);
+  const order = useReorder(
+    store.phrasings.filter((row) => row.phrasingSetId === phrasingSetId),
+    (phrasing, sortKey) => {
+      update.mutate({ phrasing, patch: { sortKey } });
+    },
+  );
 
   if (set === undefined) {
     return (
@@ -318,7 +336,14 @@ export function PhrasingEditor({
       </PanelHeader>
       <PanelBody className="space-y-3">
         {wordings.map((phrasing) => (
-          <Wording key={phrasing.id} store={store} client={client} set={set} phrasing={phrasing} />
+          <Wording
+            key={phrasing.id}
+            store={store}
+            client={client}
+            set={set}
+            phrasing={phrasing}
+            order={order}
+          />
         ))}
         <AddWording
           store={store}

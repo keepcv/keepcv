@@ -12,8 +12,10 @@ import { Button } from "../../../components/ui/button.js";
 import { Conflict } from "../../../components/ui/conflict.js";
 import { CheckboxField, SelectField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
 import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
 import {
   useCreateChannel,
@@ -224,11 +226,13 @@ function ChannelRow({
   label,
   isArchived,
   client,
+  order,
 }: {
   channel: ContactChannel;
   label: string;
   isArchived: boolean;
   client: ApiClient;
+  order: Reorder<ContactChannel>;
 }) {
   const update = useUpdateChannel(client);
   const setArchived = useSetChannelArchived(client);
@@ -236,23 +240,30 @@ function ChannelRow({
   const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
-    <li className="border-t border-slate-100 px-4 py-3 first:border-t-0">
+    <li
+      {...order.rowProps(channel)}
+      className="border-t border-slate-100 px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <DragGrip />
         <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-slate-400">
           {label}
         </span>
         <span className="min-w-40 flex-1 truncate text-sm text-slate-800">{channel.value}</span>
         {channel.isDefaultVisible ? null : <Badge>off by default</Badge>}
         {isArchived ? <Badge tone="warning">Archived</Badge> : null}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {isArchived ? null : (
-            <Button
-              onClick={() => {
-                setValues(values === undefined ? channelValuesOf(channel) : undefined);
-              }}
-            >
-              {values === undefined ? "Edit" : "Cancel"}
-            </Button>
+            <>
+              <ReorderControls order={order} row={channel} subject={channel.value} />
+              <Button
+                onClick={() => {
+                  setValues(values === undefined ? channelValuesOf(channel) : undefined);
+                }}
+              >
+                {values === undefined ? "Edit" : "Cancel"}
+              </Button>
+            </>
           )}
           <Button
             tone={isArchived ? "secondary" : "danger"}
@@ -309,12 +320,16 @@ function ChannelRow({
 
 function Contacts({ store, client }: { store: Store; client: ApiClient }) {
   const create = useCreateChannel(client);
+  const update = useUpdateChannel(client);
   const [values, setValues] = useState<ChannelValues>(newChannelValues);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [showArchived, setShowArchived] = useState(false);
 
   const rows = channelRows(store, showArchived);
   const missing = missingExtractable(store);
+  const order = useReorder(store.contactChannels, (channel, sortKey) => {
+    update.mutate({ channel, patch: { sortKey } });
+  });
 
   return (
     <Panel>
@@ -353,6 +368,7 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
               label={row.label}
               isArchived={row.isArchived}
               client={client}
+              order={order}
             />
           ))}
         </ul>

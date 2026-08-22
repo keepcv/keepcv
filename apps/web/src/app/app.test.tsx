@@ -1739,3 +1739,108 @@ describe("the profile", () => {
     expect(store.contactChannels).toHaveLength(1);
   });
 });
+
+// jsdom implements no `dataTransfer`, which is exactly why the row being
+// dragged lives in React state instead.
+function dragOnto(from: HTMLElement, to: HTMLElement): void {
+  fireEvent.dragStart(from);
+  fireEvent.dragOver(to);
+  fireEvent.drop(to);
+  fireEvent.dragEnd(from);
+}
+
+function rowOf(text: string): HTMLElement {
+  const row = screen.getByText(text).closest("li");
+  if (row === null) throw new Error(`no row holding ${text}`);
+  return row;
+}
+
+describe("ordering", () => {
+  it("writes one row when a record is dragged onto another", async () => {
+    const store = emptyStore();
+    const first = addRecord(store, { kind: "project", title: "Difference Engine" });
+    addRecord(store, { kind: "project", title: "Analytical Engine", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project");
+
+    await screen.findByText("Difference Engine");
+    dragOnto(rowOf("Difference Engine"), rowOf("Analytical Engine"));
+
+    await waitFor(() => {
+      expect(store.records[0]?.sortKey).not.toBe("a0");
+    });
+    expect(store.records[0]?.id).toBe(first.id);
+    expect(store.records[1]?.sortKey).toBe("a1");
+    // One row, because the key is fractional: a move must not rewrite the list.
+    expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("writes nothing when a row is dropped on itself", async () => {
+    const store = emptyStore();
+    addRecord(store, { kind: "project", title: "Difference Engine" });
+    addRecord(store, { kind: "project", title: "Analytical Engine", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project");
+
+    await screen.findByText("Difference Engine");
+    dragOnto(rowOf("Difference Engine"), rowOf("Difference Engine"));
+
+    expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(0);
+  });
+
+  // A custom entry is scoped by the section it prints under, so two headings are
+  // two lists: one of them would otherwise collide on `record_sort_key_unique`.
+  it("keeps custom entries in a list per heading", async () => {
+    const store = emptyStore();
+    const patents = addCustomSection(store, "Patents");
+    const exhibits = addCustomSection(store, "Exhibitions", { sortKey: "a1" });
+    addRecord(store, { kind: "custom_entry", title: "A patent", customSectionId: patents });
+    addRecord(store, { kind: "custom_entry", title: "A show", customSectionId: exhibits });
+
+    mount(() => jsonOf(store), "/records?kind=custom_entry");
+
+    expect(await screen.findByText("Patents")).toBeInTheDocument();
+    expect(screen.getByText("Exhibitions")).toBeInTheDocument();
+    expect(rowOf("A patent").parentElement).not.toBe(rowOf("A show").parentElement);
+  });
+
+  it("orders a record's points by keyboard as well as by dragging", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    addPoint(store, "Cut p95 latency", { recordId: record.id });
+    addPoint(store, "Rewrote the scheduler", { recordId: record.id, sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByText("Cut p95 latency");
+    press("Move Rewrote the scheduler up");
+
+    await waitFor(() => {
+      expect(store.points[1]?.sortKey).not.toBe("a1");
+    });
+    expect(String(store.points[1]?.sortKey) < "a0").toBe(true);
+  });
+
+  it("drags a section of a resume above the one over it", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const resume = addResume(store, { name: "Staff engineer" });
+    const experience = addSection(store, resume.id);
+    addEntry(store, experience, record.id);
+    addSection(store, resume.id, { kind: "project", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}`);
+
+    const held = (await screen.findByRole("heading", { name: "Projects" })).closest(
+      "div[draggable]",
+    );
+    const target = screen.getByRole("heading", { name: "Experience" }).closest("div[draggable]");
+    if (held === null || target === null) throw new Error("no draggable section");
+    dragOnto(held as HTMLElement, target as HTMLElement);
+
+    await waitFor(() => {
+      expect(store.resumeSections[1]?.sortKey).not.toBe("a1");
+    });
+    expect(String(store.resumeSections[1]?.sortKey) < "a0").toBe(true);
+  });
+});

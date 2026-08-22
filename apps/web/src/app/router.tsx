@@ -76,9 +76,11 @@ const recordsRoute = createRoute({
   path: "/records",
   validateSearch: recordSearchSchema,
   component: function RecordsScreen() {
-    const store = useStore(recordsRoute.useRouteContext().api);
+    const { api } = recordsRoute.useRouteContext();
     const { kind, tag, archived } = recordsRoute.useSearch();
-    return <RecordList store={store} filters={{ kind, tagId: tag, archived }} />;
+    return (
+      <RecordList store={useStore(api)} client={api} filters={{ kind, tagId: tag, archived }} />
+    );
   },
 });
 

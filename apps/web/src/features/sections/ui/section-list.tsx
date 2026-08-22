@@ -6,8 +6,10 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
 import {
   sectionInput,
   useCreateCustomSection,
@@ -51,14 +53,28 @@ function Rename({
   );
 }
 
-function Row({ store, row, client }: { store: Store; row: SectionRow; client: ApiClient }) {
+function Row({
+  store,
+  row,
+  client,
+  order,
+}: {
+  store: Store;
+  row: SectionRow;
+  client: ApiClient;
+  order: Reorder<CustomSection>;
+}) {
   const setArchived = useSetCustomSectionArchived(client);
   const [renaming, setRenaming] = useState(false);
   const { section } = row;
 
   return (
-    <li className="border-t border-slate-100 px-4 py-3 first:border-t-0">
+    <li
+      {...order.rowProps(section)}
+      className="border-t border-slate-100 px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <DragGrip />
         <span className="text-sm font-medium text-slate-900">{section.heading}</span>
         {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
         {row.records === 0 ? (
@@ -72,15 +88,18 @@ function Row({ store, row, client }: { store: Store; row: SectionRow; client: Ap
             {row.records} {row.records === 1 ? "entry" : "entries"}
           </Link>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {row.isArchived ? null : (
-            <Button
-              onClick={() => {
-                setRenaming(!renaming);
-              }}
-            >
-              Rename
-            </Button>
+            <>
+              <ReorderControls order={order} row={section} subject={section.heading} />
+              <Button
+                onClick={() => {
+                  setRenaming(!renaming);
+                }}
+              >
+                Rename
+              </Button>
+            </>
           )}
           <Button
             tone={row.isArchived ? "secondary" : "danger"}
@@ -152,7 +171,11 @@ export function SectionList({
   client: ApiClient;
   archived: boolean;
 }) {
+  const update = useUpdateCustomSection(client);
   const rows = sectionRows(store, archived);
+  const order = useReorder(store.customSections, (section, sortKey) => {
+    update.mutate({ section, patch: { sortKey } });
+  });
 
   return (
     <div className="space-y-5">
@@ -196,7 +219,7 @@ export function SectionList({
           </PanelHeader>
           <ul>
             {rows.map((row) => (
-              <Row key={row.section.id} store={store} row={row} client={client} />
+              <Row key={row.section.id} store={store} row={row} client={client} order={order} />
             ))}
           </ul>
         </Panel>

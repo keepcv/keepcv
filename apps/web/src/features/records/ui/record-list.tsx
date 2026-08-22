@@ -1,14 +1,20 @@
-import type { Store } from "@keepcv/schema";
+import type { CareerRecord, Store } from "@keepcv/schema";
+import { careerRecordPatchSchema } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import type { ApiClient } from "../../../lib/api.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
 import { TaggedNote } from "../../tags/ui/tagged-note.js";
+import { useUpdateRecord } from "../api/use-records.js";
 import {
   groupedRecordRows,
   KIND_LABELS,
   type RecordFilters,
+  type RecordGroup,
   type RecordRow,
 } from "../model/record-rows.js";
 
@@ -33,13 +39,25 @@ function narrowing(filters: RecordFilters): Record<string, unknown> {
   };
 }
 
-function Row({ row }: { row: RecordRow }) {
+function Row({
+  row,
+  order,
+  entry,
+}: {
+  row: RecordRow;
+  order: Reorder<CareerRecord>;
+  entry: CareerRecord | undefined;
+}) {
   return (
-    <li>
+    <li
+      {...(entry === undefined ? {} : order.rowProps(entry))}
+      className="flex items-baseline gap-1 data-[held=true]:opacity-40"
+    >
+      <DragGrip />
       <Link
         to="/records/$recordId"
         params={{ recordId: row.id }}
-        className="flex items-baseline gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 data-[archived=true]:opacity-60"
+        className="flex min-w-0 flex-1 items-baseline gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 data-[archived=true]:opacity-60"
         data-archived={row.isArchived}
       >
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
@@ -62,7 +80,39 @@ function Row({ row }: { row: RecordRow }) {
           </Badge>
         ) : null}
       </Link>
+      {entry === undefined ? null : (
+        <ReorderControls order={order} row={entry} subject={row.title} />
+      )}
     </li>
+  );
+}
+
+// The list a record is dragged within is its kind, and for a custom entry the
+// heading it prints under.
+function Group({ group, client }: { group: RecordGroup; client: ApiClient }) {
+  const update = useUpdateRecord(client);
+  const order = useReorder(group.scope, (record, sortKey) => {
+    // The patch is a union discriminated on `kind`, so a move carries the kind
+    // it is not changing.
+    update.mutate({
+      id: record.id,
+      expectedUpdatedAt: record.updatedAt,
+      patch: careerRecordPatchSchema.parse({ kind: record.kind, sortKey }),
+      organisation: null,
+    });
+  });
+
+  return (
+    <ul className="rounded-xl border border-slate-200 bg-white p-1">
+      {group.rows.map((row) => (
+        <Row
+          key={row.id}
+          row={row}
+          order={order}
+          entry={group.scope.find((entry) => entry.id === row.id)}
+        />
+      ))}
+    </ul>
   );
 }
 
@@ -97,7 +147,15 @@ function Nothing({ filters }: { filters: RecordFilters }) {
 
 // Grouped by kind rather than one flat wall: sixty records in one list is a
 // scroll nobody reads, and the kind is the first thing anyone narrows by.
-export function RecordList({ store, filters }: { store: Store; filters: RecordFilters }) {
+export function RecordList({
+  store,
+  client,
+  filters,
+}: {
+  store: Store;
+  client: ApiClient;
+  filters: RecordFilters;
+}) {
   const groups = groupedRecordRows(store, filters);
   const total = groups.reduce((count, group) => count + group.rows.length, 0);
 
@@ -147,17 +205,15 @@ export function RecordList({ store, filters }: { store: Store; filters: RecordFi
       ) : (
         <div className="space-y-6">
           {groups.map((group) => (
-            <section key={group.kind}>
-              {filters.kind === undefined ? (
+            <section key={group.key}>
+              {/* Always for a custom entry: its heading is what tells two
+                  otherwise identical groups apart. */}
+              {filters.kind === undefined || group.kind === "custom_entry" ? (
                 <h2 className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                  {KIND_LABELS[group.kind]}
+                  {group.heading}
                 </h2>
               ) : null}
-              <ul className="rounded-xl border border-slate-200 bg-white p-1">
-                {group.rows.map((row) => (
-                  <Row key={row.id} row={row} />
-                ))}
-              </ul>
+              <Group group={group} client={client} />
             </section>
           ))}
         </div>

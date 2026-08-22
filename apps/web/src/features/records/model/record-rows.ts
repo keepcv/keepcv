@@ -96,16 +96,59 @@ export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
 }
 
 export interface RecordGroup {
+  key: string;
   kind: CareerRecordKind;
+  heading: string;
+  // The list this group is dragged within, archived rows included: a record's
+  // sort key is scoped by `(kind, custom_section_id)` (data-model.md #3.5).
+  scope: CareerRecord[];
   rows: RecordRow[];
+}
+
+const sectionIdOf = (entry: CareerRecord | undefined): Uuid | null =>
+  entry?.kind === "custom_entry" ? entry.customSectionId : null;
+
+function scopedRecords(
+  store: Store,
+  kind: CareerRecordKind,
+  sectionId: Uuid | null,
+): CareerRecord[] {
+  return store.records.filter((entry) => entry.kind === kind && sectionIdOf(entry) === sectionId);
 }
 
 // In the order the kinds are declared, which is reading order: storage order
 // puts Awards above Experience, and nobody reads a career that way.
 export function groupedRecordRows(store: Store, filters: RecordFilters): RecordGroup[] {
   const rows = recordRows(store, filters);
-  return CAREER_RECORD_KINDS.map((kind) => ({
-    kind,
-    rows: rows.filter((row) => row.kind === kind),
-  })).filter((group) => group.rows.length > 0);
+  const held = new Map(store.records.map((entry) => [entry.id, entry]));
+
+  return CAREER_RECORD_KINDS.flatMap((kind): RecordGroup[] => {
+    const of = rows.filter((row) => row.kind === kind);
+    if (of.length === 0) return [];
+
+    if (kind !== "custom_entry") {
+      return [
+        {
+          key: kind,
+          kind,
+          heading: KIND_LABELS[kind],
+          scope: scopedRecords(store, kind, null),
+          rows: of,
+        },
+      ];
+    }
+
+    // One group per heading: a custom entry is scoped by the section it prints
+    // under, so all of them in one list would be a list dragged across two
+    // scopes and `record_sort_key_unique` would refuse the second one.
+    const sections = [...new Set(of.map((row) => sectionIdOf(held.get(row.id))))];
+    return sections.map((sectionId) => ({
+      key: `${kind}:${sectionId ?? ""}`,
+      kind,
+      heading:
+        store.customSections.find((row) => row.id === sectionId)?.heading ?? KIND_LABELS[kind],
+      scope: scopedRecords(store, kind, sectionId),
+      rows: of.filter((row) => sectionIdOf(held.get(row.id)) === sectionId),
+    }));
+  });
 }
