@@ -14,7 +14,7 @@ import { TemplateFrame } from "./template-frame.js";
 const SETTLES_AFTER = 500;
 
 // Only what differs from the template's own defaults, so a default that moves in
-// a later version moves with it (application-structure.md #5.5).
+// a later version moves with it (application-structure.md #5.6).
 function overrides(template: Template, config: TemplateConfig): TemplateConfig {
   return Object.fromEntries(
     Object.entries(config).filter(([key, value]) => template.defaultConfig[key] !== value),

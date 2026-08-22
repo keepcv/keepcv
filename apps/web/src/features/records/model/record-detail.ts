@@ -4,7 +4,6 @@ import {
   live,
   pointsOfRecord,
   tagsOfPoint,
-  tagsOfRecord,
   textOfPhrasingSet,
   textOfPoint,
 } from "@keepcv/core";
@@ -42,7 +41,6 @@ export interface RecordDetail {
   points: PointRow[];
   links: RecordLink[];
   fields: RecordField[];
-  tags: string[];
   placements: Placement[];
 }
 
@@ -87,7 +85,6 @@ export function recordDetail(store: Store, recordId: Uuid): RecordDetail | undef
     points: pointRows(store, recordId),
     links: inOrder(live(store.recordLinks).filter((row) => row.recordId === recordId)),
     fields: inOrder(live(store.recordFields).filter((row) => row.recordId === recordId)),
-    tags: tagsOfRecord(store, recordId).map((tag) => tag.label),
     placements: placements(store, recordId),
   };
 }

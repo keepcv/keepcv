@@ -54,6 +54,10 @@ export function Navigation({ store }: { store: Store }) {
           Points
           <Count>{live(store.points).length}</Count>
         </NavLink>
+        <NavLink to="/tags" search={{ filter: "all" }}>
+          Tags
+          <Count>{live(store.tags).length}</Count>
+        </NavLink>
         <NavLink to="/resumes" search={{ archived: "exclude" }}>
           Resumes
           <Count>{live(store.resumes).length}</Count>

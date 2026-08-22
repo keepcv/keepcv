@@ -4,6 +4,7 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import { TaggedNote } from "../../tags/ui/tagged-note.js";
 import {
   groupedRecordRows,
   KIND_LABELS,
@@ -21,6 +22,15 @@ const ARCHIVED_OPTIONS = [
 // list should not open the form on "experience".
 function newRecordSearch(filters: RecordFilters): Record<string, unknown> {
   return filters.kind === undefined ? {} : { kind: filters.kind };
+}
+
+// Everything the list is narrowed by apart from the control being rendered, so
+// changing one narrowing does not silently drop the others.
+function narrowing(filters: RecordFilters): Record<string, unknown> {
+  return {
+    ...(filters.kind === undefined ? {} : { kind: filters.kind }),
+    ...(filters.tagId === undefined ? {} : { tag: filters.tagId }),
+  };
 }
 
 function Row({ row }: { row: RecordRow }) {
@@ -56,6 +66,35 @@ function Row({ row }: { row: RecordRow }) {
   );
 }
 
+function Nothing({ filters }: { filters: RecordFilters }) {
+  if (filters.tagId !== undefined) {
+    return (
+      <Empty title="Nothing carries that tag">
+        A record takes a tag on its own screen, and a point takes one on the point screen.
+      </Empty>
+    );
+  }
+  if (filters.archived === "only") {
+    return (
+      <Empty title="Nothing archived here">
+        Archiving keeps a record out of the way without destroying it. Nothing here has been put
+        away.
+      </Empty>
+    );
+  }
+  return (
+    <Empty title="No records yet">
+      A record is a job, a degree, a project, a talk - anything you might one day want on a resume.
+      Points attach to it afterwards.
+      <span className="mt-4 block">
+        <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
+          Add the first one
+        </ButtonLink>
+      </span>
+    </Empty>
+  );
+}
+
 // Grouped by kind rather than one flat wall: sixty records in one list is a
 // scroll nobody reads, and the kind is the first thing anyone narrows by.
 export function RecordList({ store, filters }: { store: Store; filters: RecordFilters }) {
@@ -81,10 +120,7 @@ export function RecordList({ store, filters }: { store: Store; filters: RecordFi
               <Segment
                 key={option.value}
                 to="/records"
-                search={{
-                  ...(filters.kind === undefined ? {} : { kind: filters.kind }),
-                  archived: option.value,
-                }}
+                search={{ ...narrowing(filters), archived: option.value }}
                 active={filters.archived === option.value}
               >
                 {option.label}
@@ -97,22 +133,17 @@ export function RecordList({ store, filters }: { store: Store; filters: RecordFi
         </div>
       </div>
 
+      {filters.tagId === undefined ? null : (
+        <TaggedNote
+          store={store}
+          tagId={filters.tagId}
+          to="/records"
+          search={{ archived: filters.archived }}
+        />
+      )}
+
       {total === 0 ? (
-        <Empty title={filters.archived === "only" ? "Nothing archived here" : "No records yet"}>
-          {filters.archived === "only" ? (
-            "Archiving keeps a record out of the way without destroying it. Nothing here has been put away."
-          ) : (
-            <>
-              A record is a job, a degree, a project, a talk - anything you might one day want on a
-              resume. Points attach to it afterwards.
-              <span className="mt-4 block">
-                <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
-                  Add the first one
-                </ButtonLink>
-              </span>
-            </>
-          )}
-        </Empty>
+        <Nothing filters={filters} />
       ) : (
         <div className="space-y-6">
           {groups.map((group) => (

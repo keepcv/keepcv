@@ -1,4 +1,4 @@
-import { formatMetric, live, tagsOfPoint, textOfPoint } from "@keepcv/core";
+import { formatMetric, live, pointsWithTag, tagsOfPoint, textOfPoint } from "@keepcv/core";
 import type { PointConfidence, Store, Uuid } from "@keepcv/schema";
 
 export const POINT_FILTERS = ["all", "unplaced", "unmeasured", "archived"] as const;
@@ -25,13 +25,21 @@ export interface PointListRow {
   isArchived: boolean;
 }
 
-export function pointRows(store: Store, filter: PointFilter): PointListRow[] {
+export interface PointFilters {
+  filter: PointFilter;
+  tagId?: Uuid | undefined;
+}
+
+export function pointRows(store: Store, { filter, tagId }: PointFilters): PointListRow[] {
   const measured = new Set(live(store.metrics).map((metric) => metric.pointId));
+  const carrying =
+    tagId === undefined ? undefined : new Set(pointsWithTag(store, tagId).map((point) => point.id));
 
   return store.points
     .filter((point) =>
       filter === "archived" ? point.archivedAt !== null : point.archivedAt === null,
     )
+    .filter((point) => carrying === undefined || carrying.has(point.id))
     .filter((point) => filter !== "unplaced" || point.recordId === null)
     .filter((point) => filter !== "unmeasured" || !measured.has(point.id))
     .map((point) => ({

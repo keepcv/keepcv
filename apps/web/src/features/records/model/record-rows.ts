@@ -1,4 +1,4 @@
-import { live, organisationOf, pointsOfRecord } from "@keepcv/core";
+import { live, organisationOf, pointsOfRecord, recordsWithTag } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, Store, Uuid } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
@@ -76,14 +76,21 @@ export function toRecordRow(store: Store, entry: CareerRecord): RecordRow {
 
 export interface RecordFilters {
   kind?: CareerRecordKind | undefined;
+  tagId?: Uuid | undefined;
   archived: ArchivedFilter;
 }
 
 // Narrows without sorting: the store already returns a total order, and a list
 // that reshuffled on every filter change would be its own bug.
 export function recordRows(store: Store, filters: RecordFilters): RecordRow[] {
+  const carrying =
+    filters.tagId === undefined
+      ? undefined
+      : new Set(recordsWithTag(store, filters.tagId).map((entry) => entry.id));
+
   return store.records
     .filter((entry) => filters.kind === undefined || entry.kind === filters.kind)
+    .filter((entry) => carrying === undefined || carrying.has(entry.id))
     .filter((entry) => matchesArchived(entry, filters.archived))
     .map((entry) => toRecordRow(store, entry));
 }

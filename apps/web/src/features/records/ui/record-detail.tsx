@@ -6,6 +6,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetArchived } from "../api/use-records.js";
 import { type PointRow, recordDetail } from "../model/record-detail.js";
 import { KIND_NAMES } from "../model/record-rows.js";
@@ -70,7 +71,7 @@ export function RecordDetail({
 
   if (detail === undefined) return <MissingRecord />;
 
-  const { record, row, points, links, fields, tags, placements } = detail;
+  const { record, row, points, links, fields, placements } = detail;
 
   return (
     <div className="space-y-5">
@@ -110,16 +111,18 @@ export function RecordDetail({
               <Meta key={part}>{part}</Meta>
             ))}
         </p>
-        {tags.length === 0 ? null : (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <Badge key={tag}>{tag}</Badge>
-            ))}
-          </div>
-        )}
       </div>
 
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}
+
+      <Panel>
+        <PanelHeader title="Tags">
+          The words this is filed under. A resume is matched against them, and search reads them.
+        </PanelHeader>
+        <PanelBody>
+          <TagPicker store={store} client={client} subject={{ kind: "record", id: recordId }} />
+        </PanelBody>
+      </Panel>
 
       {detail.summary === "" ? null : (
         <Panel>

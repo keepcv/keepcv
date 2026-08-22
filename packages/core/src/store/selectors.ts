@@ -17,6 +17,7 @@ import type {
 } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { bySortKey } from "../ordering/sort-key.js";
+import { tagSlug } from "../tags/slug.js";
 
 // Screens read the cached store through these rather than through requests of
 // their own (application-structure.md #4).
@@ -130,6 +131,13 @@ export function pointsWithTag(store: Store, tagId: Uuid): Point[] {
     store.pointTags.filter((entry) => entry.tagId === tagId).map((entry) => entry.pointId),
   );
   return store.points.filter((point) => carries.has(point.id));
+}
+
+// Two labels that slug alike are one tag, and `tag_slug_unique` refuses the
+// second.
+export function tagForLabel(store: Store, label: string): Tag | undefined {
+  const slug = tagSlug(label);
+  return store.tags.find((tag) => tag.slug === slug);
 }
 
 export interface TagUsage {
@@ -247,7 +255,7 @@ const SECTION_HEADINGS: Record<SectionKind, string> = {
 export const DEFAULT_SECTION_LAYOUT = "entries";
 
 // Structural rather than a whole row, so a restore can ask what a section would
-// print under before it exists (application-structure.md #5.5).
+// print under before it exists (application-structure.md #5.6).
 export function sectionHeading(
   store: Store,
   section: Pick<ResumeSection, "kind" | "customSectionId" | "heading">,

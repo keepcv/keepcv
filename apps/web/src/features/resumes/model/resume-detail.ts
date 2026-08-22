@@ -116,7 +116,7 @@ function contactsOf(store: Store, resumeId: Uuid): ContactRow[] {
 }
 
 // Both halves of the same screen: the composition is every row the selection
-// holds, and the document is what survives it (application-structure.md #5.5).
+// holds, and the document is what survives it (application-structure.md #5.6).
 export function resumeDetail(store: Store, resumeId: Uuid, asOf: string): ResumeDetail | undefined {
   const composed = composition(store, resumeId);
   if (composed === undefined) return undefined;

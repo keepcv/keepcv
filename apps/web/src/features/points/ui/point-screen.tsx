@@ -5,9 +5,10 @@ import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
-import { Panel, PanelHeader } from "../../../components/ui/panel.js";
+import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
+import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetPointArchived, useUpdatePoint } from "../api/use-points.js";
 import {
   buildPointPatch,
@@ -120,6 +121,15 @@ export function PointScreen({
       </Panel>
 
       <PointMetrics store={store} client={client} point={point} />
+
+      <Panel>
+        <PanelHeader title="Tags">
+          The words this is filed under. A resume is matched against them, and search reads them.
+        </PanelHeader>
+        <PanelBody>
+          <TagPicker store={store} client={client} subject={{ kind: "point", id: point.id }} />
+        </PanelBody>
+      </Panel>
 
       <ButtonLink to="/points" search={{ filter: "all" }}>
         Back to points

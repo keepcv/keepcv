@@ -15,6 +15,7 @@ import {
   addResume,
   addRevision,
   addSection,
+  addTag,
   aFilledStore,
   emptyStore,
 } from "../store.harness.js";
@@ -1116,5 +1117,130 @@ describe("a resume and its template", () => {
     expect(screen.getByText(/Babbage Ltd, Soho/)).toBeInTheDocument();
     expect(screen.getByText(/Babbage and Sons/)).toBeInTheDocument();
     expect(store.resumes[0]?.targetCompany).toBe("Babbage Ltd");
+  });
+});
+
+describe("the tag vocabulary", () => {
+  // Every row carries the same controls, so a click has to be aimed at one.
+  async function rowFor(label: string): Promise<HTMLElement> {
+    const row = (await screen.findByText(label)).closest("li");
+    if (row === null) throw new Error(`no row for ${label}`);
+    return row;
+  }
+
+  function aTaggedStore() {
+    const store = emptyStore();
+    const record = addRecord(store, { title: "Ledger rewrite" });
+    const point = addPoint(store, "Ran it in anger", { recordId: record.id });
+    return { store, record, point };
+  }
+
+  it("files a record under a word nobody has used yet, creating the tag in one motion", async () => {
+    const { store, record } = aTaggedStore();
+    const server = storeServer(store);
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByLabelText("Add a tag");
+    type("Add a tag", "Kubernetes");
+    press("Add");
+
+    expect(await screen.findByRole("button", { name: "Take Kubernetes off" })).toBeInTheDocument();
+    expect(server.calls.map((call) => `${call.method} ${call.path}`)).toContain("POST /v1/tags");
+    expect(store.tags[0]?.slug).toBe("kubernetes");
+    expect(store.recordTags).toHaveLength(1);
+  });
+
+  // Two labels that slug alike are one tag, and the store would refuse the
+  // second: the picker has to reach for what is there rather than send it.
+  it("reaches for the tag that already exists rather than making a second one", async () => {
+    const { store, point } = aTaggedStore();
+    const kubernetes = addTag(store, "Kubernetes");
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    await screen.findByLabelText("Add a tag");
+    type("Add a tag", "kubernetes");
+    press("Add");
+
+    expect(await screen.findByRole("button", { name: "Take Kubernetes off" })).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([
+      { method: "PUT", path: `/v1/points/${point.id}/tags/${kubernetes.id}`, body: undefined },
+    ]);
+    expect(store.tags).toHaveLength(1);
+  });
+
+  it("takes a tag off without archiving either end", async () => {
+    const { store, record } = aTaggedStore();
+    const kubernetes = addTag(store, "Kubernetes");
+    store.recordTags.push({ tagId: kubernetes.id, recordId: record.id });
+    const server = storeServer(store);
+    mount(server.answer, `/records/${record.id}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Take Kubernetes off" }));
+
+    await waitFor(() => {
+      expect(store.recordTags).toEqual([]);
+    });
+    expect(store.tags).toHaveLength(1);
+    expect(store.records[0]?.archivedAt).toBeNull();
+  });
+
+  it("narrows the record list to one tag, and says which", async () => {
+    const { store, record } = aTaggedStore();
+    addRecord(store, { title: "Untagged work" });
+    const kubernetes = addTag(store, "Kubernetes");
+    store.recordTags.push({ tagId: kubernetes.id, recordId: record.id });
+
+    mount(() => jsonOf(store), `/records?tag=${kubernetes.id}`);
+
+    expect(await screen.findByText("Ledger rewrite")).toBeInTheDocument();
+    expect(screen.queryByText("Untagged work")).not.toBeInTheDocument();
+    expect(screen.getByText("Filed under")).toBeInTheDocument();
+  });
+
+  // The merge is the reason the vocabulary is manageable at all: it moves what
+  // the losing tag carried rather than dropping it with the name.
+  it("merges one tag into another and moves everything it carried", async () => {
+    const { store, record, point } = aTaggedStore();
+    const k8s = addTag(store, "k8s");
+    const kubernetes = addTag(store, "Kubernetes");
+    store.recordTags.push({ tagId: k8s.id, recordId: record.id });
+    store.pointTags.push(
+      { tagId: k8s.id, pointId: point.id },
+      { tagId: kubernetes.id, pointId: point.id },
+    );
+    const server = storeServer(store);
+    mount(server.answer, "/tags");
+
+    const row = within(await rowFor("k8s"));
+    fireEvent.click(row.getByRole("button", { name: "Merge" }));
+    fireEvent.change(screen.getByLabelText("Merge k8s into"), {
+      target: { value: kubernetes.id },
+    });
+    press("Merge and archive k8s");
+
+    await waitFor(() => {
+      expect(store.tags.find((tag) => tag.id === k8s.id)?.archivedAt).not.toBeNull();
+    });
+    expect(store.recordTags).toEqual([{ tagId: kubernetes.id, recordId: record.id }]);
+    // The point carried both, so it keeps the one it had rather than gaining a
+    // second row the uniqueness index would refuse.
+    expect(store.pointTags).toEqual([{ tagId: kubernetes.id, pointId: point.id }]);
+  });
+
+  it("renames a tag, and the slug follows the name", async () => {
+    const { store } = aTaggedStore();
+    addTag(store, "kuberentes");
+    const server = storeServer(store);
+    mount(server.answer, "/tags");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rename" }));
+    type("Name", "Kubernetes");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.tags[0]?.label).toBe("Kubernetes");
+    });
+    expect(store.tags[0]?.slug).toBe("kubernetes");
   });
 });

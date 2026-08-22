@@ -79,10 +79,11 @@ the entire WYSIWYG premise.
                  - canonicalise(RichText) + contentHash
                  - projectPlainText(RichText)
                  - search(store, query) and the store selectors: counts,
-                       nudges, tag usage, draftFor(store, target), the wordings
-                       a set holds and the resumes a point or a wording is on
-                       are pure functions of the boot payload, so no screen asks
-                       the server a question it already holds the answer to
+                       nudges, tag usage, tagForLabel(store, label),
+                       draftFor(store, target), the wordings a set holds and the
+                       resumes a point or a wording is on are pure functions of
+                       the boot payload, so no screen asks the server a question
+                       it already holds the answer to
                  - paginate(blocks, usable) and lengthBudget(doc, pages, limit)
                        fed real geometry by whatever laid the document out,
                        so the answer is measured rather than estimated (#7)
@@ -363,7 +364,32 @@ otherwise would manufacture the anxiety this screen exists to remove. The
 `/v1/points/{id}/usage` route answers a different question - which *versions*
 pinned it - and is for the timeline.
 
-### 5.5 Resume composer
+### 5.5 Tag vocabulary
+
+Needs: every tag with what it carries on both sides, live and archived; and the
+one label a new tag would collide with.
+
+**A tag is created from wherever the word is being used.** The picker on a record
+and on a point takes a label rather than an id: an existing tag is reached for and
+a new one is created and assigned in the same motion, so filing work under a word
+never starts with a trip to a management screen. What decides which of the two
+happens is `tagForLabel(store, label)` in `@keepcv/core` - two labels that slug
+alike are one tag, and `tag_slug_unique` refuses the second (data-model.md I17).
+The picker names the tag it would have collided with rather than showing the
+constraint.
+
+**The vocabulary screen is where a tag is renamed, merged and put aside.** Merging
+is the reason a vocabulary of eighty stays usable: it moves everything the losing
+tag carried onto another one and archives it, so no assignment is lost with the
+name. Its counts link to the lists narrowed by that tag, which is what makes
+"0 records, 0 points" actionable rather than trivia.
+
+**Archived tags are offered nowhere but their own filter.** Assigning one would
+put a hidden word on a live row, so the picker refuses and says where to put it
+back - the alternative, restoring it silently, is a write the user did not ask
+for.
+
+### 5.6 Resume composer
 
 Three panes: the store with in/out toggles; the resume structure,
 drag-and-drop; live preview.
@@ -421,7 +447,7 @@ wants one page" is a fact about the application rather than about typography.
 Null means no limit and is the default: a resume that nags before the user has
 said what they are aiming at is a resume that nags for nothing.
 
-### 5.6 Resume target
+### 5.7 Resume target
 
 The resume screen's second view, between composition and preview. Needs: the
 application's own facts - company, role, posting URL, applied date - and the
@@ -454,7 +480,7 @@ the record each sits under, and taking one off the page writes `is_visible`
 false on the entry point. Nothing is archived and nothing is deleted, so the
 selection still holds what was chosen and where it sat.
 
-### 5.7 Version timeline and compare
+### 5.8 Version timeline and compare
 
 The resume screen's fourth view, beside composition, target and preview. Needs: versions
 ordered by `seq desc` with the trigger and, for a restore, the number it came
@@ -488,7 +514,7 @@ row with a label rather than a flag, and unstarring archives it like any other
 owned row. Snapshots are in the archive rather than the boot payload, so the
 screen fetches them beside the versions.
 
-### 5.8 Export and data
+### 5.9 Export and data
 
 Needs: format list with explicit lossiness warnings; mirror status
 and location; restore.

@@ -166,8 +166,9 @@ knows nothing else - no driver, no token store, no port number.
 The web app is an application frame - a navigation rail that lists the kinds the
 store holds, a search field, and a disclosure in place of the rail below `lg` -
 over the store overview, the record list, a record's detail and its form, the
-point list, the resume list, a resume's composition, its compiled preview and its
-history, and search results. All of it is fed by one `GET /v1/store` on the root route's
+point list, the tag vocabulary, the resume list, a resume's composition, its
+compiled preview and its history, and search results. All of it is fed by one
+`GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
 payload, handed to a template in an iframe of its own that reports back how many
 pages it came to. React, TanStack Router and
@@ -180,8 +181,18 @@ Create, edit, archive and restore go through `useStoreMutation` in
 `lib/store-cache.ts`, which patches the cached `Store` before the request leaves,
 puts it back when the request is refused, and re-reads once it settles. A `409`
 opens a field-by-field comparison offering both resolutions and taking neither.
-Metrics are written as they are added rather than staged with a form. Tags and
-evidence are still read-only.
+Metrics are written as they are added rather than staged with a form. Evidence is
+still read-only.
+
+**A tag is created from wherever the word is being used.** The picker on a record
+and on a point takes a label, not an id: `tagForLabel(store, label)` in
+`@keepcv/core` answers whether that word is already a tag, so an existing one is
+reached for and a new one is created and assigned in the same motion. Two labels
+that slug alike are one tag and `tag_slug_unique` refuses the second, so the
+picker and the vocabulary screen name the tag they would collide with rather than
+letting the store answer with a constraint. Merging moves everything the losing
+tag carried before archiving it, and an archived tag is offered nowhere but its
+own filter. Both lists narrow by tag, and the tag is in the URL.
 
 **A resume's target is the one form that stages rather than writing as it is
 typed.** A posting is pasted in one motion, and the match below it would re-rank

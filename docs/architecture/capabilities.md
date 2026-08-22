@@ -124,6 +124,15 @@ saved filters.
 #8). It therefore has no migration, no route and no index to maintain, and the
 same call serves the browser, the CLI and anything server-side.
 
+The vocabulary is written from the app: a tag is created, renamed, archived, put
+back and merged away on its own screen, and assigned from the record and point
+screens by typing the word rather than picking an id. `tagForLabel(store, label)`
+decides whether that is a new tag or the one already there, so two spellings of
+one word cannot become two tags (application-structure.md #5.5). Both lists narrow
+by tag, and the tag is in the URL.
+
+What remains is **saved filters**.
+
 ### Composition
 
 Built. The resume entity and its target context; include and exclude toggles at

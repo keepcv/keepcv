@@ -5,6 +5,7 @@ import {
   diffManifests,
   type JsonValue,
   newUuid,
+  tagSlug,
 } from "@keepcv/core";
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
@@ -16,6 +17,8 @@ import {
   phrasingSchema,
   phrasingSetSchema,
   pointSchema,
+  pointTagSchema,
+  recordTagSchema,
   resumeContactChannelSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
@@ -24,6 +27,7 @@ import {
   resumeSnapshotSchema,
   resumeVersionSchema,
   richTextSchema,
+  tagSchema,
 } from "@keepcv/schema";
 
 export interface Call {
@@ -69,6 +73,9 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.resumeEntries.push(resumeEntrySchema.parse(row));
   } else if (path === "/v1/resume-entry-points") {
     store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row));
+  } else if (path === "/v1/tags") {
+    const { label } = body as { label: string };
+    store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
   } else {
     return undefined;
   }
@@ -180,12 +187,62 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   if (collection === "records") {
     return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
   }
+  if (collection === "tags") {
+    const { label } = merged as { label?: string };
+    return amendIn(
+      store.tags,
+      id,
+      label === undefined ? merged : { ...merged, slug: tagSlug(label) },
+      (value) => tagSchema.parse(value),
+    );
+  }
   // Named rather than defaulted: a path this stub has never heard of used to
   // amend a record, so a typo in a test passed while writing to the wrong table.
   throw new Error(`the store stub has no collection ${String(collection)}`);
 }
 
+// The pair is the whole row: putting it twice is the same answer, and taking it
+// off destroys nothing at either end.
+function onAssignment<T extends { tagId: string }>(
+  rows: T[],
+  row: T,
+  method: string,
+  carrierOf: (held: T) => string,
+): Response {
+  const index = rows.findIndex(
+    (held) => held.tagId === row.tagId && carrierOf(held) === carrierOf(row),
+  );
+
+  if (method === "DELETE") {
+    if (index >= 0) rows.splice(index, 1);
+    return new Response(null, { status: 204 });
+  }
+  if (index < 0) rows.push(row);
+  return jsonOf(row);
+}
+
+// Everything carrying the tag moves across and the tag is archived; a row that
+// already carried both keeps the one it had.
+function onMerge(store: Store, id: string, intoTagId: string, at: string): Response {
+  const moved = <T extends { tagId: string }>(rows: T[], carrierOf: (row: T) => string): T[] => {
+    const already = new Set(rows.filter((row) => row.tagId === intoTagId).map(carrierOf));
+    return rows.flatMap((row) => {
+      if (row.tagId !== id) return [row];
+      return already.has(carrierOf(row)) ? [] : [{ ...row, tagId: intoTagId }];
+    });
+  };
+
+  store.recordTags = moved(store.recordTags, (row) => row.recordId);
+  store.pointTags = moved(store.pointTags, (row) => row.pointId);
+  return amendIn(store.tags, id, { archivedAt: at, updatedAt: at }, (value) =>
+    tagSchema.parse(value),
+  );
+}
+
 const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;
+const RECORD_TAG = /^\/v1\/records\/([^/]+)\/tags\/([^/]+)$/;
+const POINT_TAG = /^\/v1\/points\/([^/]+)\/tags\/([^/]+)$/;
+const MERGE = /^\/v1\/tags\/([^/]+)\/merge$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
 const CONTACT = /^\/v1\/resumes\/([^/]+)\/contact-channels\/([^/]+)$/;
@@ -368,6 +425,30 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
   if (target !== null) return onDraft(store, target, call, at);
   const pair = CONTACT.exec(call.path);
   if (pair !== null) return onContactChannel(store, pair, call);
+
+  const onRecord = RECORD_TAG.exec(call.path);
+  if (onRecord !== null) {
+    return onAssignment(
+      store.recordTags,
+      recordTagSchema.parse({ recordId: onRecord[1], tagId: onRecord[2] }),
+      call.method,
+      (row) => row.recordId,
+    );
+  }
+  const onPoint = POINT_TAG.exec(call.path);
+  if (onPoint !== null) {
+    return onAssignment(
+      store.pointTags,
+      pointTagSchema.parse({ pointId: onPoint[1], tagId: onPoint[2] }),
+      call.method,
+      (row) => row.pointId,
+    );
+  }
+  const merging = MERGE.exec(call.path);
+  if (merging !== null) {
+    return onMerge(store, merging[1] ?? "", (call.body as { intoTagId: string }).intoTagId, at);
+  }
+
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
 
