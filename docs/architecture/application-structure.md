@@ -107,8 +107,9 @@ the entire WYSIWYG premise.
 @keepcv/templates  The template contract, the shared fixture that defines what
                  passing it means, and the templates themselves.
 @keepcv/interop  The lossy adapters - JSON Resume, RenderCV, PDF and DOCX
-                 parsing. Native export/import is not here: it is a whole-store
-                 read and write, so it is the store repository.
+                 parsing - each with a loss report counted against the resume
+                 in hand (#7.3). Native export/import is not here: it is a
+                 whole-store read and write, so it is the store repository.
 @keepcv/ats-lint ResumeDocument + the rendered file -> lint report. Pure, and
                  depends on nothing but schema: the caller renders (#7.2).
 ```
@@ -710,6 +711,30 @@ is formatted by `renderManifest` and always carries its year, and a field is
 whatever the user typed. Adding a rule is an id in `LINT_RULES` plus an entry in
 `DOCUMENT_RULES` or `OUTPUT_RULES`; there is no route and no table, for the same
 reason `search` has neither.
+
+### 7.3 Somebody else's format
+
+`toJsonResume(document)` in `@keepcv/interop` writes the resume as JSON Resume
+v1.0.0. It reads a `ResumeDocument` and not the store, because that format
+describes a resume and a store is a career history; and it is a function rather
+than a `?format=` on `/v1/export` for the reason `renderHtml` is a function -
+the caller is holding the document already.
+
+**It maps only what the format has somewhere to put.** Nine record kinds have a
+list over there; anything else - a custom section, a talk - has none, and is
+dropped rather than forced into an array that means something different. Dates
+travel as the partial dates the record holds, which are ISO 8601 already;
+`period.display` is ours and never leaves.
+
+**`lossOf(document)` is counted against this resume**, not written as a standing
+disclaimer. Three metrics, two sections with nowhere to go, one renamed heading:
+a warning naming those is one somebody reads, and anything with a count of zero
+is not in the list at all. The app shows it beside the button, before the file
+is written, because a declared loss the user reads afterwards is not a declared
+loss.
+
+The direction that writes to the store - import, and the reconciliation
+interface every import goes through - is not built.
 
 ---
 

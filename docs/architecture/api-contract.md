@@ -167,7 +167,7 @@ GET    /v1/resume-versions/:id         the version and the manifest it pinned
 POST   /v1/resume-versions/:id/restore { id } - the version this appends
 CRUD   /v1/resume-snapshots            ?resumeId=&archived=
 
-GET    /v1/export                      ?format=native|jsonresume|...
+GET    /v1/export                      the whole store, natively
 POST   /v1/import                      ?format=native - all or nothing, into an empty store
 POST   /v1/import?format=jsonresume    returns a reconciliation plan, not a result
 POST   /v1/import/:planId/apply
@@ -193,6 +193,13 @@ Notes on the non-obvious ones:
   it wants a verdict. A route would ship the whole resume to the machine it came
   from and answer with a list the caller could have computed. See
   `application-structure.md` #7.2.
+- **`/v1/export` has no `?format=jsonresume`.** It used to be listed with one.
+  The native export is a whole-store read, which is genuinely the server's, but
+  JSON Resume describes a *resume* - `toJsonResume(document)` in
+  `@keepcv/interop` is a pure function of a document the caller already holds,
+  and `lossOf(document)` names what it drops. Two answers of different shapes
+  behind one query parameter would have been the wrong route either way. See
+  `application-structure.md` #7.3.
 - **There is no `/v1/custom-sections/:id/entries`.** What prints under a custom
   heading is a `record` of kind `custom_entry`, so it is created and listed
   through `/v1/records` like every other kind; the section id is a field of the

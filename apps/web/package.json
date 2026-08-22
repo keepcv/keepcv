@@ -34,6 +34,7 @@
     "@keepcv/api": "workspace:*",
     "@keepcv/ats-lint": "workspace:*",
     "@keepcv/core": "workspace:*",
+    "@keepcv/interop": "workspace:*",
     "@keepcv/render": "workspace:*",
     "@keepcv/schema": "workspace:*",
     "@keepcv/templates": "workspace:*",
