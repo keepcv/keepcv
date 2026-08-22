@@ -139,8 +139,8 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
 `evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
 `resume_section`, `resume_entry`, `resume_entry_point`,
-`resume_contact_channel`, `resume_version`, `resume_snapshot` and
-`resume_content_ref`, and the port has eleven repositories. That is the record
+`resume_contact_channel`, `saved_filter`, `resume_version`, `resume_snapshot`
+and `resume_content_ref`, and the port has twelve repositories. That is the record
 store, its vocabulary, its editor state, the composition a resume is and its
 history. `resume_version` is append-only, like `phrasing_revision`, and held
 that way by the same hand-written trigger. There is no `search_document` and
@@ -150,15 +150,19 @@ The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
 `/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
 assignment on records and points, `/v1/tags/{id}/merge`,
 `/v1/drafts/{targetKind}/{targetId}/{field}`, a resume's contact-channel
-overrides, and sixteen owned collections: `/v1/contact-channels`,
+overrides, and seventeen owned collections: `/v1/contact-channels`,
 `/v1/organisations`, `/v1/custom-sections`, `/v1/records`, `/v1/record-links`,
 `/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
-`/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/resumes`,
-`/v1/resume-sections`, `/v1/resume-entries` and `/v1/resume-entry-points`.
+`/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/saved-filters`,
+`/v1/resumes`, `/v1/resume-sections`, `/v1/resume-entries` and
+`/v1/resume-entry-points`.
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
-the resume timeline at `/v1/resume-versions`, `/v1/resume-snapshots`,
-`GET /v1/resume-versions/diff`, `POST /v1/resume-versions/{id}/restore`, and
-`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. A template is code rather
+`POST /v1/resumes/{id}/derive`, the resume timeline at `/v1/resume-versions`,
+`/v1/resume-snapshots`, `GET /v1/resume-versions/diff`,
+`GET /v1/resume-versions/{id}/document`,
+`POST /v1/resume-versions/{id}/restore`, and `/v1/points/{id}/usage` and
+`/v1/records/{id}/usage`. There is no `/v1/backup/*`: those routes would have
+handed `createApi` a filesystem, and the mirror is the launcher's. A template is code rather
 than a row, so it has no routes: the resume carries `template_id` and
 `template_config`, and both travel in the boot payload.
 `createApi` takes the port, an owner scope and an `authenticate` function and
@@ -166,9 +170,10 @@ knows nothing else - no driver, no token store, no port number.
 
 The web app is an application frame - a navigation rail that lists the kinds the
 store holds, a search field, and a disclosure in place of the rail below `lg` -
-over the store overview, the record list, a record's detail and its form, the
-point list, the tag vocabulary, the custom-section headings, the resume list, a
-resume's composition, its compiled preview and its history, and search results. All of it is fed by one
+over the store overview, the profile, the record list, a record's detail and its
+form, the point list, the tag vocabulary, the custom-section headings, the
+resume list, a resume's composition, its compiled preview and its history, the
+backup screen, and search results. All of it is fed by one
 `GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
 payload, handed to a template in an iframe of its own that reports back how many
@@ -187,6 +192,43 @@ evidence: both are sub-collections of a point that already exists, so there is
 nothing to roll back. Evidence is private structurally - `ResumeDocument` has no
 field it could travel in - and the panel says so beside the rows, because a user
 who does not believe it will not write down the thing worth writing down.
+
+**The profile is a screen, and it is where every resume header comes from.**
+Identity stages and saves as one patch, like the resume target; contact channels
+write as they are typed, like a metric on a point; and the summary is a phrasing
+set, so it gets variants, drafts and history for free. A profile that never had
+one names no set, so starting a summary creates the set and points the profile
+at it in one write. The panel names email and phone when neither is there, which
+is the finding the linter would otherwise raise after the resume is built.
+
+**Every ordered list drags, and every ordered list still keys.** `useReorder` in
+`lib/order.ts` is the one place a move is computed: it takes the scope the
+sort-key index covers, archived rows included, answers the key through
+`keyForPosition` and writes one row. Both inputs, always - a list that only
+drags is one a keyboard cannot order, and the buttons are the only half a screen
+reader can announce. The dragged row is in React state rather than
+`dataTransfer`, which jsdom implements not at all. The record list splits custom
+entries by heading, because a custom entry's sort key is scoped by the section
+it prints under.
+
+**A resume can be started from another, and an old version leaves as a file.**
+`derivePlan` answers the rows a copy needs and one route writes them in a
+transaction; the composition and the template come across and the posting does
+not. `GET /v1/resume-versions/{id}/document` compiles what a version said in the
+words it pinned, so sending an old one no longer means restoring it first.
+
+**The store backs up to one readable file, and the launcher keeps a copy.**
+`keepcv serve` writes it beside the data directory on start, on a timer and on
+stop, whole-then-renamed and skipped when nothing changed; `keepcv backup` and
+`keepcv restore` do the same on demand; the app reaches it through `/v1/export`
+and `/v1/import`. A restore only loads into a store nothing has been written to.
+
+**A narrowed list can be kept under a name.** `saved_filter` stores what the
+narrowing means rather than the vocabulary of the control that made it, so the
+point list's one four-valued widget becomes an archived scope plus an
+`unfinished` fact the store can answer, and redrawing the control needs no
+migration. A check constraint refuses a row carrying the other subject's
+narrowing.
 
 **A link and a field are written on the record's own screen, as they are typed.**
 Both are sub-collections of a record that already exists, so they follow metrics

@@ -130,7 +130,7 @@ const clearContactChannel = createRoute({
 // One transaction, because a half-copied resume is a resume: the plan is
 // computed in `@keepcv/core` and applied through the methods a composition
 // write already uses, so no repository method is added
-// (application-structure.md #5.7).
+// (application-structure.md #5.11).
 const deriveResume = createRoute({
   method: "post",
   path: "/v1/resumes/{id}/derive",

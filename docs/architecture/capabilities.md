@@ -86,8 +86,14 @@ adapter, so it lives on the repository port and not in `@keepcv/interop`.
 
 ### Profile
 
-Identity fields; contact channels with default visibility; a professional
-summary with phrasing variants; private versus exportable flags.
+Built. Identity fields; contact channels with default visibility, written as
+they are typed and ordered like any other list; a professional summary as a
+phrasing set, so it gets variants, drafts and an append-only history for free.
+
+The screen is the header of every resume this store compiles and the only place
+it comes from. It names email and phone when neither is there, which is the
+finding the linter would otherwise raise on the preview screen, after the resume
+is built (application-structure.md #5.10).
 
 ### Career record store
 
@@ -112,7 +118,16 @@ back, with a count of what is filed under each. Until it existed the record
 form's section picker had nothing in it and `custom_entry` was hidden, so a
 whole record kind was unreachable.
 
-What remains is dragging, here as elsewhere.
+Ordering is built, here and everywhere else a list is ordered. `useReorder` in
+the web app is the one place a move is computed: it takes the scope the sort-key
+index covers, archived rows included, answers the fractional key through
+`keyForPosition` and writes one row. Dragging and the Up/Down buttons are the
+same call, and a move that changes nothing writes nothing. Both, always - a list
+that only drags is one a keyboard cannot order.
+
+The record list splits custom entries by heading, because a custom entry's sort
+key is scoped by the section it prints under and one list holding two headings
+would be a list dragged across two scopes.
 
 ### Points and phrasings
 
@@ -177,9 +192,14 @@ A resume is created, renamed, archived and put back from the app as well, which
 is what stopped the composer being reachable only by a resume somebody else had
 made.
 
-What remains is **deriving a resume from an existing one**, and dragging: the
-order is changed by keyboard today, which is the accessible half and the half
-the sort-key arithmetic actually needs.
+Deriving a resume from an existing one is built: `derivePlan(store, resumeId,
+into)` in `@keepcv/core` answers every row a copy needs and
+`POST /v1/resumes/{id}/derive` writes them in one transaction, applying the plan
+through the methods a composition write already uses. The composition, the
+template and every toggle come across; the posting does not
+(application-structure.md #5.11). Dragging is built too, at all three levels.
+
+Nothing is outstanding here.
 
 ### Render and templates
 
@@ -261,8 +281,16 @@ saying where it came from. The resume screen's third view is the timeline, the
 comparison and the restore.
 
 Starring is there too: a snapshot is a version the user named, so it asks for a
-label, and unstarring archives the row. What remains is **exporting a version**:
-`renderManifest` and `renderHtml` are both there, so it is a screen away.
+label, and unstarring archives the row.
+
+Exporting a version is built. `GET /v1/resume-versions/{id}/document` compiles a
+version's manifest through `renderManifest`, resolving the revisions the manifest
+pinned rather than what the phrasings say now, and the timeline hands that
+document to the same download panel the working resume uses. A route rather than
+a selector, for the reason the diff is one: the boot payload deliberately
+carries only what each phrasing currently says. Sending an old version no longer
+means restoring it first, which rewrote the working composition to send
+something already sent.
 
 ### Import
 

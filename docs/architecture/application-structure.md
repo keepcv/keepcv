@@ -563,6 +563,43 @@ leaves the previous copy rather than half a file. `keepcv backup` and
 
 Export is never gated by any auth or entitlement state.
 
+### 5.10 Profile
+
+The header of every resume this store compiles, and the only place it comes
+from. Identity fields stage and save as one patch, like the resume target and
+for the same reason - four fields that read as one line, with a `409` comparison
+shared with the other two forms.
+
+**Contact channels write as they are typed**, like a metric on a point: a channel
+is a row of a profile that already exists, so there is nothing to stage and
+nothing to roll back. The panel names email and phone when neither is there,
+which is the finding the linter would otherwise raise on the preview screen,
+after the resume is built.
+
+**The summary is a phrasing set like a point's**, so it gets variants, drafts and
+an append-only history for free. A profile that never had one names no set, and
+there is nowhere to type until one is made: starting it creates the set and
+points the profile at it in one write.
+
+### 5.11 Resume list
+
+Rows and a control to start one. **A resume can also be started from another**:
+`derivePlan(store, resumeId, into)` in `@keepcv/core` answers every row a copy
+needs and `POST /v1/resumes/{id}/derive` writes them in one transaction, because
+a half-copied resume is a resume. The plan is applied through the methods a
+composition write already uses, so no repository method is added - the same
+shape as a restore.
+
+**The composition, the template and every toggle come across; the posting does
+not.** A derived resume is aimed at a different opening, and inheriting the old
+company would put the wrong posting behind the match on the new one. Live rows
+only: an archived row is one the user took off, and copying it would either put
+it back or start the copy holding something already removed.
+
+The name is asked for rather than defaulted silently, because two resumes called
+the same thing is the state this is most likely to produce and the hardest to
+unpick later.
+
 ---
 
 ## 6. The phrasing editor state machine
