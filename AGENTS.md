@@ -181,8 +181,11 @@ Create, edit, archive and restore go through `useStoreMutation` in
 `lib/store-cache.ts`, which patches the cached `Store` before the request leaves,
 puts it back when the request is refused, and re-reads once it settles. A `409`
 opens a field-by-field comparison offering both resolutions and taking neither.
-Metrics are written as they are added rather than staged with a form. Evidence is
-still read-only.
+Metrics are written as they are added rather than staged with a form, and so is
+evidence: both are sub-collections of a point that already exists, so there is
+nothing to roll back. Evidence is private structurally - `ResumeDocument` has no
+field it could travel in - and the panel says so beside the rows, because a user
+who does not believe it will not write down the thing worth writing down.
 
 **A tag is created from wherever the word is being used.** The picker on a record
 and on a point takes a label, not an id: `tagForLabel(store, label)` in
