@@ -6,6 +6,7 @@
     { "path": "packages/templates" },
     { "path": "packages/render" },
     { "path": "packages/ats-lint" },
+    { "path": "packages/interop" },
     { "path": "packages/db" },
     { "path": "packages/api" },
     { "path": "apps/cli" }

@@ -123,11 +123,12 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 ## Current state
 
 `packages/schema`, `packages/core`, `packages/db`, `packages/api`,
-`packages/templates`, `packages/render` and `packages/ats-lint` exist, `apps/cli`
-is the `keepcv` launcher and `render` command and `apps/web` is the browser app.
-`interop` is specified but deliberately **not scaffolded** - empty packages are
-noise, and a sub-feature is either not started or complete. Create it when its
-capability is built, and add it to the root `tsconfig.json` references then.
+`packages/templates`, `packages/render`, `packages/ats-lint` and
+`packages/interop` exist, `apps/cli` is the `keepcv` launcher and `render`
+command and `apps/web` is the browser app. Every package the specs name is now
+scaffolded. Create a new one only when its capability is built, and add it to
+the root `tsconfig.json` references then - an empty package is noise, and a
+sub-feature is either not started or complete.
 
 `apps/web` is the one workspace project **not** in those references: it emits no
 declarations for anything to reference, so it is a `noEmit` project that Vite
@@ -261,6 +262,18 @@ are functions of the findings, and the panel says beside them that this product
 claims compatibility with no named commercial system. A rule that would fire on
 the file `ats-single-column` writes would fire on every resume this product
 produces, and a test says so.
+
+**A resume also leaves in somebody else's format, and says what it costs.**
+`toJsonResume(document)` in `@keepcv/interop` reads a `ResumeDocument` rather
+than the store, because JSON Resume describes a resume and a store is a career
+history. It maps only what that format has a list for and drops the rest rather
+than forcing a talk into `projects`; dates go as the partial dates the record
+holds, never `period.display`. `lossOf(document)` counts the loss **against this
+resume** - three metrics, one section with nowhere to go - and anything at zero
+is not in the list, because a standing disclaimer is one nobody reads. It is
+shown before the download. There is no `?format=jsonresume` on `/v1/export`:
+that route is a whole-store read and this is a function of a document the caller
+already holds.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response

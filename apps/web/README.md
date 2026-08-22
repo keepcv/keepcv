@@ -121,6 +121,9 @@ pnpm --filter @keepcv/web dev
   browser's print engine is what lays them out. Both are written from what the
   tab already holds, so neither asks the store for anything, and nothing marked
   private can travel in either.
+- **Or as JSON Resume, once you have read what it costs.** The same screen writes
+  the resume in the format other tools import, and lists first what will not fit
+  in it - counted against this resume, not as a page of general caveats.
 - **It tells you how a machine will read it.** Beside the download, the file is
   read back the way an applicant tracking system would: whether your contact
   details can be pulled out of it, whether your headings are ones anything looks

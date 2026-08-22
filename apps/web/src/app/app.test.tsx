@@ -1250,6 +1250,47 @@ describe("a resume and its template", () => {
     expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
   });
 
+  it("writes it as JSON Resume, and says first what will not fit", async () => {
+    const { store, server, resume } = aResumeToPrint();
+    const point = store.points[0];
+    if (point === undefined) throw new Error("the filled store holds a point");
+    addEvidence(store, point.id, { value: "https://private.test/salary-review" });
+
+    const written: Blob[] = [];
+    const names: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob: Blob | MediaSource) => {
+      written.push(blob as Blob);
+      return "blob:written";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+    await printed();
+
+    // Counted against this resume, and read before the file is written.
+    expect(screen.getByText(/things? do(es)? not fit that format/)).toBeInTheDocument();
+
+    press("Download JSON Resume");
+
+    expect(names).toEqual(["ada-lovelace-staff-engineer-2026.json"]);
+    const file = written[0];
+    if (file === undefined) throw new Error("the download wrote a file");
+
+    const parsed = JSON.parse(await file.text()) as {
+      basics: { name: string };
+      work: { position: string; highlights: string[] }[];
+    };
+    expect(parsed.basics.name).toBe("Ada Lovelace");
+    expect(parsed.work[0]?.highlights).toContain("Cut p95 latency from 800ms to 120ms");
+    expect(await file.text()).not.toContain("private.test");
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+
   // The browser is the PDF writer: the template's stylesheet already states the
   // page box and the break rules the print engine needs.
   it("hands that same file to the print engine", async () => {

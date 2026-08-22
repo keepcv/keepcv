@@ -220,7 +220,19 @@ browser's printing engine, because the stylesheet already states `@page` and the
 break rules - there is no PDF writer and no headless browser
 (application-structure.md #7.1).
 
-What remains is a JSON Resume adapter with explicit lossiness warnings; DOCX,
+JSON Resume is built too, as `toJsonResume(document)` in `@keepcv/interop`,
+with `lossOf(document)` beside it. The adapter reads a `ResumeDocument` rather
+than the store, because that format describes a resume and not a career history,
+and the loss report is counted **against this resume** - three metrics, two
+sections with nowhere to go - rather than being a standing list of caveats
+nobody reads. It is shown before the download, not after, and nothing with a
+count of zero appears in it.
+
+There is no `?format=jsonresume` on `/v1/export`: the native export is a
+whole-store read and belongs to the server, but a resume in somebody else's
+format is a pure function of a document the caller is already holding.
+
+What remains is JSON Resume **import** with the reconciliation interface; DOCX,
 LaTeX and Typst; and full-store backup and restore.
 
 ### Versions and snapshots

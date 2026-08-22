@@ -192,6 +192,9 @@ importers:
       '@keepcv/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@keepcv/interop':
+        specifier: workspace:*
+        version: link:../../packages/interop
       '@keepcv/render':
         specifier: workspace:*
         version: link:../../packages/render
@@ -365,6 +368,25 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.10
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@26.1.2)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.11)(yaml@2.9.0))
+
+  packages/interop:
+    dependencies:
+      '@keepcv/core':
+        specifier: workspace:*
+        version: link:../core
+      '@keepcv/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      '@keepcv/templates':
+        specifier: workspace:*
+        version: link:../templates
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
