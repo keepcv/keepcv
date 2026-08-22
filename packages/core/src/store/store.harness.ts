@@ -28,6 +28,7 @@ import {
   tagSchema,
 } from "@keepcv/schema";
 import { newUuid } from "../identity/uuid.js";
+import { tagSlug } from "../tags/slug.js";
 
 // Parsed through the schemas rather than cast: a fixture the wire format would
 // reject is one the selectors are not actually being tested against.
@@ -214,7 +215,7 @@ export function anOrganisation(name: string, overrides: Record<string, unknown> 
 export function aTag(store: Store, label: string, overrides: Record<string, unknown> = {}): Tag {
   const tag = tagSchema.parse({
     ...standard(),
-    slug: label.toLowerCase(),
+    slug: tagSlug(label),
     label,
     category: null,
     ...overrides,

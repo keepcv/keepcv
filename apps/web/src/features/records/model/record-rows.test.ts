@@ -1,7 +1,13 @@
 import { partialDateSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { formatPartialDate } from "../../../lib/partial-date.js";
-import { addOrganisation, addPoint, addRecord, emptyStore } from "../../../store.harness.js";
+import {
+  addOrganisation,
+  addPoint,
+  addRecord,
+  addTag,
+  emptyStore,
+} from "../../../store.harness.js";
 import { formatPeriod, recordRows, toRecordRow } from "./record-rows.js";
 
 describe("formatting a partial date", () => {
@@ -71,6 +77,24 @@ describe("filtering the record list", () => {
     expect(
       recordRows(store, { kind: "experience", archived: "exclude" }).map((r) => r.title),
     ).toEqual(["a job"]);
+  });
+
+  it("narrows to one tag, on top of every other narrowing", () => {
+    const store = emptyStore();
+    const job = addRecord(store, { kind: "experience", title: "a job" });
+    const project = addRecord(store, { kind: "project", title: "a project" });
+    addRecord(store, { kind: "experience", title: "untagged" });
+    const tag = addTag(store, "Kubernetes");
+    store.recordTags.push(
+      { tagId: tag.id, recordId: job.id },
+      { tagId: tag.id, recordId: project.id },
+    );
+
+    const filters = { tagId: tag.id, archived: "exclude" } as const;
+    expect(recordRows(store, filters).map((r) => r.title)).toEqual(["a job", "a project"]);
+    expect(recordRows(store, { ...filters, kind: "project" }).map((r) => r.title)).toEqual([
+      "a project",
+    ]);
   });
 
   // The store returns a total order, so two reads of unchanged data give the

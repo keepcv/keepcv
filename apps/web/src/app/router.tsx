@@ -13,6 +13,8 @@ import { RESUME_VIEWS, ResumeDetailScreen } from "../features/resumes/ui/resume-
 import { ResumeList } from "../features/resumes/ui/resume-list.js";
 import { SearchResults } from "../features/search/ui/search-results.js";
 import { Overview } from "../features/store/ui/overview.js";
+import { TAG_FILTERS } from "../features/tags/model/tag-rows.js";
+import { TagList } from "../features/tags/ui/tag-list.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
 import { prefetchStore, useStore } from "../lib/store-cache.js";
@@ -40,6 +42,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 // Filters live in the URL, not in component state (application-structure.md #3).
 const recordSearchSchema = z.object({
   kind: careerRecordKindSchema.optional(),
+  tag: uuidSchema.optional(),
   archived: z.enum(ARCHIVED_FILTERS).default("exclude"),
 });
 
@@ -63,8 +66,8 @@ const recordsRoute = createRoute({
   validateSearch: recordSearchSchema,
   component: function RecordsScreen() {
     const store = useStore(recordsRoute.useRouteContext().api);
-    const { kind, archived } = recordsRoute.useSearch();
-    return <RecordList store={store} filters={{ kind, archived }} />;
+    const { kind, tag, archived } = recordsRoute.useSearch();
+    return <RecordList store={store} filters={{ kind, tagId: tag, archived }} />;
   },
 });
 
@@ -113,10 +116,24 @@ const editRecordRoute = createRoute({
 const pointsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/points",
-  validateSearch: z.object({ filter: z.enum(POINT_FILTERS).default("all") }),
+  validateSearch: z.object({
+    filter: z.enum(POINT_FILTERS).default("all"),
+    tag: uuidSchema.optional(),
+  }),
   component: function PointsScreen() {
     const store = useStore(pointsRoute.useRouteContext().api);
-    return <PointList store={store} filter={pointsRoute.useSearch().filter} />;
+    const { filter, tag } = pointsRoute.useSearch();
+    return <PointList store={store} filters={{ filter, tagId: tag }} />;
+  },
+});
+
+const tagsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tags",
+  validateSearch: z.object({ filter: z.enum(TAG_FILTERS).default("all") }),
+  component: function TagsScreen() {
+    const { api } = tagsRoute.useRouteContext();
+    return <TagList store={useStore(api)} client={api} filter={tagsRoute.useSearch().filter} />;
   },
 });
 
@@ -203,6 +220,7 @@ const routeTree = rootRoute.addChildren([
   pointsRoute,
   newPointRoute,
   editPointRoute,
+  tagsRoute,
   resumesRoute,
   resumeRoute,
   searchRoute,

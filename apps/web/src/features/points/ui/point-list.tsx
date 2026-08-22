@@ -4,10 +4,12 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import { TaggedNote } from "../../tags/ui/tagged-note.js";
 import {
   POINT_FILTER_LABELS,
   POINT_FILTERS,
   type PointFilter,
+  type PointFilters,
   type PointListRow,
   pointRows,
 } from "../model/point-rows.js";
@@ -60,8 +62,37 @@ function Row({ row }: { row: PointListRow }) {
   );
 }
 
-export function PointList({ store, filter }: { store: Store; filter: PointFilter }) {
-  const rows = pointRows(store, filter);
+function Nothing({ filters }: { filters: PointFilters }) {
+  if (filters.tagId !== undefined) {
+    return (
+      <Empty title="Nothing carries that tag">
+        A point takes a tag on its own screen, and a record takes one on the record screen.
+      </Empty>
+    );
+  }
+  if (filters.filter !== "all") {
+    return (
+      <Empty title="Nothing here">
+        Nothing matches that filter, which on this screen is usually good news.
+      </Empty>
+    );
+  }
+  return (
+    <Empty title="No points yet">
+      A point is the atomic unit: one thing you did, and what it moved. Records hold them; resumes
+      select them.
+      <span className="mt-4 block">
+        <ButtonLink tone="primary" to="/points/new">
+          Write the first one
+        </ButtonLink>
+      </span>
+    </Empty>
+  );
+}
+
+export function PointList({ store, filters }: { store: Store; filters: PointFilters }) {
+  const rows = pointRows(store, filters);
+  const { filter, tagId } = filters;
 
   return (
     <div className="space-y-5">
@@ -76,7 +107,7 @@ export function PointList({ store, filter }: { store: Store; filter: PointFilter
               <Segment
                 key={option}
                 to="/points"
-                search={{ filter: option }}
+                search={{ ...(tagId === undefined ? {} : { tag: tagId }), filter: option }}
                 active={filter === option}
               >
                 {POINT_FILTER_LABELS[option]}
@@ -89,22 +120,12 @@ export function PointList({ store, filter }: { store: Store; filter: PointFilter
         </div>
       </div>
 
+      {tagId === undefined ? null : (
+        <TaggedNote store={store} tagId={tagId} to="/points" search={{ filter }} />
+      )}
+
       {rows.length === 0 ? (
-        <Empty title={filter === "all" ? "No points yet" : "Nothing here"}>
-          {filter === "all" ? (
-            <>
-              A point is the atomic unit: one thing you did, and what it moved. Records hold them;
-              resumes select them.
-              <span className="mt-4 block">
-                <ButtonLink tone="primary" to="/points/new">
-                  Write the first one
-                </ButtonLink>
-              </span>
-            </>
-          ) : (
-            "Nothing matches that filter, which on this screen is usually good news."
-          )}
-        </Empty>
+        <Nothing filters={filters} />
       ) : (
         <ul className="rounded-xl border border-slate-200 bg-white">
           {rows.map((row) => (

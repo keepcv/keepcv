@@ -5,9 +5,9 @@ the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** The application frame, the store overview,
 > records and points with the forms that write them, the phrasing editor with
-> its drafts and variants, resumes you can start, compose, template, preview,
-> compare and restore from, and search. Tags, evidence and a resume's target
-> context are still read-only.
+> its drafts and variants, the tag vocabulary, resumes you can start, compose,
+> target, template, preview, compare and restore from, and search. Evidence is
+> still read-only.
 
 ## Running it
 
@@ -64,6 +64,12 @@ pnpm --filter @keepcv/web dev
   wording plus short, long or angled variants, and points at one of them. A
   resume pins the wording it chose, so changing which is canonical rewrites
   nothing that was already sent.
+- **A tag is made by using the word.** Type it on a record or a point and it is
+  created and filed in one motion; type one you already have, however you spell
+  it, and it reaches for that one rather than making a second. The vocabulary
+  screen is where you rename, merge and put aside - and merging carries
+  everything the old name held onto the new one, so consolidating eighty tags
+  down to twenty loses nothing.
 - **Composing a resume costs one small request per change.** A toggle, a move or
   a placement writes one row, and the answer goes straight into the cache rather
   than sending the whole store back down the wire.

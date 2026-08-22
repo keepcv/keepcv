@@ -1,4 +1,4 @@
-import { newUuid } from "@keepcv/core";
+import { newUuid, tagSlug } from "@keepcv/core";
 import {
   type CareerRecord,
   careerRecordSchema,
@@ -21,6 +21,8 @@ import {
   resumeSectionSchema,
   type Store,
   storeSchema,
+  type Tag,
+  tagSchema,
   type Uuid,
 } from "@keepcv/schema";
 
@@ -94,6 +96,18 @@ export function addRecord(store: Store, overrides: Record<string, unknown> = {})
   });
   store.records.push(entry);
   return entry;
+}
+
+export function addTag(store: Store, label: string, overrides: Record<string, unknown> = {}): Tag {
+  const tag = tagSchema.parse({
+    ...standard(),
+    slug: tagSlug(label),
+    label,
+    category: null,
+    ...overrides,
+  });
+  store.tags.push(tag);
+  return tag;
 }
 
 export function addOrganisation(store: Store, name: string): Uuid {

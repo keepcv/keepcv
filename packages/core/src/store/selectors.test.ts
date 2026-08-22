@@ -15,6 +15,7 @@ import {
   recordsWithTag,
   resumesUsingPhrasing,
   resumesUsingPoint,
+  tagForLabel,
   tagsOfPoint,
   tagsOfRecord,
   tagUsage,
@@ -307,6 +308,18 @@ describe("tags", () => {
       { tag: react, records: 1, points: 0 },
       { tag: unused, records: 0, points: 0 },
     ]);
+  });
+
+  // Without this a screen offers to create a tag the store would refuse, and
+  // the user reads a constraint name instead of the tag they already have.
+  it("finds the tag a label would land on, however it was typed", () => {
+    const store = emptyStore();
+    const react = aTag(store, "React");
+    aTag(store, "C++");
+
+    expect(tagForLabel(store, "  react ")).toEqual(react);
+    expect(tagForLabel(store, "C++")?.label).toBe("C++");
+    expect(tagForLabel(store, "C#")).toBeUndefined();
   });
 });
 

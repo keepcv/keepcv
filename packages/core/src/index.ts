@@ -91,6 +91,7 @@ export {
   type StoreOverview,
   sectionHeading,
   type TagUsage,
+  tagForLabel,
   tagsOfPoint,
   tagsOfRecord,
   tagUsage,
