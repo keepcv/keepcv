@@ -2,6 +2,7 @@ import { newUuid } from "@keepcv/core";
 import type {
   ManifestDiff,
   RestoredResume,
+  ResumeDocument,
   ResumeSnapshot,
   ResumeVersion,
   Uuid,
@@ -9,6 +10,7 @@ import type {
 import {
   manifestDiffSchema,
   restoredResumeSchema,
+  resumeDocumentSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
 } from "@keepcv/schema";
@@ -139,5 +141,25 @@ export function useRestoreVersion(client: ApiClient, resumeId: Uuid) {
       await queries.invalidateQueries({ queryKey: versionsKey(resumeId) });
       await queries.invalidateQueries({ queryKey: STORE_KEY });
     },
+  });
+}
+
+// Fetched on demand rather than with the timeline: a manifest resolves to a
+// whole document, and a list of forty would fetch forty of them to show a
+// button. Immutable, so once fetched it never goes stale.
+export function useVersionDocument(client: ApiClient, versionId: Uuid, enabled: boolean) {
+  return useQuery({
+    queryKey: ["resume-version", versionId, "document"],
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: async (): Promise<ResumeDocument> =>
+      resumeDocumentSchema.parse(
+        await unwrap(
+          await client.v1["resume-versions"][":id"].document.$get({
+            param: { id: versionId },
+            query: {},
+          }),
+        ),
+      ),
   });
 }

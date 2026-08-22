@@ -7,6 +7,7 @@ import {
   type Repositories,
   type RestoreChange,
   type RestorePlan,
+  renderManifest,
   restorePlan,
   type UnitOfWork,
 } from "@keepcv/core";
@@ -15,6 +16,7 @@ import {
   type PhrasingRevision,
   type ResumeManifest,
   restoredResumeSchema,
+  resumeDocumentSchema,
   resumeSnapshotInputSchema,
   resumeSnapshotPatchSchema,
   resumeSnapshotSchema,
@@ -101,6 +103,27 @@ const readVersion = createRoute({
   responses: {
     ...sessionRequired,
     200: jsonResponse(resumeVersionSchema, "the version"),
+    404: noVersion,
+  },
+});
+
+// A route rather than a function of the boot payload, for the reason `diff` is
+// one: a manifest pins its wordings by revision id and the payload carries only
+// what each phrasing currently says (api-contract.md #3).
+const readVersionDocument = createRoute({
+  method: "get",
+  path: `${versionsPath}/{id}/document`,
+  tags: ["resume versions"],
+  summary: "Compile what a version said into the document every renderer binds to",
+  description:
+    "The wordings are the ones the version pinned, not the ones the store holds now, so a resume sent in March goes on saying what it said.",
+  request: {
+    params: idParam,
+    query: z.object({ locale: z.string().min(2).optional() }),
+  },
+  responses: {
+    ...sessionRequired,
+    200: jsonResponse(resumeDocumentSchema, "the compiled document"),
     404: noVersion,
   },
 });
@@ -253,6 +276,19 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     .openapi(readVersion, async (c) => {
       const { id } = c.req.valid("param");
       return c.json(await unitOfWork.run(async (r) => await r.versions.get(id)), 200);
+    })
+    .openapi(readVersionDocument, async (c) => {
+      const { id } = c.req.valid("param");
+      const { locale } = c.req.valid("query");
+      const document = await unitOfWork.run(async (r) => {
+        const version = await r.versions.get(id);
+        const revisions = await revisionsFor(r, [version.manifest]);
+        return renderManifest(version.manifest, revisions, {
+          generatedAt: new Date().toISOString(),
+          ...(locale === undefined ? {} : { locale }),
+        });
+      });
+      return c.json(document, 200);
     })
     .openapi(restoreVersion, async (c) => {
       const { id } = c.req.valid("param");

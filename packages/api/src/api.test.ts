@@ -130,6 +130,7 @@ describe("the OpenAPI document", () => {
       "/v1/resume-versions",
       "/v1/resume-versions/diff",
       "/v1/resume-versions/{id}",
+      "/v1/resume-versions/{id}/document",
       "/v1/resume-versions/{id}/restore",
       "/v1/resumes",
       "/v1/resumes/{id}",

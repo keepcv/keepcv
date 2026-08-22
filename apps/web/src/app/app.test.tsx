@@ -1872,3 +1872,27 @@ describe("starting a resume from another", () => {
     expect(store.resumeEntries.filter((row) => row.resumeId === resume.id)).toHaveLength(1);
   });
 });
+
+describe("sending an old version", () => {
+  // A version is a file the same way the working resume is. Restoring it first
+  // would rewrite the working composition to send something already sent.
+  it("compiles a version in the words it pinned, without restoring anything", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency", { recordId: record.id });
+    const resume = addResume(store, { name: "Staff engineer" });
+    addEntryPoint(store, addEntry(store, addSection(store, resume.id), record.id), point);
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}?view=history`);
+
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await screen.findByText("#1");
+    press("Export");
+
+    expect(await screen.findByRole("button", { name: "Download HTML" })).toBeInTheDocument();
+    expect(screen.getByText(/Version #1, in the words it pinned/)).toBeInTheDocument();
+    // Nothing was restored: the composition is exactly what it was.
+    expect(server.calls.some((call) => call.path.endsWith("/restore"))).toBe(false);
+  });
+});

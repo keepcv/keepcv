@@ -6,6 +6,7 @@ import {
   diffManifests,
   type JsonValue,
   newUuid,
+  renderManifest,
   tagSlug,
 } from "@keepcv/core";
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
@@ -305,6 +306,7 @@ const MERGE = /^\/v1\/tags\/([^/]+)\/merge$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
 const DERIVE = /^\/v1\/resumes\/([^/]+)\/derive$/;
+const VERSION_DOCUMENT = /^\/v1\/resume-versions\/([^/]+)\/document$/;
 const CONTACT = /^\/v1\/resumes\/([^/]+)\/contact-channels\/([^/]+)$/;
 
 interface CaptureInput {
@@ -389,6 +391,17 @@ function read(store: Store, archive: Archive, url: URL): Response {
     const b = versions.find((row) => row.id === url.searchParams.get("b"));
     if (a === undefined || b === undefined) return jsonOf({ status: 404 }, 404);
     return jsonOf(diffManifests(a.manifest, b.manifest, store.phrasingRevisions));
+  }
+
+  const compiling = VERSION_DOCUMENT.exec(url.pathname);
+  if (compiling !== null) {
+    const version = versions.find((row) => row.id === compiling[1]);
+    if (version === undefined) return jsonOf({ status: 404 }, 404);
+    return jsonOf(
+      renderManifest(version.manifest, store.phrasingRevisions, {
+        generatedAt: new Date().toISOString(),
+      }),
+    );
   }
 
   if (url.pathname === "/v1/resume-versions") {
