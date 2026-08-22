@@ -401,6 +401,13 @@ tag carried onto another one and archives it, so no assignment is lost with the
 name. Its counts link to the lists narrowed by that tag, which is what makes
 "0 records, 0 points" actionable rather than trivia.
 
+**Saved filters sit above the list they narrow**, not on a screen of their own:
+a saved filter is a shortcut back to a list, so it lives where that list is. The
+row keeps what the narrowing means rather than the vocabulary of the control
+that made it (`data-model.md` #8.1), and a filter already naming what is on
+screen is said so rather than offered for saving a second time. Forgetting one
+archives it, like every other owned row.
+
 **Archived tags are offered nowhere but their own filter.** Assigning one would
 put a hidden word on a live row, so the picker refuses and says where to put it
 back - the alternative, restoring it silently, is a write the user did not ask
@@ -533,10 +540,65 @@ screen fetches them beside the versions.
 
 ### 5.9 Export and data
 
-Needs: format list with explicit lossiness warnings; mirror status
-and location; restore.
+Built. Two panels: take a copy, and put one back. The copy is `GET /v1/export`,
+which is the archive rather than the boot payload - superseded wordings and
+every version come with it - written to a file from the tab that read it. Putting
+one back is `POST /v1/import`, all or nothing and only into a store nothing has
+been written to yet, because merging two career histories needs a review step in
+front of it.
+
+**What it would carry is counted, not described.** "Everything" is what every
+backup screen says and the sentence nobody believes; "2 records, 3 points, 1
+resume" is one somebody reads. The same panel says whether a load would be
+refused, before a file is chosen rather than after.
+
+**The mirror belongs to the launcher, not to the API.** `keepcv serve` writes a
+readable copy of the whole store beside the data directory as it starts, on a
+timer, and as it stops, skipping the write when the store says exactly what the
+file already says. It is written whole and moved into place, so a crash mid-write
+leaves the previous copy rather than half a file. `keepcv backup` and
+`keepcv restore` are the same two things without a browser open. There is no
+`/v1/backup/*`: those routes would have handed `createApi` a filesystem
+(`api-contract.md` #3).
 
 Export is never gated by any auth or entitlement state.
+
+### 5.10 Profile
+
+The header of every resume this store compiles, and the only place it comes
+from. Identity fields stage and save as one patch, like the resume target and
+for the same reason - four fields that read as one line, with a `409` comparison
+shared with the other two forms.
+
+**Contact channels write as they are typed**, like a metric on a point: a channel
+is a row of a profile that already exists, so there is nothing to stage and
+nothing to roll back. The panel names email and phone when neither is there,
+which is the finding the linter would otherwise raise on the preview screen,
+after the resume is built.
+
+**The summary is a phrasing set like a point's**, so it gets variants, drafts and
+an append-only history for free. A profile that never had one names no set, and
+there is nowhere to type until one is made: starting it creates the set and
+points the profile at it in one write.
+
+### 5.11 Resume list
+
+Rows and a control to start one. **A resume can also be started from another**:
+`derivePlan(store, resumeId, into)` in `@keepcv/core` answers every row a copy
+needs and `POST /v1/resumes/{id}/derive` writes them in one transaction, because
+a half-copied resume is a resume. The plan is applied through the methods a
+composition write already uses, so no repository method is added - the same
+shape as a restore.
+
+**The composition, the template and every toggle come across; the posting does
+not.** A derived resume is aimed at a different opening, and inheriting the old
+company would put the wrong posting behind the match on the new one. Live rows
+only: an archived row is one the user took off, and copying it would either put
+it back or start the copy holding something already removed.
+
+The name is asked for rather than defaulted silently, because two resumes called
+the same thing is the state this is most likely to produce and the hardest to
+unpick later.
 
 ---
 

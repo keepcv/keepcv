@@ -1,11 +1,14 @@
-import type { Store, Uuid } from "@keepcv/schema";
+import type { Point as PointRecord, Store, Uuid } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
+import { useUpdatePoint } from "../../points/api/use-points.js";
 import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetArchived } from "../api/use-records.js";
 import { type PointRow, recordDetail } from "../model/record-detail.js";
@@ -23,17 +26,34 @@ function Meta({ children }: { children: ReactNode }) {
   );
 }
 
-function Point({ point }: { point: PointRow }) {
+function Point({
+  point,
+  order,
+  row,
+}: {
+  point: PointRow;
+  order: Reorder<PointRecord>;
+  row: PointRecord | undefined;
+}) {
   return (
-    <li className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0">
-      <Link
-        to="/points/$pointId/edit"
-        params={{ pointId: point.id }}
-        className="block text-sm text-slate-800 underline-offset-2 hover:underline data-[archived=true]:text-slate-400"
-        data-archived={point.isArchived}
-      >
-        {point.text || "an empty point"}
-      </Link>
+    <li
+      {...(row === undefined ? {} : order.rowProps(row))}
+      className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0 data-[held=true]:opacity-40"
+    >
+      <div className="flex items-baseline gap-1">
+        <DragGrip />
+        <Link
+          to="/points/$pointId/edit"
+          params={{ pointId: point.id }}
+          className="block min-w-0 flex-1 text-sm text-slate-800 underline-offset-2 hover:underline data-[archived=true]:text-slate-400"
+          data-archived={point.isArchived}
+        >
+          {point.text || "an empty point"}
+        </Link>
+        {row === undefined ? null : (
+          <ReorderControls order={order} row={row} subject={point.text || "an empty point"} />
+        )}
+      </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {point.metrics.map((metric) => (
           <Badge key={metric} tone="accent">
@@ -47,6 +67,48 @@ function Point({ point }: { point: PointRow }) {
         {point.isArchived ? <Badge tone="warning">Archived</Badge> : null}
       </div>
     </li>
+  );
+}
+
+// The order points print in under this record, which is what a resume starts
+// from before it reorders them for itself.
+function Points({
+  store,
+  client,
+  recordId,
+  points,
+}: {
+  store: Store;
+  client: ApiClient;
+  recordId: Uuid;
+  points: PointRow[];
+}) {
+  const update = useUpdatePoint(client);
+  const scope = store.points.filter((row) => row.recordId === recordId);
+  const order = useReorder(scope, (point, sortKey) => {
+    update.mutate({ point, patch: { sortKey } });
+  });
+
+  if (points.length === 0) {
+    return (
+      <p className="py-2 text-sm text-slate-600">
+        Nothing here yet. A point is one thing you did and what it moved - the unit every resume is
+        assembled from.
+      </p>
+    );
+  }
+
+  return (
+    <ul>
+      {points.map((point) => (
+        <Point
+          key={point.id}
+          point={point}
+          order={order}
+          row={scope.find((row) => row.id === point.id)}
+        />
+      ))}
+    </ul>
   );
 }
 
@@ -144,18 +206,7 @@ export function RecordDetail({
           What you actually did. Wording is chosen per resume; this is the canonical one.
         </PanelHeader>
         <PanelBody>
-          {points.length === 0 ? (
-            <p className="py-2 text-sm text-slate-600">
-              Nothing here yet. A point is one thing you did and what it moved - the unit every
-              resume is assembled from.
-            </p>
-          ) : (
-            <ul>
-              {points.map((point) => (
-                <Point key={point.id} point={point} />
-              ))}
-            </ul>
-          )}
+          <Points store={store} client={client} recordId={recordId} points={points} />
         </PanelBody>
       </Panel>
 

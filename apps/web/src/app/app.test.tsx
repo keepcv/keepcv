@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_AFTER_MS } from "../features/phrasings/model/editor.js";
 import { apiClient } from "../lib/api.js";
 import {
+  addContactChannel,
   addCustomSection,
   addDraft,
   addEntry,
@@ -18,6 +19,7 @@ import {
   addRecordField,
   addResume,
   addRevision,
+  addSavedFilter,
   addSection,
   addTag,
   aFilledStore,
@@ -68,6 +70,7 @@ const EPOCH_ISO = "2026-01-01T00:00:00.000Z";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("the app", () => {
@@ -1616,5 +1619,447 @@ describe("what backs a point up", () => {
     });
     expect(store.evidence).toHaveLength(1);
     expect(store.evidence[0]?.archivedAt).not.toBeNull();
+  });
+});
+
+describe("the profile", () => {
+  it("puts a name on the store, which is what every resume header prints", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Name");
+    type("Name", "Ada Lovelace");
+    type("Headline", "Engine lead");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.profile.fullName).toBe("Ada Lovelace");
+    });
+    expect(store.profile.headline).toBe("Engine lead");
+  });
+
+  it("says nothing was saved when the profile changed underneath, and keeps both", async () => {
+    const store = emptyStore();
+    store.profile.fullName = "Ada Lovelace";
+    const server = storeServer(store, (call) =>
+      call.method === "PATCH"
+        ? jsonOf(
+            {
+              type: "https://keepcv.app/problems/conflict",
+              title: "Conflict",
+              status: 409,
+              detail: "The profile changed.",
+              instance: "/v1/profile",
+              current: { ...store.profile, fullName: "A. Lovelace" },
+            },
+            409,
+          )
+        : undefined,
+    );
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Name");
+    type("Name", "Ada Byron");
+    press("Save");
+
+    expect(
+      await screen.findByText("The profile changed while you were editing it"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ada Byron")).toBeInTheDocument();
+    expect(screen.getByText("A. Lovelace")).toBeInTheDocument();
+    expect(store.profile.fullName).toBe("Ada Lovelace");
+  });
+
+  it("adds a way to be reached, as it is typed", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Value");
+    type("Value", "ada@example.org");
+    press("Add a way to reach you");
+
+    await waitFor(() => {
+      expect(store.contactChannels).toHaveLength(1);
+    });
+    expect(store.contactChannels[0]).toMatchObject({
+      kind: "email",
+      value: "ada@example.org",
+      isDefaultVisible: true,
+    });
+  });
+
+  // The rule the linter fires on, said where it can still be acted on rather
+  // than on the preview screen after the resume is built.
+  it("names the contact kinds a machine reading the resume would want", async () => {
+    mount(() => jsonOf(emptyStore()), "/profile");
+
+    expect(await screen.findByText(/No email and no phone yet/)).toBeInTheDocument();
+  });
+
+  it("does not nag once both are there", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    addContactChannel(store, "phone", "+44 20 7946 0000", { sortKey: "a1" });
+    mount(() => jsonOf(store), "/profile");
+
+    expect(await screen.findByText("ada@example.org")).toBeInTheDocument();
+    expect(screen.queryByText(/yet\./)).not.toBeInTheDocument();
+  });
+
+  // "A resume with neither" is only true while both are missing, and the first
+  // real store this was tried on had an email.
+  it("stops saying neither once one of the two is there", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    mount(() => jsonOf(store), "/profile");
+
+    expect(await screen.findByText(/No phone yet/)).toBeInTheDocument();
+    expect(screen.queryByText(/with neither/)).not.toBeInTheDocument();
+  });
+
+  // A summary is a phrasing set like a point's, so it has to be made before
+  // there is anywhere to type: the profile names a set rather than holding text.
+  it("starts a summary by making the set the profile names", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByRole("button", { name: "Write a summary" });
+    press("Write a summary");
+
+    await waitFor(() => {
+      expect(store.profile.summarySetId).not.toBeNull();
+    });
+    expect(store.phrasingSets).toHaveLength(1);
+    expect(store.phrasingSets[0]?.purpose).toBe("profile_summary");
+    expect(await screen.findByLabelText("Wording, standard")).toBeInTheDocument();
+  });
+
+  it("archives a contact channel rather than deleting it", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByText("ada@example.org");
+    press("Archive");
+
+    await waitFor(() => {
+      expect(store.contactChannels[0]?.archivedAt).not.toBeNull();
+    });
+    expect(store.contactChannels).toHaveLength(1);
+  });
+});
+
+// jsdom implements no `dataTransfer`, which is exactly why the row being
+// dragged lives in React state instead.
+function dragOnto(from: HTMLElement, to: HTMLElement): void {
+  fireEvent.dragStart(from);
+  fireEvent.dragOver(to);
+  fireEvent.drop(to);
+  fireEvent.dragEnd(from);
+}
+
+function rowOf(text: string): HTMLElement {
+  const row = screen.getByText(text).closest("li");
+  if (row === null) throw new Error(`no row holding ${text}`);
+  return row;
+}
+
+describe("ordering", () => {
+  it("writes one row when a record is dragged onto another", async () => {
+    const store = emptyStore();
+    const first = addRecord(store, { kind: "project", title: "Difference Engine" });
+    addRecord(store, { kind: "project", title: "Analytical Engine", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project");
+
+    await screen.findByText("Difference Engine");
+    dragOnto(rowOf("Difference Engine"), rowOf("Analytical Engine"));
+
+    await waitFor(() => {
+      expect(store.records[0]?.sortKey).not.toBe("a0");
+    });
+    expect(store.records[0]?.id).toBe(first.id);
+    expect(store.records[1]?.sortKey).toBe("a1");
+    // One row, because the key is fractional: a move must not rewrite the list.
+    expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("writes nothing when a row is dropped on itself", async () => {
+    const store = emptyStore();
+    addRecord(store, { kind: "project", title: "Difference Engine" });
+    addRecord(store, { kind: "project", title: "Analytical Engine", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project");
+
+    await screen.findByText("Difference Engine");
+    dragOnto(rowOf("Difference Engine"), rowOf("Difference Engine"));
+
+    expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(0);
+  });
+
+  // A custom entry is scoped by the section it prints under, so two headings are
+  // two lists: one of them would otherwise collide on `record_sort_key_unique`.
+  it("keeps custom entries in a list per heading", async () => {
+    const store = emptyStore();
+    const patents = addCustomSection(store, "Patents");
+    const exhibits = addCustomSection(store, "Exhibitions", { sortKey: "a1" });
+    addRecord(store, { kind: "custom_entry", title: "A patent", customSectionId: patents });
+    addRecord(store, { kind: "custom_entry", title: "A show", customSectionId: exhibits });
+
+    mount(() => jsonOf(store), "/records?kind=custom_entry");
+
+    expect(await screen.findByText("Patents")).toBeInTheDocument();
+    expect(screen.getByText("Exhibitions")).toBeInTheDocument();
+    expect(rowOf("A patent").parentElement).not.toBe(rowOf("A show").parentElement);
+  });
+
+  it("orders a record's points by keyboard as well as by dragging", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    addPoint(store, "Cut p95 latency", { recordId: record.id });
+    addPoint(store, "Rewrote the scheduler", { recordId: record.id, sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByText("Cut p95 latency");
+    press("Move Rewrote the scheduler up");
+
+    await waitFor(() => {
+      expect(store.points[1]?.sortKey).not.toBe("a1");
+    });
+    expect(String(store.points[1]?.sortKey) < "a0").toBe(true);
+  });
+
+  it("drags a section of a resume above the one over it", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const resume = addResume(store, { name: "Staff engineer" });
+    const experience = addSection(store, resume.id);
+    addEntry(store, experience, record.id);
+    addSection(store, resume.id, { kind: "project", sortKey: "a1" });
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}`);
+
+    const held = (await screen.findByRole("heading", { name: "Projects" })).closest(
+      "div[draggable]",
+    );
+    const target = screen.getByRole("heading", { name: "Experience" }).closest("div[draggable]");
+    if (held === null || target === null) throw new Error("no draggable section");
+    dragOnto(held as HTMLElement, target as HTMLElement);
+
+    await waitFor(() => {
+      expect(store.resumeSections[1]?.sortKey).not.toBe("a1");
+    });
+    expect(String(store.resumeSections[1]?.sortKey) < "a0").toBe(true);
+  });
+});
+
+describe("starting a resume from another", () => {
+  it("copies the selection and opens the copy", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency", { recordId: record.id });
+    const resume = addResume(store, { name: "Staff engineer", targetCompany: "Babbage Ltd" });
+    addEntryPoint(store, addEntry(store, addSection(store, resume.id), record.id), point);
+    const server = storeServer(store);
+    mount(server.answer, "/resumes");
+
+    await screen.findByText("Staff engineer");
+    press("Start one from this");
+    press("Start it");
+
+    await waitFor(() => {
+      expect(store.resumes).toHaveLength(2);
+    });
+    const copy = store.resumes[1];
+    expect(copy?.name).toBe("Staff engineer copy");
+    // The posting does not come across: the copy is aimed at a different opening.
+    expect(copy?.targetCompany).toBeNull();
+    expect(store.resumeSections.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);
+    expect(store.resumeEntryPoints.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);
+    // The source is read, never moved.
+    expect(store.resumeEntries.filter((row) => row.resumeId === resume.id)).toHaveLength(1);
+  });
+});
+
+describe("sending an old version", () => {
+  // A version is a file the same way the working resume is. Restoring it first
+  // would rewrite the working composition to send something already sent.
+  it("compiles a version in the words it pinned, without restoring anything", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency", { recordId: record.id });
+    const resume = addResume(store, { name: "Staff engineer" });
+    addEntryPoint(store, addEntry(store, addSection(store, resume.id), record.id), point);
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}?view=history`);
+
+    await screen.findByRole("button", { name: "Save a version" });
+    press("Save a version");
+    await screen.findByText("#1");
+    press("Export");
+
+    expect(await screen.findByRole("button", { name: "Download HTML" })).toBeInTheDocument();
+    expect(screen.getByText(/Version #1, in the words it pinned/)).toBeInTheDocument();
+    // Nothing was restored: the composition is exactly what it was.
+    expect(server.calls.some((call) => call.path.endsWith("/restore"))).toBe(false);
+  });
+});
+
+describe("your data", () => {
+  // The archive rather than the boot payload: a backup carries superseded
+  // wordings and every version, which `/v1/store` deliberately does not.
+  it("reads the export rather than the payload the app already holds", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    const downloaded: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:kept");
+    vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded.push(this.download);
+    });
+    mount(server.answer, "/data");
+
+    await screen.findByRole("button", { name: "Download a backup" });
+    press("Download a backup");
+
+    await waitFor(() => {
+      expect(downloaded).toHaveLength(1);
+    });
+    expect(downloaded[0]).toMatch(/^keepcv-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(server.calls.some((call) => call.path === "/v1/export")).toBe(true);
+  });
+
+  it("counts what a backup would carry rather than promising everything", async () => {
+    mount(() => jsonOf(aFilledStore()), "/data");
+
+    expect(
+      await screen.findByText(/Currently 2 records, 3 points, 1 resume\./),
+    ).toBeInTheDocument();
+  });
+
+  it("says a load will be refused while the store still holds something", async () => {
+    mount(() => jsonOf(aFilledStore()), "/data");
+
+    expect(
+      await screen.findByText(/already holds something, so a load will be refused/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers to load straight in when nothing has been written yet", async () => {
+    mount(() => jsonOf(emptyStore()), "/data");
+
+    expect(
+      await screen.findByText(/empty, so a backup will load straight into it/),
+    ).toBeInTheDocument();
+  });
+
+  // The store refuses an import over a profile someone has filled in, so a
+  // screen promising the load would work is a screen that lies.
+  it("counts a filled-in profile as something written", async () => {
+    const store = emptyStore();
+    store.profile.fullName = "Ada Lovelace";
+    mount(() => jsonOf(store), "/data");
+
+    expect(await screen.findByText(/already holds something/)).toBeInTheDocument();
+    expect(screen.getByText(/Just the profile so far/)).toBeInTheDocument();
+  });
+});
+
+describe("saved filters", () => {
+  it("keeps the list you are looking at under a name", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project&archived=only");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+    type("A name for this filter", "Shelved projects");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.savedFilters).toHaveLength(1);
+    });
+    expect(store.savedFilters[0]).toMatchObject({
+      name: "Shelved projects",
+      subject: "record",
+      kind: "project",
+      archived: "only",
+      unfinished: null,
+    });
+  });
+
+  // The four values one control holds are stored apart, so a row says what it
+  // means rather than repeating a widget's vocabulary.
+  it("stores what a point filter means, not the name of the control", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    mount(server.answer, "/points?filter=unmeasured");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+    type("A name for this filter", "Needs a number");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.savedFilters).toHaveLength(1);
+    });
+    expect(store.savedFilters[0]).toMatchObject({
+      subject: "point",
+      unfinished: "unmeasured",
+      archived: "exclude",
+      kind: null,
+    });
+  });
+
+  // The box replaces the button that was just clicked, so it appears under the
+  // cursor: one that is not focused reads as broken, which it did in a browser.
+  it("puts the cursor in the name box it just opened", async () => {
+    mount(() => jsonOf(aFilledStore()), "/records");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+
+    expect(screen.getByLabelText("A name for this filter")).toHaveFocus();
+  });
+
+  it("offers a saved one as a way back to that list", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    mount(() => jsonOf(store), "/records");
+
+    const chip = await screen.findByRole("link", { name: "Shelved projects" });
+    expect(chip).toHaveAttribute("href", expect.stringContaining("kind=project"));
+    expect(chip).toHaveAttribute("href", expect.stringContaining("archived=only"));
+  });
+
+  it("says the list is already saved rather than offering to save it twice", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    mount(() => jsonOf(store), "/records?kind=project&archived=only");
+
+    expect(await screen.findByText("Saved as Shelved projects")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save this filter" })).not.toBeInTheDocument();
+  });
+
+  it("forgets one by archiving it, never by deleting", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    const server = storeServer(store);
+    mount(server.answer, "/records");
+
+    await screen.findByRole("link", { name: "Shelved projects" });
+    press("Forget Shelved projects");
+
+    await waitFor(() => {
+      expect(store.savedFilters[0]?.archivedAt).not.toBeNull();
+    });
+    expect(store.savedFilters).toHaveLength(1);
   });
 });

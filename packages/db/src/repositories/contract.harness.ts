@@ -17,6 +17,7 @@ import type {
   ResumeEntryPointInput,
   ResumeInput,
   ResumeSectionInput,
+  SavedFilterInput,
   TagInput,
   Uuid,
 } from "@keepcv/schema";
@@ -394,4 +395,19 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       store: () => store,
     });
   });
+}
+
+export function savedFilterInput(name: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id: newUuid(),
+    name,
+    subject: "record",
+    query: "",
+    kind: null,
+    tagId: null,
+    archived: "exclude",
+    unfinished: null,
+    sortKey: "a0",
+    ...overrides,
+  } as SavedFilterInput;
 }

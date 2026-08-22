@@ -17,6 +17,7 @@ import type {
   Evidence,
   EvidenceInput,
   EvidencePatch,
+  FilterSubject,
   Metric,
   MetricInput,
   MetricPatch,
@@ -64,6 +65,9 @@ import type {
   ResumeVersion,
   ResumeVersionInput,
   RichText,
+  SavedFilter,
+  SavedFilterInput,
+  SavedFilterPatch,
   Store,
   Tag,
   TagInput,
@@ -171,6 +175,18 @@ export interface CustomSectionRepository {
   update(id: Uuid, patch: CustomSectionPatch, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<CustomSection>;
+}
+
+export interface SavedFilterRepository {
+  list(options?: {
+    subject?: FilterSubject | undefined;
+    includeArchived?: boolean | undefined;
+  }): Promise<SavedFilter[]>;
+  get(id: Uuid): Promise<SavedFilter>;
+  create(input: SavedFilterInput): Promise<SavedFilter>;
+  update(id: Uuid, patch: SavedFilterPatch, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
 }
 
 export interface CareerRecordRepository {
@@ -468,6 +484,7 @@ export interface Repositories {
   profile: ProfileRepository;
   organisations: OrganisationRepository;
   customSections: CustomSectionRepository;
+  savedFilters: SavedFilterRepository;
   records: CareerRecordRepository;
   points: PointRepository;
   phrasings: PhrasingRepository;

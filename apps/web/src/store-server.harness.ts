@@ -1,15 +1,19 @@
 import {
   captureManifest,
   contentHash,
+  derivePlan,
   deriveRevision,
   diffManifests,
   type JsonValue,
   newUuid,
+  renderManifest,
   tagSlug,
 } from "@keepcv/core";
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
+  CURRENT_SCHEMA_VERSION,
   careerRecordSchema,
+  contactChannelSchema,
   customSectionSchema,
   draftSchema,
   evidenceSchema,
@@ -20,6 +24,7 @@ import {
   phrasingSetSchema,
   pointSchema,
   pointTagSchema,
+  profileSchema,
   recordFieldSchema,
   recordLinkSchema,
   recordTagSchema,
@@ -31,6 +36,7 @@ import {
   resumeSnapshotSchema,
   resumeVersionSchema,
   richTextSchema,
+  savedFilterSchema,
   tagSchema,
 } from "@keepcv/schema";
 
@@ -65,6 +71,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
   const row = stamp(body, at);
   if (path === "/v1/organisations") {
     store.organisations.push(organisationSchema.parse(row));
+  } else if (path === "/v1/contact-channels") {
+    store.contactChannels.push(contactChannelSchema.parse(row));
   } else if (path === "/v1/records") {
     store.records.push(careerRecordSchema.parse(row));
   } else if (path === "/v1/resumes") {
@@ -85,6 +93,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.recordFields.push(recordFieldSchema.parse(row));
   } else if (path === "/v1/custom-sections") {
     store.customSections.push(customSectionSchema.parse(row));
+  } else if (path === "/v1/saved-filters") {
+    store.savedFilters.push(savedFilterSchema.parse(row));
   } else if (path === "/v1/tags") {
     const { label } = body as { label: string };
     store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
@@ -101,6 +111,33 @@ function createPhrasing(store: Store, body: unknown, at: string): Response {
 
   store.phrasings.push(row);
   store.phrasingRevisions.push(revision);
+  return jsonOf(row, 201);
+}
+
+// A set with its first wording, which is how a profile summary is started.
+function createPhrasingSet(store: Store, body: unknown, at: string): Response {
+  const { phrasing, ...columns } = body as {
+    id: string;
+    purpose: string;
+    phrasing: { id: string; body: unknown };
+  };
+  const revision = revisionOf(phrasing.id, phrasing.body, at);
+
+  store.phrasings.push(
+    phrasingSchema.parse({
+      ...stamp(phrasing, at),
+      phrasingSetId: columns.id,
+      currentRevisionId: revision.id,
+    }),
+  );
+  store.phrasingRevisions.push(revision);
+
+  const row = phrasingSetSchema.parse({
+    ...stamp({ id: columns.id }, at),
+    purpose: columns.purpose,
+    canonicalPhrasingId: phrasing.id,
+  });
+  store.phrasingSets.push(row);
   return jsonOf(row, 201);
 }
 
@@ -211,6 +248,12 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   if (collection === "custom-sections") {
     return amendIn(store.customSections, id, merged, (value) => customSectionSchema.parse(value));
   }
+  if (collection === "saved-filters") {
+    return amendIn(store.savedFilters, id, merged, (value) => savedFilterSchema.parse(value));
+  }
+  if (collection === "contact-channels") {
+    return amendIn(store.contactChannels, id, merged, (value) => contactChannelSchema.parse(value));
+  }
   if (collection === "tags") {
     const { label } = merged as { label?: string };
     return amendIn(
@@ -269,6 +312,8 @@ const POINT_TAG = /^\/v1\/points\/([^/]+)\/tags\/([^/]+)$/;
 const MERGE = /^\/v1\/tags\/([^/]+)\/merge$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
+const DERIVE = /^\/v1\/resumes\/([^/]+)\/derive$/;
+const VERSION_DOCUMENT = /^\/v1\/resume-versions\/([^/]+)\/document$/;
 const CONTACT = /^\/v1\/resumes\/([^/]+)\/contact-channels\/([^/]+)$/;
 
 interface CaptureInput {
@@ -355,6 +400,17 @@ function read(store: Store, archive: Archive, url: URL): Response {
     return jsonOf(diffManifests(a.manifest, b.manifest, store.phrasingRevisions));
   }
 
+  const compiling = VERSION_DOCUMENT.exec(url.pathname);
+  if (compiling !== null) {
+    const version = versions.find((row) => row.id === compiling[1]);
+    if (version === undefined) return jsonOf({ status: 404 }, 404);
+    return jsonOf(
+      renderManifest(version.manifest, store.phrasingRevisions, {
+        generatedAt: new Date().toISOString(),
+      }),
+    );
+  }
+
   if (url.pathname === "/v1/resume-versions") {
     const resumeId = url.searchParams.get("resumeId");
     return jsonOf({
@@ -370,6 +426,15 @@ function read(store: Store, archive: Archive, url: URL): Response {
     );
     return jsonOf({
       items: snapshots.filter((row) => row.archivedAt === null && of.has(row.resumeVersionId)),
+    });
+  }
+
+  // The archive rather than the boot payload: an export carries history too.
+  if (url.pathname === "/v1/export") {
+    return jsonOf({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      store: { ...store, resumeVersions: versions, resumeSnapshots: snapshots },
     });
   }
 
@@ -443,6 +508,27 @@ function onSnapshot(snapshots: ResumeSnapshot[], call: Call, at: string): Respon
   );
 }
 
+// The plan is the store's, as it is in the API: what the app answers for is the
+// request it sent and the re-read that follows.
+function onDerive(store: Store, from: RegExpExecArray, call: Call, at: string): Response {
+  const plan = derivePlan(store, (from[1] ?? "") as Uuid, call.body as { id: Uuid; name: string });
+  if (plan === undefined) return jsonOf({ status: 404 }, 404);
+
+  const resume = resumeSchema.parse(stamp(plan.resume, at));
+  store.resumes.push(resume);
+  for (const row of plan.sections) {
+    store.resumeSections.push(resumeSectionSchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.entries) {
+    store.resumeEntries.push(resumeEntrySchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.entryPoints) {
+    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(stamp(row, at)));
+  }
+  store.resumeContactChannels.push(...plan.contacts);
+  return jsonOf(resume, 201);
+}
+
 function write(store: Store, archive: Archive, call: Call, at: string): Response {
   const { versions, snapshots } = archive;
   const target = DRAFT.exec(call.path);
@@ -473,12 +559,44 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
     return onMerge(store, merging[1] ?? "", (call.body as { intoTagId: string }).intoTagId, at);
   }
 
+  const deriving = DERIVE.exec(call.path);
+  if (deriving !== null) return onDerive(store, deriving, call, at);
+
+  // All or nothing, and only into a store nothing has been written to yet.
+  if (call.path === "/v1/import") {
+    if (store.records.length > 0 || store.resumes.length > 0) {
+      return jsonOf(
+        {
+          type: "https://keepcv.app/problems/conflict",
+          title: "Conflict",
+          status: 409,
+          detail: "The store already holds something.",
+          instance: "/v1/import",
+        },
+        409,
+      );
+    }
+    Object.assign(store, (call.body as { store: Store }).store);
+    return new Response(null, { status: 204 });
+  }
+
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
+
+  // One per owner, so it is patched at a path with no id in it.
+  if (call.path === "/v1/profile") {
+    store.profile = profileSchema.parse({
+      ...store.profile,
+      ...(call.body as { patch: object }).patch,
+      updatedAt: at,
+    });
+    return jsonOf(store.profile);
+  }
 
   const created = createRow(store, call.path, call.body, at);
   if (created !== undefined) return created;
   if (call.path === "/v1/points") return createPoint(store, call.body, at);
+  if (call.path === "/v1/phrasing-sets") return createPhrasingSet(store, call.body, at);
   if (call.path === "/v1/phrasings") return createPhrasing(store, call.body, at);
   if (REVISIONS.test(call.path)) return addRevision(store, call.path, call.body, at);
   return amend(store, call, at);

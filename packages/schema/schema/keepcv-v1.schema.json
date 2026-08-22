@@ -196,6 +196,12 @@
             "$ref": "#/$defs/ResumeContactChannel"
           }
         },
+        "savedFilters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SavedFilter"
+          }
+        },
         "resumeVersions": {
           "type": "array",
           "items": {
@@ -233,6 +239,7 @@
         "resumeEntries",
         "resumeEntryPoints",
         "resumeContactChannels",
+        "savedFilters",
         "resumeVersions",
         "resumeSnapshots"
       ],
@@ -3525,6 +3532,130 @@
       ],
       "additionalProperties": false,
       "title": "Resume contact channel"
+    },
+    "SavedFilter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "archivedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "enum": [
+            "record",
+            "point"
+          ]
+        },
+        "query": {
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "experience",
+                "education",
+                "project",
+                "skill",
+                "certification",
+                "publication",
+                "award",
+                "language",
+                "volunteering",
+                "speaking",
+                "custom_entry"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tagId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived": {
+          "type": "string",
+          "enum": [
+            "exclude",
+            "include",
+            "only"
+          ]
+        },
+        "unfinished": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "unplaced",
+                "unmeasured"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sortKey": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9A-Za-z]+$"
+        }
+      },
+      "required": [
+        "id",
+        "createdAt",
+        "updatedAt",
+        "archivedAt",
+        "name",
+        "subject",
+        "query",
+        "kind",
+        "tagId",
+        "archived",
+        "unfinished",
+        "sortKey"
+      ],
+      "additionalProperties": false,
+      "title": "Saved filter"
     },
     "ResumeVersion": {
       "type": "object",

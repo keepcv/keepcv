@@ -26,6 +26,7 @@ import {
   type Run,
   recordInput,
   resumeInput,
+  savedFilterInput,
   sectionInput,
   tagInput,
 } from "./contract.harness.js";
@@ -168,6 +169,23 @@ async function fill(run: Run): Promise<void> {
     await r.tags.tagRecord(senior.id, react.id);
     await r.tags.tagPoint(placed.id, react.id);
 
+    // One per subject, one carrying a tag, and one archived: the covering test
+    // below asserts every collection has a live row and an archived one.
+    await r.savedFilters.create(
+      savedFilterInput("React work", {
+        query: "engine",
+        kind: "experience",
+        tagId: react.id,
+      }),
+    );
+    await r.savedFilters.create(
+      savedFilterInput("Points with no metric", { subject: "point", unfinished: "unmeasured" }),
+    );
+    const droppedFilter = await r.savedFilters.create(
+      savedFilterInput("One I stopped using", { archived: "only", sortKey: "a1" }),
+    );
+    await r.savedFilters.archive(droppedFilter.id, droppedFilter.updatedAt);
+
     await r.drafts.save(
       { targetKind: "phrasing", targetId: angled.id, field: "text" },
       { body: [{ t: "text", v: "half a rewrite" }] },
@@ -283,6 +301,7 @@ function reversed(store: Archive): Archive {
     resumeEntries: [...store.resumeEntries].reverse(),
     resumeEntryPoints: [...store.resumeEntryPoints].reverse(),
     resumeContactChannels: [...store.resumeContactChannels].reverse(),
+    savedFilters: [...store.savedFilters].reverse(),
     resumeVersions: [...store.resumeVersions].reverse(),
     resumeSnapshots: [...store.resumeSnapshots].reverse(),
   };

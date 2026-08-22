@@ -1,5 +1,11 @@
 import { createRoute } from "@hono/zod-openapi";
-import { compile, NotFoundError, type ResumeRepository, type UnitOfWork } from "@keepcv/core";
+import {
+  compile,
+  derivePlan,
+  NotFoundError,
+  type ResumeRepository,
+  type UnitOfWork,
+} from "@keepcv/core";
 import {
   resumeContactChannelSchema,
   resumeDocumentSchema,
@@ -118,6 +124,29 @@ const clearContactChannel = createRoute({
     ...sessionRequired,
     204: { description: "the resume does not override that channel" },
     404: noResume,
+  },
+});
+
+// One transaction, because a half-copied resume is a resume: the plan is
+// computed in `@keepcv/core` and applied through the methods a composition
+// write already uses, so no repository method is added
+// (application-structure.md #5.11).
+const deriveResume = createRoute({
+  method: "post",
+  path: "/v1/resumes/{id}/derive",
+  tags: ["resumes"],
+  summary: "Start a resume from the selection another one holds",
+  description:
+    "The composition, the template and every toggle come across; the posting does not, because a derived resume is aimed at a different opening.",
+  request: {
+    params: z.object({ id: uuidSchema }),
+    body: jsonBody(z.object({ id: uuidSchema, name: z.string().min(1) })),
+  },
+  responses: {
+    ...sessionRequired,
+    201: jsonResponse(resumeSchema, "the resume it started"),
+    404: noResume,
+    409: problemResponse("the id is already taken"),
   },
 });
 
@@ -339,6 +368,30 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       });
       if (document === undefined) throw new NotFoundError("resume", id);
       return c.json(document, 200);
+    })
+    .openapi(deriveResume, async (c) => {
+      const { id } = c.req.valid("param");
+      const into = c.req.valid("json");
+
+      const started = await unitOfWork.run(async (r) => {
+        const plan = derivePlan(await r.store.readCurrent(), id, into);
+        if (plan === undefined) throw new NotFoundError("resume", id);
+
+        const resume = await r.resumes.create(plan.resume);
+        for (const section of plan.sections) await r.resumes.addSection(section);
+        for (const entry of plan.entries) await r.resumes.addEntry(entry);
+        for (const point of plan.entryPoints) await r.resumes.addEntryPoint(point);
+        for (const contact of plan.contacts) {
+          await r.resumes.setContactChannel(
+            contact.resumeId,
+            contact.contactChannelId,
+            contact.isVisible,
+          );
+        }
+        return resume;
+      });
+
+      return c.json(started, 201);
     })
     .openapi(listContactChannels, async (c) => {
       const { id } = c.req.valid("param");

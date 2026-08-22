@@ -20,4 +20,5 @@ export {
   resumeSection,
 } from "./resume.js";
 export { resumeContentRef, resumeSnapshot, resumeVersion } from "./resume-version.js";
+export { savedFilter } from "./saved-filter.js";
 export { pointTag, recordTag, tag } from "./tag.js";

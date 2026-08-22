@@ -19,6 +19,7 @@ import {
   resumeSectionSchema,
 } from "../entities/resume.js";
 import { resumeSnapshotSchema, resumeVersionSchema } from "../entities/resume-version.js";
+import { savedFilterSchema } from "../entities/saved-filter.js";
 import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
@@ -55,6 +56,7 @@ export const storeSchema = z
     resumeEntries: z.array(resumeEntrySchema),
     resumeEntryPoints: z.array(resumeEntryPointSchema),
     resumeContactChannels: z.array(resumeContactChannelSchema),
+    savedFilters: z.array(savedFilterSchema),
   })
   // Named, because two routes answer this shape and an anonymous one would be
   // inlined into the OpenAPI document twice.
