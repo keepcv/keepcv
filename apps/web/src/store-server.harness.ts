@@ -1,6 +1,7 @@
 import {
   captureManifest,
   contentHash,
+  derivePlan,
   deriveRevision,
   diffManifests,
   type JsonValue,
@@ -303,6 +304,7 @@ const POINT_TAG = /^\/v1\/points\/([^/]+)\/tags\/([^/]+)$/;
 const MERGE = /^\/v1\/tags\/([^/]+)\/merge$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
+const DERIVE = /^\/v1\/resumes\/([^/]+)\/derive$/;
 const CONTACT = /^\/v1\/resumes\/([^/]+)\/contact-channels\/([^/]+)$/;
 
 interface CaptureInput {
@@ -477,6 +479,27 @@ function onSnapshot(snapshots: ResumeSnapshot[], call: Call, at: string): Respon
   );
 }
 
+// The plan is the store's, as it is in the API: what the app answers for is the
+// request it sent and the re-read that follows.
+function onDerive(store: Store, from: RegExpExecArray, call: Call, at: string): Response {
+  const plan = derivePlan(store, (from[1] ?? "") as Uuid, call.body as { id: Uuid; name: string });
+  if (plan === undefined) return jsonOf({ status: 404 }, 404);
+
+  const resume = resumeSchema.parse(stamp(plan.resume, at));
+  store.resumes.push(resume);
+  for (const row of plan.sections) {
+    store.resumeSections.push(resumeSectionSchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.entries) {
+    store.resumeEntries.push(resumeEntrySchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.entryPoints) {
+    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(stamp(row, at)));
+  }
+  store.resumeContactChannels.push(...plan.contacts);
+  return jsonOf(resume, 201);
+}
+
 function write(store: Store, archive: Archive, call: Call, at: string): Response {
   const { versions, snapshots } = archive;
   const target = DRAFT.exec(call.path);
@@ -506,6 +529,9 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
   if (merging !== null) {
     return onMerge(store, merging[1] ?? "", (call.body as { intoTagId: string }).intoTagId, at);
   }
+
+  const deriving = DERIVE.exec(call.path);
+  if (deriving !== null) return onDerive(store, deriving, call, at);
 
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);

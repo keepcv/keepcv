@@ -1844,3 +1844,31 @@ describe("ordering", () => {
     expect(String(store.resumeSections[1]?.sortKey) < "a0").toBe(true);
   });
 });
+
+describe("starting a resume from another", () => {
+  it("copies the selection and opens the copy", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency", { recordId: record.id });
+    const resume = addResume(store, { name: "Staff engineer", targetCompany: "Babbage Ltd" });
+    addEntryPoint(store, addEntry(store, addSection(store, resume.id), record.id), point);
+    const server = storeServer(store);
+    mount(server.answer, "/resumes");
+
+    await screen.findByText("Staff engineer");
+    press("Start one from this");
+    press("Start it");
+
+    await waitFor(() => {
+      expect(store.resumes).toHaveLength(2);
+    });
+    const copy = store.resumes[1];
+    expect(copy?.name).toBe("Staff engineer copy");
+    // The posting does not come across: the copy is aimed at a different opening.
+    expect(copy?.targetCompany).toBeNull();
+    expect(store.resumeSections.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);
+    expect(store.resumeEntryPoints.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);
+    // The source is read, never moved.
+    expect(store.resumeEntries.filter((row) => row.resumeId === resume.id)).toHaveLength(1);
+  });
+});

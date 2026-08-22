@@ -1,5 +1,6 @@
 export { captureManifest, type ManifestRef, manifestRefs } from "./document/capture.js";
 export { compile } from "./document/compile.js";
+export { type DerivePlan, derivePlan } from "./document/derive.js";
 export { diffManifests } from "./document/diff.js";
 export { contactHref, formatMetric, formatPartialDate, formatPeriod } from "./document/format.js";
 export {
