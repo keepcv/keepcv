@@ -1,7 +1,7 @@
 import { newUuid } from "@keepcv/core";
 import type { Evidence, EvidenceInput, EvidenceKind, Store, Uuid } from "@keepcv/schema";
 import { evidenceInputSchema } from "@keepcv/schema";
-import { type FieldErrors, fieldErrors } from "./point-form.js";
+import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 
 export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
   url: "Link",

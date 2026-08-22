@@ -12,6 +12,7 @@ import {
 } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
+import type { FieldErrors } from "../../../lib/form.js";
 import { sentenceCase } from "../../../lib/label.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
 import { KIND_NAMES } from "../../records/model/record-rows.js";
@@ -20,7 +21,6 @@ import {
   blankPointValues,
   buildPointSubmission,
   CONFIDENCE_HINTS,
-  type FieldErrors,
   type PointFormValues,
 } from "../model/point-form.js";
 

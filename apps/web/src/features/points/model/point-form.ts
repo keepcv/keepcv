@@ -9,7 +9,7 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { metricInputSchema, pointInputSchema, pointPatchSchema } from "@keepcv/schema";
-import type { ZodError } from "zod";
+import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 import { bodyOf } from "../../phrasings/model/editor.js";
 
 export const CONFIDENCE_HINTS: Record<PointConfidence, string> = {
@@ -27,8 +27,6 @@ export interface PointFormValues {
   occurredOn: string;
 }
 
-export type FieldErrors = Record<string, string>;
-
 export function blankPointValues(recordId?: Uuid): PointFormValues {
   return { text: "", recordId: recordId ?? "", confidence: "unverified", occurredOn: "" };
 }
@@ -40,14 +38,6 @@ export function pointValuesOf(store: Store, point: Point): PointFormValues {
     confidence: point.confidence,
     occurredOn: point.occurredOn ?? "",
   };
-}
-
-export function fieldErrors(error: ZodError): FieldErrors {
-  const errors: FieldErrors = {};
-  for (const issue of error.issues) {
-    errors[issue.path.map(String).join(".")] ??= issue.message;
-  }
-  return errors;
 }
 
 function columns(values: PointFormValues) {

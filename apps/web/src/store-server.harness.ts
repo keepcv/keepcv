@@ -10,6 +10,7 @@ import {
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
   careerRecordSchema,
+  customSectionSchema,
   draftSchema,
   evidenceSchema,
   metricSchema,
@@ -19,6 +20,8 @@ import {
   phrasingSetSchema,
   pointSchema,
   pointTagSchema,
+  recordFieldSchema,
+  recordLinkSchema,
   recordTagSchema,
   resumeContactChannelSchema,
   resumeEntryPointSchema,
@@ -76,6 +79,12 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row));
   } else if (path === "/v1/evidence") {
     store.evidence.push(evidenceSchema.parse(row));
+  } else if (path === "/v1/record-links") {
+    store.recordLinks.push(recordLinkSchema.parse(row));
+  } else if (path === "/v1/record-fields") {
+    store.recordFields.push(recordFieldSchema.parse(row));
+  } else if (path === "/v1/custom-sections") {
+    store.customSections.push(customSectionSchema.parse(row));
   } else if (path === "/v1/tags") {
     const { label } = body as { label: string };
     store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
@@ -192,6 +201,15 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   }
   if (collection === "evidence") {
     return amendIn(store.evidence, id, merged, (value) => evidenceSchema.parse(value));
+  }
+  if (collection === "record-links") {
+    return amendIn(store.recordLinks, id, merged, (value) => recordLinkSchema.parse(value));
+  }
+  if (collection === "record-fields") {
+    return amendIn(store.recordFields, id, merged, (value) => recordFieldSchema.parse(value));
+  }
+  if (collection === "custom-sections") {
+    return amendIn(store.customSections, id, merged, (value) => customSectionSchema.parse(value));
   }
   if (collection === "tags") {
     const { label } = merged as { label?: string };

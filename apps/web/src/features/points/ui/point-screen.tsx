@@ -7,15 +7,11 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
+import type { FieldErrors } from "../../../lib/form.js";
 import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
 import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetPointArchived, useUpdatePoint } from "../api/use-points.js";
-import {
-  buildPointPatch,
-  type FieldErrors,
-  type PointFormValues,
-  pointValuesOf,
-} from "../model/point-form.js";
+import { buildPointPatch, type PointFormValues, pointValuesOf } from "../model/point-form.js";
 import { PointEvidence } from "./point-evidence.js";
 import { Placement } from "./point-form.js";
 import { PointMetrics } from "./point-metrics.js";

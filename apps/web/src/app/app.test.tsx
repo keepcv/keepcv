@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_AFTER_MS } from "../features/phrasings/model/editor.js";
 import { apiClient } from "../lib/api.js";
 import {
+  addCustomSection,
   addDraft,
   addEntry,
   addEntryPoint,
@@ -14,6 +15,7 @@ import {
   addPhrasing,
   addPoint,
   addRecord,
+  addRecordField,
   addResume,
   addRevision,
   addSection,
@@ -287,6 +289,196 @@ describe("writing a record", () => {
     expect(screen.getByText(/Analytical Engine/)).toBeInTheDocument();
     expect(screen.getByText(/Difference Engine, mark II/)).toBeInTheDocument();
     expect(store.records[0]?.title).toBe("Difference Engine");
+  });
+});
+
+describe("what a record carries beside its points", () => {
+  function aRecord() {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "project", title: "Difference Engine" });
+    return { store, server: storeServer(store), record };
+  }
+
+  it("adds a link and takes it off again", async () => {
+    const { store, server, record } = aRecord();
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("heading", { name: "Difference Engine" });
+    type("Address", "https://github.com/ada/engine");
+    type("Shown as", "The source");
+    press("Add link");
+
+    expect(await screen.findByRole("link", { name: "The source" })).toHaveAttribute(
+      "href",
+      "https://github.com/ada/engine",
+    );
+    await waitFor(() => {
+      expect(store.recordLinks).toHaveLength(1);
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "remove" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(store.recordLinks[0]?.archivedAt).not.toBeNull();
+    });
+    expect(screen.queryByRole("link", { name: "The source" })).not.toBeInTheDocument();
+  });
+
+  it("refuses a link with no address", async () => {
+    const { store, server, record } = aRecord();
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add link");
+
+    expect(await screen.findByText(/too small|expected/i)).toBeInTheDocument();
+    expect(store.recordLinks).toEqual([]);
+  });
+
+  it("adds a field, deriving the key nobody would type", async () => {
+    const { store, server, record } = aRecord();
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("heading", { name: "Difference Engine" });
+    type("Name", "Credential ID");
+    type("Value", "AWS-1234");
+    press("Add field");
+
+    await waitFor(() => {
+      expect(store.recordFields).toHaveLength(1);
+    });
+    expect(store.recordFields[0]?.key).toBe("credential-id");
+    expect(await screen.findByText("AWS-1234")).toBeInTheDocument();
+  });
+
+  // `record_field_key_unique` covers archived rows, so a second create would be
+  // refused by the index forever. Naming it again puts the row back.
+  it("puts a removed field back rather than writing a second one", async () => {
+    const { store, server, record } = aRecord();
+    addRecordField(store, record.id, { archivedAt: EPOCH_ISO, value: "old" });
+
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("heading", { name: "Difference Engine" });
+    type("Name", "Credential ID");
+    type("Value", "AWS-9999");
+    press("Add field");
+
+    await waitFor(() => {
+      expect(store.recordFields[0]?.archivedAt).toBeNull();
+    });
+    expect(store.recordFields).toHaveLength(1);
+    expect(store.recordFields[0]?.value).toBe("AWS-9999");
+    expect(
+      server.calls.filter((call) => call.method === "POST" && call.path.endsWith("restore")),
+    ).toHaveLength(1);
+  });
+
+  it("says so rather than letting the index refuse a name already there", async () => {
+    const { store, server, record } = aRecord();
+    addRecordField(store, record.id);
+
+    mount(server.answer, `/records/${record.id}`);
+
+    await screen.findByRole("heading", { name: "Difference Engine" });
+    type("Name", "Credential ID");
+    press("Add field");
+
+    expect(await screen.findByText("this record already carries that")).toBeInTheDocument();
+    expect(store.recordFields).toHaveLength(1);
+  });
+});
+
+describe("sections of your own", () => {
+  it("adds one from an empty screen", async () => {
+    const store = emptyStore();
+    mount(storeServer(store).answer, "/sections?archived=false");
+
+    await screen.findByText("No sections of your own yet");
+    type("New section", "Patents");
+    press("Add");
+
+    await waitFor(() => {
+      expect(store.customSections).toHaveLength(1);
+    });
+    expect(store.customSections[0]?.heading).toBe("Patents");
+    expect(await screen.findByText("Patents")).toBeInTheDocument();
+  });
+
+  // The kind is hidden while nothing can be filed under it, which is what made
+  // the picker on the record form a dead end.
+  it("is what makes a custom entry offered at all", async () => {
+    const store = emptyStore();
+    addCustomSection(store, "Patents");
+
+    mount(storeServer(store).answer, "/records/new");
+
+    expect(await screen.findByRole("option", { name: "Custom entry" })).toBeInTheDocument();
+  });
+
+  it("offers no custom entry while there is no section to file one under", async () => {
+    mount(storeServer(emptyStore()).answer, "/records/new");
+
+    await screen.findByLabelText("Kind");
+    expect(screen.queryByRole("option", { name: "Custom entry" })).not.toBeInTheDocument();
+  });
+
+  it("names the heading it would collide with rather than writing a second one", async () => {
+    const store = emptyStore();
+    addCustomSection(store, "Patents");
+    mount(storeServer(store).answer, "/sections?archived=false");
+
+    await screen.findByText("Patents");
+    type("New section", "patents");
+
+    expect(
+      await screen.findByText("Patents already prints under that heading."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  });
+
+  it("renames one, then archives it off the screen", async () => {
+    const store = emptyStore();
+    addCustomSection(store, "Patents");
+    mount(storeServer(store).answer, "/sections?archived=false");
+
+    await screen.findByText("Patents");
+    press("Rename");
+    type("Heading", "Patents and filings");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.customSections[0]?.heading).toBe("Patents and filings");
+    });
+
+    press("Archive");
+    await waitFor(() => {
+      expect(store.customSections[0]?.archivedAt).not.toBeNull();
+    });
+    expect(await screen.findByText("No sections of your own yet")).toBeInTheDocument();
+  });
+
+  it("puts an archived one back from its own filter", async () => {
+    const store = emptyStore();
+    addCustomSection(store, "Patents", { archivedAt: EPOCH_ISO });
+    mount(storeServer(store).answer, "/sections?archived=true");
+
+    await screen.findByText("Patents");
+    press("Put back");
+
+    await waitFor(() => {
+      expect(store.customSections[0]?.archivedAt).toBeNull();
+    });
+  });
+
+  it("counts what is filed under one", async () => {
+    const store = emptyStore();
+    const section = addCustomSection(store, "Patents");
+    addRecord(store, { kind: "custom_entry", title: "A filing", customSectionId: section });
+
+    mount(storeServer(store).answer, "/sections?archived=false");
+
+    expect(await screen.findByRole("link", { name: "1 entry" })).toBeInTheDocument();
   });
 });
 

@@ -166,8 +166,8 @@ knows nothing else - no driver, no token store, no port number.
 The web app is an application frame - a navigation rail that lists the kinds the
 store holds, a search field, and a disclosure in place of the rail below `lg` -
 over the store overview, the record list, a record's detail and its form, the
-point list, the tag vocabulary, the resume list, a resume's composition, its
-compiled preview and its history, and search results. All of it is fed by one
+point list, the tag vocabulary, the custom-section headings, the resume list, a
+resume's composition, its compiled preview and its history, and search results. All of it is fed by one
 `GET /v1/store` on the root route's
 loader, and the preview is `compile()` running in the browser over that same
 payload, handed to a template in an iframe of its own that reports back how many
@@ -186,6 +186,16 @@ evidence: both are sub-collections of a point that already exists, so there is
 nothing to roll back. Evidence is private structurally - `ResumeDocument` has no
 field it could travel in - and the panel says so beside the rows, because a user
 who does not believe it will not write down the thing worth writing down.
+
+**A link and a field are written on the record's own screen, as they are typed.**
+Both are sub-collections of a record that already exists, so they follow metrics
+and evidence rather than the record form above them: nothing is staged and there
+is nothing to roll back. `record_field_key_unique` covers archived rows, so
+`buildField` answers a put-back rather than a create when a removed field is
+named again - the same shape as placing something on a resume, and the reason
+the add control is one control. A custom section is a screen of its own, because
+until one exists the record form's section picker is empty and `custom_entry` is
+hidden, which made a whole record kind unreachable.
 
 **A tag is created from wherever the word is being used.** The picker on a record
 and on a point takes a label, not an id: `tagForLabel(store, label)` in

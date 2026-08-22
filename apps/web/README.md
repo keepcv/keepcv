@@ -108,6 +108,13 @@ pnpm --filter @keepcv/web dev
   restores which points were on the resume and in what order - not their words,
   which the version keeps and the point's own history holds. Star one to give it
   a name you will recognise later.
+- **A record carries more than its points.** Links to where the work lives and
+  named fields for whatever the form has no box for are added on the record's own
+  screen, saved as you type them. Removing one archives it, and naming a removed
+  field again puts it back rather than starting a second one.
+- **Sections of your own.** Headings for work the eleven built-in kinds have no
+  name for - patents, licences, exhibitions. Add one and "custom entry" becomes
+  a record kind you can file under it.
 - **A finished resume leaves as one file.** Download it as HTML that carries its
   own styling and fetches nothing, or print it - which is the PDF, because the
   page size, the margins and the breaks are already in the file and your

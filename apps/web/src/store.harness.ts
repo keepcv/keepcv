@@ -3,6 +3,7 @@ import {
   type CareerRecord,
   careerRecordSchema,
   contactChannelSchema,
+  customSectionSchema,
   draftSchema,
   evidenceSchema,
   metricSchema,
@@ -16,6 +17,8 @@ import {
   type Resume,
   type ResumeEntry,
   type ResumeSection,
+  recordFieldSchema,
+  recordLinkSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
   resumeSchema,
@@ -386,4 +389,56 @@ export function aFilledStore(): Store {
   addEntry(store, projects, engine.id);
 
   return store;
+}
+
+export function addRecordLink(
+  store: Store,
+  recordId: Uuid,
+  overrides: Record<string, unknown> = {},
+) {
+  store.recordLinks.push(
+    recordLinkSchema.parse({
+      ...standard(),
+      recordId,
+      kind: "repo",
+      label: null,
+      url: "https://github.com/ada/engine",
+      sortKey: "a0",
+      ...overrides,
+    }),
+  );
+}
+
+export function addRecordField(
+  store: Store,
+  recordId: Uuid,
+  overrides: Record<string, unknown> = {},
+) {
+  store.recordFields.push(
+    recordFieldSchema.parse({
+      ...standard(),
+      recordId,
+      key: "credential-id",
+      label: "Credential ID",
+      value: "AWS-1234",
+      valueKind: "text",
+      sortKey: "a0",
+      ...overrides,
+    }),
+  );
+}
+
+export function addCustomSection(
+  store: Store,
+  heading: string,
+  overrides: Record<string, unknown> = {},
+): Uuid {
+  const section = customSectionSchema.parse({
+    ...standard(),
+    heading,
+    sortKey: "a0",
+    ...overrides,
+  });
+  store.customSections.push(section);
+  return section.id;
 }
