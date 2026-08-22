@@ -8,6 +8,7 @@ import { RangeField, SelectField } from "../../../components/ui/field.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { usePatchResume } from "../api/use-resumes.js";
 import { DownloadResume } from "./download.js";
+import { LintPanel } from "./lint-report.js";
 import { TemplateFrame } from "./template-frame.js";
 
 // Long enough that dragging a slider is one write rather than forty. Each one
@@ -153,6 +154,8 @@ export function DocumentPreview({
     <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
       <aside className="space-y-4">
         <DownloadResume document={document} />
+
+        <LintPanel document={document} />
 
         <div className="space-y-2 rounded-lg bg-slate-50 p-3">
           <SelectField

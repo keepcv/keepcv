@@ -156,9 +156,9 @@ A resume is created, renamed, archived and put back from the app as well, which
 is what stopped the composer being reachable only by a resume somebody else had
 made.
 
-What remains is **deriving a resume from an existing one**, a screen for the
-target context, and dragging: the order is changed by keyboard today, which is
-the accessible half and the half the sort-key arithmetic actually needs.
+What remains is **deriving a resume from an existing one**, and dragging: the
+order is changed by keyboard today, which is the accessible half and the half
+the sort-key arithmetic actually needs.
 
 ### Render and templates
 
@@ -231,10 +231,23 @@ reviewed before it is applied.
 
 ### ATS linter
 
-A rule engine and report contract. Checks for column reading-order integrity,
-non-standard section headings, text rendered as images, unparseable dates and
-contact-detail extractability. Compliance tiers are derived from lint results,
-never asserted.
+Built, as `lint({ document, html })` in `@keepcv/ats-lint`. Five rules over the
+compiled document and the file the template wrote: contact details a reader can
+extract, section headings a system is built to look for, dates that carry a year
+and read one way, reading order that survives being pulled off a printed page,
+and text that is text rather than a picture. The preview screen shows the report
+beside the download, and `keepcv render` prints it after writing the file.
+
+The tier is derived from the findings and asserted nowhere, and the panel says
+so: this product makes no claim of compatibility with any named commercial
+system. A finding about the file names a construct the template chose, so the
+linter is also how a user compares templates on something other than looks
+(application-structure.md #7.2).
+
+There is no `/v1/lint`: the caller holds the document and the file already, for
+the same reason search and `composition` are selectors rather than routes.
+
+What remains is more rules as real postings turn up cases these five miss.
 
 ### Accounts and sync
 

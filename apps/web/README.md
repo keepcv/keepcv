@@ -114,6 +114,12 @@ pnpm --filter @keepcv/web dev
   browser's print engine is what lays them out. Both are written from what the
   tab already holds, so neither asks the store for anything, and nothing marked
   private can travel in either.
+- **It tells you how a machine will read it.** Beside the download, the file is
+  read back the way an applicant tracking system would: whether your contact
+  details can be pulled out of it, whether your headings are ones anything looks
+  for, whether your dates carry a year, and whether the template you picked moves
+  the words around on the page. Observations about your file, never a claim of
+  compatibility with a named product.
 
 ## The session token
 

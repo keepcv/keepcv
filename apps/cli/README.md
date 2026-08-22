@@ -62,6 +62,11 @@ margins and the page breaks are all in the file already.
 Nothing marked private travels in it. Evidence is not a field the resume
 document has.
 
+After it writes the file it reads it back the way a machine would and says what
+it found: an email address nothing can extract, a heading no system looks for, a
+date with no year in it, or a template that moves the words around on the page.
+It is a report, not a gate - the file is already written.
+
 | Option | Default |
 |---|---|
 | `--out <path>` | the resume's own name, in the current directory |

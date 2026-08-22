@@ -109,7 +109,8 @@ the entire WYSIWYG premise.
 @keepcv/interop  The lossy adapters - JSON Resume, RenderCV, PDF and DOCX
                  parsing. Native export/import is not here: it is a whole-store
                  read and write, so it is the store repository.
-@keepcv/ats-lint ResumeDocument + rendered output -> lint report.
+@keepcv/ats-lint ResumeDocument + the rendered file -> lint report. Pure, and
+                 depends on nothing but schema: the caller renders (#7.2).
 ```
 
 **Why `@keepcv/core` runs in the browser matters more than it looks.** It means
@@ -674,6 +675,41 @@ to keep in step with the first.
 first warns while the resume is being composed; the second is what actually
 produces the file. Where they disagree the printer is right, which is why the
 length budget is a warning rather than a gate.
+
+### 7.2 Reading it back the way a machine would
+
+`lint({ document, html })` in `@keepcv/ats-lint` answers a `LintReport`: a list
+of findings and a tier derived from them. It takes both because half the checks
+are about what the resume says - a missing email address, a heading nothing will
+file, a date with no year in it - and half are about what the template did with
+it - columns, floats, coordinates, images, words that exist only in a stylesheet.
+
+**It takes the file rather than producing one.** The caller has already rendered
+by the time it wants a verdict, and taking the bytes means the thing being linted
+is the thing being sent. It also keeps the package pure: no React, no dependency
+on `@keepcv/render`, and a rule suite that can be handed markup no template would
+ever emit. The preview panel and `keepcv render` both call it, so the answer is
+the same on either side.
+
+**The file rules are static.** They read the constructs the stylesheet declared,
+not the boxes a browser painted, which is the only thing available where there is
+no layout engine. They are therefore limited to constructs that move the words
+every time, and the remedy each one names is a different template rather than a
+different resume. The linter is deliberately the thing that lets a user compare
+templates on something other than looks.
+
+**A tier is derived and never asserted.** `clean` is the absence of findings,
+`readable` means warnings only, `at-risk` means something will not survive. There
+is no claim of compatibility with any named commercial system anywhere in the
+product, and the panel says as much beside the findings. A template's own
+`complianceNotes` sit in a separate panel and are observations about the
+template, not a verdict on the resume.
+
+Dates are checked on record fields and not on an entry's period: a period's text
+is formatted by `renderManifest` and always carries its year, and a field is
+whatever the user typed. Adding a rule is an id in `LINT_RULES` plus an entry in
+`DOCUMENT_RULES` or `OUTPUT_RULES`; there is no route and no table, for the same
+reason `search` has neither.
 
 ---
 

@@ -1071,6 +1071,30 @@ describe("a resume and its template", () => {
     expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
   });
 
+  const lintPanel = async () =>
+    await screen.findByRole("region", { name: "How a machine will read it" });
+
+  it("reads the file back the way a machine would, and says so", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    expect(await lintPanel()).toHaveTextContent("Nothing here trips a reader");
+  });
+
+  // A resume with no way to reach the person on it passes every other check in
+  // the app and is the one thing a machine reading it cannot do without.
+  it("names what a machine would not get from it", async () => {
+    const { store, server, resume } = aResumeToPrint();
+    store.contactChannels = [];
+
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    const panel = await lintPanel();
+    expect(panel).toHaveTextContent("Will break");
+    expect(panel).toHaveTextContent("No email address anywhere");
+    expect(panel).toHaveTextContent("not a claim of compatibility with any product");
+  });
+
   it("says what the template does rather than claiming a certification", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);

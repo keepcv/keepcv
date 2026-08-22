@@ -123,11 +123,11 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 ## Current state
 
 `packages/schema`, `packages/core`, `packages/db`, `packages/api`,
-`packages/templates` and `packages/render` exist, `apps/cli` is the `keepcv`
-launcher and `render` command and `apps/web` is the browser app. `interop` and
-`ats-lint` are specified but deliberately **not scaffolded** - empty packages are
-noise, and a sub-feature is either not started or complete. Create each one when
-its capability is built, and add it to the root `tsconfig.json` references then.
+`packages/templates`, `packages/render` and `packages/ats-lint` exist, `apps/cli`
+is the `keepcv` launcher and `render` command and `apps/web` is the browser app.
+`interop` is specified but deliberately **not scaffolded** - empty packages are
+noise, and a sub-feature is either not started or complete. Create it when its
+capability is built, and add it to the root `tsconfig.json` references then.
 
 `apps/web` is the one workspace project **not** in those references: it emits no
 declarations for anything to reference, so it is a `noEmit` project that Vite
@@ -237,6 +237,20 @@ printing engine fragments the DOM properly, which is exactly what the preview
 declines to do. No headless browser and no PDF library: either would be a second
 layout engine to keep in step with the first. Where it and `paginate` disagree
 the printer is right, which is why the length budget warns rather than gates.
+
+**The linter reads the file, and the tier is derived rather than claimed.**
+`lint({ document, html })` in `@keepcv/ats-lint` takes both, because half the
+rules are about what the resume says - no email address, a heading nothing files,
+a date with no year - and half are about what the template did with it - columns,
+floats, coordinates, images, words that live only in a stylesheet. Taking the
+rendered bytes rather than producing them means the thing linted is the thing
+sent, and it keeps the package free of React and of `@keepcv/render`. There is no
+`/v1/lint`: the caller holds both inputs, which is the argument that keeps
+`search` and `composition` out of the API too. `clean`, `readable` and `at-risk`
+are functions of the findings, and the panel says beside them that this product
+claims compatibility with no named commercial system. A rule that would fire on
+the file `ats-single-column` writes would fire on every resume this product
+produces, and a test says so.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response
