@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_AFTER_MS } from "../features/phrasings/model/editor.js";
 import { apiClient } from "../lib/api.js";
 import {
+  addContactChannel,
   addCustomSection,
   addDraft,
   addEntry,
@@ -1616,5 +1617,125 @@ describe("what backs a point up", () => {
     });
     expect(store.evidence).toHaveLength(1);
     expect(store.evidence[0]?.archivedAt).not.toBeNull();
+  });
+});
+
+describe("the profile", () => {
+  it("puts a name on the store, which is what every resume header prints", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Name");
+    type("Name", "Ada Lovelace");
+    type("Headline", "Engine lead");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.profile.fullName).toBe("Ada Lovelace");
+    });
+    expect(store.profile.headline).toBe("Engine lead");
+  });
+
+  it("says nothing was saved when the profile changed underneath, and keeps both", async () => {
+    const store = emptyStore();
+    store.profile.fullName = "Ada Lovelace";
+    const server = storeServer(store, (call) =>
+      call.method === "PATCH"
+        ? jsonOf(
+            {
+              type: "https://keepcv.app/problems/conflict",
+              title: "Conflict",
+              status: 409,
+              detail: "The profile changed.",
+              instance: "/v1/profile",
+              current: { ...store.profile, fullName: "A. Lovelace" },
+            },
+            409,
+          )
+        : undefined,
+    );
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Name");
+    type("Name", "Ada Byron");
+    press("Save");
+
+    expect(
+      await screen.findByText("The profile changed while you were editing it"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ada Byron")).toBeInTheDocument();
+    expect(screen.getByText("A. Lovelace")).toBeInTheDocument();
+    expect(store.profile.fullName).toBe("Ada Lovelace");
+  });
+
+  it("adds a way to be reached, as it is typed", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByLabelText("Value");
+    type("Value", "ada@example.org");
+    press("Add a way to reach you");
+
+    await waitFor(() => {
+      expect(store.contactChannels).toHaveLength(1);
+    });
+    expect(store.contactChannels[0]).toMatchObject({
+      kind: "email",
+      value: "ada@example.org",
+      isDefaultVisible: true,
+    });
+  });
+
+  // The rule the linter fires on, said where it can still be acted on rather
+  // than on the preview screen after the resume is built.
+  it("names the contact kinds a machine reading the resume would want", async () => {
+    mount(() => jsonOf(emptyStore()), "/profile");
+
+    expect(await screen.findByText(/No email and no phone yet/)).toBeInTheDocument();
+  });
+
+  it("does not nag once both are there", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    addContactChannel(store, "phone", "+44 20 7946 0000", { sortKey: "a1" });
+    mount(() => jsonOf(store), "/profile");
+
+    expect(await screen.findByText("ada@example.org")).toBeInTheDocument();
+    expect(screen.queryByText(/yet\. A resume with neither/)).not.toBeInTheDocument();
+  });
+
+  // A summary is a phrasing set like a point's, so it has to be made before
+  // there is anywhere to type: the profile names a set rather than holding text.
+  it("starts a summary by making the set the profile names", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByRole("button", { name: "Write a summary" });
+    press("Write a summary");
+
+    await waitFor(() => {
+      expect(store.profile.summarySetId).not.toBeNull();
+    });
+    expect(store.phrasingSets).toHaveLength(1);
+    expect(store.phrasingSets[0]?.purpose).toBe("profile_summary");
+    expect(await screen.findByLabelText("Wording, standard")).toBeInTheDocument();
+  });
+
+  it("archives a contact channel rather than deleting it", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    const server = storeServer(store);
+    mount(server.answer, "/profile");
+
+    await screen.findByText("ada@example.org");
+    press("Archive");
+
+    await waitFor(() => {
+      expect(store.contactChannels[0]?.archivedAt).not.toBeNull();
+    });
+    expect(store.contactChannels).toHaveLength(1);
   });
 });

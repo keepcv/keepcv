@@ -277,14 +277,21 @@ function AddWording({
   );
 }
 
+const TITLES = {
+  point: "What it says",
+  profile: "Professional summary",
+} as const;
+
 export function PhrasingEditor({
   store,
   client,
   phrasingSetId,
+  subject = "point",
 }: {
   store: Store;
   client: ApiClient;
   phrasingSetId: Uuid;
+  subject?: keyof typeof TITLES;
 }) {
   const set = store.phrasingSets.find((row) => row.id === phrasingSetId);
   const wordings = phrasingsOfSet(store, phrasingSetId);
@@ -293,11 +300,10 @@ export function PhrasingEditor({
   if (set === undefined) {
     return (
       <Panel>
-        <PanelHeader title="What it says" />
+        <PanelHeader title={TITLES[subject]} />
         <PanelBody>
           <p className="text-sm text-slate-600">
-            This point has no wording attached, which the store allows and no screen can repair.
-            Archive it and write it again.
+            This {subject} names a wording the store does not hold, which no screen can repair.
           </p>
         </PanelBody>
       </Panel>
@@ -306,7 +312,7 @@ export function PhrasingEditor({
 
   return (
     <Panel>
-      <PanelHeader title="What it says">
+      <PanelHeader title={TITLES[subject]}>
         Kept as a draft while you type and committed when you stop. Editing appends to the history
         rather than overwriting it, so a resume you sent in March goes on saying what it said.
       </PanelHeader>

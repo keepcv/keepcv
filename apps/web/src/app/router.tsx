@@ -6,6 +6,7 @@ import { POINT_FILTERS } from "../features/points/model/point-rows.js";
 import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
 import { PointScreen } from "../features/points/ui/point-screen.js";
+import { ProfileScreen } from "../features/profile/ui/profile-screen.js";
 import { MissingRecord, RecordDetail } from "../features/records/ui/record-detail.js";
 import { RecordForm } from "../features/records/ui/record-form.js";
 import { RecordList } from "../features/records/ui/record-list.js";
@@ -58,6 +59,15 @@ const overviewRoute = createRoute({
   component: function OverviewScreen() {
     const store = useStore(overviewRoute.useRouteContext().api);
     return <Overview store={store} asOf={new Date().toISOString()} />;
+  },
+});
+
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: function ProfilePage() {
+    const { api } = profileRoute.useRouteContext();
+    return <ProfileScreen store={useStore(api)} client={api} />;
   },
 });
 
@@ -230,6 +240,7 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   overviewRoute,
+  profileRoute,
   recordsRoute,
   newRecordRoute,
   recordRoute,

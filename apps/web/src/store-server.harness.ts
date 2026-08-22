@@ -10,6 +10,7 @@ import {
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
 import {
   careerRecordSchema,
+  contactChannelSchema,
   customSectionSchema,
   draftSchema,
   evidenceSchema,
@@ -20,6 +21,7 @@ import {
   phrasingSetSchema,
   pointSchema,
   pointTagSchema,
+  profileSchema,
   recordFieldSchema,
   recordLinkSchema,
   recordTagSchema,
@@ -65,6 +67,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
   const row = stamp(body, at);
   if (path === "/v1/organisations") {
     store.organisations.push(organisationSchema.parse(row));
+  } else if (path === "/v1/contact-channels") {
+    store.contactChannels.push(contactChannelSchema.parse(row));
   } else if (path === "/v1/records") {
     store.records.push(careerRecordSchema.parse(row));
   } else if (path === "/v1/resumes") {
@@ -101,6 +105,33 @@ function createPhrasing(store: Store, body: unknown, at: string): Response {
 
   store.phrasings.push(row);
   store.phrasingRevisions.push(revision);
+  return jsonOf(row, 201);
+}
+
+// A set with its first wording, which is how a profile summary is started.
+function createPhrasingSet(store: Store, body: unknown, at: string): Response {
+  const { phrasing, ...columns } = body as {
+    id: string;
+    purpose: string;
+    phrasing: { id: string; body: unknown };
+  };
+  const revision = revisionOf(phrasing.id, phrasing.body, at);
+
+  store.phrasings.push(
+    phrasingSchema.parse({
+      ...stamp(phrasing, at),
+      phrasingSetId: columns.id,
+      currentRevisionId: revision.id,
+    }),
+  );
+  store.phrasingRevisions.push(revision);
+
+  const row = phrasingSetSchema.parse({
+    ...stamp({ id: columns.id }, at),
+    purpose: columns.purpose,
+    canonicalPhrasingId: phrasing.id,
+  });
+  store.phrasingSets.push(row);
   return jsonOf(row, 201);
 }
 
@@ -210,6 +241,9 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   }
   if (collection === "custom-sections") {
     return amendIn(store.customSections, id, merged, (value) => customSectionSchema.parse(value));
+  }
+  if (collection === "contact-channels") {
+    return amendIn(store.contactChannels, id, merged, (value) => contactChannelSchema.parse(value));
   }
   if (collection === "tags") {
     const { label } = merged as { label?: string };
@@ -476,9 +510,20 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
 
+  // One per owner, so it is patched at a path with no id in it.
+  if (call.path === "/v1/profile") {
+    store.profile = profileSchema.parse({
+      ...store.profile,
+      ...(call.body as { patch: object }).patch,
+      updatedAt: at,
+    });
+    return jsonOf(store.profile);
+  }
+
   const created = createRow(store, call.path, call.body, at);
   if (created !== undefined) return created;
   if (call.path === "/v1/points") return createPoint(store, call.body, at);
+  if (call.path === "/v1/phrasing-sets") return createPhrasingSet(store, call.body, at);
   if (call.path === "/v1/phrasings") return createPhrasing(store, call.body, at);
   if (REVISIONS.test(call.path)) return addRevision(store, call.path, call.body, at);
   return amend(store, call, at);

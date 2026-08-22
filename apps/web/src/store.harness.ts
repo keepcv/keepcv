@@ -256,7 +256,12 @@ export function addEvidence(
   );
 }
 
-export function addContactChannel(store: Store, kind: string, value: string): void {
+export function addContactChannel(
+  store: Store,
+  kind: string,
+  value: string,
+  overrides: Record<string, unknown> = {},
+): void {
   store.contactChannels.push(
     contactChannelSchema.parse({
       ...standard(),
@@ -265,6 +270,7 @@ export function addContactChannel(store: Store, kind: string, value: string): vo
       value,
       isDefaultVisible: true,
       sortKey: "a0",
+      ...overrides,
     }),
   );
 }
