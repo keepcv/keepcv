@@ -1,4 +1,4 @@
-import { live } from "@keepcv/core";
+import { isEmptyStore, live } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
 import { useState } from "react";
 import { Failure } from "../../../app/states.js";
@@ -58,8 +58,8 @@ function TakeACopy({ client, store }: { client: ApiClient; store: Store }) {
           {read.isPending ? "Reading" : "Download a backup"}
         </Button>
         <p className="text-xs leading-relaxed text-slate-500">
-          {held === "" ? "There is nothing in the store yet." : `Currently ${held}.`} The launcher
-          also keeps a copy of this beside the store on disk, and writes it again when it stops.
+          {held === "" ? "Just the profile so far." : `Currently ${held}.`} The launcher also keeps
+          a copy of this beside the store on disk, and writes it again when it stops.
         </p>
       </PanelBody>
     </Panel>
@@ -72,8 +72,9 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
   const load = useLoadBackup(client);
   const [unreadable, setUnreadable] = useState<string | undefined>(undefined);
 
-  const isEmpty =
-    store.records.length === 0 && store.points.length === 0 && store.resumes.length === 0;
+  // The store applies this rule over the archive and refuses either way; this
+  // only decides which sentence to print before a file is chosen.
+  const isEmpty = isEmptyStore(store);
 
   return (
     <Panel>

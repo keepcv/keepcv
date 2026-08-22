@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { NameBox } from "../../../components/ui/name-box.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
@@ -35,41 +36,27 @@ function Derive({ resume, client }: { resume: Resume; client: ApiClient }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <input
-        aria-label={`A name for the resume started from ${resume.name}`}
-        value={typed}
-        onChange={(event) => {
-          setTyped(event.target.value);
-        }}
-        className="min-w-0 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-      />
-      <Button
-        tone="primary"
-        disabled={typed.trim() === "" || derive.isPending}
-        onClick={() => {
-          const id = newUuid();
-          derive.mutate(
-            { from: resume, id, name: typed.trim() },
-            {
-              onSuccess: () => {
-                void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });
-              },
+    <NameBox
+      label={`A name for the resume started from ${resume.name}`}
+      initial={`${resume.name} copy`}
+      confirm={derive.isPending ? "Copying" : "Start it"}
+      disabled={derive.isPending}
+      onSave={(name) => {
+        const id = newUuid();
+        derive.mutate(
+          { from: resume, id, name },
+          {
+            onSuccess: () => {
+              void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });
             },
-          );
-          setTyped(null);
-        }}
-      >
-        {derive.isPending ? "Copying" : "Start it"}
-      </Button>
-      <Button
-        onClick={() => {
-          setTyped(null);
-        }}
-      >
-        Cancel
-      </Button>
-    </div>
+          },
+        );
+        setTyped(null);
+      }}
+      onCancel={() => {
+        setTyped(null);
+      }}
+    />
   );
 }
 

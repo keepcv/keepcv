@@ -330,3 +330,13 @@ export function composition(store: Store, resumeId: Uuid): Composition | undefin
     ),
   };
 }
+
+// The same rule the store applies before it loads an import, over the boot
+// payload rather than the archive: the store is the authority and refuses
+// either way, so this only decides whether a screen offers to try.
+export function isEmptyStore(store: Store): boolean {
+  const { id, createdAt, updatedAt, archivedAt, ...details } = store.profile;
+  if (Object.values(details).some((value) => value !== null)) return false;
+
+  return Object.entries(store).every(([, value]) => !Array.isArray(value) || value.length === 0);
+}

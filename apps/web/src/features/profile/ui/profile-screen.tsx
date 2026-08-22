@@ -32,6 +32,7 @@ import {
   type ChannelValues,
   channelRows,
   channelValuesOf,
+  EXTRACTABLE_KINDS,
   isChanged,
   missingExtractable,
   newChannelValues,
@@ -354,8 +355,10 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
 
       {missing.length === 0 ? null : (
         <div className="mx-4 mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          No {missing.map((kind) => CHANNEL_LABELS[kind].toLowerCase()).join(" and no ")} yet. A
-          resume with neither is one a machine reading it cannot answer.
+          No {missing.map((kind) => CHANNEL_LABELS[kind].toLowerCase()).join(" and no ")} yet.{" "}
+          {missing.length === EXTRACTABLE_KINDS.length
+            ? "A resume with neither is one a machine reading it cannot file an application from."
+            : "Both are worth having: a reader that pulls the text back out looks for each."}
         </div>
       )}
 

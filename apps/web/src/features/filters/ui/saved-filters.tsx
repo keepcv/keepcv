@@ -2,6 +2,7 @@ import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "../../../components/ui/button.js";
+import { NameBox } from "../../../components/ui/name-box.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { useForgetFilter, useSaveFilter } from "../api/use-saved-filters.js";
 import {
@@ -74,34 +75,19 @@ export function SavedFilters({
           Save this filter
         </Button>
       ) : (
-        <span className="flex flex-wrap items-center gap-2">
-          <input
-            aria-label="A name for this filter"
-            value={typed}
-            placeholder="What this list is"
-            onChange={(event) => {
-              setTyped(event.target.value);
-            }}
-            className="min-w-0 rounded-lg border border-slate-200 px-2 py-1 text-sm"
-          />
-          <Button
-            tone="primary"
-            disabled={typed.trim() === "" || save.isPending}
-            onClick={() => {
-              save.mutate(filterInput(store, typed, narrowing));
-              setTyped(null);
-            }}
-          >
-            Save
-          </Button>
-          <Button
-            onClick={() => {
-              setTyped(null);
-            }}
-          >
-            Cancel
-          </Button>
-        </span>
+        <NameBox
+          label="A name for this filter"
+          placeholder="What this list is"
+          confirm="Save"
+          disabled={save.isPending}
+          onSave={(name) => {
+            save.mutate(filterInput(store, name, narrowing));
+            setTyped(null);
+          }}
+          onCancel={() => {
+            setTyped(null);
+          }}
+        />
       )}
     </div>
   );

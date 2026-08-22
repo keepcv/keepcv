@@ -1705,7 +1705,18 @@ describe("the profile", () => {
     mount(() => jsonOf(store), "/profile");
 
     expect(await screen.findByText("ada@example.org")).toBeInTheDocument();
-    expect(screen.queryByText(/yet\. A resume with neither/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/yet\./)).not.toBeInTheDocument();
+  });
+
+  // "A resume with neither" is only true while both are missing, and the first
+  // real store this was tried on had an email.
+  it("stops saying neither once one of the two is there", async () => {
+    const store = emptyStore();
+    addContactChannel(store, "email", "ada@example.org");
+    mount(() => jsonOf(store), "/profile");
+
+    expect(await screen.findByText(/No phone yet/)).toBeInTheDocument();
+    expect(screen.queryByText(/with neither/)).not.toBeInTheDocument();
   });
 
   // A summary is a phrasing set like a point's, so it has to be made before
@@ -1948,6 +1959,17 @@ describe("your data", () => {
       await screen.findByText(/empty, so a backup will load straight into it/),
     ).toBeInTheDocument();
   });
+
+  // The store refuses an import over a profile someone has filled in, so a
+  // screen promising the load would work is a screen that lies.
+  it("counts a filled-in profile as something written", async () => {
+    const store = emptyStore();
+    store.profile.fullName = "Ada Lovelace";
+    mount(() => jsonOf(store), "/data");
+
+    expect(await screen.findByText(/already holds something/)).toBeInTheDocument();
+    expect(screen.getByText(/Just the profile so far/)).toBeInTheDocument();
+  });
 });
 
 describe("saved filters", () => {
@@ -1994,6 +2016,17 @@ describe("saved filters", () => {
       archived: "exclude",
       kind: null,
     });
+  });
+
+  // The box replaces the button that was just clicked, so it appears under the
+  // cursor: one that is not focused reads as broken, which it did in a browser.
+  it("puts the cursor in the name box it just opened", async () => {
+    mount(() => jsonOf(aFilledStore()), "/records");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+
+    expect(screen.getByLabelText("A name for this filter")).toHaveFocus();
   });
 
   it("offers a saved one as a way back to that list", async () => {

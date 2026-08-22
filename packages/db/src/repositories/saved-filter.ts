@@ -60,7 +60,10 @@ export function createSavedFilterRepository(db: Database): SavedFilterRepository
             options?.subject === undefined ? undefined : eq(savedFilter.subject, options.subject),
           ),
         )
-        .orderBy(bySortKey(savedFilter.sortKey));
+        // By subject first: the sort key is scoped to `(owner_id, subject)`, so
+        // two subjects can hold the same key and the key alone is not a total
+        // order. The export round trip is what found that.
+        .orderBy(savedFilter.subject, bySortKey(savedFilter.sortKey));
       return rows.map(toSavedFilter);
     },
 
