@@ -99,7 +99,11 @@ the entire WYSIWYG premise.
 
 @keepcv/api      Hono routes, Zod validation, error mapping, typed client.
 
-@keepcv/render   ResumeDocument -> HTML -> paginated -> PDF.
+@keepcv/render   ResumeDocument + the template it names -> one self-contained
+                 HTML file. No PDF writer and no headless browser: the file
+                 carries the template's own `@page` rules, so the printing
+                 engine is the PDF exporter (#7.1). Runs in Node and the
+                 browser, like core.
 @keepcv/templates  The template contract, the shared fixture that defines what
                  passing it means, and the templates themselves.
 @keepcv/interop  The lossy adapters - JSON Resume, RenderCV, PDF and DOCX
@@ -639,8 +643,37 @@ serves it over loopback beside `/v1`, so the whole bundle is one local read and
 splitting it by route would buy a suspense boundary per screen and no measurable
 time. The limit in `vite.config.ts` is set above today's size rather than
 removed, so it still trips on a real regression. The split worth making later is
-this pipeline: the templates are large, are needed on one screen, and are the
-first thing in the app that a user might never load at all.
+this pipeline: the templates and the exporter together are the largest thing in
+the bundle, are needed on one screen, and are the first thing in the app that a
+user might never load at all.
+
+### 7.1 Taking the resume away
+
+`renderHtml(document)` in `@keepcv/render` resolves the template the document
+names, inlines that template's stylesheet, and returns one HTML file. That is
+the whole exporter. It runs wherever a `ResumeDocument` does, so the app calls
+it on the document it already compiled in the tab - no request, and it works
+with the store stopped - and `keepcv render` calls it on one it compiled from
+the store on disk. Both produce the same bytes, because there is one function.
+
+**The file fetches nothing.** `isATemplate` already refuses a stylesheet that
+`@import`s or names an address, and the exporter's own suite asserts the file
+adds no address the template did not print. A resume mailed to someone who
+opens it offline has to look like the resume that was sent.
+
+**The browser is the PDF writer.** The stylesheet the file carries states
+`@page`, its physical units and its break rules, so the printing engine
+paginates the same geometry `paginate` measured - and it fragments the DOM
+properly, which is exactly what the preview declines to do. Print goes through a
+hidden `iframe` carrying that file, so the dialog opens on the document the
+download would have written rather than on the app around it. There is no
+headless browser here and no PDF library: either would be a second layout engine
+to keep in step with the first.
+
+**`paginate` and the printer answer the same question at different times.** The
+first warns while the resume is being composed; the second is what actually
+produces the file. Where they disagree the printer is right, which is why the
+length budget is a warning rather than a gate.
 
 ---
 

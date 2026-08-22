@@ -6,8 +6,8 @@ the `keepcv` launcher serves the built output, on the same origin as the API.
 > **Status: early development.** The application frame, the store overview,
 > records and points with the forms that write them, the phrasing editor with
 > its drafts and variants, private evidence, the tag vocabulary, and resumes you
-> can start, compose, target, template, preview, compare and restore from, plus
-> search. Every collection the store holds now writes.
+> can start, compose, target, template, preview, compare, restore from and send
+> as a file, plus search. Every collection the store holds now writes.
 
 ## Running it
 
@@ -108,6 +108,12 @@ pnpm --filter @keepcv/web dev
   restores which points were on the resume and in what order - not their words,
   which the version keeps and the point's own history holds. Star one to give it
   a name you will recognise later.
+- **A finished resume leaves as one file.** Download it as HTML that carries its
+  own styling and fetches nothing, or print it - which is the PDF, because the
+  page size, the margins and the breaks are already in the file and your
+  browser's print engine is what lays them out. Both are written from what the
+  tab already holds, so neither asks the store for anything, and nothing marked
+  private can travel in either.
 
 ## The session token
 

@@ -199,8 +199,15 @@ What remains is **further templates**.
 
 ### Export
 
-PDF and HTML. A JSON Resume adapter with explicit lossiness warnings. DOCX,
-LaTeX and Typst. Full-store backup and restore.
+HTML and PDF are built, as `renderHtml(document)` in `@keepcv/render`: one
+self-contained file carrying the template's own stylesheet, downloaded from the
+preview screen or written by `keepcv render`. PDF is the same file handed to the
+browser's printing engine, because the stylesheet already states `@page` and the
+break rules - there is no PDF writer and no headless browser
+(application-structure.md #7.1).
+
+What remains is a JSON Resume adapter with explicit lossiness warnings; DOCX,
+LaTeX and Typst; and full-store backup and restore.
 
 ### Versions and snapshots
 
@@ -213,8 +220,8 @@ saying where it came from. The resume screen's third view is the timeline, the
 comparison and the restore.
 
 Starring is there too: a snapshot is a version the user named, so it asks for a
-label, and unstarring archives the row. What remains is **exporting a version**,
-which waits for a renderer.
+label, and unstarring archives the row. What remains is **exporting a version**:
+`renderManifest` and `renderHtml` are both there, so it is a screen away.
 
 ### Import
 

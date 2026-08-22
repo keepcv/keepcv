@@ -33,6 +33,7 @@
   "dependencies": {
     "@keepcv/api": "workspace:*",
     "@keepcv/core": "workspace:*",
+    "@keepcv/render": "workspace:*",
     "@keepcv/schema": "workspace:*",
     "@keepcv/templates": "workspace:*",
     "@tanstack/react-query": "catalog:",

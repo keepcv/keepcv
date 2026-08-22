@@ -344,6 +344,13 @@ format must render, so the fixture is shared between templates and exporters -
 and the fixture has a test of its own asserting it still covers all of that,
 because a template only proves as much as the fixture asks of it.
 
+`@keepcv/render` renders it through every template in the registry, and asserts
+what an exported file owes on top of what a template owes: it fetches nothing,
+it adds no address the template did not print, and every element the template
+printed survives into the file. An exporter that drops a section is the
+destructive behaviour this product exists to eliminate, arriving one layer
+lower down.
+
 ---
 
 ## 6. Presenters

@@ -122,12 +122,12 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 ## Current state
 
-`packages/schema`, `packages/core`, `packages/db`, `packages/api` and
-`packages/templates` exist, `apps/cli` is the `keepcv` launcher and `apps/web` is
-the browser app. `interop`, `render` and `ats-lint` are specified but deliberately
-**not scaffolded** - empty packages are noise, and a sub-feature is either not
-started or complete. Create each one when its capability is built, and add it to
-the root `tsconfig.json` references then.
+`packages/schema`, `packages/core`, `packages/db`, `packages/api`,
+`packages/templates` and `packages/render` exist, `apps/cli` is the `keepcv`
+launcher and `render` command and `apps/web` is the browser app. `interop` and
+`ats-lint` are specified but deliberately **not scaffolded** - empty packages are
+noise, and a sub-feature is either not started or complete. Create each one when
+its capability is built, and add it to the root `tsconfig.json` references then.
 
 `apps/web` is the one workspace project **not** in those references: it emits no
 declarations for anything to reference, so it is a `noEmit` project that Vite
@@ -224,6 +224,19 @@ resolves, so no unit arithmetic happens in the host. There is deliberately no
 pagination library: one would fragment the DOM React owns, weigh megabytes, and
 be untestable in jsdom, which has no layout. The preview draws a labelled rule at
 each boundary rather than splitting the page into sheets.
+
+**A resume leaves as one file, and the browser is the PDF writer.**
+`renderHtml(document)` in `@keepcv/render` resolves the template the document
+names and inlines its stylesheet, so the file fetches nothing and prints the way
+the preview looked. That is a function rather than a route, for the reason
+`search` and `composition` are: the app calls it on the document it compiled in
+the tab, and `keepcv render` calls it on one compiled from the store on disk, so
+both produce the same bytes. PDF is that file in a hidden iframe handed to
+`print()` - the stylesheet already states `@page` and the break rules, and the
+printing engine fragments the DOM properly, which is exactly what the preview
+declines to do. No headless browser and no PDF library: either would be a second
+layout engine to keep in step with the first. Where it and `paginate` disagree
+the printer is right, which is why the length budget warns rather than gates.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response

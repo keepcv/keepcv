@@ -4,6 +4,7 @@
     { "path": "packages/schema" },
     { "path": "packages/core" },
     { "path": "packages/templates" },
+    { "path": "packages/render" },
     { "path": "packages/db" },
     { "path": "packages/api" },
     { "path": "apps/cli" }
