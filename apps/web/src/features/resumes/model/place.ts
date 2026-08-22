@@ -1,14 +1,12 @@
 import {
-  bySortKey,
   entryFor,
   entryPointFor,
   keyForPosition,
-  live,
   newUuid,
   type PlaceableSection,
   sectionFor,
 } from "@keepcv/core";
-import type { ResumeEntry, ResumeSection, Store, Uuid } from "@keepcv/schema";
+import type { ResumeEntry, ResumeSection, SortKey, Store, Uuid } from "@keepcv/schema";
 import {
   resumeEntryInputSchema,
   resumeEntryPointInputSchema,
@@ -25,15 +23,18 @@ import type {
 // on the composition covers archived rows too (data-model.md #9.1).
 export type Placement = { add: AddComposition } | { putBack: SetComposedArchived };
 
-function sectionsOf(store: Store, resumeId: Uuid) {
+// Each is the list one level drags within, archived rows included, which is both
+// the scope its sort-key index covers and the scope `useReorder` is handed
+// (data-model.md #3.5).
+export function sectionsOf(store: Store, resumeId: Uuid) {
   return store.resumeSections.filter((row) => row.resumeId === resumeId);
 }
 
-function entriesOf(store: Store, sectionId: Uuid) {
+export function entriesOf(store: Store, sectionId: Uuid) {
   return store.resumeEntries.filter((row) => row.resumeSectionId === sectionId);
 }
 
-function pointsOf(store: Store, entryId: Uuid) {
+export function pointsOf(store: Store, entryId: Uuid) {
   return store.resumeEntryPoints.filter((row) => row.resumeEntryId === entryId);
 }
 
@@ -122,34 +123,8 @@ export function toggled(placed: Placed, isVisible: boolean): PatchComposition {
   }
 }
 
-// The rows the sort-key index covers around this one, archived included.
-function scopeOf(store: Store, placed: Placed) {
-  switch (placed.level) {
-    case "section":
-      return sectionsOf(store, placed.row.resumeId);
-    case "entry":
-      return entriesOf(store, placed.row.resumeSectionId);
-    case "point":
-      return pointsOf(store, placed.row.resumeEntryId);
-  }
-}
-
-function indexOf(
-  scope: readonly { id: Uuid; sortKey: string; archivedAt: string | null }[],
-  id: Uuid,
-): number {
-  return live(scope)
-    .sort(bySortKey)
-    .findIndex((row) => row.id === id);
-}
-
-// One row moves, because the key is fractional (data-model.md #3.4). Nothing is
-// written when the row is already where the move would put it.
-export function movedBy(store: Store, placed: Placed, delta: number): PatchComposition | undefined {
-  const scope = scopeOf(store, placed);
-  const sortKey = keyForPosition(scope, placed.row.id, indexOf(scope, placed.row.id) + delta);
-  if (sortKey === undefined) return undefined;
-
+// One row moves, because the key is fractional (data-model.md #3.4).
+export function movedTo(placed: Placed, sortKey: SortKey): PatchComposition {
   switch (placed.level) {
     case "section":
       return { level: "section", row: placed.row, patch: { sortKey } };

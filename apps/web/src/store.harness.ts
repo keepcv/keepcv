@@ -24,6 +24,7 @@ import {
   resumeSchema,
   resumeSectionSchema,
   type Store,
+  savedFilterSchema,
   storeSchema,
   type Tag,
   tagSchema,
@@ -70,6 +71,7 @@ export function emptyStore(): Store {
     resumeEntries: [],
     resumeEntryPoints: [],
     resumeContactChannels: [],
+    savedFilters: [],
   });
 }
 
@@ -256,7 +258,12 @@ export function addEvidence(
   );
 }
 
-export function addContactChannel(store: Store, kind: string, value: string): void {
+export function addContactChannel(
+  store: Store,
+  kind: string,
+  value: string,
+  overrides: Record<string, unknown> = {},
+): void {
   store.contactChannels.push(
     contactChannelSchema.parse({
       ...standard(),
@@ -265,6 +272,7 @@ export function addContactChannel(store: Store, kind: string, value: string): vo
       value,
       isDefaultVisible: true,
       sortKey: "a0",
+      ...overrides,
     }),
   );
 }
@@ -441,4 +449,25 @@ export function addCustomSection(
   });
   store.customSections.push(section);
   return section.id;
+}
+
+export function addSavedFilter(
+  store: Store,
+  name: string,
+  overrides: Record<string, unknown> = {},
+): void {
+  store.savedFilters.push(
+    savedFilterSchema.parse({
+      ...standard(),
+      name,
+      subject: "record",
+      query: "",
+      kind: null,
+      tagId: null,
+      archived: "exclude",
+      unfinished: null,
+      sortKey: "a0",
+      ...overrides,
+    }),
+  );
 }

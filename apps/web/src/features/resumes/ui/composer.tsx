@@ -1,11 +1,20 @@
-import type { Store, Uuid } from "@keepcv/schema";
+import type {
+  ResumeEntry,
+  ResumeEntryPoint,
+  ResumeSection,
+  SortKey,
+  Store,
+  Uuid,
+} from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { DragGrip, ReorderControls, RowButton } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { type Reorder, useReorder } from "../../../lib/order.js";
 import {
   type Placed,
   useAddComposed,
@@ -14,11 +23,14 @@ import {
   useSetContactVisibility,
 } from "../api/use-composition.js";
 import {
-  movedBy,
+  entriesOf,
+  movedTo,
   type Placement,
   placePoint,
   placeRecord,
   placeSection,
+  pointsOf,
+  sectionsOf,
   toggled,
 } from "../model/place.js";
 import type {
@@ -37,34 +49,9 @@ function Off() {
 
 interface Writes {
   toggle: (placed: Placed, isVisible: boolean) => void;
-  move: (placed: Placed, delta: number) => void;
+  move: (placed: Placed, sortKey: SortKey) => void;
   remove: (placed: Placed) => void;
   place: (placement: Placement) => void;
-}
-
-function RowButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
-    >
-      {children}
-    </button>
-  );
 }
 
 // Every label names its row, because four of these repeat down the screen and
@@ -73,37 +60,18 @@ function Controls({
   subject,
   placed,
   isVisible,
-  isFirst,
-  isLast,
+  reorder,
   writes,
 }: {
   subject: string;
   placed: Placed;
   isVisible: boolean;
-  isFirst: boolean;
-  isLast: boolean;
+  reorder: ReactNode;
   writes: Writes;
 }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
-      <RowButton
-        label={`Move ${subject} up`}
-        disabled={isFirst}
-        onClick={() => {
-          writes.move(placed, -1);
-        }}
-      >
-        Up
-      </RowButton>
-      <RowButton
-        label={`Move ${subject} down`}
-        disabled={isLast}
-        onClick={() => {
-          writes.move(placed, 1);
-        }}
-      >
-        Down
-      </RowButton>
+      {reorder}
       <RowButton
         label={`${isVisible ? "Stop printing" : "Print"} ${subject}`}
         onClick={() => {
@@ -174,14 +142,12 @@ function AddPicker<T extends { label: string }>({
 
 function Point({
   point,
-  isFirst,
-  isLast,
+  order,
   writes,
   onChooseWording,
 }: {
   point: CompositionPoint;
-  isFirst: boolean;
-  isLast: boolean;
+  order: Reorder<ResumeEntryPoint>;
   writes: Writes;
   onChooseWording: (phrasingId: Uuid) => void;
 }) {
@@ -189,12 +155,11 @@ function Point({
 
   return (
     <li
-      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5 text-sm text-slate-700 data-[off=true]:opacity-50"
+      {...order.rowProps(point.row)}
+      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5 text-sm text-slate-700 data-[held=true]:opacity-40 data-[off=true]:opacity-50"
       data-off={!point.isVisible}
     >
-      <span aria-hidden className="text-slate-300">
-        -
-      </span>
+      <DragGrip />
       <Link
         to="/points/$pointId/edit"
         params={{ pointId: point.pointId }}
@@ -223,8 +188,7 @@ function Point({
         subject={text}
         placed={{ level: "point", row: point.row }}
         isVisible={point.isVisible}
-        isFirst={isFirst}
-        isLast={isLast}
+        reorder={<ReorderControls order={order} row={point.row} subject={text} />}
         writes={writes}
       />
     </li>
@@ -232,28 +196,36 @@ function Point({
 }
 
 function Entry({
+  store,
   entry,
-  isFirst,
-  isLast,
+  order,
   writes,
   onPlacePoint,
   onChooseWording,
 }: {
+  store: Store;
   entry: CompositionEntry;
-  isFirst: boolean;
-  isLast: boolean;
+  order: Reorder<ResumeEntry>;
   writes: Writes;
   onPlacePoint: (point: CompositionEntry["placeable"][number]) => void;
   onChooseWording: (point: CompositionPoint, phrasingId: Uuid) => void;
 }) {
+  const points = useReorder(pointsOf(store, entry.row.id), (row, sortKey) => {
+    writes.move({ level: "point", row }, sortKey);
+  });
+
   return (
-    <li className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0">
+    <li
+      {...order.rowProps(entry.row)}
+      className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0 data-[held=true]:opacity-40"
+    >
       {/* Wraps rather than hiding: which role, where and when is the whole
           identity of an entry, and dropping it below `sm` leaves a bare title. */}
       <div
         className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 data-[off=true]:opacity-50"
         data-off={!entry.isVisible}
       >
+        <DragGrip />
         <Link
           to="/records/$recordId"
           params={{ recordId: entry.recordId }}
@@ -269,8 +241,7 @@ function Entry({
           subject={entry.title}
           placed={{ level: "entry", row: entry.row }}
           isVisible={entry.isVisible}
-          isFirst={isFirst}
-          isLast={isLast}
+          reorder={<ReorderControls order={order} row={entry.row} subject={entry.title} />}
           writes={writes}
         />
       </div>
@@ -283,12 +254,11 @@ function Entry({
         )
       ) : (
         <ul className="mt-1.5">
-          {entry.points.map((point, at) => (
+          {entry.points.map((point) => (
             <Point
               key={point.row.id}
               point={point}
-              isFirst={at === 0}
-              isLast={at === entry.points.length - 1}
+              order={points}
               writes={writes}
               onChooseWording={(phrasingId) => {
                 onChooseWording(point, phrasingId);
@@ -370,72 +340,77 @@ function Heading({
 
 function Section({
   section,
-  isFirst,
-  isLast,
+  order,
   writes,
   store,
   onRename,
   onChooseWording,
 }: {
   section: CompositionSection;
-  isFirst: boolean;
-  isLast: boolean;
+  order: Reorder<ResumeSection>;
   writes: Writes;
   store: Store;
   onRename: (heading: string) => void;
   onChooseWording: (point: CompositionPoint, phrasingId: Uuid) => void;
 }) {
+  const entries = useReorder(entriesOf(store, section.row.id), (row, sortKey) => {
+    writes.move({ level: "entry", row }, sortKey);
+  });
+
   return (
-    <Panel>
-      <PanelHeader
-        title={section.heading}
-        aside={
-          <span className="flex items-center gap-2">
-            {section.isVisible ? null : <Badge>section off</Badge>}
-            <Controls
-              subject={section.heading}
-              placed={{ level: "section", row: section.row }}
-              isVisible={section.isVisible}
-              isFirst={isFirst}
-              isLast={isLast}
-              writes={writes}
-            />
-          </span>
-        }
-      />
-      <PanelBody className="space-y-3">
-        <Heading section={section} onRename={onRename} />
-
-        {section.entries.length === 0 ? (
-          <p className="text-sm text-slate-600">Nothing placed in this section yet.</p>
-        ) : (
-          <ul>
-            {section.entries.map((entry, at) => (
-              <Entry
-                key={entry.row.id}
-                entry={entry}
-                isFirst={at === 0}
-                isLast={at === section.entries.length - 1}
+    <div {...order.rowProps(section.row)} className="data-[held=true]:opacity-40">
+      <Panel>
+        <PanelHeader
+          title={section.heading}
+          aside={
+            <span className="flex items-center gap-2">
+              {section.isVisible ? null : <Badge>section off</Badge>}
+              <Controls
+                subject={section.heading}
+                placed={{ level: "section", row: section.row }}
+                isVisible={section.isVisible}
+                reorder={
+                  <ReorderControls order={order} row={section.row} subject={section.heading} />
+                }
                 writes={writes}
-                onPlacePoint={(point) => {
-                  writes.place(placePoint(store, entry.row, point.id, point.phrasingId));
-                }}
-                onChooseWording={onChooseWording}
               />
-            ))}
-          </ul>
-        )}
-
-        <AddPicker
-          label={`Add a record to ${section.heading}`}
-          empty="Every record of this kind is already in this section."
-          options={section.placeable}
-          onPick={(record) => {
-            writes.place(placeRecord(store, section.row, record.id));
-          }}
+            </span>
+          }
         />
-      </PanelBody>
-    </Panel>
+        <PanelBody className="space-y-3">
+          <Heading section={section} onRename={onRename} />
+
+          {section.entries.length === 0 ? (
+            <p className="text-sm text-slate-600">Nothing placed in this section yet.</p>
+          ) : (
+            <ul>
+              {section.entries.map((entry) => (
+                <Entry
+                  key={entry.row.id}
+                  store={store}
+                  entry={entry}
+                  order={entries}
+                  writes={writes}
+                  onPlacePoint={(point) => {
+                    writes.place(placePoint(store, entry.row, point.id, point.phrasingId));
+                  }}
+                  onChooseWording={onChooseWording}
+                />
+              ))}
+            </ul>
+          )}
+
+          <AddPicker
+            label={`Add a record to ${section.heading}`}
+            empty="Every record of this kind is already in this section."
+            options={section.placeable}
+            onPick={(record) => {
+              writes.place(placeRecord(store, section.row, record.id));
+            }}
+          />
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }
 
@@ -523,9 +498,8 @@ export function Composer({
     toggle: (placed, isVisible) => {
       patch.mutate(toggled(placed, isVisible));
     },
-    move: (placed, delta) => {
-      const moved = movedBy(store, placed, delta);
-      if (moved !== undefined) patch.mutate(moved);
+    move: (placed, sortKey) => {
+      patch.mutate(movedTo(placed, sortKey));
     },
     remove: (placed) => {
       setArchived.mutate({ ...placed, archived: true });
@@ -536,6 +510,10 @@ export function Composer({
     },
   };
 
+  const sections = useReorder(sectionsOf(store, resumeId), (row, sortKey) => {
+    writes.move({ level: "section", row }, sortKey);
+  });
+
   return (
     <div className="space-y-5">
       {detail.sections.length === 0 ? (
@@ -544,12 +522,11 @@ export function Composer({
           is copied - a resume points at the store.
         </Empty>
       ) : (
-        detail.sections.map((section, at) => (
+        detail.sections.map((section) => (
           <Section
             key={section.row.id}
             section={section}
-            isFirst={at === 0}
-            isLast={at === detail.sections.length - 1}
+            order={sections}
             writes={writes}
             store={store}
             onRename={(heading) => {

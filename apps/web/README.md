@@ -3,11 +3,13 @@
 The browser app for [KeepCV](https://github.com/keepcv/keepcv). Not published:
 the `keepcv` launcher serves the built output, on the same origin as the API.
 
-> **Status: early development.** The application frame, the store overview,
-> records and points with the forms that write them, the phrasing editor with
-> its drafts and variants, private evidence, the tag vocabulary, and resumes you
-> can start, compose, target, template, preview, compare, restore from and send
-> as a file, plus search. Every collection the store holds now writes.
+> **Status: early development.** The application frame, the store overview, the
+> profile with its contact channels and summary, records and points with the
+> forms that write them, the phrasing editor with its drafts and variants,
+> private evidence, the tag vocabulary, and resumes you can start, derive from
+> another, compose, target, template, preview, compare, restore from and send as
+> a file - old versions included - plus search and a backup screen. Every
+> collection the store holds now writes, and every ordered list drags.
 
 ## Running it
 

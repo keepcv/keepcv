@@ -2,10 +2,12 @@ import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import { DataScreen } from "../features/data/ui/data-screen.js";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
 import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
 import { PointScreen } from "../features/points/ui/point-screen.js";
+import { ProfileScreen } from "../features/profile/ui/profile-screen.js";
 import { MissingRecord, RecordDetail } from "../features/records/ui/record-detail.js";
 import { RecordForm } from "../features/records/ui/record-form.js";
 import { RecordList } from "../features/records/ui/record-list.js";
@@ -61,14 +63,34 @@ const overviewRoute = createRoute({
   },
 });
 
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: function ProfilePage() {
+    const { api } = profileRoute.useRouteContext();
+    return <ProfileScreen store={useStore(api)} client={api} />;
+  },
+});
+
+const dataRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/data",
+  component: function DataPage() {
+    const { api } = dataRoute.useRouteContext();
+    return <DataScreen store={useStore(api)} client={api} />;
+  },
+});
+
 const recordsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/records",
   validateSearch: recordSearchSchema,
   component: function RecordsScreen() {
-    const store = useStore(recordsRoute.useRouteContext().api);
+    const { api } = recordsRoute.useRouteContext();
     const { kind, tag, archived } = recordsRoute.useSearch();
-    return <RecordList store={store} filters={{ kind, tagId: tag, archived }} />;
+    return (
+      <RecordList store={useStore(api)} client={api} filters={{ kind, tagId: tag, archived }} />
+    );
   },
 });
 
@@ -122,9 +144,9 @@ const pointsRoute = createRoute({
     tag: uuidSchema.optional(),
   }),
   component: function PointsScreen() {
-    const store = useStore(pointsRoute.useRouteContext().api);
+    const { api } = pointsRoute.useRouteContext();
     const { filter, tag } = pointsRoute.useSearch();
-    return <PointList store={store} filters={{ filter, tagId: tag }} />;
+    return <PointList store={useStore(api)} client={api} filters={{ filter, tagId: tag }} />;
   },
 });
 
@@ -230,6 +252,8 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   overviewRoute,
+  profileRoute,
+  dataRoute,
   recordsRoute,
   newRecordRoute,
   recordRoute,

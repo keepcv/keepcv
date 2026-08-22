@@ -5,7 +5,8 @@ data store that compiles into resumes: the store holds everything permanently,
 and a resume is a selection over it.
 
 > **Status: early development.** There is no release yet. It serves the HTTP API
-> and the web app, and writes a resume out as a file.
+> and the web app, writes a resume out as a file, and keeps a readable backup
+> of the whole store beside it.
 
 ## Usage
 
@@ -24,6 +25,7 @@ launch and prints where everything is:
     http://127.0.0.1:4319/#token=RmXk...
 
     Store   /home/ada/.keepcv
+    Backup  /home/ada/.keepcv/store.json
     Token   RmXk...
 ```
 
@@ -70,6 +72,32 @@ It is a report, not a gate - the file is already written.
 | Option | Default |
 |---|---|
 | `--out <path>` | the resume's own name, in the current directory |
+| `--data-dir <path>` | `~/.keepcv` |
+
+## Backing it up
+
+The launcher writes `store.json` beside the data directory as it starts, every
+few minutes while it runs, and again as it stops. It is the whole store in one
+readable file - archived rows, superseded wordings and every resume version -
+written whole and moved into place, so a crash mid-write leaves the previous copy
+rather than half a file. A write that would change nothing is skipped, so an idle
+store touches no disk.
+
+The same two things on demand:
+
+```sh
+npx keepcv backup --out my-store.json
+npx keepcv restore --from my-store.json --data-dir ./fresh
+```
+
+A restore only loads into a store nothing has been written to yet. It never
+merges two career histories: that needs a review step in front of it, which is
+what importing another tool's format will be for.
+
+| Option | Default |
+|---|---|
+| `--out <path>` | `store.json` beside the store |
+| `--from <path>` | required, for `restore` |
 | `--data-dir <path>` | `~/.keepcv` |
 
 The data directory is where your career store lives. It is a PostgreSQL

@@ -12,6 +12,7 @@ import {
   useSnapshots,
   useStarVersion,
   useVersionDiff,
+  useVersionDocument,
   useVersions,
 } from "../api/use-versions.js";
 import {
@@ -21,6 +22,7 @@ import {
   type VersionRow,
   versionRows,
 } from "../model/version-rows.js";
+import { DownloadResume } from "./download.js";
 
 const INDENTS = ["pl-0", "pl-4", "pl-8"];
 
@@ -147,6 +149,40 @@ function Starring({ row, onStar }: { row: VersionRow; onStar: (star: Star) => vo
   );
 }
 
+// A version is a file the same way the working resume is: the store compiles
+// the manifest, the browser renders it. Nothing is restored to send an old one.
+function ExportVersion({ client, row }: { client: ApiClient; row: VersionRow }) {
+  const [open, setOpen] = useState(false);
+  const document = useVersionDocument(client, row.id, open);
+
+  return (
+    <>
+      <Button
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
+        {open ? "Close" : "Export"}
+      </Button>
+      {!open ? null : (
+        <div className="w-full">
+          {document.error === null ? null : <Failure error={document.error} />}
+          {document.data === undefined ? (
+            <Skeleton rows={1} />
+          ) : (
+            <div className="max-w-xs">
+              <p className="pb-2 text-xs text-slate-500">
+                Version #{row.seq}, in the words it pinned rather than the ones the store holds now.
+              </p>
+              <DownloadResume document={document.data} />
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 // The timeline, a comparison of any two entries, and a restore. A restore never
 // rewinds: it appends an entry saying where it came from (data-model.md #9.2).
 export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeId: Uuid }) {
@@ -212,6 +248,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
                       star.mutate(next);
                     }}
                   />
+                  <ExportVersion client={client} row={row} />
                   <Button
                     disabled={restore.isPending || row.seq === newest?.seq}
                     onClick={() => {

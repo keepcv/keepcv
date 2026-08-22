@@ -1,21 +1,74 @@
 import { newUuid } from "@keepcv/core";
-import type { Store } from "@keepcv/schema";
+import type { Resume, Store } from "@keepcv/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { NameBox } from "../../../components/ui/name-box.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
-import { useCreateResume } from "../api/use-resumes.js";
+import { useCreateResume, useDeriveResume } from "../api/use-resumes.js";
 import { type ResumeRow, resumeRows } from "../model/resume-rows.js";
 
 function counted(value: number, singular: string, plural: string): string {
   return `${String(value)} ${value === 1 ? singular : plural}`;
 }
 
-function Row({ row }: { row: ResumeRow }) {
+// The name is asked for, because two resumes called the same thing is the state
+// this is most likely to produce and the hardest to unpick later.
+function Derive({ resume, client }: { resume: Resume; client: ApiClient }) {
+  const derive = useDeriveResume(client);
+  const navigate = useNavigate();
+  const [typed, setTyped] = useState<string | null>(null);
+
+  if (typed === null) {
+    return (
+      <Button
+        onClick={() => {
+          setTyped(`${resume.name} copy`);
+        }}
+      >
+        Start one from this
+      </Button>
+    );
+  }
+
+  return (
+    <NameBox
+      label={`A name for the resume started from ${resume.name}`}
+      initial={`${resume.name} copy`}
+      confirm={derive.isPending ? "Copying" : "Start it"}
+      disabled={derive.isPending}
+      onSave={(name) => {
+        const id = newUuid();
+        derive.mutate(
+          { from: resume, id, name },
+          {
+            onSuccess: () => {
+              void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });
+            },
+          },
+        );
+        setTyped(null);
+      }}
+      onCancel={() => {
+        setTyped(null);
+      }}
+    />
+  );
+}
+
+function Row({
+  row,
+  resume,
+  client,
+}: {
+  row: ResumeRow;
+  resume: Resume | undefined;
+  client: ApiClient;
+}) {
   return (
     <li>
       <Link
@@ -45,6 +98,11 @@ function Row({ row }: { row: ResumeRow }) {
           {row.hidden === 0 ? "" : ` - ${String(row.hidden)} toggled off`}
         </p>
       </Link>
+      {resume === undefined || row.isArchived ? null : (
+        <div className="px-3 pb-2">
+          <Derive resume={resume} client={client} />
+        </div>
+      )}
     </li>
   );
 }
@@ -158,7 +216,12 @@ export function ResumeList({
       ) : (
         <ul className="rounded-xl border border-slate-200 bg-white p-1">
           {rows.map((row) => (
-            <Row key={row.id} row={row} />
+            <Row
+              key={row.id}
+              row={row}
+              resume={store.resumes.find((held) => held.id === row.id)}
+              client={client}
+            />
           ))}
         </ul>
       )}

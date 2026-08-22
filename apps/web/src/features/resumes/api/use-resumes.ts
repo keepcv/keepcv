@@ -1,4 +1,4 @@
-import type { Resume, ResumeInput, ResumePatch, Store } from "@keepcv/schema";
+import type { Resume, ResumeInput, ResumePatch, Store, Uuid } from "@keepcv/schema";
 import { resumeSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
 import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
@@ -63,5 +63,28 @@ export function useSetResumeArchived(client: ApiClient) {
       return writeInto(store, { ...resume, archivedAt: archived ? at : null, updatedAt: at });
     },
     settle: writeInto,
+  });
+}
+
+export interface DeriveResume {
+  from: Resume;
+  id: Uuid;
+  name: string;
+}
+
+// Nothing optimistic: the store mints every row of the copy, so there is no
+// composition to show until the re-read brings it back.
+export function useDeriveResume(client: ApiClient) {
+  return useStoreMutation<DeriveResume, Resume>({
+    send: async ({ from, id, name }) =>
+      resumeSchema.parse(
+        await unwrap(
+          await client.v1.resumes[":id"].derive.$post({
+            param: { id: from.id },
+            json: { id, name },
+          }),
+        ),
+      ),
+    optimistic: (store) => store,
   });
 }

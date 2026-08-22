@@ -5,6 +5,7 @@ import {
   type ResumeSnapshot,
   type ResumeVersion,
   restoredResumeSchema,
+  resumeDocumentSchema,
   resumeSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
@@ -384,5 +385,36 @@ describe("usage", () => {
   it("is a 404 for a point that is not there, not an empty list", async () => {
     expect((await send("GET", `/v1/points/${newUuid()}/usage`)).status).toBe(404);
     expect((await send("GET", `/v1/records/${newUuid()}/usage`)).status).toBe(404);
+  });
+});
+
+describe("compiling what a version said", () => {
+  // The whole point of pinning revisions: rewording in June must not rewrite
+  // what a version captured in March says was sent.
+  it("resolves the wordings the version pinned, not the ones the store holds now", async () => {
+    const { resumeId, phrasingId } = await compose("For Acme");
+    const { version } = await capture(resumeId);
+    await send("POST", `/v1/phrasings/${phrasingId}/revisions`, {
+      body: [{ t: "text", v: "Something else entirely" }],
+    });
+
+    const response = await send("GET", `/v1/resume-versions/${version.id}/document`);
+    expect(response.status).toBe(200);
+    const document = resumeDocumentSchema.parse(await response.json());
+
+    const printed = document.sections.flatMap((section) =>
+      section.entries.flatMap((entry) => entry.points.map((point) => point.plainText)),
+    );
+    expect(printed).toEqual(["Cut p95 latency from 800ms to 120ms"]);
+  });
+
+  it("cannot compile another owner's version", async () => {
+    const { resumeId } = await compose("For Acme");
+    const { version } = await capture(resumeId);
+    const intruder = await otherOwner();
+
+    const response = await intruder("GET", `/v1/resume-versions/${version.id}/document`);
+    expect(response.status).toBe(404);
+    expect((await problemOf(response)).type).toBe(PROBLEM_TYPES.notFound);
   });
 });

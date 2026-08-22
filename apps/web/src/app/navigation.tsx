@@ -46,6 +46,10 @@ export function Navigation({ store }: { store: Store }) {
         <NavLink to="/" exact>
           Overview
         </NavLink>
+        <NavLink to="/profile">
+          Profile
+          {store.profile.fullName === null ? <Count>unnamed</Count> : null}
+        </NavLink>
         <NavLink to="/records" search={{ archived: "exclude" }}>
           All records
           <Count>{live(store.records).length}</Count>
@@ -66,6 +70,7 @@ export function Navigation({ store }: { store: Store }) {
           Resumes
           <Count>{live(store.resumes).length}</Count>
         </NavLink>
+        <NavLink to="/data">Your data</NavLink>
       </div>
 
       {counts.length === 0 ? null : (

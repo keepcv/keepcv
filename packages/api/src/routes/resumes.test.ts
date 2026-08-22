@@ -476,3 +476,69 @@ describe("contact channel overrides", () => {
     expect((await send("GET", `/v1/resumes/${theirResume.id}/contact-channels`)).status).toBe(404);
   });
 });
+
+describe("deriving a resume", () => {
+  it("copies the selection in one transaction and leaves the source alone", async () => {
+    const { resume, section, entry, record, point, phrasingId } = await compose();
+    const id = newUuid();
+
+    const started = await created(
+      await send("POST", `/v1/resumes/${resume.id}/derive`, { id, name: "Backend, Zeta" }),
+      resumeSchema,
+    );
+    expect(started).toMatchObject({ id, name: "Backend, Zeta" });
+
+    const sections = await items(
+      await send("GET", `/v1/resume-sections?resumeId=${id}`),
+      resumeSectionSchema,
+    );
+    const entries = await items(
+      await send("GET", `/v1/resume-entries?resumeId=${id}`),
+      resumeEntrySchema,
+    );
+    const points = await items(
+      await send("GET", `/v1/resume-entry-points?resumeId=${id}`),
+      resumeEntryPointSchema,
+    );
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.id).not.toBe(section.id);
+    expect(entries[0]).toMatchObject({ recordId: record.id, resumeSectionId: sections[0]?.id });
+    expect(points[0]).toMatchObject({
+      pointId: point.id,
+      phrasingId,
+      resumeEntryId: entries[0]?.id,
+    });
+
+    // The source keeps exactly what it had: deriving reads, it does not move.
+    expect(
+      await items(await send("GET", `/v1/resume-entries?resumeId=${resume.id}`), resumeEntrySchema),
+    ).toEqual([entry]);
+  });
+
+  it("takes the template but never the posting", async () => {
+    const resume = await addResume("Backend, Acme");
+    await send("PATCH", `/v1/resumes/${resume.id}`, {
+      expectedUpdatedAt: resume.updatedAt,
+      patch: { templateId: "ats-single-column", pageLimit: 1, targetCompany: "Babbage Ltd" },
+    });
+
+    const started = await created(
+      await send("POST", `/v1/resumes/${resume.id}/derive`, { id: newUuid(), name: "Next" }),
+      resumeSchema,
+    );
+    expect(started).toMatchObject({
+      templateId: "ats-single-column",
+      pageLimit: 1,
+      targetCompany: null,
+    });
+  });
+
+  it("cannot derive from another owner's resume", async () => {
+    const theirs = await addResume("Theirs", await otherOwner());
+    const problem = await problemOf(
+      await send("POST", `/v1/resumes/${theirs.id}/derive`, { id: newUuid(), name: "Mine" }),
+    );
+    expect(problem.status).toBe(404);
+  });
+});

@@ -866,6 +866,40 @@ rather than inventing them (`mentoring` does not find `mentored`). A missed term
 shows up as "nothing placed answers this" next to a resume that plainly does,
 which reads as a prompt rather than as an error.
 
+### 8.1 `saved_filter` - a narrowing under a name
+
+```sql
+name       text not null
+subject    text not null check (subject in ('record','point'))
+query      text not null default ''
+kind       text null                 -- a record kind; the record list only
+tag_id     uuid null                 -- (owner_id, tag_id) references tag
+archived   text not null default 'exclude'  -- exclude | include | only
+unfinished text null                 -- unplaced | unmeasured; the point list only
+sort_key   text not null
+```
+
+**It stores what the narrowing means, not the vocabulary of the control that
+produced it.** The point list narrows with one four-valued widget - all,
+unplaced, no metric, archived - and two of those are facts about a point while
+one is an archived scope. Keeping the widget's own word would tie a table to a
+segmented control, and redrawing the control would need a migration. Split as
+above, `archived` is the same three values on both lists and `unfinished` names
+a thing the store can answer.
+
+**A row carries only its subject's narrowing.** A record has no `unplaced` and a
+point has no kind, so `saved_filter_subject_columns_check` refuses a row that
+would filter by something the list it belongs to never reads.
+
+**`sort_key` is scoped to `(owner_id, subject)`**, which is the list it is
+dragged within (#3.5). The tag reference cascades like every other one and is
+never `set null`: the key is composite, so Postgres would null `owner_id` with
+it, and nothing deletes a tag anyway.
+
+Archiving a tag does not archive the filters naming it. The tag is still there
+and the vocabulary screen is where it comes back; a filter that quietly vanished
+because a word was put aside would be a delete nobody asked for.
+
 ---
 
 ## 9. Resumes
