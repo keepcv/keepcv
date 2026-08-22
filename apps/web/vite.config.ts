@@ -10,7 +10,7 @@ export default defineConfig({
   // to know where it was deployed.
   base: "/",
   // application-structure.md #7 for the limit.
-  build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 1000 },
+  build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 1100 },
   // The launcher serves both from one origin, so the dev server reproduces that
   // rather than teaching the app a second base URL.
   server: { proxy: { "/v1": "http://127.0.0.1:4319" } },

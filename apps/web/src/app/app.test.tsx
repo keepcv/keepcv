@@ -1020,6 +1020,57 @@ describe("a resume and its template", () => {
     expect(await screen.findByText(/within the 1 page you asked for/)).toBeInTheDocument();
   });
 
+  // The document was compiled in this tab, so the file is written from what the
+  // browser already holds and the store is asked nothing.
+  it("writes the resume out as one file, without a request for it", async () => {
+    const { store, server, resume } = aResumeToPrint();
+    const point = store.points[0];
+    if (point === undefined) throw new Error("the filled store holds a point");
+    addEvidence(store, point.id, { value: "https://private.test/salary-review" });
+
+    const written: Blob[] = [];
+    const names: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob: Blob | MediaSource) => {
+      written.push(blob as Blob);
+      return "blob:written";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+    await printed();
+    press("Download HTML");
+
+    expect(names).toEqual(["ada-lovelace-staff-engineer-2026.html"]);
+    const file = written[0];
+    if (file === undefined) throw new Error("the download wrote a file");
+
+    const html = await file.text();
+    expect(html.startsWith("<!doctype html>")).toBe(true);
+    expect(html).toContain("Cut p95 latency from 800ms to 120ms");
+    // Structural, not filtered: `ResumeDocument` has no field evidence could
+    // travel in, so no exporter can leak it even by mistake.
+    expect(html).not.toContain("private.test");
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+
+  // The browser is the PDF writer: the template's stylesheet already states the
+  // page box and the break rules the print engine needs.
+  it("hands that same file to the print engine", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    await printed();
+    press("Print or save as PDF");
+
+    const sent = window.document.querySelector<HTMLIFrameElement>('iframe[aria-hidden="true"]');
+    expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
+  });
+
   it("says what the template does rather than claiming a certification", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
