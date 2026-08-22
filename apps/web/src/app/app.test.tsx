@@ -1,3 +1,4 @@
+import { compile } from "@keepcv/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -8,6 +9,7 @@ import {
   addDraft,
   addEntry,
   addEntryPoint,
+  addEvidence,
   addMetric,
   addPhrasing,
   addPoint,
@@ -59,6 +61,8 @@ async function printed(): Promise<ReturnType<typeof within>> {
   });
   return within(page);
 }
+
+const EPOCH_ISO = "2026-01-01T00:00:00.000Z";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -1242,5 +1246,67 @@ describe("the tag vocabulary", () => {
       expect(store.tags[0]?.label).toBe("Kubernetes");
     });
     expect(store.tags[0]?.slug).toBe("kubernetes");
+  });
+});
+
+describe("what backs a point up", () => {
+  it("adds evidence to a point and keeps it out of what prints", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Cut p95 latency from 800ms to 120ms");
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    await screen.findByLabelText("Kind");
+    type("Link", "https://reviews.test/q3");
+    type("Why it matters", "named as the reason it landed");
+    press("Add evidence");
+
+    expect(await screen.findByRole("link", { name: "https://reviews.test/q3" })).toHaveAttribute(
+      "rel",
+      "noreferrer noopener",
+    );
+    expect(screen.getByText("named as the reason it landed")).toBeInTheDocument();
+    expect(store.evidence).toHaveLength(1);
+    expect(store.evidence[0]).toMatchObject({ kind: "url", pointId: point.id });
+  });
+
+  // Evidence is private structurally, not by a filter: there is no field on
+  // `ResumeDocument` it could travel in, and this is the test that says so.
+  it("never reaches the compiled document", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Cut p95 latency", { recordId: record.id });
+    addEvidence(store, point.id);
+    const resume = addResume(store, { name: "Staff engineer" });
+    const section = addSection(store, resume.id);
+    addEntryPoint(store, addEntry(store, section, record.id), point);
+
+    mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
+
+    const page = await printed();
+    expect(page.getByText("Cut p95 latency")).toBeInTheDocument();
+    expect(page.queryByText(/private\.test/)).not.toBeInTheDocument();
+    expect(JSON.stringify(compile(store, resume.id, { generatedAt: EPOCH_ISO }))).not.toContain(
+      "private.test",
+    );
+  });
+
+  it("removes a piece of evidence by archiving it, never by deleting", async () => {
+    const store = emptyStore();
+    const point = addPoint(store, "Cut p95 latency");
+    addEvidence(store, point.id, { kind: "note", value: "Told me in the Q3 review" });
+    const server = storeServer(store);
+    mount(server.answer, `/points/${point.id}/edit`);
+
+    expect(await screen.findByText("Told me in the Q3 review")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "remove" }));
+
+    // Off the screen and still in the store: the row is archived, not deleted,
+    // and an archived one must not keep rendering.
+    await waitFor(() => {
+      expect(screen.queryByText("Told me in the Q3 review")).not.toBeInTheDocument();
+    });
+    expect(store.evidence).toHaveLength(1);
+    expect(store.evidence[0]?.archivedAt).not.toBeNull();
   });
 });

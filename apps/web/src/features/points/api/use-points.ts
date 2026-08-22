@@ -1,6 +1,20 @@
 import { deriveRevision, newUuid } from "@keepcv/core";
-import type { Metric, MetricInput, Point, PointInput, PointPatch } from "@keepcv/schema";
-import { metricSchema, phrasingSchema, phrasingSetSchema, pointSchema } from "@keepcv/schema";
+import type {
+  Evidence,
+  EvidenceInput,
+  Metric,
+  MetricInput,
+  Point,
+  PointInput,
+  PointPatch,
+} from "@keepcv/schema";
+import {
+  evidenceSchema,
+  metricSchema,
+  phrasingSchema,
+  phrasingSetSchema,
+  pointSchema,
+} from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
 import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
@@ -139,6 +153,41 @@ export function useArchiveMetric(client: ApiClient) {
     optimistic: (store, metric) => ({
       ...store,
       metrics: replaceRow(store.metrics, { ...metric, archivedAt: now(), updatedAt: now() }),
+    }),
+  });
+}
+
+export function useAddEvidence(client: ApiClient) {
+  return useStoreMutation<EvidenceInput, Evidence>({
+    send: async (evidence) =>
+      evidenceSchema.parse(await unwrap(await client.v1.evidence.$post({ json: evidence }))),
+    optimistic: (store, evidence) => {
+      const at = now();
+      return {
+        ...store,
+        evidence: [
+          ...store.evidence,
+          evidenceSchema.parse({ ...evidence, createdAt: at, updatedAt: at, archivedAt: null }),
+        ],
+      };
+    },
+  });
+}
+
+export function useArchiveEvidence(client: ApiClient) {
+  return useStoreMutation<Evidence, Evidence>({
+    send: async (evidence) =>
+      evidenceSchema.parse(
+        await unwrap(
+          await client.v1.evidence[":id"].$delete({
+            param: { id: evidence.id },
+            json: { expectedUpdatedAt: evidence.updatedAt },
+          }),
+        ),
+      ),
+    optimistic: (store, evidence) => ({
+      ...store,
+      evidence: replaceRow(store.evidence, { ...evidence, archivedAt: now(), updatedAt: now() }),
     }),
   });
 }

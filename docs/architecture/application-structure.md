@@ -315,6 +315,17 @@ That last item is why `resume_content_ref` exists (data-model.md #9.2).
 Editing a phrasing without knowing which resumes depend on it is exactly the
 anxiety this product exists to remove.
 
+**Evidence is written on this screen, and the screen says it never leaves.**
+Metrics and evidence are both sub-collections of a point that already exists, so
+both are saved as they are added rather than staged, and removing one archives it.
+The difference is what the panel has to communicate: evidence is private
+*structurally* - `ResumeDocument` has no field it could travel in
+(template-model.md #2) - and a user who does not believe that will not write down
+the thing worth writing down. The panel says so where the rows are, not in help
+text. A `url` renders as a link only when it parses as `http` or `https`; a path,
+a half-typed address or any other scheme is shown as text, because the value is
+the user's own note and not a URL field.
+
 **Points are also a destination of their own**, listed with the record each is
 filed under, its metrics, its tags and how many resumes print it. The point is
 the atomic unit; a store that can only be browsed through records hides the one

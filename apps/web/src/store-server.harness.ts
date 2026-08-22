@@ -11,6 +11,7 @@ import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from 
 import {
   careerRecordSchema,
   draftSchema,
+  evidenceSchema,
   metricSchema,
   organisationSchema,
   phrasingRevisionSchema,
@@ -73,6 +74,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.resumeEntries.push(resumeEntrySchema.parse(row));
   } else if (path === "/v1/resume-entry-points") {
     store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row));
+  } else if (path === "/v1/evidence") {
+    store.evidence.push(evidenceSchema.parse(row));
   } else if (path === "/v1/tags") {
     const { label } = body as { label: string };
     store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
@@ -186,6 +189,9 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   }
   if (collection === "records") {
     return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
+  }
+  if (collection === "evidence") {
+    return amendIn(store.evidence, id, merged, (value) => evidenceSchema.parse(value));
   }
   if (collection === "tags") {
     const { label } = merged as { label?: string };

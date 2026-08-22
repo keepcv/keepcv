@@ -5,9 +5,9 @@ the `keepcv` launcher serves the built output, on the same origin as the API.
 
 > **Status: early development.** The application frame, the store overview,
 > records and points with the forms that write them, the phrasing editor with
-> its drafts and variants, the tag vocabulary, resumes you can start, compose,
-> target, template, preview, compare and restore from, and search. Evidence is
-> still read-only.
+> its drafts and variants, private evidence, the tag vocabulary, and resumes you
+> can start, compose, target, template, preview, compare and restore from, plus
+> search. Every collection the store holds now writes.
 
 ## Running it
 
@@ -64,6 +64,11 @@ pnpm --filter @keepcv/web dev
   wording plus short, long or angled variants, and points at one of them. A
   resume pins the wording it chose, so changing which is canonical rewrites
   nothing that was already sent.
+- **What backs a claim up stays here.** A point takes the link, the note or the
+  file that proves it, and no resume can carry any of it - not because a filter
+  strips it, but because the compiled document has no field it would fit in. It
+  is in the export, though: a backup that quietly dropped it would not be a
+  backup.
 - **A tag is made by using the word.** Type it on a record or a point and it is
   created and filed in one motion; type one you already have, however you spell
   it, and it reaches for that one rather than making a second. The vocabulary
