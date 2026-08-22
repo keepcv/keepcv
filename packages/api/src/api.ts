@@ -12,6 +12,7 @@ import { pointRoutes } from "./routes/points.js";
 import { profileRoutes } from "./routes/profile.js";
 import { recordRoutes } from "./routes/records.js";
 import { resumeRoutes } from "./routes/resumes.js";
+import { savedFilterRoutes } from "./routes/saved-filters.js";
 import { storeRoutes } from "./routes/store.js";
 import { tagRoutes } from "./routes/tags.js";
 import { versionRoutes } from "./routes/versions.js";
@@ -82,6 +83,7 @@ export function createApi(options: ApiOptions) {
     .route("/", profileRoutes(options.unitOfWork))
     .route("/", organisationRoutes(options.unitOfWork))
     .route("/", customSectionRoutes(options.unitOfWork))
+    .route("/", savedFilterRoutes(options.unitOfWork))
     .route("/", recordRoutes(options.unitOfWork))
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))

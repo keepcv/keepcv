@@ -49,6 +49,7 @@ export {
   type Repositories,
   type ResumeRepository,
   type ResumeVersionRepository,
+  type SavedFilterRepository,
   StoreNotEmptyError,
   type StoreRepository,
   TagMergedIntoItselfError,

@@ -147,7 +147,14 @@ decides whether that is a new tag or the one already there, so two spellings of
 one word cannot become two tags (application-structure.md #5.5). Both lists narrow
 by tag, and the tag is in the URL.
 
-What remains is **saved filters**.
+Saved filters are built: the record list and the point list each keep named
+narrowings above them, saved from whatever is on screen and offered back as a
+way to that list. A row stores **what the narrowing means** rather than the
+vocabulary of the control that produced it - `unplaced` and `unmeasured` are
+facts about a point, and the archived scope is the same three values on both
+lists - so a widget can be redrawn without rewriting the rows. One list is not
+saved twice: a filter matching the narrowing on screen is named instead of the
+save control being offered (data-model.md #8.1).
 
 ### Composition
 

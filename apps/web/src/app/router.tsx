@@ -144,9 +144,9 @@ const pointsRoute = createRoute({
     tag: uuidSchema.optional(),
   }),
   component: function PointsScreen() {
-    const store = useStore(pointsRoute.useRouteContext().api);
+    const { api } = pointsRoute.useRouteContext();
     const { filter, tag } = pointsRoute.useSearch();
-    return <PointList store={store} filters={{ filter, tagId: tag }} />;
+    return <PointList store={useStore(api)} client={api} filters={{ filter, tagId: tag }} />;
   },
 });
 

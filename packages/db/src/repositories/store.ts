@@ -37,6 +37,7 @@ import {
   resumeSection,
   resumeSnapshot,
   resumeVersion,
+  savedFilter,
   tag,
 } from "../schema/index.js";
 import { owned } from "./owned-row.js";
@@ -120,6 +121,7 @@ export function createStoreRepository(
       resumeEntries: await repositories.resumes.listEntries(everything),
       resumeEntryPoints: await repositories.resumes.listEntryPoints(everything),
       resumeContactChannels: await repositories.resumes.listContactChannels(),
+      savedFilters: await repositories.savedFilters.list(everything),
     };
   }
 
@@ -272,6 +274,11 @@ export function createStoreRepository(
       await insertAll(
         recordTag,
         store.recordTags.map((row) => ({ ...row, ownerId })),
+      );
+      // After the tags, which is the only table one references.
+      await insertAll(
+        savedFilter,
+        store.savedFilters.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
 
       await loadPoints(store, ownerId);

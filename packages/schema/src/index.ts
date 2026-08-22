@@ -277,6 +277,23 @@ export {
   versionTriggerSchema,
 } from "./entities/resume-version.js";
 export {
+  ARCHIVED_SCOPES,
+  type ArchivedScope,
+  archivedScopeSchema,
+  FILTER_SUBJECTS,
+  type FilterSubject,
+  filterSubjectSchema,
+  type SavedFilter,
+  type SavedFilterInput,
+  type SavedFilterPatch,
+  savedFilterInputSchema,
+  savedFilterPatchSchema,
+  savedFilterSchema,
+  UNFINISHED_KINDS,
+  type UnfinishedKind,
+  unfinishedKindSchema,
+} from "./entities/saved-filter.js";
+export {
   type PointTag,
   pointTagSchema,
   type RecordTag,

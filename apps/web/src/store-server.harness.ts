@@ -36,6 +36,7 @@ import {
   resumeSnapshotSchema,
   resumeVersionSchema,
   richTextSchema,
+  savedFilterSchema,
   tagSchema,
 } from "@keepcv/schema";
 
@@ -92,6 +93,8 @@ function createRow(store: Store, path: string, body: unknown, at: string): Respo
     store.recordFields.push(recordFieldSchema.parse(row));
   } else if (path === "/v1/custom-sections") {
     store.customSections.push(customSectionSchema.parse(row));
+  } else if (path === "/v1/saved-filters") {
+    store.savedFilters.push(savedFilterSchema.parse(row));
   } else if (path === "/v1/tags") {
     const { label } = body as { label: string };
     store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
@@ -244,6 +247,9 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
   }
   if (collection === "custom-sections") {
     return amendIn(store.customSections, id, merged, (value) => customSectionSchema.parse(value));
+  }
+  if (collection === "saved-filters") {
+    return amendIn(store.savedFilters, id, merged, (value) => savedFilterSchema.parse(value));
   }
   if (collection === "contact-channels") {
     return amendIn(store.contactChannels, id, merged, (value) => contactChannelSchema.parse(value));

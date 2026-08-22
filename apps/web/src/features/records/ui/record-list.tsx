@@ -8,6 +8,8 @@ import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
+import { recordNarrowing } from "../../filters/model/saved-filters.js";
+import { SavedFilters } from "../../filters/ui/saved-filters.js";
 import { TaggedNote } from "../../tags/ui/tagged-note.js";
 import { useUpdateRecord } from "../api/use-records.js";
 import {
@@ -190,6 +192,8 @@ export function RecordList({
           </ButtonLink>
         </div>
       </div>
+
+      <SavedFilters store={store} client={client} narrowing={recordNarrowing(filters)} />
 
       {filters.tagId === undefined ? null : (
         <TaggedNote

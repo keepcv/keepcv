@@ -19,6 +19,7 @@ import {
   addRecordField,
   addResume,
   addRevision,
+  addSavedFilter,
   addSection,
   addTag,
   aFilledStore,
@@ -1946,5 +1947,86 @@ describe("your data", () => {
     expect(
       await screen.findByText(/empty, so a backup will load straight into it/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("saved filters", () => {
+  it("keeps the list you are looking at under a name", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    mount(server.answer, "/records?kind=project&archived=only");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+    type("A name for this filter", "Shelved projects");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.savedFilters).toHaveLength(1);
+    });
+    expect(store.savedFilters[0]).toMatchObject({
+      name: "Shelved projects",
+      subject: "record",
+      kind: "project",
+      archived: "only",
+      unfinished: null,
+    });
+  });
+
+  // The four values one control holds are stored apart, so a row says what it
+  // means rather than repeating a widget's vocabulary.
+  it("stores what a point filter means, not the name of the control", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    mount(server.answer, "/points?filter=unmeasured");
+
+    await screen.findByRole("button", { name: "Save this filter" });
+    press("Save this filter");
+    type("A name for this filter", "Needs a number");
+    press("Save");
+
+    await waitFor(() => {
+      expect(store.savedFilters).toHaveLength(1);
+    });
+    expect(store.savedFilters[0]).toMatchObject({
+      subject: "point",
+      unfinished: "unmeasured",
+      archived: "exclude",
+      kind: null,
+    });
+  });
+
+  it("offers a saved one as a way back to that list", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    mount(() => jsonOf(store), "/records");
+
+    const chip = await screen.findByRole("link", { name: "Shelved projects" });
+    expect(chip).toHaveAttribute("href", expect.stringContaining("kind=project"));
+    expect(chip).toHaveAttribute("href", expect.stringContaining("archived=only"));
+  });
+
+  it("says the list is already saved rather than offering to save it twice", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    mount(() => jsonOf(store), "/records?kind=project&archived=only");
+
+    expect(await screen.findByText("Saved as Shelved projects")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save this filter" })).not.toBeInTheDocument();
+  });
+
+  it("forgets one by archiving it, never by deleting", async () => {
+    const store = aFilledStore();
+    addSavedFilter(store, "Shelved projects", { kind: "project", archived: "only" });
+    const server = storeServer(store);
+    mount(server.answer, "/records");
+
+    await screen.findByRole("link", { name: "Shelved projects" });
+    press("Forget Shelved projects");
+
+    await waitFor(() => {
+      expect(store.savedFilters[0]?.archivedAt).not.toBeNull();
+    });
+    expect(store.savedFilters).toHaveLength(1);
   });
 });

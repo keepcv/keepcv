@@ -401,6 +401,13 @@ tag carried onto another one and archives it, so no assignment is lost with the
 name. Its counts link to the lists narrowed by that tag, which is what makes
 "0 records, 0 points" actionable rather than trivia.
 
+**Saved filters sit above the list they narrow**, not on a screen of their own:
+a saved filter is a shortcut back to a list, so it lives where that list is. The
+row keeps what the narrowing means rather than the vocabulary of the control
+that made it (`data-model.md` #8.1), and a filter already naming what is on
+screen is said so rather than offered for saving a second time. Forgetting one
+archives it, like every other owned row.
+
 **Archived tags are offered nowhere but their own filter.** Assigning one would
 put a hidden word on a live row, so the picker refuses and says where to put it
 back - the alternative, restoring it silently, is a write the user did not ask

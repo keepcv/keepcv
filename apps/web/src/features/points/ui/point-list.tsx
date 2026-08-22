@@ -4,6 +4,9 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
+import type { ApiClient } from "../../../lib/api.js";
+import { pointNarrowing } from "../../filters/model/saved-filters.js";
+import { SavedFilters } from "../../filters/ui/saved-filters.js";
 import { TaggedNote } from "../../tags/ui/tagged-note.js";
 import {
   POINT_FILTER_LABELS,
@@ -90,7 +93,15 @@ function Nothing({ filters }: { filters: PointFilters }) {
   );
 }
 
-export function PointList({ store, filters }: { store: Store; filters: PointFilters }) {
+export function PointList({
+  store,
+  client,
+  filters,
+}: {
+  store: Store;
+  client: ApiClient;
+  filters: PointFilters;
+}) {
   const rows = pointRows(store, filters);
   const { filter, tagId } = filters;
 
@@ -119,6 +130,8 @@ export function PointList({ store, filters }: { store: Store; filters: PointFilt
           </ButtonLink>
         </div>
       </div>
+
+      <SavedFilters store={store} client={client} narrowing={pointNarrowing(filters)} />
 
       {tagId === undefined ? null : (
         <TaggedNote store={store} tagId={tagId} to="/points" search={{ filter }} />
