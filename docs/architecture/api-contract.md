@@ -167,8 +167,6 @@ GET    /v1/resume-versions/:id         the version and the manifest it pinned
 POST   /v1/resume-versions/:id/restore { id } - the version this appends
 CRUD   /v1/resume-snapshots            ?resumeId=&archived=
 
-POST   /v1/lint                        ResumeDocument -> lint report
-
 GET    /v1/export                      ?format=native|jsonresume|...
 POST   /v1/import                      ?format=native - all or nothing, into an empty store
 POST   /v1/import?format=jsonresume    returns a reconciliation plan, not a result
@@ -188,8 +186,13 @@ Notes on the non-obvious ones:
   in `@keepcv/render` is the whole surface; the app calls it on the document it
   compiled in the tab, and `keepcv render` calls it on one it compiled from the
   store. This is the same argument that keeps search and `composition` out of
-  the API. `POST /v1/lint` stays a route only until the linter exists to say
-  otherwise.
+  the API.
+- **There is no `/v1/lint` either, for the same reason.**
+  `lint({ document, html })` in `@keepcv/ats-lint` is a pure function of a
+  document and the file rendered from it, and the caller holds both by the time
+  it wants a verdict. A route would ship the whole resume to the machine it came
+  from and answer with a list the caller could have computed. See
+  `application-structure.md` #7.2.
 - **There is no `/v1/custom-sections/:id/entries`.** What prints under a custom
   heading is a `record` of kind `custom_entry`, so it is created and listed
   through `/v1/records` like every other kind; the section id is a field of the

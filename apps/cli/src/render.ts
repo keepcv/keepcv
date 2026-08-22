@@ -1,4 +1,6 @@
 import { writeFile } from "node:fs/promises";
+import type { LintReport } from "@keepcv/ats-lint";
+import { lint } from "@keepcv/ats-lint";
 import { compile } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { fileNameFor, renderHtml } from "@keepcv/render";
@@ -15,7 +17,7 @@ export interface Chooser {
   because: "none named" | "no match" | "ambiguous";
 }
 
-export type RenderResult = { wrote: string } | Chooser;
+export type RenderResult = { wrote: string; report: LintReport } | Chooser;
 
 const live = (resumes: readonly Resume[]): Resume[] =>
   resumes.filter((resume) => resume.archivedAt === null);
@@ -55,12 +57,27 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
     // Only the resume being absent answers undefined, and it came from this store.
     if (document === undefined) throw new Error(`${only.name} did not compile`);
 
+    const html = renderHtml(document);
     const path = request.out ?? fileNameFor(document, "html");
-    await writeFile(path, renderHtml(document), "utf8");
-    return { wrote: path };
+    await writeFile(path, html, "utf8");
+    return { wrote: path, report: lint({ document, html }) };
   } finally {
     await store.close();
   }
+}
+
+const TIER: Record<LintReport["tier"], string> = {
+  clean: "Nothing in it trips a reader that pulls the text back out.",
+  readable: "Readable, with something worth knowing:",
+  "at-risk": "Something in it does not survive being read by a machine:",
+};
+
+export function verdict(report: LintReport): string {
+  const findings = report.findings.map(
+    (finding) =>
+      `    ${finding.severity === "blocker" ? "!" : "-"} ${finding.where}: ${finding.detail}`,
+  );
+  return `  ${TIER[report.tier]}\n${findings.join("\n")}${findings.length === 0 ? "" : "\n"}`;
 }
 
 const OPENING: Record<Chooser["because"], string> = {

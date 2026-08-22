@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
 import { SESSION_TOKEN_HEADER } from "@keepcv/api";
-import { listing, renderResume } from "./render.js";
+import { listing, renderResume, verdict } from "./render.js";
 import { DEFAULT_DATA_DIR, DEFAULT_PORT, startServer } from "./serve.js";
 
 const USAGE = `
@@ -50,7 +50,7 @@ async function render(
 ): Promise<number> {
   const result = await renderResume({ dataDir, resume: named, out });
   if ("wrote" in result) {
-    process.stdout.write(`\n  Wrote ${result.wrote}\n\n`);
+    process.stdout.write(`\n  Wrote ${result.wrote}\n\n${verdict(result.report)}\n`);
     return 0;
   }
   process.stderr.write(listing(result));

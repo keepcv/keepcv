@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { SESSION_TOKEN_HEADER } from "@keepcv/api";
 import { newUuid } from "@keepcv/core";
 import { describe, expect, it } from "vitest";
-import { listing, renderResume } from "./render.js";
+import { listing, renderResume, verdict } from "./render.js";
 import { startServer } from "./serve.js";
 
 // A PGlite store on disk is a WebAssembly boot plus a full migration run, which
@@ -59,7 +59,14 @@ describe("keepcv render", () => {
       const out = join(dataDir, "out.html");
 
       try {
-        expect(await renderResume({ dataDir, resume: "staff", out })).toEqual({ wrote: out });
+        const result = await renderResume({ dataDir, resume: "staff", out });
+        expect(result).toMatchObject({ wrote: out });
+
+        // This store holds a name and nothing to reach the person by, so the
+        // file it wrote is one no system could file an application from.
+        if (!("report" in result)) throw new Error("render answered a file");
+        expect(result.report.tier).toBe("at-risk");
+        expect(verdict(result.report)).toContain("No email address anywhere");
 
         const html = await readFile(out, "utf8");
         expect(html.startsWith("<!doctype html>")).toBe(true);
@@ -96,7 +103,7 @@ describe("keepcv render", () => {
             resume: "Staff engineer",
             out: join(dataDir, "one.html"),
           }),
-        ).toEqual({ wrote: join(dataDir, "one.html") });
+        ).toMatchObject({ wrote: join(dataDir, "one.html") });
       } finally {
         await rm(dataDir, { recursive: true, force: true });
       }
