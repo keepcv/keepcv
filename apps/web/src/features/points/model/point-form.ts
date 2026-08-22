@@ -42,7 +42,7 @@ export function pointValuesOf(store: Store, point: Point): PointFormValues {
   };
 }
 
-function fieldErrors(error: ZodError): FieldErrors {
+export function fieldErrors(error: ZodError): FieldErrors {
   const errors: FieldErrors = {};
   for (const issue of error.issues) {
     errors[issue.path.map(String).join(".")] ??= issue.message;

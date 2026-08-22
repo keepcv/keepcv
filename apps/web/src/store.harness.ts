@@ -4,6 +4,7 @@ import {
   careerRecordSchema,
   contactChannelSchema,
   draftSchema,
+  evidenceSchema,
   metricSchema,
   organisationSchema,
   type Phrasing,
@@ -231,6 +232,23 @@ export function addMetric(store: Store, pointId: Uuid): void {
       direction: null,
       period: null,
       sortKey: "a0",
+    }),
+  );
+}
+
+export function addEvidence(
+  store: Store,
+  pointId: Uuid,
+  overrides: Record<string, unknown> = {},
+): void {
+  store.evidence.push(
+    evidenceSchema.parse({
+      ...standard(),
+      pointId,
+      kind: "url",
+      value: "https://private.test/salary-review",
+      note: null,
+      ...overrides,
     }),
   );
 }

@@ -16,6 +16,7 @@ import {
   type PointFormValues,
   pointValuesOf,
 } from "../model/point-form.js";
+import { PointEvidence } from "./point-evidence.js";
 import { Placement } from "./point-form.js";
 import { PointMetrics } from "./point-metrics.js";
 
@@ -121,6 +122,8 @@ export function PointScreen({
       </Panel>
 
       <PointMetrics store={store} client={client} point={point} />
+
+      <PointEvidence store={store} client={client} point={point} />
 
       <Panel>
         <PanelHeader title="Tags">

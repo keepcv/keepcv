@@ -104,7 +104,9 @@ ordering, and incompleteness nudges.
 
 The heart of the product. Point records with primary and secondary parents;
 phrasing sets, variants and immutable revisions; **the authoring interface**;
-a constrained inline markup editor; structured metrics; private evidence;
+a constrained inline markup editor; structured metrics; private evidence
+(written on the point's own screen, and marked private where the rows are rather
+than in help text - see application-structure.md #5.4);
 confidence levels; revision history with compare and restore; and a usage view
 answering "where is this used?".
 
