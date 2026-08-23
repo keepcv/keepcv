@@ -531,9 +531,8 @@ These are the point of the product, not preferences.
   code, comments, `package.json` descriptions, CI, commit messages, PR bodies -
   refers to another repository, another deployment of this product, a tier, a
   price or an implementation that is not in this tree. "Self-hosted" is fine: it
-  describes the person running it. "The hosted product", "the cloud repo", "a
-  hosted adapter" are not, and each of those was here once. A reader should
-  never be able to infer that something is being held back.
+  describes the person running it. A reader should never be able to infer that
+  something exists beyond what they can see.
 - **Ordering uses fractional sort keys**, not integer positions, so a
   drag-and-drop move writes one row.
 - **A feature is usable without editing the file that implements it.** These
