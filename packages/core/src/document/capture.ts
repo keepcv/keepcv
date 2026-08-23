@@ -102,7 +102,7 @@ function contactsOf(store: Store, resumeId: Uuid): ContactChannel[] {
 
 // What the resume says right now, frozen: pinning only phrasing revisions would
 // leave titles, dates and links live, so correcting one in 2027 would rewrite
-// what a 2026 snapshot claims was sent (data-model.md #9.3).
+// what a 2026 snapshot claims was sent.
 export function captureManifest(store: Store, resumeId: Uuid): ResumeManifest | undefined {
   const composed = composition(store, resumeId);
   if (composed === undefined) return undefined;
@@ -151,8 +151,6 @@ export interface ManifestRef {
   refId: Uuid;
 }
 
-// The usage index, projected out of a manifest: what "which resumes used this
-// point?" reads (data-model.md #9.2).
 export function manifestRefs(manifest: ResumeManifest): ManifestRef[] {
   const refs = new Map<string, ManifestRef>();
   const add = (refKind: ContentRefKind, refId: Uuid | null) => {

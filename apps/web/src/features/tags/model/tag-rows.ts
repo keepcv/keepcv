@@ -25,8 +25,7 @@ export interface TagRow {
   isArchived: boolean;
 }
 
-// Alphabetical: a tag has no sort key, and a vocabulary is looked up by name
-// rather than scrolled.
+// Alphabetical: a tag has no sort key.
 export function tagRows(store: Store, filter: TagFilter): TagRow[] {
   return tagUsage(store)
     .map((usage) => ({ ...usage, isArchived: usage.tag.archivedAt !== null }))

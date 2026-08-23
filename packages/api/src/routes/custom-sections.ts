@@ -10,7 +10,7 @@ import { router } from "../router.js";
 import { archivedQuery, collectionRoutes } from "./collection.js";
 
 // No nested entries route: an entry is a `custom_entry` record, created and
-// listed through /v1/records (api-contract.md #3).
+// listed through /v1/records.
 const routes = collectionRoutes({
   path: "/v1/custom-sections",
   tag: "custom sections",

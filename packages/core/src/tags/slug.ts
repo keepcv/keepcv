@@ -5,7 +5,7 @@ const HASH = /#/g;
 const SEPARATORS = /[^\p{L}\p{N}]+/gu;
 const EDGES = /^-+|-+$/g;
 
-// The projection `tag_slug_unique` is enforced on (data-model.md I17).
+// The projection `tag_slug_unique` is enforced on.
 export function tagSlug(label: string): string {
   // Before the rest is stripped: C, C++ and C# are otherwise one tag.
   const spelled = label.replace(PLUS, "-plus").replace(HASH, "-sharp");

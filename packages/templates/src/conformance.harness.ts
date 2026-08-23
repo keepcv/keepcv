@@ -67,9 +67,9 @@ function configsToTry(template: Template): TemplateConfig[] {
   });
 }
 
-// Passing this is the definition of "is a template" (template-model.md #5). It
-// is called from a `describe` in the package's own suite and, once there is an
-// exporter, from that one too.
+// Passing this is the definition of "is a template". It is called from a
+// `describe` in the package's own suite and, once there is an exporter, from
+// that one too.
 export function isATemplate(template: Template): void {
   it("supports the document version this build compiles", () => {
     expect(template.documentVersions).toContain(RESUME_DOCUMENT_SCHEMA_VERSION);

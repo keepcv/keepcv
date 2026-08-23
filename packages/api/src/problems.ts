@@ -15,7 +15,6 @@ export class UnauthorizedError extends Error {
   override readonly name = "UnauthorizedError";
 }
 
-// Carries the state the server holds, so the UI can show both sides.
 export class StaleWriteError extends Error {
   override readonly name = "StaleWriteError";
   readonly current: unknown;

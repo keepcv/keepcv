@@ -2,8 +2,6 @@ import type { Difference } from "../../lib/form.js";
 import { Button } from "./button.js";
 import { Panel, PanelBody, PanelHeader } from "./panel.js";
 
-// Both sides of a stale write, named. Nothing is kept until one is chosen
-// (application-structure.md #4).
 export function Conflict({
   title,
   rows,

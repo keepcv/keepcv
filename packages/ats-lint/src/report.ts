@@ -41,8 +41,7 @@ export interface LintRule {
   check: (input: LintInput) => readonly LintIssue[];
 }
 
-// A tier is the absence of findings, never a claim about a named product
-// (capabilities.md, ATS linter).
+// A tier is the absence of findings, never a claim about a named product.
 export function tierFor(findings: readonly LintFinding[]): LintTier {
   if (findings.some((finding) => finding.severity === "blocker")) return "at-risk";
   return findings.length === 0 ? "clean" : "readable";

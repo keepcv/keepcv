@@ -50,7 +50,6 @@ function Nudge({
   );
 }
 
-// The cold re-entry screen (application-structure.md #5.1).
 export function Overview({ store, asOf }: { store: Store; asOf: string }) {
   const summary = overview(store, { asOf });
   const { unfinished } = summary;

@@ -277,7 +277,7 @@ describe("comparing and restoring versions", () => {
   });
 
   // Never rewinds: the timeline keeps what happened in between, and the restore
-  // is a third entry saying where it came from (data-model.md #9.2).
+  // is a third entry saying where it came from.
   it("writes an older selection back and appends a version saying so", async () => {
     const { resumeId, entryId } = await compose("For Acme");
     const original = await capture(resumeId);

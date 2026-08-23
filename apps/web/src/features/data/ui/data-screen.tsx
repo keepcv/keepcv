@@ -15,8 +15,6 @@ function fileName(at: string): string {
   return `keepcv-${at.slice(0, 10)}.json`;
 }
 
-// Counted rather than described: "everything" is what every backup screen says,
-// and it is the sentence nobody believes until the numbers are beside it.
 function holdings(store: Store): string {
   const counts = [
     [live(store.records).length, "record"],

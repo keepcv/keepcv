@@ -258,7 +258,7 @@ export interface PhrasingRepository {
   }): Promise<PhrasingRevision[]>;
 }
 
-// Refused rather than stored and deduplicated on every read (data-model.md I16).
+// Refused rather than stored and deduplicated on every read.
 export class DuplicatePointRecordLinkError extends Error {
   override readonly name = "DuplicatePointRecordLinkError";
   readonly pointId: Uuid;
@@ -350,10 +350,8 @@ export interface TagRepository {
   untagPoint(pointId: Uuid, tagId: Uuid): Promise<void>;
 }
 
-// Keyed by what it drafts. `save` overwrites and takes no token; `discard` is
-// the one delete the store performs (data-model.md #5).
 // One aggregate: sections, entries and the points under them have no life apart
-// from the resume they compose (data-model.md #9.1).
+// from the resume they compose.
 export interface ResumeRepository {
   list(options?: { includeArchived?: boolean | undefined }): Promise<Resume[]>;
   get(id: Uuid): Promise<Resume>;
@@ -419,8 +417,8 @@ export interface ResumeRepository {
 }
 
 // Answers the current version unchanged when the manifest has not moved: three
-// sends of one resume are three snapshots, not three timeline entries nobody can
-// tell apart (data-model.md #9.2).
+// sends of one resume are three snapshots, not three timeline entries nobody
+// can tell apart.
 export interface AppendedVersion {
   version: ResumeVersion;
   created: boolean;
@@ -473,7 +471,7 @@ export class StoreNotEmptyError extends Error {
 export interface StoreRepository {
   read(): Promise<Archive>;
   // The same shape minus superseded wordings: history grows without bound and
-  // the boot payload must not (api-contract.md #3).
+  // the boot payload must not.
   readCurrent(): Promise<Store>;
   load(archive: Archive): Promise<void>;
 }
@@ -495,8 +493,8 @@ export interface Repositories {
   store: StoreRepository;
 }
 
-// The only way to reach a repository: a partial failure mid-point leaves a point
-// with no text, so there is no non-transactional path.
+// The only way to reach a repository: a partial failure mid-point leaves a
+// point with no text, so there is no non-transactional path.
 export interface UnitOfWork {
   run<T>(work: (repositories: Repositories) => Promise<T>): Promise<T>;
 }

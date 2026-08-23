@@ -33,8 +33,6 @@ export interface RouterContext {
   signOut: (() => void) | undefined;
 }
 
-// One loader, on the root: the shell navigates by what the store holds, so every
-// screen under it reads the same one payload (application-structure.md #4).
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   loader: async ({ context }) => {
     await prefetchStore(context.queries, context.api);
@@ -47,7 +45,6 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
   pendingComponent: () => <Skeleton rows={4} />,
 });
 
-// Filters live in the URL, not in component state (application-structure.md #3).
 const recordSearchSchema = z.object({
   kind: careerRecordKindSchema.optional(),
   tag: uuidSchema.optional(),

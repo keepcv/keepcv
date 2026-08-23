@@ -57,7 +57,7 @@ export async function startServer(options: {
   });
 
   // Composed here, so `createApi` knows nothing about a filesystem, a cookie or
-  // a password, and the hosted adapter reuses it unchanged.
+  // a password.
   const web = serveWebApp(webAssetsDir());
   const handle = async (request: Request, from: string | undefined): Promise<Response> => {
     // Proxy mode believes a header. Anything that did not arrive through the

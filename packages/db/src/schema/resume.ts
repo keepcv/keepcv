@@ -37,7 +37,6 @@ const SECTION_KINDS = [
 
 const LAYOUTS = ["entries", "inline", "grouped"];
 
-// data-model.md #9.1.
 export const resume = pgTable(
   "resume",
   {

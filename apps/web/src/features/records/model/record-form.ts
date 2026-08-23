@@ -197,8 +197,6 @@ const SHARED_LABELS: Record<string, string> = {
   location: "Location",
 };
 
-// What each side says, field by field. A stale write is never resolved by
-// silently keeping one of them (application-structure.md #4).
 export function differences(
   store: Store,
   mine: RecordFormValues,

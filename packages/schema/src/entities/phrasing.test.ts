@@ -44,8 +44,8 @@ const revision = {
 };
 
 describe("phrasingSetSchema", () => {
-  // The moment between inserting the set and inserting its first phrasing, which
-  // is what makes the circular foreign key resolvable (data-model.md #5).
+  // The moment between inserting the set and inserting its first phrasing,
+  // which is what makes the circular foreign key resolvable.
   it("accepts a set that has no canonical phrasing yet", () => {
     expect(phrasingSetSchema.safeParse({ ...set, canonicalPhrasingId: null }).success).toBe(true);
   });

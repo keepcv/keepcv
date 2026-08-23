@@ -27,8 +27,8 @@ export const draftTargetSchema = z
 // half-written state this table exists to keep.
 export const draftBodySchema = z.record(z.string(), z.unknown());
 
-// data-model.md #5. No id, no `archivedAt` and no concurrency token: the target
-// is the identity, and the next keystrokes are meant to overwrite this.
+// No id, no `archivedAt` and no concurrency token: the target is the identity,
+// and the next keystrokes are meant to overwrite this.
 export const draftSchema = draftTargetSchema
   .extend({
     createdAt: timestampSchema,

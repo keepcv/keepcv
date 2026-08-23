@@ -74,8 +74,7 @@ export interface UpdatePoint {
   patch: PointPatch;
 }
 
-// No text here: what a point says is the phrasing editor's to append
-// (application-structure.md #5.4).
+// No text here: what a point says is the phrasing editor's to append.
 export function useUpdatePoint(client: ApiClient) {
   return useStoreMutation<UpdatePoint, Point>({
     send: async ({ point, patch }) =>

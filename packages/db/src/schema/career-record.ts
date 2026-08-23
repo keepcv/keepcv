@@ -41,8 +41,8 @@ function onlyOn(kind: string, columns: string[]) {
   );
 }
 
-// One table for every record kind (data-model.md #6). `title` is nullable and
-// `is_current` defaults false: a record can be saved half-entered.
+// One table for every record kind. `title` is nullable and `is_current`
+// defaults false: a record can be saved half-entered.
 export const record = pgTable(
   "record",
   {
@@ -99,14 +99,15 @@ export const record = pgTable(
       sql.raw(`(kind = 'custom_entry') = (custom_section_id is not null)`),
     ),
 
-    // NULLS NOT DISTINCT covers both scopes: the column is null on every kind but
-    // custom_entry, where nulls comparing equal collapses this to (owner, kind).
+    // NULLS NOT DISTINCT covers both scopes: the column is null on every kind
+    // but custom_entry, where nulls comparing equal collapses this to (owner,
+    // kind).
     unique("record_sort_key_unique")
       .on(table.ownerId, table.kind, table.customSectionId, table.sortKey)
       .nullsNotDistinct(),
 
-    // Composite, so pointing at another owner's organisation is impossible rather
-    // than merely untested. A null satisfies it, which is MATCH SIMPLE.
+    // Composite, so pointing at another owner's organisation is impossible
+    // rather than merely untested. A null satisfies it, which is MATCH SIMPLE.
     foreignKey({
       name: "record_organisation_fk",
       columns: [table.ownerId, table.organisationId],

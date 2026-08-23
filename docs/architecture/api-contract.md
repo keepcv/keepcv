@@ -1,7 +1,7 @@
 # API Contract
 
-> The boundary between `apps/web` and `@keepcv/api`, and - more importantly -
-> the boundary the private cloud repo implements.
+> The boundary between `apps/web` and `@keepcv/api`, and the one anything else
+> that serves this store has to hold to.
 > Companion: [`data-model.md`](data-model.md),
 > [`application-structure.md`](application-structure.md).
 
@@ -9,10 +9,10 @@
 
 ## 1. Why this is a first-class artifact
 
-The public/private split works only if the private cloud repo can be a thin
-adapter rather than a fork. That requires a boundary that is documented,
-versioned and stable - which framework-internal RPC would not give us, and
-which self-hosters genuinely need.
+A store people run themselves is a store whose client and server drift out of
+step, so the boundary between them has to be documented, versioned and stable.
+Framework-internal RPC would not give us that, and it would make the API a
+side effect of one client's shape rather than a contract anything can hold to.
 
 So the HTTP API is designed, not emitted as a side effect.
 
@@ -194,8 +194,7 @@ Notes on the non-obvious ones:
 - **There is no `/v1/backup/*`.** It used to list three: `status`, `now` and
   `restore`. All three would have handed `createApi` a filesystem, which is the
   one thing it is built not to have - it takes the port, an owner scope and an
-  `authenticate` function and nothing else, which is what lets a hosted adapter
-  reuse it unchanged. The mirror is the launcher's: `keepcv serve` writes a
+  `authenticate` function and nothing else. The mirror is the launcher's: `keepcv serve` writes a
   readable copy of the whole store beside the data directory when it starts, on
   a timer, and when it stops, and `keepcv backup` and `keepcv restore` do the
   same two things on demand. The app reaches the same behaviour through
@@ -398,8 +397,8 @@ Notes on the non-obvious ones:
 
 ## 4. The repository port
 
-Defined as interfaces in `@keepcv/core`, implemented by `@keepcv/db` locally
-and by the private cloud repo against server PostgreSQL.
+Defined as interfaces in `@keepcv/core` and implemented by `@keepcv/db`, on
+PGlite locally and on server PostgreSQL.
 
 ```ts
 interface Repositories {
@@ -505,11 +504,11 @@ logic worth hiding behind a helper.
 
 ## 5. Contract testing
 
-A single suite runs against every implementation of `Repositories`:
-`@keepcv/db` on PGlite, `@keepcv/db` on server PostgreSQL, and - once it
-exists - the cloud implementation. It asserts the invariants in
-`data-model.md` #10 rather than the queries, so a divergent implementation
-fails loudly instead of subtly.
+One suite runs against every implementation of `Repositories`: `@keepcv/db` on
+PGlite and `@keepcv/db` on server PostgreSQL today, and anything else that ever
+implements the port. It asserts the invariants in `data-model.md` #10 rather
+than the queries, so a divergent implementation fails loudly instead of
+subtly.
 
 ---
 
@@ -517,8 +516,8 @@ fails loudly instead of subtly.
 
 `createApi` takes `authenticate` and nothing else: no driver, no filesystem, no
 port and no password. Everything below belongs to the launcher, for the same
-reason the backup mirror does - a hosted deployment reuses `createApi` unchanged
-and answers `authenticate` its own way.
+reason the backup mirror does: what serves the API decides how a request names
+an owner, and `createApi` is the same either way.
 
 ### The three modes
 

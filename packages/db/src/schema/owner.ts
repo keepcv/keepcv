@@ -14,8 +14,8 @@ export const owner = pgTable("owner", {
   lastOpenedAt: instant("last_opened_at"),
 });
 
-// data-model.md #3.1. Each table declares the `(owner_id, id)` primary key
-// itself: identity is owner-scoped, so restoring an export never collides.
+// Each table declares the `(owner_id, id)` primary key itself: identity is
+// owner-scoped, so restoring an export never collides.
 export function standardColumns() {
   return {
     id: uuid("id").notNull(),

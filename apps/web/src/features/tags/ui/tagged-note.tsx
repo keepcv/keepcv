@@ -1,8 +1,6 @@
 import type { Store, Uuid } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 
-// A filter that is only in the URL is one nobody can see they are inside, and
-// the empty state below it reads as "you have nothing" rather than "not here".
 export function TaggedNote({
   store,
   tagId,

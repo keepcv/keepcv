@@ -104,8 +104,6 @@ describe("what does not survive the trip", () => {
     expect(named("Emphasis")?.count).toBeGreaterThan(0);
   });
 
-  // Every entry above is a real finding about this resume. A standing list of
-  // caveats is one nobody reads, so nothing with a count of zero is in it.
   it("says nothing about what this resume does not have", () => {
     expect(losses.every((loss) => loss.count > 0)).toBe(true);
 

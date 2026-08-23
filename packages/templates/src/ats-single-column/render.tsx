@@ -142,7 +142,7 @@ function Group({
 }
 
 // An empty section says so rather than printing a heading over nothing, and an
-// entry no group claimed still prints (template-model.md #5).
+// entry no group claimed still prints.
 function Body({ section }: { section: DocumentSection }): ReactElement {
   if (section.entries.length === 0) {
     return <p className="kc-empty">Nothing under this heading prints yet.</p>;

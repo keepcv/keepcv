@@ -183,8 +183,6 @@ function ExportVersion({ client, row }: { client: ApiClient; row: VersionRow }) 
   );
 }
 
-// The timeline, a comparison of any two entries, and a restore. A restore never
-// rewinds: it appends an entry saying where it came from (data-model.md #9.2).
 export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeId: Uuid }) {
   const versions = useVersions(client, resumeId);
   const snapshots = useSnapshots(client, resumeId);

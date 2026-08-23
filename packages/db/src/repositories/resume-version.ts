@@ -114,7 +114,7 @@ export function createResumeVersionRepository(db: Database): ResumeVersionReposi
       const manifestHash = manifestHashOf(input.manifest);
       const current = await latest(input.resumeId);
       // A restore is an event rather than a state, so it appends even when it
-      // lands on the manifest already current (data-model.md #9.2).
+      // lands on the manifest already current.
       if (current?.manifestHash === manifestHash && input.restoredFromVersionId === null) {
         return { version: toVersion(current), created: false };
       }

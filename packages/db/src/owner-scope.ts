@@ -7,8 +7,8 @@ export class OwnerScopeError extends Error {
   override readonly name = "OwnerScopeError";
 }
 
-// Read here rather than passed, so "forgot to scope this query" is not a mistake
-// a caller is able to make (api-contract.md #4).
+// Read here rather than passed, so "forgot to scope this query" is not a
+// mistake a caller is able to make.
 export function runAsOwner<T>(ownerId: Uuid, work: () => Promise<T>): Promise<T> {
   return scope.run(ownerId, work);
 }

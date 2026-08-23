@@ -158,7 +158,7 @@ export function createPointRepository(
       return toPoint(await insertOwned(db, point, "point", columns));
     },
 
-    // Promoting a linked record to primary drops the link (data-model.md I16).
+    // Promoting a linked record to primary drops the link.
     async update(id, patch, expectedUpdatedAt) {
       if (patch.recordId != null) {
         await dropLink(id, patch.recordId);

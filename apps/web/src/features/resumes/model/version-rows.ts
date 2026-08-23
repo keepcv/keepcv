@@ -132,8 +132,6 @@ function entryLines(prefix: string, entry: EntryChange): ChangeLine[] {
   ];
 }
 
-// Flattened, because the shape a reader wants is a list of what happened rather
-// than the manifest's tree.
 export function diffLines(diff: ManifestDiff): ChangeLine[] {
   const heading = (key: string, subject: string, fields: readonly FieldChange[]): ChangeLine[] =>
     fields.length === 0

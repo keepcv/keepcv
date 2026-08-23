@@ -12,7 +12,6 @@ import type { Uuid } from "@keepcv/schema";
 
 const AUTH_FILE = "auth.json";
 
-// api-contract.md #6
 const COST = { N: 2 ** 14, r: 8, p: 1, keylen: 32, maxmem: 64 * 1024 * 1024 };
 
 const SESSION_LASTS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -87,9 +86,9 @@ function sign(secret: string, body: string): string {
   return createHmac("sha256", secret).update(body).digest("base64url");
 }
 
-// `<ownerId>.<expiry>.<mac>`: stateless, so a restart does not end a session and
-// there is no session table to keep. Revocation is rotating the secret, which
-// is what setting a password does.
+// `<ownerId>.<expiry>.<mac>`: stateless, so a restart does not end a session
+// and there is no session table to keep. Revocation is rotating the secret,
+// which is what setting a password does.
 export function mintSession(secret: string, ownerId: Uuid, now = Date.now()): string {
   const body = `${ownerId}.${String(now + SESSION_LASTS_MS)}`;
   return `${body}.${sign(secret, body)}`;

@@ -17,14 +17,14 @@ import {
 import { instant, owner, standardColumns } from "./owner.js";
 import { quoted } from "./vocabulary.js";
 
-// One file, every extras callback annotated: these three reference each other in
-// a cycle, and without the annotation TypeScript hits TS7022.
+// One file, every extras callback annotated: these three reference each other
+// in a cycle, and without the annotation TypeScript hits TS7022.
 
 const PURPOSES = ["point", "profile_summary", "record_summary"];
 const VARIANTS = ["standard", "short", "long", "angled"];
 
 // `canonical_phrasing_id` is nullable so the set can be inserted before the
-// phrasing that points back at it (data-model.md #5).
+// phrasing that points back at it.
 export const phrasingSet = pgTable(
   "phrasing_set",
   {
@@ -36,8 +36,8 @@ export const phrasingSet = pgTable(
     primaryKey({ columns: [table.ownerId, table.id] }),
     check("phrasing_set_purpose_check", sql.raw(`purpose in (${quoted(PURPOSES)})`)),
 
-    // Carrying this set's own id makes "the canonical phrasing is mine" a foreign
-    // key rather than a check nobody runs (I15).
+    // Carrying this set's own id makes "the canonical phrasing is mine" a
+    // foreign key rather than a check nobody runs (I15).
     foreignKey({
       name: "phrasing_set_canonical_fk",
       columns: [table.ownerId, table.canonicalPhrasingId, table.id],
@@ -77,8 +77,8 @@ export const phrasing = pgTable(
   ],
 );
 
-// IMMUTABLE: no `updated_at`, no `archived_at`, and a hand-written trigger in the
-// migration rejects any update (data-model.md I2).
+// IMMUTABLE: no `updated_at`, no `archived_at`, and a hand-written trigger in
+// the migration rejects any update.
 export const phrasingRevision = pgTable(
   "phrasing_revision",
   {

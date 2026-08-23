@@ -107,7 +107,7 @@ export function useSetChannelArchived(client: ApiClient) {
 }
 
 // Two requests, because a profile names its summary set rather than holding the
-// words: there is nowhere to write them until the set exists (data-model.md #4).
+// words: there is nowhere to write them until the set exists.
 export interface StartSummary {
   profile: Profile;
   input: PhrasingSetInput;
@@ -127,8 +127,8 @@ export function useStartSummary(client: ApiClient) {
     },
     optimistic: (store, { profile, input }) => {
       const at = now();
-      // The store mints the real revision id, since a content hash is what makes
-      // an append idempotent. This one lives until the re-read.
+      // The store mints the real revision id, since a content hash is what
+      // makes an append idempotent. This one lives until the re-read.
       const revisionId = newUuid();
       return {
         ...withProfile(store, { ...profile, summarySetId: input.id, updatedAt: at }),

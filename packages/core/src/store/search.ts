@@ -2,9 +2,6 @@ import type { Store, Uuid } from "@keepcv/schema";
 import { fold } from "../text/fold.js";
 import { live, organisationOf, tagsOfPoint, tagsOfRecord, textOfPhrasingSet } from "./selectors.js";
 
-// A pure function over the boot payload, not a table and not a route
-// (data-model.md #8).
-
 export type SearchSubject = "record" | "point";
 
 export interface SearchHit {
@@ -41,7 +38,8 @@ function field(value: string | null, weight: number): Field {
 function bestWeight(term: string, fields: readonly Field[]): number {
   let best = 0;
   for (const entry of fields) {
-    // Prefixes, not whole words: "postg" has to find "PostgreSQL" mid-keystroke.
+    // Prefixes, not whole words: "postg" has to find "PostgreSQL" mid-
+    // keystroke.
     if (entry.weight > best && entry.words.some((word) => word.startsWith(term))) {
       best = entry.weight;
     }
@@ -49,7 +47,8 @@ function bestWeight(term: string, fields: readonly Field[]): number {
   return best;
 }
 
-// Every term has to land somewhere, so a two-word query narrows rather than widens.
+// Every term has to land somewhere, so a two-word query narrows rather than
+// widens.
 function score(terms: readonly string[], fields: readonly Field[]): number {
   let total = 0;
   for (const term of terms) {
@@ -102,7 +101,8 @@ export function search(
     if (found > 0) hits.push({ subject: "point", id: point.id, score: found });
   }
 
-  // A total order, so rows do not reshuffle under the cursor between keystrokes.
+  // A total order, so rows do not reshuffle under the cursor between
+  // keystrokes.
   return hits.sort(
     (a, b) => b.score - a.score || RANK[a.subject] - RANK[b.subject] || a.id.localeCompare(b.id),
   );

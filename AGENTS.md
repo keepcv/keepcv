@@ -527,8 +527,26 @@ These are the point of the product, not preferences.
   native export, because `import(export(store)) == store` is a tested property.
 - **Every table carries `owner_id` from the first migration**, and repositories
   take the owner from ambient request scope, never a caller parameter.
+- **This repository describes only what it contains.** Nothing pushed - docs,
+  code, comments, `package.json` descriptions, CI, commit messages, PR bodies -
+  refers to another repository, another deployment of this product, a tier, a
+  price or an implementation that is not in this tree. "Self-hosted" is fine: it
+  describes the person running it. "The hosted product", "the cloud repo", "a
+  hosted adapter" are not, and each of those was here once. A reader should
+  never be able to infer that something is being held back.
 - **Ordering uses fractional sort keys**, not integer positions, so a
   drag-and-drop move writes one row.
+- **A feature is usable without editing the file that implements it.** These
+  are libraries, and a consumer that has to fork one has stopped being a
+  consumer. Three shapes do this and all three are already here: injected at the
+  boundary (`createApi`'s `authenticate`), declared by the implementation and
+  rendered by the caller (a template's `fields`), or composed around rather than
+  inside (the launcher's `/auth` routes, its backup mirror). If using what you
+  built would mean changing a constant, widening a union or re-exporting a
+  module, the seam is in the wrong place, and moving it costs less now than
+  after a fork of it exists.
+- **No package knows what a plan, quota, tier or entitlement is.** That is what
+  keeps "export is never gated" true by construction rather than by review.
 
 ## Terminology (used consistently in code, API and UI copy)
 
@@ -599,20 +617,33 @@ A comment earns its place by naming one of exactly three things:
 - **a failure that has actually happened** - not one that could
 - **a case the types cannot express** and the next edit would silently break
 
-**"X rather than Y, so that Z" is not one of them.** That form is the design
-argument, and the design argument lives in `docs/architecture/`. If it matters,
-put it there and leave the bare pointer - `data-model.md #3.6` - as the entire
-comment. A pointer plus a paragraph is the paragraph in two places.
+**The test is the "Z", not the shape.** "X rather than Y, so that Z" is the
+form most comments here take, and it is fine when Z is something the next reader
+can act on: a failure that happened (`a typo in a test passed while writing to
+the wrong table`), a constraint (`record_field_key_unique` covers archived
+rows), or behaviour the types cannot state (`jsdom does not implement
+dataTransfer`). It is not fine when Z is why the design is nicer - readability,
+symmetry, "one vocabulary is one feature to read". That argument belongs in
+`docs/architecture/` and nowhere else. Applying this to the whole tree kept
+about four hundred comments and deleted about sixty, so the shape alone is not
+the thing to grep for.
 
-**When the argument lives in an ADR, the code gets no comment at all.** ADRs are
-not pushed, so nothing in the code can reach one and nothing may cite one. Write
-the conclusion into `docs/architecture/` in the same change and point at that.
-The pull of an unreachable ADR is what produces most bad comments here.
+**No file paths and no section numbers in code.** Not `data-model.md #3.6`, not
+an ADR number, not a bare pointer of any kind. A pointer is not the argument, so
+it does not help the reader who needs the argument; it does rot the moment a
+section is renumbered, and nothing checks it. Someone who needs to know why a
+line exists reads `docs/architecture/` - they do not need the code to tell them
+it is there. If the answer to "should this be a comment?" is "no, but the
+section number is short", the answer is no.
 
 **One line. Two only if the case genuinely needs it.** Three is a spec section
 that has escaped into the code. Aim for zero comments in a file; one is normal;
 a file wanting three is telling you the naming is wrong or `docs/architecture/`
 is missing a paragraph.
+
+**A comment that survives says what breaks, not where it is written down.**
+Comment blocks wrap at 80 columns even though Biome's `lineWidth` is 100; Biome
+does not reflow them, so it is done by hand.
 
 A worked example, from this repository before the bar was applied:
 
@@ -624,8 +655,8 @@ A worked example, from this repository before the bar was applied:
 export const organisationSchema = z.object({ ... });
 ```
 
-Three sentences of `data-model.md` #6 copied, plus one restating a field that is
-not there. It became:
+Three sentences of the spec copied, a pointer to where they were copied from,
+and one restating a field that is not there. It became:
 
 ```ts
 export const organisationSchema = z.object({ ... });
@@ -654,6 +685,10 @@ Several of these look like bugs. They are not - do not "fix" them.
 - **Biome owns formatting and most linting.** `eslint.config.js` is deliberately
   thin - type-aware rules only. If a rule does not need type information, it
   belongs in `biome.json` or nowhere.
+- **`complexity/useLiteralKeys` is off.** `noPropertyAccessFromIndexSignature`
+  is on in `tsconfig.base.json`, so `errors["url"]` is what TypeScript requires
+  whenever the property comes from an index signature, and the rule's fix is
+  `TS4111` every time. It sat at 32 permanent infos before it was turned off.
 - **`biome.json` takes no comments.** A `//` line does not fail loudly - Biome
   discards the whole config and falls back to its defaults, so the next
   `pnpm lint:fix` silently reformats the entire repository to tabs at 80 columns.
@@ -672,7 +707,7 @@ Several of these look like bugs. They are not - do not "fix" them.
   `declare`d locally in `identity/uuid.ts` for the same reason.
 - **Dependency versions live in the `catalog:`**, one per dependency repo-wide.
   Add versions there and reference `"catalog:"` in package manifests.
-- **PostgreSQL is the only dialect**, local and hosted. Local uses PGlite (real
+- **PostgreSQL is the only dialect**, on a laptop and on a server. Local uses PGlite (real
   Postgres in WASM, no Docker). Do not introduce SQLite.
 - **Timestamp columns are `precision: 3`, not the Postgres default.** `updated_at`
   is the optimistic-concurrency token: it goes to the client as an ISO string and

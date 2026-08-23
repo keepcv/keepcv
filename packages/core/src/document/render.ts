@@ -32,9 +32,9 @@ function keyed<T>(rows: readonly T[], prefix: string): { key: string; row: T }[]
   return rows.map((row, index) => ({ key: `${prefix}${index}`, row }));
 }
 
-// A user-defined field whose key collides with a presenter's keeps its label and
-// takes a suffixed key: specialised templates address the typed column by key
-// and must not be handed user-entered data instead (template-model.md #3).
+// A user-defined field whose key collides with a presenter's keeps its label
+// and takes a suffixed key: specialised templates address the typed column by
+// key and must not be handed user-entered data instead.
 function withUserFields(entry: ManifestEntry, presented: DocumentField[]): DocumentField[] {
   const taken = new Set(presented.map((field) => field.key));
   return [
@@ -179,10 +179,6 @@ function contactsOf(manifest: ResumeManifest): DocumentContact[] {
   });
 }
 
-// The same function serves the browser preview, a server-side export and a
-// version pinned months ago (template-model.md #7). The revisions are passed in
-// because a manifest pins them by id: they are immutable, so the text a version
-// resolves to can never change.
 export function renderManifest(
   manifest: ResumeManifest,
   revisions: readonly PhrasingRevision[],

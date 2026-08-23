@@ -12,7 +12,7 @@ import { record } from "./career-record.js";
 import { owner, standardColumns } from "./owner.js";
 import { point } from "./point.js";
 
-// `slug` is derived from the label by the repository (data-model.md I17).
+// `slug` is derived from the label by the repository.
 export const tag = pgTable(
   "tag",
   {

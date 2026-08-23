@@ -253,9 +253,10 @@ formatting exists.
 
 ### `owner`
 
-The tenancy anchor. Local mode creates exactly one row at first launch. When
-accounts land, `owner` gains a nullable link to Better Auth's user
-table - no other table changes.
+The tenancy anchor. Exactly one row, created at first launch. Every other table
+carries `owner_id` from its first migration and every repository reads it from
+ambient scope, so the predicate is uniform whatever ends up putting an owner
+there.
 
 ```sql
 owner (

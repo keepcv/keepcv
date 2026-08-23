@@ -93,8 +93,6 @@ export function Placement({
   );
 }
 
-// A point arrives with the words it holds, so this screen writes text and the
-// editing one hands it to the phrasing editor (application-structure.md #5.4).
 export function PointForm({
   store,
   client,

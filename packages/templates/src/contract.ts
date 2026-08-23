@@ -29,8 +29,8 @@ export type ConfigField =
       default: number;
     };
 
-// template-model.md #5. `styles` and `render` are handed the document and the
-// config and nothing else, which is what makes a template unable to fetch.
+// `styles` and `render` are handed the document and the config and nothing
+// else, which is what makes a template unable to fetch.
 export interface Template {
   id: string;
   name: string;
@@ -78,8 +78,8 @@ function accepted(field: ConfigField, raw: unknown): ConfigValue | undefined {
 }
 
 // A stored config outlives the template version that wrote it: a key the
-// template has since dropped is ignored, one it has added takes its default, and
-// a value outside the declared range is refused rather than rendered.
+// template has since dropped is ignored, one it has added takes its default,
+// and a value outside the declared range is refused rather than rendered.
 export function configFor(
   template: Template,
   stored: Readonly<Record<string, unknown>> | undefined,

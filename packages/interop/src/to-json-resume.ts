@@ -91,8 +91,8 @@ function workOf(entry: DocumentEntry): JsonResumeWork {
   };
 }
 
-// Only what the format has somewhere to put. A section this leaves out is named
-// by `lossOf` rather than forced into an array that means something else.
+// Only what the format has somewhere to put; anything left out is named by
+// `lossOf`.
 export function toJsonResume(document: ResumeDocument): JsonResume {
   const work = entriesOf(document, "experience").map(workOf);
 

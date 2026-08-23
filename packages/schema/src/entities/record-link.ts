@@ -7,7 +7,7 @@ export const RECORD_LINK_KINDS = ["repo", "demo", "docs", "verify", "recording",
 
 export const recordLinkKindSchema = z.enum(RECORD_LINK_KINDS);
 
-// A URL is a link; a labelled value is a field (data-model.md #6).
+// A URL is a link; a labelled value is a field.
 export const recordLinkSchema = z
   .object({
     ...standardFields,

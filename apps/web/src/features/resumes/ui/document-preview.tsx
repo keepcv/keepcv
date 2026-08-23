@@ -15,8 +15,8 @@ import { TemplateFrame } from "./template-frame.js";
 // carries the row's `updatedAt`, and a burst would race its own answers.
 const SETTLES_AFTER = 500;
 
-// Only what differs from the template's own defaults, so a default that moves in
-// a later version moves with it (application-structure.md #5.6).
+// Only what differs from the template's own defaults, so a default that moves
+// in a later version moves with it.
 function overrides(template: Template, config: TemplateConfig): TemplateConfig {
   return Object.fromEntries(
     Object.entries(config).filter(([key, value]) => template.defaultConfig[key] !== value),
@@ -71,8 +71,6 @@ const NAMES_AT_MOST = 5;
 
 const pages = (count: number) => `${String(count)} ${count === 1 ? "page" : "pages"}`;
 
-// Named rather than counted, because the answer to "it is too long" is which
-// point to drop (template-model.md #4).
 function Budget({ budget }: { budget: LengthBudget }) {
   if (budget.limit === null) {
     return <p className="text-xs text-text-subtle">This is {pages(budget.pages)} long.</p>;

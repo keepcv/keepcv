@@ -106,7 +106,7 @@ export function createStoreRepository(
       phrasingSets: await repositories.phrasings.listSets(everything),
       phrasings: await repositories.phrasings.list(everything),
       // The export takes every revision: dropping a superseded wording is a
-      // delete. The boot payload takes the current ones (api-contract.md #3).
+      // delete. The boot payload takes the current ones.
       phrasingRevisions: await repositories.phrasings.listRevisions({ currentOnly }),
       points: await repositories.points.list(everything),
       pointRecordLinks: await repositories.points.listRecordLinks(),
@@ -196,7 +196,7 @@ export function createStoreRepository(
   }
 
   // History is in the archive and not in the boot payload: it grows without
-  // bound (api-contract.md #3).
+  // bound.
   async function readArchive(): Promise<Archive> {
     return {
       ...(await readStore()),
@@ -245,7 +245,8 @@ export function createStoreRepository(
         organisation,
         store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
-      // Derived again rather than trusted, or a hand-edited file makes I17 false.
+      // Derived again rather than trusted, or a hand-edited file makes I17
+      // false.
       await insertAll(
         tag,
         store.tags.map((row) => ({
@@ -328,8 +329,8 @@ export function createStoreRepository(
           starredAt: new Date(row.starredAt),
         })),
       );
-      // Rebuilt rather than exported: a derived index in a file is a second copy
-      // of the manifests that could arrive disagreeing with them.
+      // Rebuilt rather than exported: a derived index in a file is a second
+      // copy of the manifests that could arrive disagreeing with them.
       await insertAll(
         resumeContentRef,
         archive.resumeVersions.flatMap((row) =>

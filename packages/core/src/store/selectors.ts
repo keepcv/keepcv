@@ -19,9 +19,6 @@ import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { bySortKey } from "../ordering/sort-key.js";
 import { tagSlug } from "../tags/slug.js";
 
-// Screens read the cached store through these rather than through requests of
-// their own (application-structure.md #4).
-
 interface Archivable {
   archivedAt: string | null;
 }
@@ -74,7 +71,7 @@ export function canonicalPhrasingOf(
 }
 
 // A resume pins the phrasing, not the set, so what it says is this and not the
-// canonical wording (data-model.md #9.1).
+// canonical wording.
 export function textOfPhrasing(store: Store, phrasing: Phrasing): string {
   const revision = store.phrasingRevisions.find((row) => row.id === phrasing.currentRevisionId);
   return revision?.plainText ?? "";
@@ -94,8 +91,6 @@ function resumesPinning(store: Store, pins: (row: ResumeEntryPoint) => boolean):
   return live(store.resumes).filter((resume) => holding.has(resume.id));
 }
 
-// What rewording changes, answered before it is reworded
-// (application-structure.md #5.4).
 export function resumesUsingPhrasing(store: Store, phrasingId: Uuid): Resume[] {
   return resumesPinning(store, (row) => row.phrasingId === phrasingId);
 }
@@ -156,7 +151,6 @@ export function tagUsage(store: Store): TagUsage[] {
   }));
 }
 
-// Asked before an editor opens (application-structure.md #6).
 export function draftFor(store: Store, target: DraftTarget): Draft | undefined {
   return store.drafts.find(
     (draft) =>
@@ -172,7 +166,8 @@ export interface RecordCount {
   archived: number;
 }
 
-// Every kind, including the ones at zero: a kind not on the list is unclickable.
+// Every kind, including the ones at zero: a kind not on the list is
+// unclickable.
 export function recordCounts(store: Store): RecordCount[] {
   return CAREER_RECORD_KINDS.map((kind) => {
     const ofKind = store.records.filter((entry) => entry.kind === kind);
@@ -198,7 +193,8 @@ export interface StoreOverview {
 const RECENTLY_EDITED = 8;
 const EXPIRING_WITHIN_DAYS = 90;
 
-// A parameter rather than `Date.now()`, so a test can ask about March in January.
+// A parameter rather than `Date.now()`, so a test can ask about March in
+// January.
 export function overview(
   store: Store,
   options: { asOf: string; expiringWithinDays?: number },
@@ -225,7 +221,8 @@ export function overview(
         (entry) => !entry.isCurrent && entry.startedOn !== null && entry.endedOn === null,
       ),
       pointsWithoutMetrics: livePoints.filter((point) => !withMetrics.has(point.id)),
-      // Partial dates compare correctly as strings: "2026-03" < "2026-03-14" < "2026-04".
+      // Partial dates compare correctly as strings: "2026-03" < "2026-03-14" <
+      // "2026-04".
       expiringCertifications: liveRecords.filter(
         (entry) =>
           entry.kind === "certification" &&
@@ -254,8 +251,6 @@ const SECTION_HEADINGS: Record<SectionKind, string> = {
 
 export const DEFAULT_SECTION_LAYOUT = "entries";
 
-// Structural rather than a whole row, so a restore can ask what a section would
-// print under before it exists (application-structure.md #5.6).
 export function sectionHeading(
   store: Store,
   section: Pick<ResumeSection, "kind" | "customSectionId" | "heading">,
@@ -294,8 +289,6 @@ function inOrder<T extends { sortKey: string; id: Uuid }>(rows: T[]): T[] {
   return [...rows].sort(bySortKey);
 }
 
-// What a resume is made of, resolved and ordered. There is no route for it
-// (api-contract.md #3).
 export function composition(store: Store, resumeId: Uuid): Composition | undefined {
   const resume = store.resumes.find((row) => row.id === resumeId);
   if (resume === undefined) return undefined;

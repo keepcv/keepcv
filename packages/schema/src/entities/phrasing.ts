@@ -32,7 +32,7 @@ export const phrasingSchema = z
   })
   .meta({ id: "Phrasing", title: "Phrasing" });
 
-// Immutable, so no `updatedAt` and no `archivedAt` (data-model.md I2).
+// Immutable, so no `updatedAt` and no `archivedAt`.
 export const phrasingRevisionSchema = z
   .object({
     id: uuidSchema,

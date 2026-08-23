@@ -1,10 +1,10 @@
 import type { ResumeDocument } from "@keepcv/schema";
 import { RESUME_DOCUMENT_SCHEMA_VERSION } from "@keepcv/schema";
 
-// Passing this is the definition of "is a template" (template-model.md #5), so
-// it carries every slot, every field kind, all three inline marks, all three
-// layouts, a section with nothing under it, an entry with no points, a point
-// with no metrics, an entry no group claims, and a kind no presenter emits.
+// Passing this is the definition of "is a template", so it carries every slot,
+// every field kind, all three inline marks, all three layouts, a section with
+// nothing under it, an entry with no points, a point with no metrics, an entry
+// no group claims, and a kind no presenter emits.
 export const FIXTURE_DOCUMENT: ResumeDocument = {
   schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
   meta: {
@@ -216,8 +216,8 @@ export const FIXTURE_DOCUMENT: ResumeDocument = {
           points: [],
           tags: [],
           links: [],
-          // The same key as the entry above it: a field key names a column, so it
-          // repeats across entries and cannot be what `data-key` carries.
+          // The same key as the entry above it: a field key names a column, so
+          // it repeats across entries and cannot be what `data-key` carries.
           fields: [{ key: "credentialId", label: "Credential ID", value: "CKA-99", kind: "text" }],
         },
       ],

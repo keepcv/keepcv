@@ -34,7 +34,6 @@ const points = collectionRoutes({
   }),
 });
 
-// Flat and narrowed by `?pointId` (api-contract.md #3).
 const byPoint = archivedQuery.extend({ pointId: uuidSchema.optional() });
 
 const metrics = collectionRoutes({

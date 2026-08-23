@@ -5,8 +5,6 @@ import { quoted } from "./vocabulary.js";
 
 const KINDS = ["company", "institution", "issuer", "publisher", "venue", "other"];
 
-// data-model.md #6. `name` is the one thing you always know, so it is the single
-// NOT NULL here.
 export const organisation = pgTable(
   "organisation",
   {

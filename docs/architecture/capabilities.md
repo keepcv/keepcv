@@ -53,7 +53,6 @@ Foundation
                 +-> Versions and snapshots
                   +-> Import
                   +-> ATS linter
-                  +-> Accounts and sync
                   +-> Role profiles
                   +-> Portfolio site
 ```
@@ -86,14 +85,12 @@ later. Once that test exists, everything built afterwards inherits a test provin
 it did not break portability. It is a whole-store read and write rather than an
 adapter, so it lives on the repository port and not in `@keepcv/interop`.
 
-**What a self-hoster needs is not a user system.** A store reached from a
-phone or a LAN needs a credential that survives a restart, which the launch
-token is not; that is `--auth password` and `--auth proxy`, and it is the whole
-of it. Accounts, sign-up, verification, OAuth and anything that could gate a
-feature belong to the hosted product and not to this repository - a shared
-package that learns what an entitlement is has already lost the argument.
+**What this needs is not a user system.** A store reached from a phone or a LAN
+needs a credential that survives a restart, which the launch token is not; that
+is `--auth password` and `--auth proxy`, and it is the whole of it. All three
+modes answer the same single owner.
 
-**Non-goals:** no accounts, no hosted deployment, no telemetry, no OIDC client.
+**Non-goals:** no accounts, no sign-up, no telemetry, no OIDC client.
 
 ### Profile
 
@@ -328,12 +325,6 @@ There is no `/v1/lint`: the caller holds the document and the file already, for
 the same reason search and `composition` are selectors rather than routes.
 
 What remains is more rules as real postings turn up cases these five miss.
-
-### Accounts and sync
-
-Better Auth integration; a server storage adapter; local-to-hosted migration;
-account deletion with a mandatory export offer. Server-side entitlements live
-in the private repository only.
 
 ### Role profiles
 

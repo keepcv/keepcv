@@ -26,10 +26,9 @@ import { timestampSchema } from "../primitives/timestamp.js";
 export const CURRENT_SCHEMA_VERSION = 1;
 
 // Current state, which is what the boot payload carries. History is in
-// `archiveSchema` below, and grows without bound (api-contract.md #3).
-// `import(export(store)) == store` is a tested property, so anything omitted
-// there is data the format silently drops. A slice adding a table adds it to
-// one of these two.
+// `archiveSchema` below, and grows without bound. `import(export(store)) ==
+// store` is a tested property, so anything omitted there is data the format
+// silently drops. A slice adding a table adds it to one of these two.
 export const storeSchema = z
   .object({
     profile: profileSchema,
@@ -49,7 +48,7 @@ export const storeSchema = z
     tags: z.array(tagSchema),
     recordTags: z.array(recordTagSchema),
     pointTags: z.array(pointTagSchema),
-    // In the boot payload too, unlike revision history (api-contract.md #3).
+    // In the boot payload too, unlike revision history.
     drafts: z.array(draftSchema),
     resumes: z.array(resumeSchema),
     resumeSections: z.array(resumeSectionSchema),
@@ -62,8 +61,8 @@ export const storeSchema = z
   // inlined into the OpenAPI document twice.
   .meta({ id: "Store", title: "Career store" });
 
-// The store plus its history. `resumeContentRef` is absent because it is derived
-// from the manifests and rebuilt on import (data-model.md #9.2).
+// The store plus its history. `resumeContentRef` is absent because it is
+// derived from the manifests and rebuilt on import.
 export const archiveSchema = storeSchema
   .extend({
     resumeVersions: z.array(resumeVersionSchema),

@@ -6,7 +6,7 @@ import { richTextSchema } from "../primitives/rich-text.js";
 
 export const RESUME_DOCUMENT_SCHEMA_VERSION = 1;
 
-// template-model.md #4. Positional, so nothing here is a store identifier.
+// Positional, so nothing here is a store identifier.
 const keySchema = z.string().min(1);
 
 export const documentPeriodSchema = z
@@ -119,9 +119,6 @@ export const documentHeaderSchema = z
   })
   .meta({ id: "DocumentHeader", title: "Header" });
 
-// The template is named rather than resolved: a document is what a renderer
-// binds to, and which renderer that is has to survive being stored and read back
-// by a build that holds different templates (template-model.md #5).
 export const documentMetaSchema = z
   .object({
     generatedAt: z.string(),
@@ -132,8 +129,8 @@ export const documentMetaSchema = z
   })
   .meta({ id: "DocumentMeta", title: "Document metadata" });
 
-// The one shape that crosses every layer unchanged (template-model.md). It has
-// no field evidence could travel in, which is invariant I5.
+// The one shape that crosses every layer unchanged. It has no field evidence
+// could travel in, which is invariant I5.
 export const resumeDocumentSchema = z
   .object({
     schemaVersion: z.number().int().positive(),

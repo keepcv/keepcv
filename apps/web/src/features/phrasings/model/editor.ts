@@ -25,8 +25,8 @@ export function bodyOf(text: string): RichText {
   return trimmed === "" ? [] : [{ t: "text", v: trimmed }];
 }
 
-// A draft is deliberately unvalidated (data-model.md #5), so a body written by
-// an older shape reads as no draft rather than as a crash on open.
+// A draft is deliberately unvalidated, so a body written by an older shape
+// reads as no draft rather than as a crash on open.
 export function draftText(draft: Draft | undefined): string | undefined {
   if (draft === undefined) return undefined;
   const parsed = richTextSchema.safeParse(draft.body["body"]);
@@ -41,8 +41,6 @@ export interface EditorState {
   hasDraft: boolean;
 }
 
-// The transitions of application-structure.md #6, as a function of what is on
-// screen rather than of which timer fired.
 export function actionFor(state: EditorState, trigger: "debounce" | "settle"): EditorAction {
   if (state.typed.trim() === state.committed) return state.hasDraft ? "discard-draft" : "none";
   return trigger === "debounce" ? "save-draft" : "commit";
