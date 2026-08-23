@@ -8,7 +8,7 @@ import type {
 } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
-import { Empty } from "../../../app/states.js";
+import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
@@ -522,8 +522,14 @@ export function Composer({
     writes.move({ level: "section", row }, sortKey);
   });
 
+  // Every write here is optimistic, so a refused one puts the row back exactly
+  // as it was and otherwise says nothing at all.
+  const refused = add.error ?? patch.error ?? setArchived.error;
+
   return (
     <div className="space-y-5">
+      {refused === null ? null : <Failure error={refused} />}
+
       {detail.sections.length === 0 ? (
         <Empty title="This resume is empty">
           Sections come first, then the records that go in them, then the points under each. Nothing

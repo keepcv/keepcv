@@ -1297,6 +1297,30 @@ describe("a resume and its template", () => {
     expect(server.calls.filter((call) => call.method === "POST")).toHaveLength(1);
   });
 
+  // Every composition write is optimistic, so a refused one puts the row back
+  // exactly as it was and the screen otherwise says nothing at all.
+  it("says so when a composition write is refused", async () => {
+    const { store, resume } = aResumeToPrint();
+
+    mount((_url, init) => {
+      if (init?.method === undefined || init.method === "GET") return jsonOf(store);
+      return jsonOf(
+        {
+          type: "https://keepcv.app/problems/internal",
+          title: "The store is unreachable",
+          status: 500,
+          detail: "Nothing was written.",
+          instance: "/v1/resume-entries",
+        },
+        500,
+      );
+    }, `/resumes/${resume.id}?view=composition`);
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Stop printing Experience/ }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("The store is unreachable");
+  });
+
   it("renames a resume, archives it and puts it back", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}`);
