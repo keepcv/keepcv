@@ -126,7 +126,15 @@ function Kinds({ store, collapsed }: { store: Store; collapsed: boolean }) {
   );
 }
 
-export function Navigation({ store, collapsed = false }: { store: Store; collapsed?: boolean }) {
+export function Navigation({
+  store,
+  collapsed = false,
+  onSignOut,
+}: {
+  store: Store;
+  collapsed?: boolean;
+  onSignOut?: (() => void) | undefined;
+}) {
   return (
     <nav className="flex flex-col gap-1 text-sm" aria-label="Store">
       <NavLink to="/" exact icon="overview" label="Overview" collapsed={collapsed} />
@@ -182,6 +190,20 @@ export function Navigation({ store, collapsed = false }: { store: Store; collaps
 
       <Group title="System" collapsed={collapsed}>
         <NavLink to="/data" icon="data" label="Your data" collapsed={collapsed} />
+        {onSignOut === undefined ? null : (
+          <button
+            type="button"
+            onClick={onSignOut}
+            title={collapsed ? "Sign out" : undefined}
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text",
+              collapsed && "justify-center px-0",
+            )}
+          >
+            <Icon name="signOut" size="sm" />
+            {collapsed ? null : <span className="min-w-0 flex-1 truncate text-left">Sign out</span>}
+          </button>
+        )}
       </Group>
     </nav>
   );

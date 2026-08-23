@@ -30,7 +30,13 @@ function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-export function Shell({ store }: { store: Store }) {
+export function Shell({
+  store,
+  onSignOut,
+}: {
+  store: Store;
+  onSignOut?: (() => void) | undefined;
+}) {
   const path = useRouterState({ select: (state) => state.location.pathname });
   const [palette, setPalette] = useState(false);
   // Keyed by the path it was opened on rather than closed by an effect watching
@@ -100,7 +106,7 @@ export function Shell({ store }: { store: Store }) {
           />
         ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <Navigation store={store} collapsed={collapsed} />
+          <Navigation store={store} collapsed={collapsed} onSignOut={onSignOut} />
         </div>
         {collapsed ? null : <ThemeToggle choice={choice} choose={choose} />}
       </aside>
@@ -163,7 +169,7 @@ export function Shell({ store }: { store: Store }) {
               />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <Navigation store={store} />
+              <Navigation store={store} onSignOut={onSignOut} />
             </div>
             <ThemeToggle choice={choice} choose={choose} />
           </div>

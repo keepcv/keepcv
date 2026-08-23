@@ -46,12 +46,14 @@ export function TextField({
   onChange,
   placeholder,
   suggestions,
+  type = "text",
   ...common
 }: Common & {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   suggestions?: readonly string[];
+  type?: "text" | "password";
 }) {
   const controlId = useId();
   const describedBy = `${controlId}-note`;
@@ -61,6 +63,7 @@ export function TextField({
     <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
       <input
         id={controlId}
+        type={type}
         value={value}
         onChange={(event) => {
           onChange(event.target.value);

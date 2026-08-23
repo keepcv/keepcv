@@ -37,7 +37,7 @@ function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"
   window.history.replaceState(null, "", path);
 
   const queries = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = buildRouter({ queries, api: apiClient("a-token") });
+  const router = buildRouter({ queries, api: apiClient("a-token"), signOut: undefined });
 
   render(
     <QueryClientProvider client={queries}>

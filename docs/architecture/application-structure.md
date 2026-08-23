@@ -851,7 +851,8 @@ Rules:
 
 ### The session token
 
-Local mode mints a token per launch and never writes it to disk. The launcher
+Only in token mode; `api-contract.md` #6 has the other two. It mints a token per
+launch and never writes it to disk. The launcher
 prints a URL carrying it in the **fragment**, which no browser sends to any
 server: a page on another origin that fetches this one gets the entry document
 with no token in it, and nothing lands in a proxy log. The app claims it once,
@@ -973,15 +974,25 @@ nothing inside has claimed focus already**. The close button is that first
 element, so focusing it unconditionally took focus back from the palette's field
 and swallowed everything typed after opening.
 
-### 10.6 Arriving without a token
+### 10.6 Arriving without a credential
 
-The app is reached through a URL the launcher prints, so anyone arriving without
-one used to get a red 401 panel. `main.tsx` renders a landing page instead and
-the router never mounts - every route under it would only render the same 401. A
-token that is present and refused is a different case, and the app's own failure
-state says what to do about it.
+`main.tsx` awaits `GET /auth/mode` before the first render, because which of
+three screens belongs here is not a thing to decide twice, and an effect that
+decided it later would flash the wrong one. **In none of the three does the
+router mount** - every route under it would only render the same 401.
 
-That page is also the marketing surface, and it names the things that were
-otherwise buried a level or two inside the app: the linter, the length budget,
-reading a posting, version history, phrasing variants, and what JSON Resume
-cannot carry.
+| mode | with nothing to send |
+|---|---|
+| `token` | the landing page |
+| `password` | the sign-in screen |
+| `proxy` | a panel saying the upstream named nobody, which is a proxy misconfiguration and not something to retry here |
+
+A credential that is present and refused is a different case, and the app's own
+failure state says what to do about it. Signing out is a nav item rather than a
+mode the shell knows about: the router context carries `signOut` or carries
+nothing, so the navigation asks whether signing out is a thing here.
+
+The landing page is also the marketing surface, and it names the things that
+were otherwise buried a level or two inside the app: the linter, the length
+budget, reading a posting, version history, phrasing variants, and what JSON
+Resume cannot carry.

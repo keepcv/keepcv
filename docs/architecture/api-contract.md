@@ -97,9 +97,10 @@ id ignores the flag entirely, so a link to an archived row always resolves.
 Purging is `POST /v1/{resource}/{id}/purge` with explicit confirmation -
 deliberately not reachable by an accidental `DELETE`.
 
-**Authentication.** Local mode: the per-launch session token in a custom
-header. Hosted: Better Auth session. Route handlers see an ambient owner scope
-either way and never accept an owner id from the caller.
+**Authentication.** `createApi` takes an `authenticate` function and knows
+nothing else about it: whatever serves the API decides how a request names an
+owner (#6). Route handlers see an ambient owner scope either way and never
+accept an owner id from the caller.
 
 `/v1/openapi.json` is the one route outside the guard. It describes the contract
 rather than exposing any of the store, and the tooling that reads it has not been
@@ -509,3 +510,79 @@ A single suite runs against every implementation of `Repositories`:
 exists - the cloud implementation. It asserts the invariants in
 `data-model.md` #10 rather than the queries, so a divergent implementation
 fails loudly instead of subtly.
+
+---
+
+## 6. Serving it yourself
+
+`createApi` takes `authenticate` and nothing else: no driver, no filesystem, no
+port and no password. Everything below belongs to the launcher, for the same
+reason the backup mirror does - a hosted deployment reuses `createApi` unchanged
+and answers `authenticate` its own way.
+
+### The three modes
+
+| `--auth` | Who is asking | For |
+|---|---|---|
+| `token` (default) | a token minted per launch, in `x-keepcv-session` | one person, one machine, loopback |
+| `password` | a signed cookie handed out for a password | a machine reached from a phone, a LAN or a tunnel |
+| `proxy` | a header an upstream sets, from an address the launcher trusts | an instance already behind SSO, oauth2-proxy, Tailscale or a corporate gateway |
+
+**Binding off loopback refuses `token`.** That token is minted per run, printed
+to a terminal and held only in memory: it cannot survive a restart, cannot be
+typed on the device reading the store, and is the entire credential for anything
+that can reach the port. The launcher will not start that way.
+
+**Nothing here is a user system.** A self-hosted store holds exactly one owner,
+and all three modes answer the same owner id. Accounts, sign-up, verification
+and anything that could gate a feature are not in this repository.
+
+### The password mode
+
+`keepcv set-password` writes `auth.json` into the data directory, mode `0600`,
+holding a scrypt hash and a signing secret. The parameters are `N=2^14, r=8,
+p=1`, about 16MB and a tenth of a second, and they are recorded in the stored
+string so raising them later does not lock anybody out. Node's own `scrypt`
+rather than argon2id, which is the better function and the only reason the
+launcher would take a native dependency; the cost of being wrong here is bounded
+by a throttle and by the fact that the attacker has to reach the port at all.
+
+A session is `<ownerId>.<expiry>.<hmac-sha256>` in a `keepcv.session` cookie -
+`HttpOnly`, `SameSite=Strict`, thirty days. Stateless, so a restart does not end
+a session and there is no session table to keep; revocation is rotating the
+secret, which is what setting a password does. No `Secure` flag: the launcher
+serves plain HTTP and a proxy in front of it is the only thing that could be
+terminating TLS.
+
+Sign-in is throttled to five refusals a minute. scrypt at a tenth of a second on
+its own leaves room for tens of thousands of guesses an hour.
+
+### The proxy mode
+
+`--auth proxy --proxy-header X-Forwarded-User` reads the user the upstream
+named. `--proxy-from` is the only address that header is read from, default
+`127.0.0.1`, and a request from anywhere else is refused before it reaches a
+route - otherwise anyone who can reach the port sets the header themselves.
+`--proxy-user` pins the one value that header may carry.
+
+This is deliberately not an OIDC client. An OIDC client in this repository would
+be a second thing to keep correct with no way to test it against the providers
+people actually use; a proxy is what those deployments already have in front of
+everything else they self-host.
+
+### The launcher's own routes
+
+Outside `/v1`, so they are invisible to `createApi` and to the OpenAPI document.
+
+| Route | |
+|---|---|
+| `GET /auth/mode` | `{ mode, signedIn }`, no credential required |
+| `POST /auth/sign-in` | password mode only; `{ password }` in, `Set-Cookie` out; `404` where there is no password |
+| `POST /auth/sign-out` | clears the cookie |
+
+`/auth/mode` takes no credential because the app has to know which of three
+screens to render before it has anything to send, and `signedIn` is on it
+because the cookie is `HttpOnly` and only the launcher can say whether it is
+still good. The web app asks once, before the first render: no token in token
+mode is the landing page, no session in password mode is the sign-in screen,
+and the router never mounts in either case.
