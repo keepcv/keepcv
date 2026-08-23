@@ -7,7 +7,19 @@ import { Icon } from "../components/icon/icon.js";
 import { KIND_LABELS } from "../features/records/model/record-rows.js";
 import { cn } from "../lib/cn.js";
 
-const ACTIVE = "bg-brand-soft text-brand-text hover:bg-brand-soft hover:text-brand-text";
+// The whole marker lives here rather than being coloured in from a transparent
+// one in `rowClass`: the router appends this instead of merging it, so both
+// `before:` colours land and the stylesheet's order picked transparent.
+const ACTIVE =
+  "bg-surface-sunken font-medium text-text before:absolute before:left-0 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']";
+
+function rowClass(collapsed: boolean, indent = false): string {
+  return cn(
+    "relative flex items-center gap-2.5 rounded-lg py-1.5 pl-3 pr-2.5 text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text",
+    collapsed && "justify-center px-0",
+    indent && "pl-8 text-xs",
+  );
+}
 
 function NavLink({
   to,
@@ -35,11 +47,7 @@ function NavLink({
       activeOptions={{ exact: exact === true, includeSearch: search !== undefined }}
       activeProps={{ className: ACTIVE }}
       title={collapsed === true ? label : undefined}
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text",
-        collapsed === true && "justify-center px-0",
-        indent === true && "pl-8 text-xs",
-      )}
+      className={rowClass(collapsed === true, indent === true)}
     >
       {icon === undefined ? null : <Icon name={icon} size="sm" />}
       {collapsed === true ? null : (
@@ -68,8 +76,9 @@ function Group({
       {collapsed ? (
         <hr className="mx-2 my-1.5 border-line-subtle" />
       ) : (
-        <p className="px-2.5 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-text-subtle">
+        <p className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-text-subtle">
           {title}
+          <span className="h-px flex-1 bg-line-subtle" aria-hidden="true" />
         </p>
       )}
       {children}
@@ -196,10 +205,7 @@ export function Navigation({
             type="button"
             onClick={onSignOut}
             title={collapsed ? "Sign out" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text",
-              collapsed && "justify-center px-0",
-            )}
+            className={rowClass(collapsed)}
           >
             <Icon name="signOut" size="sm" />
             {collapsed ? null : <span className="min-w-0 flex-1 truncate text-left">Sign out</span>}

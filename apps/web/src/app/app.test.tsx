@@ -272,6 +272,27 @@ describe("the app chrome", () => {
     expect(screen.getAllByRole("navigation", { name: "Store" })[0]).toHaveTextContent("Vocabulary");
   });
 
+  // Collapsing used to drop the footer holding it.
+  it("keeps the colour scheme reachable with the rail collapsed", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    const before = screen.getAllByRole("button", { name: "Dark" }).length;
+
+    press("Collapse the navigation");
+
+    expect(screen.getAllByRole("button", { name: "Dark" })).toHaveLength(before);
+  });
+
+  it("says how much the narrowing left, on the toolbar", async () => {
+    mount(() => jsonOf(aFilledStore()), "/records?archived=exclude");
+
+    expect(await screen.findByText("2 records")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "Archived" }));
+
+    expect(await screen.findByText("1 record")).toBeInTheDocument();
+  });
+
   // The rail and the narrow header each render a toggle, so the choice is the
   // shell's rather than each component's: two hooks would let them disagree.
   it("chooses a colour scheme, and both toggles agree", async () => {
@@ -1375,6 +1396,25 @@ describe("a resume and its template", () => {
       expectedUpdatedAt: expect.any(String),
       patch: { templateId: "ats-single-column", templateConfig: { fontSize: 12 } },
     });
+  });
+
+  // Carrying the old keys across hands the new template fields it does not have.
+  it("switches template and leaves the settings the old one owned behind", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    await printed();
+    type("Template", "ats-left-heading");
+
+    await waitFor(() => {
+      expect(patched(server)).toHaveLength(1);
+    });
+    expect(patched(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: { templateId: "ats-left-heading", templateConfig: {} },
+    });
+    expect(await screen.findByLabelText("Heading column")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Section headings")).not.toBeInTheDocument();
   });
 
   // The limit is a column on the resume, not a template setting, so it survives

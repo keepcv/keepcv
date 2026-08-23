@@ -10,6 +10,7 @@ import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { counted } from "../../../lib/label.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
 import {
   sectionInput,
@@ -185,7 +186,7 @@ export function SectionList({
         under one prints there and nowhere else.
       </PageHeader>
 
-      <Toolbar>
+      <Toolbar count={counted(rows.length, "section", "sections")}>
         <Segmented label="Sections">
           <Segment to="/sections" search={{ archived: false }} active={!archived}>
             In use
@@ -215,7 +216,7 @@ export function SectionList({
         </Empty>
       ) : (
         <Panel>
-          <PanelHeader title={`${String(rows.length)} shown`}>
+          <PanelHeader title="Headings of your own">
             Archiving a section leaves every record under it alone, so nothing about a resume that
             already printed changes.
           </PanelHeader>

@@ -84,31 +84,28 @@ export function Shell({
           collapsed ? "w-16 items-center" : "w-64",
         )}
       >
-        <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between")}>
-          <Brand collapsed={collapsed} />
-          {collapsed ? null : (
-            <Button
-              tone="ghost"
-              size="sm"
-              icon="collapse"
-              label="Collapse the navigation"
-              onClick={toggleRail}
-            />
-          )}
-        </div>
-        {collapsed ? (
-          <Button
-            tone="ghost"
-            size="sm"
-            icon="expand"
-            label="Expand the navigation"
-            onClick={toggleRail}
-          />
-        ) : null}
+        <Brand collapsed={collapsed} />
         <div className="min-h-0 flex-1 overflow-y-auto">
           <Navigation store={store} collapsed={collapsed} onSignOut={onSignOut} />
         </div>
-        {collapsed ? null : <ThemeToggle choice={choice} choose={choose} />}
+        {/* Both controls sit here in both states: the scheme used to be
+            reachable only by widening the rail again. */}
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-2 border-t border-line-subtle pt-3",
+            collapsed ? "flex-col" : "justify-between",
+          )}
+        >
+          <ThemeToggle choice={choice} choose={choose} stacked={collapsed} />
+          <Button
+            tone="ghost"
+            size="sm"
+            icon={collapsed ? "expand" : "collapse"}
+            label={collapsed ? "Expand the navigation" : "Collapse the navigation"}
+            expanded={!collapsed}
+            onClick={toggleRail}
+          />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

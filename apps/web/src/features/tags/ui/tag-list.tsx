@@ -9,6 +9,7 @@ import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { counted } from "../../../lib/label.js";
 import {
   tagInput,
   useCreateTag,
@@ -275,7 +276,7 @@ export function TagList({
         {TAG_BLURBS[filter]}
       </PageHeader>
 
-      <Toolbar>
+      <Toolbar count={counted(rows.length, "tag", "tags")}>
         <Segmented label="Tags">
           {TAG_FILTERS.map((option) => (
             <Segment key={option} to="/tags" search={{ filter: option }} active={filter === option}>
@@ -301,7 +302,7 @@ export function TagList({
         </Empty>
       ) : (
         <Panel>
-          <PanelHeader title={`${String(rows.length)} shown`}>
+          <PanelHeader title="The vocabulary">
             A tag is never deleted. Archiving puts it aside; merging moves everything it carried
             onto another one first.
           </PanelHeader>

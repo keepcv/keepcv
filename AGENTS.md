@@ -206,6 +206,18 @@ and wrong for a name field. **A pane's own layout is a container query**: the
 preview renders full width on its own tab and in half a workspace, and a viewport
 breakpoint left it unreadable in the second.
 
+**The toolbar is a rule with the controls on it, and the count goes on it.**
+Every one of them holds a single pill group that already looks like a control, so
+a bordered card around it was a box inside a box with most of the row empty; the
+row count fills the rest, because that is what a narrowing produces. It lives
+there and nowhere else - it had been a page header's blurb on one screen and a
+panel's title on two more. **In the rail, "you are here" is a marker in the
+margin**, not a brand-filled pill that shouts over the eleven rows the user has
+not reached; declare the whole marker in the active class, because the router
+appends `activeProps.className` rather than merging it and a base
+`before:bg-transparent` won. Nothing in the rail's footer moves when it
+collapses: the scheme toggle used to vanish below `w-16`.
+
 **`PageBody` is the only thing that sets a browse screen's width.** `reading`
 caps and centres it, `full` does not, and a `full` list restructures its rows so
 nothing is read across the canvas - laid out as four columns, a record row put
@@ -348,14 +360,26 @@ clear a field. The `409` comparison is shared with the record form and reduces
 the posting to a length rather than showing two pages of prose side by side.
 
 **A template is code, and the resume names it.** `@keepcv/templates` holds the
-contract, the shared fixture that decides what "is a template" means, and
-`ats-single-column`. A template is handed a `ResumeDocument` and its config and
+contract, the shared fixture that decides what "is a template" means, and two
+templates. A template is handed a `ResumeDocument` and its config and
 returns markup plus its own stylesheet, so the preview mounts it in an iframe the
 app's CSS cannot reach, at the size it will print at. Settings are declared as
 `fields`, which is what both the validator and the settings panel read; the
 resume stores only what differs from the template's defaults; and the manifest
 pins the choice, so a template swapped later cannot rewrite what a version says
 was sent.
+
+**A template owns its layout and nothing else.** Escaping a mark, tagging an
+element with the `data-key` the host paginates by, and printing a field as
+`label: value` are obligations every template has, so they are in `prose.tsx`;
+`@page`, `--kc-page-content-height` and the page-size and typeface vocabularies
+are in `paper.ts`, because a second copy of the page height drifts into a wrong
+page count rather than failing. `ats-left-heading` earns being a template rather
+than a setting on the other one by putting the section heading in a grid cell
+beside the section's first entry, which carries settings the other has no use
+for. Side by side is a **grid**, never a float, a coordinate or a column count -
+those move the words out of the order the markup has them in, and the lint rules
+refuse all three by name.
 
 **The browser lays the page out and `@keepcv/core` counts the pages.** The frame
 walks the column the template rendered and reports one `FlowBlock` per box - its
@@ -393,8 +417,8 @@ sent, and it keeps the package free of React and of `@keepcv/render`. There is n
 `search` and `composition` out of the API too. `clean`, `readable` and `at-risk`
 are functions of the findings, and the panel says beside them that this product
 claims compatibility with no named commercial system. A rule that would fire on
-the file `ats-single-column` writes would fire on every resume this product
-produces, and a test says so.
+the file any shipped template writes would fire on every resume this product
+produces; the test covers the registry, so adding a template adds a case.
 
 **A resume also leaves in somebody else's format, and says what it costs.**
 `toJsonResume(document)` in `@keepcv/interop` reads a `ResumeDocument` rather
