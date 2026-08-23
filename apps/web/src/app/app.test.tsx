@@ -1486,8 +1486,7 @@ describe("a resume and its template", () => {
     expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
   });
 
-  const lintPanel = async () =>
-    await screen.findByRole("region", { name: "How a machine will read it" });
+  const lintPanel = async () => await screen.findByRole("region", { name: "How it reads" });
 
   it("reads the file back the way a machine would, and says so", async () => {
     const { server, resume } = aResumeToPrint();
@@ -1514,8 +1513,20 @@ describe("a resume and its template", () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
-    expect(await screen.findByText("What this template does")).toBeInTheDocument();
-    expect(screen.getByText(/never images or table cells/)).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "How it looks" })).toHaveTextContent(
+      /never images or table cells/,
+    );
+  });
+
+  // Beside the composition the preview is feedback on what was just placed, and
+  // a panel of export and template controls opens over the thing it changes.
+  it("offers export and template settings on the preview but not on the composition", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=composition`);
+
+    await printed();
+    expect(screen.queryByRole("button", { name: /Export and settings/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Print or save as PDF" })).not.toBeInTheDocument();
   });
 
   const POSTING = "We use Kubernetes and Terraform. Kubernetes above all.";

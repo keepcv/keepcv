@@ -3,9 +3,11 @@ import { lengthBudget } from "@keepcv/core";
 import type { Resume, ResumeDocument } from "@keepcv/schema";
 import type { ConfigField, Template, TemplateConfig } from "@keepcv/templates";
 import { resolveTemplate, TEMPLATES } from "@keepcv/templates";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { Button } from "../../../components/ui/button.js";
 import { RangeField, SelectField } from "../../../components/ui/field.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { cn } from "../../../lib/cn.js";
 import { usePatchResume } from "../api/use-resumes.js";
 import { DownloadResume } from "./download.js";
 import { LintPanel } from "./lint-report.js";
@@ -110,17 +112,40 @@ function Budget({ budget }: { budget: LengthBudget }) {
   );
 }
 
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  const id = useId();
+
+  return (
+    <section aria-labelledby={id} className="space-y-2.5">
+      <h3
+        id={id}
+        className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-subtle"
+      >
+        {title}
+        <span className="h-px flex-1 bg-line" aria-hidden="true" />
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 export function DocumentPreview({
   client,
   resume,
   document,
+  settings = true,
 }: {
   client: ApiClient;
   resume: Resume;
   document: ResumeDocument;
+  // Off beside the composition, where this is live feedback on what was just
+  // placed and a panel of export and template controls would cover the thing it
+  // changes. They belong to the preview's own tab, which is one click away.
+  settings?: boolean;
 }) {
   const stored = resolveTemplate(document);
   const patch = usePatchResume(client);
+  const [open, setOpen] = useState(settings);
   const [pending, setPending] = useState<TemplateConfig | null>(null);
   const [pagination, setPagination] = useState<Pagination>({ pages: 1, pageOf: {}, breaks: [] });
   const config = pending ?? stored.config;
@@ -148,69 +173,100 @@ export function DocumentPreview({
     };
   }, [pending, resume, stored.template, mutate]);
 
-  // Keyed to this pane rather than the viewport: it renders both full width on
-  // its own tab and in half a workspace, and a 15rem sidebar off a viewport
-  // breakpoint left the page about 350px wide there.
+  // Every breakpoint here is a container query: this renders full width on its
+  // own tab and in half a workspace, and a 16rem sidebar off a viewport
+  // breakpoint left the page about 350px wide in the second. Wide enough for two
+  // columns, each scrolls on its own, so reading down the resume does not carry
+  // the settings off the top. `overflow-x-hidden` because a vertical scrollbar
+  // makes the horizontal one compute to `auto` too, and the 16px it reserves is
+  // enough to show it.
   return (
-    <div className="@container">
-      <div className="grid gap-6 @3xl:grid-cols-[15rem_minmax(0,1fr)] @3xl:items-start">
-        <aside className="order-2 space-y-4 @3xl:order-1">
-          <DownloadResume document={document} />
-
-          <LintPanel document={document} />
-
-          <div className="space-y-2 rounded-lg bg-surface-sunken p-3">
-            <SelectField
-              label="How long it may be"
-              options={LIMITS}
-              value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
-              onChange={(chosen) => {
-                mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
-              }}
-            />
-            <Budget budget={budget} />
-          </div>
-
-          <SelectField
-            label="Template"
-            options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
-            value={stored.template.id}
-            onChange={(templateId) => {
-              setPending(null);
-              mutate({ resume, patch: { templateId, templateConfig: {} } });
+    <div className="@container flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden @3xl:overflow-y-hidden">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+        {settings ? (
+          <Button
+            size="sm"
+            icon="settings"
+            iconEnd={open ? "chevronUp" : "chevronDown"}
+            expanded={open}
+            onClick={() => {
+              setOpen(!open);
             }}
-          />
-
-          {stored.template.fields.map((field) => (
-            <Control
-              key={field.key}
-              field={field}
-              config={config}
-              onChange={(value) => {
-                setPending({ ...config, [field.key]: value });
-              }}
-            />
-          ))}
-
-          <div className="rounded-lg bg-surface-sunken p-3">
-            <h3 className="text-xs font-medium text-text-muted">What this template does</h3>
-            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-text-subtle">
-              {stored.template.complianceNotes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          </div>
-        </aside>
-
-        <div className="order-1 rounded-xl bg-paper p-4 @3xl:order-2">
-          <TemplateFrame
-            title={`${resume.name}, as it prints`}
-            styles={stored.template.styles(config)}
-            overflowsFrom={resume.pageLimit ?? undefined}
-            onPaginate={onPaginate}
           >
-            {stored.template.render(document, config)}
-          </TemplateFrame>
+            Export and settings
+          </Button>
+        ) : null}
+        <p className="ml-auto text-xs tabular-nums text-text-subtle">{pages(budget.pages)}</p>
+      </div>
+
+      <div
+        className={cn(
+          "grid gap-6 @3xl:min-h-0 @3xl:flex-1",
+          open && "@3xl:grid-cols-[16rem_minmax(0,1fr)]",
+        )}
+      >
+        {open ? (
+          // Before the paper, not after it: stacked the other way round in a
+          // narrow pane, opening this appended it under a full-height resume and
+          // changed nothing the reader could see.
+          <aside className="space-y-5 @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pr-2">
+            <Group title="Take it with you">
+              <DownloadResume document={document} />
+            </Group>
+
+            <Group title="How it reads">
+              <LintPanel document={document} />
+              <SelectField
+                label="How long it may be"
+                options={LIMITS}
+                value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
+                onChange={(chosen) => {
+                  mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
+                }}
+              />
+              <Budget budget={budget} />
+            </Group>
+
+            <Group title="How it looks">
+              <SelectField
+                label="Template"
+                options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
+                value={stored.template.id}
+                onChange={(templateId) => {
+                  setPending(null);
+                  mutate({ resume, patch: { templateId, templateConfig: {} } });
+                }}
+              />
+              {stored.template.fields.map((field) => (
+                <Control
+                  key={field.key}
+                  field={field}
+                  config={config}
+                  onChange={(value) => {
+                    setPending({ ...config, [field.key]: value });
+                  }}
+                />
+              ))}
+              <ul className="space-y-1 text-xs leading-relaxed text-text-subtle">
+                {stored.template.complianceNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </Group>
+          </aside>
+        ) : null}
+
+        <div className="@3xl:min-h-0 @3xl:overflow-y-auto">
+          <div className="rounded-xl bg-paper p-4">
+            <TemplateFrame
+              title={`${resume.name}, as it prints`}
+              styles={stored.template.styles(config)}
+              overflowsFrom={resume.pageLimit ?? undefined}
+              onPaginate={onPaginate}
+            >
+              {stored.template.render(document, config)}
+            </TemplateFrame>
+          </div>
         </div>
       </div>
     </div>

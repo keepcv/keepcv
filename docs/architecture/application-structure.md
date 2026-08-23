@@ -909,6 +909,19 @@ utility follows.
 ground a rendered document sits on, and bold chrome around a resume is chrome
 competing with the resume.
 
+**The canvas is a warm ivory, a real step below the white it holds.** It sat
+1.5% of lightness from `surface`, with a 1px shadow at 5% opacity underneath, so
+a panel read as a hairline rectangle rather than an object on a ground. The step
+is now about 3%, `shadow-card` is two layers - a tight contact shadow that seats
+the edge and a wider ambient one that lifts it - and both are tinted warm. The
+`ink` ramp keeps the lightness the cool one had, so every text-on-surface
+contrast ratio is unchanged; only hue and chroma moved, and the hue drifts warmer
+as it darkens, which is what keeps a shadow brown rather than blue.
+
+**There is no webfont.** A store whose whole claim is that it never leaves the
+machine must not fetch a font on first paint. Display type is the same sans at a
+larger size, heavier weight and tighter tracking.
+
 ### 10.2 The scheme is applied before first paint
 
 The choice - `system`, `light` or `dark` - is in `localStorage`, and an inline
@@ -953,6 +966,25 @@ why the canvas went unused and why a two-pane task looked like a one-pane one.
 Forms and prose are capped rather than full width. Using the whole canvas is
 right for a list and wrong for a name field.
 
+**A browse screen declares its width, and `PageBody` is the only thing that sets
+one.** `reading` caps the column and centres it; `full` does not. The rule is
+what the rows carry:
+
+- **`reading`** - points, resumes, tags, sections, the profile, search. One-line
+  rows with a title and a little metadata.
+- **`full`** - records, the overview. Rows dense enough to earn the canvas, and
+  they restructure so nothing has to be read across it.
+
+The second half of that is the load-bearing part. Laid out as four columns at
+full width, a record row put its period and its point count a thousand pixels
+from the title they belonged to; the eye cannot associate them at that measure,
+and the screen reads as empty and unscannable at the same time. A full-width row
+therefore stacks - a kind glyph, the title with its counts beside it, and the
+organisation, subtitle and period on a second line under it - so everything about
+one record is against the left edge and only the reorder controls sit in the
+right gutter. A group heading carries a rule to its right rather than leaving the
+width blank.
+
 The shell is `h-dvh` with `main` as the scroll container, which is what gives a
 workspace a definite height to fill.
 
@@ -960,6 +992,20 @@ workspace a definite height to fill.
 preview renders both full width on its own tab and in half a workspace; keyed to
 the viewport it reserved a 15rem sidebar in both and left the page unreadable in
 the second.
+
+**What is about the resume is not in the resume, and it lives on the preview
+tab.** Export, the ATS findings, the page limit and the template's own settings
+are one column beside the paper, grouped as "Take it with you", "How it reads"
+and "How it looks", and it collapses so the page can have the whole pane. Wide
+enough for two columns, each scrolls on its own - reading down a resume must not
+carry the settings off the top.
+
+Beside the composition that column is **absent, not collapsed**. There the
+preview is feedback on what was just placed, and a panel of export and template
+controls opens over the thing it changes; every arrangement that keeps it - under
+the paper, or floating above it - is either invisible or in the way. The page
+count stays, because that is feedback. Changing the template is a click away on
+the tab whose job it is.
 
 ### 10.5 The palette
 

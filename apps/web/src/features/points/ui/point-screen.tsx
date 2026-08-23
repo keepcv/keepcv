@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
+import { PageBody } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
@@ -57,7 +58,7 @@ export function PointScreen({
   const failure = update.error ?? setArchived.error;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-xl font-semibold tracking-tight">Point</h1>
@@ -133,6 +134,6 @@ export function PointScreen({
       <ButtonLink to="/points" search={{ filter: "all" }}>
         Back to points
       </ButtonLink>
-    </div>
+    </PageBody>
   );
 }

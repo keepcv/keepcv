@@ -11,7 +11,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Conflict } from "../../../components/ui/conflict.js";
 import { CheckboxField, SelectField, TextField } from "../../../components/ui/field.js";
-import { PageHeader } from "../../../components/ui/page.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
@@ -456,7 +456,7 @@ function Summary({
 
 export function ProfileScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader title="Profile" icon="profile">
         One profile, and every resume prints from it. Nothing here is per-resume except which
         contacts a resume shows.
@@ -465,6 +465,6 @@ export function ProfileScreen({ store, client }: { store: Store; client: ApiClie
       <Identity profile={store.profile} client={client} />
       <Summary store={store} client={client} profile={store.profile} />
       <Contacts store={store} client={client} />
-    </div>
+    </PageBody>
   );
 }

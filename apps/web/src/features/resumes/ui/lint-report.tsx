@@ -11,7 +11,7 @@ const VERDICT: Record<LintTier, { tone: string; says: string }> = {
   },
   readable: { tone: "text-caution-text", says: "Readable, with something worth knowing." },
   "at-risk": {
-    tone: "text-rose-700",
+    tone: "text-critical-text",
     says: "Something here does not survive being read by a machine.",
   },
 };
@@ -19,19 +19,17 @@ const VERDICT: Record<LintTier, { tone: string; says: string }> = {
 // Named rather than shown only as a colour, so the severity is in the text a
 // screen reader reaches.
 const SEVERITY: Record<LintSeverity, { label: string; tone: string }> = {
-  blocker: { label: "Will break", tone: "text-rose-700" },
+  blocker: { label: "Will break", tone: "text-critical-text" },
   warning: { label: "Worth knowing", tone: "text-caution-text" },
 };
 
+// The heading and the box come from the group this sits in.
 export function LintPanel({ document }: { document: ResumeDocument }) {
   const report = useMemo(() => lint({ document, html: renderHtml(document) }), [document]);
   const verdict = VERDICT[report.tier];
 
   return (
-    <section aria-labelledby="lint-heading" className="space-y-2 rounded-lg bg-surface-sunken p-3">
-      <h3 id="lint-heading" className="text-xs font-medium text-text-muted">
-        How a machine will read it
-      </h3>
+    <div className="space-y-2">
       <p className={`text-xs ${verdict.tone}`}>{verdict.says}</p>
 
       {report.findings.length === 0 ? null : (
@@ -50,6 +48,6 @@ export function LintPanel({ document }: { document: ResumeDocument }) {
       <p className="text-xs text-text-subtle">
         Observations about this file, not a claim of compatibility with any product.
       </p>
-    </section>
+    </div>
   );
 }

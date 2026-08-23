@@ -5,7 +5,7 @@ import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
-import { PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
@@ -179,7 +179,7 @@ export function SectionList({
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader title="Sections" icon="section">
         Headings of your own, for work the eleven built-in kinds have no name for. A record filed
         under one prints there and nowhere else.
@@ -226,6 +226,6 @@ export function SectionList({
           </ul>
         </Panel>
       )}
-    </div>
+    </PageBody>
   );
 }

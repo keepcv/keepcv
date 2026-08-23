@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { Button } from "../../../components/ui/button.js";
-import { PageHeader } from "../../../components/ui/page.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { useApplyIntake } from "../api/use-intake.js";
@@ -239,7 +239,7 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
   const apply = useApplyIntake(client);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader title="Bring a resume in" icon="upload">
         Everything a file holds arrives as records and points you own, not as a resume. A PDF has no
         structure in it, so what a reader works out from one is a guess worth checking. Nothing is
@@ -295,6 +295,6 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
           </div>
         </>
       )}
-    </div>
+    </PageBody>
   );
 }

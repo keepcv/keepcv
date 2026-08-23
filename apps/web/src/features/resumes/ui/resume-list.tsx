@@ -6,7 +6,7 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { NameBox } from "../../../components/ui/name-box.js";
-import { PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
@@ -181,7 +181,7 @@ export function ResumeList({
   const rows = resumeRows(store, archived);
 
   return (
-    <div className="space-y-5">
+    <PageBody>
       <PageHeader title="Resumes" icon="resume" actions={<NewResume client={client} />}>
         A resume is a selection over the store, not a copy of it.
       </PageHeader>
@@ -211,7 +211,7 @@ export function ResumeList({
             : "A resume picks records and points out of the store and arranges them. Nothing it leaves out is lost - it stays here, ready for the next one."}
         </Empty>
       ) : (
-        <ul className="rounded-xl border border-line bg-surface p-1">
+        <ul className="rounded-xl border border-line bg-surface p-1 shadow-card">
           {rows.map((row) => (
             <Row
               key={row.id}
@@ -222,6 +222,6 @@ export function ResumeList({
           ))}
         </ul>
       )}
-    </div>
+    </PageBody>
   );
 }

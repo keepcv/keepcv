@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Empty } from "../../../app/states.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { Badge } from "../../../components/ui/badge.js";
-import { PageHeader } from "../../../components/ui/page.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import { KIND_NAMES } from "../../records/model/record-rows.js";
 import { type SearchFilters, type SearchRow, searchRows } from "../model/search-rows.js";
@@ -44,7 +44,7 @@ export function SearchResults({ store, filters }: { store: Store; filters: Searc
   const rows = filters.q.trim() === "" ? [] : searchRows(store, filters);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader
         title="Search"
         icon="search"
@@ -87,6 +87,6 @@ export function SearchResults({ store, filters }: { store: Store; filters: Searc
           ))}
         </ul>
       )}
-    </div>
+    </PageBody>
   );
 }

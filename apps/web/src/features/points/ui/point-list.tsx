@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
-import { PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { pointNarrowing } from "../../filters/model/saved-filters.js";
@@ -109,7 +109,7 @@ export function PointList({
   const { filter, tagId } = filters;
 
   return (
-    <div className="space-y-5">
+    <PageBody>
       <PageHeader
         title="Points"
         icon="point"
@@ -145,12 +145,12 @@ export function PointList({
       {rows.length === 0 ? (
         <Nothing filters={filters} />
       ) : (
-        <ul className="rounded-xl border border-line bg-surface shadow-card">
+        <ul className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
           {rows.map((row) => (
             <Row key={row.id} row={row} />
           ))}
         </ul>
       )}
-    </div>
+    </PageBody>
   );
 }

@@ -3,7 +3,7 @@ import type { Store } from "@keepcv/schema";
 import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Button } from "../../../components/ui/button.js";
-import { PageHeader } from "../../../components/ui/page.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { saveFile } from "../../../lib/files.js";
@@ -121,7 +121,7 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
 
 export function DataScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader title="Your data" icon="data">
         The store is a file on your machine. Nothing here asks anything of a network you did not
         start yourself.
@@ -142,6 +142,6 @@ export function DataScreen({ store, client }: { store: Store; client: ApiClient 
           </pre>
         </PanelBody>
       </Panel>
-    </div>
+    </PageBody>
   );
 }
