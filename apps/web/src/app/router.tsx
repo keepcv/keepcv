@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { DataScreen } from "../features/data/ui/data-screen.js";
+import { ImportScreen } from "../features/import/ui/import-screen.js";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
 import { MissingPoint, PointForm } from "../features/points/ui/point-form.js";
 import { PointList } from "../features/points/ui/point-list.js";
@@ -80,6 +81,15 @@ const dataRoute = createRoute({
   component: function DataPage() {
     const { api } = dataRoute.useRouteContext();
     return <DataScreen store={useStore(api)} client={api} />;
+  },
+});
+
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/import",
+  component: function ImportPage() {
+    const { api } = importRoute.useRouteContext();
+    return <ImportScreen store={useStore(api)} client={api} />;
   },
 });
 
@@ -256,6 +266,7 @@ const routeTree = rootRoute.addChildren([
   overviewRoute,
   profileRoute,
   dataRoute,
+  importRoute,
   recordsRoute,
   newRecordRoute,
   recordRoute,

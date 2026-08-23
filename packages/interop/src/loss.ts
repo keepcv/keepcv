@@ -91,6 +91,12 @@ export function lossOf(document: ResumeDocument): Loss[] {
       detail: "Keywords exist only on skills and projects, so tags anywhere else are dropped.",
     },
     {
+      what: "Locations",
+      count: entries.filter((entry) => entry.location !== undefined && entry.kind !== "experience")
+        .length,
+      detail: "Only the work list has somewhere to put one, so a location anywhere else is lost.",
+    },
+    {
       what: "Pronouns",
       count: document.header.pronouns === undefined ? 0 : 1,
       detail: "The format has no field for them.",

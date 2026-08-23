@@ -87,6 +87,12 @@ const columnsOfKind: Record<string, Record<string, unknown>> = {
   experience: { employmentType: null, mode: null },
   certification: { credentialId: null, expiresOn: null },
   education: { grade: null, gradeScale: null, thesisTitle: null, honours: null },
+  skill: { category: null, proficiency: null },
+  language: { proficiency: null },
+  award: {},
+  volunteering: {},
+  speaking: {},
+  publication: { doi: null },
 };
 
 export function aRecord(overrides: Record<string, unknown> = {}): CareerRecord {

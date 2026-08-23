@@ -2245,3 +2245,143 @@ describe("saved filters", () => {
     expect(store.savedFilters).toHaveLength(1);
   });
 });
+
+// A file the browser reads and never uploads: what the store is asked to write
+// is the reviewed intake, not the resume it came out of.
+function chooseFile(body: string, name = "resume.json"): void {
+  const input = screen.getByLabelText("A resume to read");
+  const file = new File([body], name, { type: "application/json" });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  fireEvent.change(input);
+}
+
+const A_RESUME = JSON.stringify({
+  basics: {
+    name: "Ada Lovelace",
+    email: "ada@example.org",
+    summary: "Ships measurable work.",
+  },
+  work: [
+    {
+      name: "Acme",
+      position: "Staff engineer",
+      startDate: "2023-04",
+      highlights: ["Cut runtime by 40%.", "Led the migration."],
+    },
+  ],
+  education: [{ institution: "UCL", studyType: "BSc", startDate: "bad-date" }],
+});
+
+describe("bringing a resume in", () => {
+  it("shows what the file held before anything is written", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+
+    expect(await screen.findByText("Staff engineer")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByText("ada@example.org")).toBeInTheDocument();
+    expect(server.calls.some((call) => call.path === "/v1/intake")).toBe(false);
+  });
+
+  it("names what it could not place rather than guessing at it", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+
+    expect(await screen.findByText(/is not a year, month or day/)).toBeInTheDocument();
+  });
+
+  it("sends the decisions with the intake, and says what came in", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+    await screen.findByText("Staff engineer");
+    press("Bring these in");
+
+    expect(await screen.findByText(/came in\./)).toBeInTheDocument();
+    const sent = server.calls.find((call) => call.path === "/v1/intake");
+    expect(sent).toBeDefined();
+    const body = sent?.body as {
+      intake: { records: unknown[] };
+      decisions: { records: unknown[] };
+    };
+    expect(body.decisions.records).toHaveLength(body.intake.records.length);
+  });
+
+  it("leaves a record out when it is skipped", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+    await screen.findByText("Staff engineer");
+
+    const row = screen.getByText("Staff engineer").closest("div")?.parentElement;
+    fireEvent.click(within(row as HTMLElement).getByRole("radio", { name: "Skip" }));
+    press("Bring these in");
+
+    await screen.findByText(/came in\./);
+    const sent = server.calls.find((call) => call.path === "/v1/intake");
+    const body = sent?.body as { decisions: { records: { action: string }[] } };
+    expect(body.decisions.records[0]?.action).toBe("skip");
+  });
+
+  // A whole-store backup restores every row exactly; reading it as a resume
+  // would quietly turn history into a handful of records.
+  it("sends someone with a backup file to the screen that restores one", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(JSON.stringify({ schemaVersion: 1, exportedAt: "2026-01-01T00:00:00.000Z" }));
+
+    expect(await screen.findByText(/whole-store backup/)).toBeInTheDocument();
+  });
+
+  it("names the three formats it reads when the file is none of them", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile("not a resume at all", "notes.txt");
+
+    expect(
+      await screen.findByText(/not a PDF, a Word document or a JSON resume/),
+    ).toBeInTheDocument();
+  });
+});
+
+// A PDF is a print artifact: what a reader gets out of one is a guess, and a
+// screen that does not say so invites it being approved unread.
+describe("bringing in a file with no structure in it", () => {
+  it("says a Word document was read from its layout, and shows what it found", async () => {
+    const { zipSync, strToU8 } = await import("fflate");
+    const paragraph = (text: string, extra = "") =>
+      `<w:p>${extra}<w:r><w:t>${text}</w:t></w:r></w:p>`;
+    const body = [
+      paragraph("Ada Lovelace", '<w:pPr><w:pStyle w:val="Title"/></w:pPr>'),
+      paragraph("ada@example.org"),
+      paragraph("Experience", '<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>'),
+      paragraph("Senior Engineer, Acme", '<w:pPr><w:pStyle w:val="Heading2"/></w:pPr>'),
+      paragraph("Cut runtime by 40%.", '<w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr>'),
+    ].join("");
+    const docx = zipSync({
+      "word/document.xml": strToU8(
+        `<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
+      ),
+    });
+
+    mount(() => jsonOf(emptyStore()), "/import");
+    const input = await screen.findByLabelText("A resume to read");
+    const file = new File([docx as BlobPart], "cv.docx");
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    expect(await screen.findByText(/worked out from the layout/)).toBeInTheDocument();
+    expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
+  });
+});

@@ -18,6 +18,7 @@ export interface JsonResumeProfile {
 export interface JsonResumeBasics {
   name?: string;
   label?: string;
+  image?: string;
   email?: string;
   phone?: string;
   url?: string;
@@ -33,6 +34,8 @@ interface Dated {
 
 export interface JsonResumeWork extends Dated {
   name?: string;
+  location?: string;
+  description?: string;
   position?: string;
   url?: string;
   summary?: string;
@@ -95,10 +98,23 @@ export interface JsonResumeProject extends Dated {
   highlights?: string[];
   keywords?: string[];
   url?: string;
+  roles?: string[];
   entity?: string;
+  type?: string;
+}
+
+export interface JsonResumeInterest {
+  name?: string;
+  keywords?: string[];
+}
+
+export interface JsonResumeReference {
+  name?: string;
+  reference?: string;
 }
 
 export interface JsonResumeMeta {
+  canonical?: string;
   version?: string;
   lastModified?: string;
 }
@@ -114,6 +130,8 @@ export interface JsonResume {
   publications?: JsonResumePublication[];
   skills?: JsonResumeSkill[];
   languages?: JsonResumeLanguage[];
+  interests?: JsonResumeInterest[];
+  references?: JsonResumeReference[];
   projects?: JsonResumeProject[];
   meta?: JsonResumeMeta;
 }

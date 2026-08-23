@@ -27,7 +27,7 @@ const nullableText = z.string().nullable();
 const nullablePartialDate = partialDateSchema.nullable();
 
 // Nullable by design: a record can be saved half-entered.
-const recordBase = z.object({
+export const recordBase = z.object({
   ...standardFields,
   title: nullableText,
   subtitle: nullableText,
@@ -64,35 +64,51 @@ function recordKind<K extends (typeof CAREER_RECORD_KINDS)[number], E extends z.
   };
 }
 
-const experience = recordKind("experience", {
-  employmentType: nullableText,
-  mode: z.enum(WORK_MODES).nullable(),
-});
-const education = recordKind("education", {
-  grade: nullableText,
-  gradeScale: nullableText,
-  thesisTitle: nullableText,
-  honours: nullableText,
-});
-const project = recordKind("project", {});
-const skill = recordKind("skill", {
-  category: nullableText,
-  proficiency: z.enum(SKILL_PROFICIENCIES).nullable(),
-});
-// `expiresOn` is not `endedOn`: conflating them breaks "what lapses in 90
-// days".
-const certification = recordKind("certification", {
-  credentialId: nullableText,
-  expiresOn: nullablePartialDate,
-});
-const publication = recordKind("publication", { doi: nullableText });
-const award = recordKind("award", {});
-// Free text, unlike a skill's proficiency: "C1" and "reading only" both occur.
-const language = recordKind("language", { proficiency: nullableText });
-const volunteering = recordKind("volunteering", {});
-const speaking = recordKind("speaking", {});
-// The one kind with a required parent, and the only one that may carry it.
-const customEntry = recordKind("custom_entry", { customSectionId: uuidSchema });
+// Read here and by the intake union, so a field added to one is a field the
+// other cannot silently drop on the way in.
+export const RECORD_EXTRAS = {
+  experience: {
+    employmentType: nullableText,
+    mode: z.enum(WORK_MODES).nullable(),
+  },
+  education: {
+    grade: nullableText,
+    gradeScale: nullableText,
+    thesisTitle: nullableText,
+    honours: nullableText,
+  },
+  project: {},
+  skill: {
+    category: nullableText,
+    proficiency: z.enum(SKILL_PROFICIENCIES).nullable(),
+  },
+  // `expiresOn` is not `endedOn`: conflating them breaks "what lapses in 90
+  // days".
+  certification: {
+    credentialId: nullableText,
+    expiresOn: nullablePartialDate,
+  },
+  publication: { doi: nullableText },
+  award: {},
+  // Free text, unlike a skill's proficiency: "C1" and "reading only" both occur.
+  language: { proficiency: nullableText },
+  volunteering: {},
+  speaking: {},
+  // The one kind with a required parent, and the only one that may carry it.
+  custom_entry: { customSectionId: uuidSchema },
+};
+
+const experience = recordKind("experience", RECORD_EXTRAS.experience);
+const education = recordKind("education", RECORD_EXTRAS.education);
+const project = recordKind("project", RECORD_EXTRAS.project);
+const skill = recordKind("skill", RECORD_EXTRAS.skill);
+const certification = recordKind("certification", RECORD_EXTRAS.certification);
+const publication = recordKind("publication", RECORD_EXTRAS.publication);
+const award = recordKind("award", RECORD_EXTRAS.award);
+const language = recordKind("language", RECORD_EXTRAS.language);
+const volunteering = recordKind("volunteering", RECORD_EXTRAS.volunteering);
+const speaking = recordKind("speaking", RECORD_EXTRAS.speaking);
+const customEntry = recordKind("custom_entry", RECORD_EXTRAS.custom_entry);
 
 export const careerRecordSchema = z.discriminatedUnion("kind", [
   experience.full,

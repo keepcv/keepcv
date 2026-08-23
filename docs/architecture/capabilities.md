@@ -302,9 +302,59 @@ something already sent.
 
 ### Import
 
-Native import; JSON Resume import; PDF and DOCX parsing; RenderCV and Reactive
-Resume adapters; and **the reconciliation interface** - every import is
-reviewed before it is applied.
+Native import is in Foundation, because it is a whole-store read and write. This
+is the other one: a file somebody else's tool wrote, merged into a store that
+already holds things.
+
+**An `Intake` is what a file said, before anything decides what to do about it.**
+No ids, no ordering and no foreign keys - an organisation arrives as the name
+that was printed and a custom entry as the heading it sat under. Its record
+union is built from the same per-kind field map the stored union is, so a kind
+that gains a field cannot gain it on one side only. Every reader answers this
+one shape, and the reader says whether the file `declared` what each thing was
+or whether it was `inferred` from how the file looked.
+
+**Reading happens where the file is, and the file never leaves it.** A reader is
+a pure function over bytes, so the browser reads the resume in the tab and the
+CLI reads it on disk; what reaches the store is the reviewed intake. That keeps
+file parsing off the API surface entirely, and a resume - which is personal data
+- out of every request log between the tab and the store.
+
+**The reconciliation interface is the point, not a wrapper around it.**
+`matchIntake(store, intake)` answers what each incoming thing looks like it
+already is, and `importPlan(store, intake, decisions)` answers the rows; both
+are pure functions over the boot payload, for the reason `restorePlan` and
+`derivePlan` are. `POST /v1/intake` re-plans server-side and applies in one
+transaction, because a client-computed list of rows to write is a client
+deciding what the store contains.
+
+**A merge adds what the file had and leaves the record alone.** The record in
+the store is what the user curated; a file exported months ago does not get to
+backfill it. So every write in a plan is a create, no concurrency token is
+involved, and applying one file twice writes nothing the second time - the
+property the whole design rests on, tested at the plan and over the API.
+
+**A PDF and a DOCX go through one segmenter, not two readers.** Both extractors
+answer `DocumentLine[]` - text, emphasis, whether it was a list item, which
+column and which page - and `fromLines` does all the reasoning over that. A DOCX
+names its headings and its lists; a PDF has neither, so the extractor there
+works them out from size, font and the leading glyph. That seam is the same one
+pagination uses: the thing that knows about layout reports geometry, and the
+pure function reasons about it.
+
+Three failures shaped it and each has a test: the name at the top is set larger
+than everything else and the size rule alone files the whole resume under it; a
+DOCX that uses Heading1 for sections and Heading2 for job titles files every job
+under itself unless the shallowest level present is taken as the section level;
+and two headings set at one height in two columns are one row and two lines, so
+joining them puts the right column's entries under the left column's heading.
+
+JSON Resume is built, both ways, with the round trip holding the two adapters
+together. What remains is the RenderCV and Reactive Resume adapters.
+
+**Non-goals:** no resume parsing service, no model call, and no scraping of any
+profile anywhere. A reader misses rather than invents, and says in `notes` what
+it could not place.
 
 ### ATS linter
 

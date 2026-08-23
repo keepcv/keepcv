@@ -81,6 +81,7 @@ describe("the OpenAPI document", () => {
       "/v1/evidence/{id}/restore",
       "/v1/export",
       "/v1/import",
+      "/v1/intake",
       "/v1/metrics",
       "/v1/metrics/{id}",
       "/v1/metrics/{id}/restore",

@@ -4,6 +4,7 @@ import {
   derivePlan,
   deriveRevision,
   diffManifests,
+  importPlan,
   type JsonValue,
   newUuid,
   renderManifest,
@@ -573,8 +574,26 @@ function onTagAssignment(store: Store, call: Call): Response | undefined {
   return undefined;
 }
 
-function write(store: Store, archive: Archive, call: Call, at: string): Response {
-  const { versions, snapshots } = archive;
+// The planner the route runs, so a screen test cannot pass against a plan the
+// server would not have made.
+function onIntake(store: Store, call: Call): Response {
+  const { intake, decisions } = call.body as {
+    intake: Parameters<typeof importPlan>[1];
+    decisions: Parameters<typeof importPlan>[2];
+  };
+  const plan = importPlan(store, intake, decisions);
+  return jsonOf({
+    organisations: plan.organisations.length,
+    customSections: plan.customSections.length,
+    contactChannels: plan.contactChannels.length,
+    records: plan.records.length,
+    points: plan.points.length,
+    tags: plan.tags.length,
+  });
+}
+
+// The routes a path pattern picks out, rather than a collection name.
+function onPattern(store: Store, archive: Archive, call: Call, at: string): Response | undefined {
   const target = DRAFT.exec(call.path);
   if (target !== null) return onDraft(store, target, call, at);
   const pair = CONTACT.exec(call.path);
@@ -591,9 +610,17 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
   if (deriving !== null) return onDerive(store, deriving, call, at);
 
   if (call.path === "/v1/import") return onImport(store, call);
+  if (call.path === "/v1/intake") return onIntake(store, call);
+  if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(archive.snapshots, call, at);
+  if (call.path.startsWith("/v1/resume-versions")) {
+    return onVersion(archive.versions, store, call, at);
+  }
+  return undefined;
+}
 
-  if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
-  if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);
+function write(store: Store, archive: Archive, call: Call, at: string): Response {
+  const matched = onPattern(store, archive, call, at);
+  if (matched !== undefined) return matched;
 
   // One per owner, so it is patched at a path with no id in it.
   if (call.path === "/v1/profile") {

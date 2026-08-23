@@ -60,6 +60,18 @@ export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";
 export { type DerivedRevision, deriveRevision } from "./richtext/revision.js";
 export {
+  type ContactMatch,
+  type IdentityMatch,
+  type ImportPlan,
+  type IntakeReview,
+  importPlan,
+  matchIntake,
+  type OrganisationMatch,
+  type PointMatch,
+  type RecordMatch,
+  suggestedDecisions,
+} from "./store/intake.js";
+export {
   entryFor,
   entryPointFor,
   keyForPosition,
@@ -111,3 +123,4 @@ export {
   targetMatch,
 } from "./store/target.js";
 export { tagSlug } from "./tags/slug.js";
+export { fold } from "./text/fold.js";

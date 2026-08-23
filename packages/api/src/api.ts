@@ -6,6 +6,7 @@ import { problemFor, UnauthorizedError } from "./problems.js";
 import { router } from "./router.js";
 import { customSectionRoutes } from "./routes/custom-sections.js";
 import { draftRoutes } from "./routes/drafts.js";
+import { intakeRoutes } from "./routes/intake.js";
 import { organisationRoutes } from "./routes/organisations.js";
 import { phrasingRoutes } from "./routes/phrasings.js";
 import { pointRoutes } from "./routes/points.js";
@@ -91,7 +92,8 @@ export function createApi(options: ApiOptions) {
     .route("/", resumeRoutes(options.unitOfWork))
     .route("/", versionRoutes(options.unitOfWork))
     .route("/", draftRoutes(options.unitOfWork))
-    .route("/", storeRoutes(options.unitOfWork));
+    .route("/", storeRoutes(options.unitOfWork))
+    .route("/", intakeRoutes(options.unitOfWork));
 }
 
 export type Api = ReturnType<typeof createApi>;
