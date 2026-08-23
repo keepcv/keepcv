@@ -184,7 +184,12 @@ rather than generated from filenames.
 **Screens name semantic tokens, never palette colours.** `styles/app.css` holds
 the ramps and, above them, `surface`, `line`, `text`, `brand`, the status trio
 and `paper`; the semantic block is `@theme inline`, so a utility emits
-`var(--surface)` and `.dark` reassigns it. Dark mode is a class on the root, set
+`var(--surface)` and `.dark` reassigns it. The canvas is a warm ivory a real step
+below the white it holds, and `shadow-card` is two warm-tinted layers: at the
+1.5% and 5%-opacity it had, a panel was a hairline rectangle rather than an
+object. The `ink` ramp kept its lightness when it went warm, so no contrast ratio
+moved. There is no webfont - a store that never leaves the machine must not fetch
+one on first paint. Dark mode is a class on the root, set
 by an inline script in `index.html` before first paint - an effect flashes a
 white page on the way into a dark one - and the choice lives on the shell, since
 two toggles with two hooks disagree. `components/icon/` keys a glyph by what it
@@ -200,6 +205,25 @@ height to fill. Forms and prose are capped - the whole canvas is right for a lis
 and wrong for a name field. **A pane's own layout is a container query**: the
 preview renders full width on its own tab and in half a workspace, and a viewport
 breakpoint left it unreadable in the second.
+
+**`PageBody` is the only thing that sets a browse screen's width.** `reading`
+caps and centres it, `full` does not, and a `full` list restructures its rows so
+nothing is read across the canvas - laid out as four columns, a record row put
+its period a thousand pixels from the title it dated. **Export, the ATS findings,
+the page limit and the template settings are one collapsing column on the preview
+tab, and are absent beside the composition**, where they would open over the very
+thing they change.
+
+**`danger` is for losing something, and archiving is not that.** Nothing here is
+destroyed, so a red Archive taught users to fear the mechanism that keeps them
+safe; it is a secondary button with the `archive` glyph, and `danger` is left on
+merging a tag and discarding a draft. **A form nobody is filling in is not on the
+screen** - it sits behind the control that names it and opens as a bounded block
+with its own confirm and cancel, rather than leaving empty inputs open with the
+submit button under them. A repeated row action is a glyph and still passes
+`label`. Note that TypeScript does not excess-check a hyphenated JSX attribute,
+so `aria-expanded` on a component that does not forward it type-checks and is
+dropped; `Button` takes `expanded`.
 
 **`Ctrl-K` opens a palette over `search(store, query)`**, the same selector the
 search screen reads, so the two cannot disagree about what matches. Arriving with

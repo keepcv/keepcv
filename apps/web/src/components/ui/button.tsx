@@ -62,6 +62,7 @@ export function Button({
   pending,
   onClick,
   label,
+  expanded,
   children,
   ...rest
 }: Look & {
@@ -72,6 +73,9 @@ export function Button({
   // An icon-only button carries no text to announce, so it passes `label` and
   // nothing else.
   label?: string;
+  // A hyphenated JSX attribute is not excess-checked, so `aria-expanded` passed
+  // in from outside type-checked and was then dropped on the floor here.
+  expanded?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -80,6 +84,7 @@ export function Button({
       disabled={disabled === true || pending === true}
       onClick={onClick}
       aria-label={label}
+      aria-expanded={expanded}
       title={children === undefined ? label : undefined}
       className={look(rest, children === undefined)}
     >

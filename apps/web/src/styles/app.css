@@ -14,17 +14,20 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
 
-  --color-ink-50: oklch(0.985 0.002 265);
-  --color-ink-100: oklch(0.968 0.004 265);
-  --color-ink-200: oklch(0.924 0.008 265);
-  --color-ink-300: oklch(0.868 0.012 265);
-  --color-ink-400: oklch(0.706 0.017 265);
-  --color-ink-500: oklch(0.556 0.02 265);
-  --color-ink-600: oklch(0.446 0.022 265);
-  --color-ink-700: oklch(0.372 0.023 265);
-  --color-ink-800: oklch(0.279 0.024 265);
-  --color-ink-900: oklch(0.211 0.023 265);
-  --color-ink-950: oklch(0.145 0.02 265);
+  /* Lightness matches the cool ramp this replaced, so every text-on-surface
+     contrast ratio is unchanged; only hue and chroma moved. The hue drifts
+     warmer as it darkens, which is what keeps a shadow brown rather than blue. */
+  --color-ink-50: oklch(0.985 0.003 90);
+  --color-ink-100: oklch(0.968 0.005 88);
+  --color-ink-200: oklch(0.924 0.007 85);
+  --color-ink-300: oklch(0.868 0.009 80);
+  --color-ink-400: oklch(0.706 0.011 72);
+  --color-ink-500: oklch(0.556 0.013 66);
+  --color-ink-600: oklch(0.446 0.014 62);
+  --color-ink-700: oklch(0.372 0.015 58);
+  --color-ink-800: oklch(0.279 0.015 55);
+  --color-ink-900: oklch(0.211 0.014 52);
+  --color-ink-950: oklch(0.145 0.012 50);
 
   --color-brand-50: oklch(0.97 0.018 292);
   --color-brand-100: oklch(0.944 0.036 292);
@@ -38,11 +41,13 @@
   --color-brand-900: oklch(0.375 0.15 292);
   --color-brand-950: oklch(0.268 0.11 292);
 
-  --color-accent-300: oklch(0.855 0.098 220);
-  --color-accent-400: oklch(0.78 0.128 220);
-  --color-accent-500: oklch(0.7 0.145 220);
-  --color-accent-600: oklch(0.61 0.14 220);
-  --color-accent-700: oklch(0.52 0.125 220);
+  /* Indigo rather than cyan: the gradients below run brand into accent, and a
+     cyan terminal on a warm canvas reads as a different product's palette. */
+  --color-accent-300: oklch(0.812 0.098 268);
+  --color-accent-400: oklch(0.712 0.135 268);
+  --color-accent-500: oklch(0.618 0.166 268);
+  --color-accent-600: oklch(0.539 0.178 268);
+  --color-accent-700: oklch(0.462 0.163 268);
 
   --color-positive-100: oklch(0.945 0.048 158);
   --color-positive-300: oklch(0.845 0.115 158);
@@ -124,11 +129,14 @@
 :root {
   color-scheme: light;
 
-  --canvas: var(--color-ink-50);
+  /* Warm ivory, and a real step down from the white it holds. At the 1.5% the
+     canvas used to sit from `--surface`, a panel was a hairline rectangle
+     rather than an object on a ground. */
+  --canvas: oklch(0.972 0.008 88);
   --surface: oklch(1 0 0);
   --surface-raised: oklch(1 0 0);
-  --surface-sunken: var(--color-ink-100);
-  --surface-hover: var(--color-ink-100);
+  --surface-sunken: oklch(0.955 0.009 88);
+  --surface-hover: oklch(0.962 0.009 88);
 
   --line: var(--color-ink-200);
   --line-subtle: var(--color-ink-100);
@@ -159,12 +167,17 @@
 
   --focus: var(--color-brand-500);
 
-  --paper: var(--color-ink-200);
+  --paper: oklch(0.94 0.009 85);
   --paper-edge: var(--color-ink-300);
 
-  --shadow-card-value: 0 1px 2px oklch(0.145 0.02 265 / 0.05);
-  --shadow-raised-value: 0 4px 12px -2px oklch(0.145 0.02 265 / 0.1);
-  --shadow-overlay-value: 0 16px 40px -8px oklch(0.145 0.02 265 / 0.22);
+  /* Two layers: a tight contact shadow that seats the edge, and a wider ambient
+     one that lifts it. A single 1px shadow at 5% was doing neither. */
+  --shadow-card-value:
+    0 1px 2px -1px oklch(0.26 0.02 55 / 0.1), 0 2px 6px -2px oklch(0.26 0.02 55 / 0.07);
+  --shadow-raised-value:
+    0 2px 4px -2px oklch(0.26 0.02 55 / 0.1), 0 8px 20px -4px oklch(0.26 0.02 55 / 0.12);
+  --shadow-overlay-value:
+    0 8px 16px -6px oklch(0.26 0.02 55 / 0.16), 0 24px 48px -12px oklch(0.26 0.02 55 / 0.24);
 }
 
 .dark {
@@ -173,12 +186,12 @@
   --canvas: var(--color-ink-950);
   --surface: var(--color-ink-900);
   --surface-raised: var(--color-ink-800);
-  --surface-sunken: oklch(0.185 0.021 265);
+  --surface-sunken: oklch(0.185 0.013 52);
   --surface-hover: var(--color-ink-800);
 
-  --line: oklch(0.31 0.024 265);
-  --line-subtle: oklch(0.25 0.023 265);
-  --line-strong: oklch(0.4 0.024 265);
+  --line: oklch(0.31 0.015 55);
+  --line-subtle: oklch(0.25 0.014 52);
+  --line-strong: oklch(0.4 0.015 55);
 
   --text: var(--color-ink-50);
   --text-muted: var(--color-ink-300);
@@ -202,7 +215,7 @@
   --focus: var(--color-brand-400);
 
   --paper: var(--color-ink-950);
-  --paper-edge: oklch(0.29 0.023 265);
+  --paper-edge: oklch(0.29 0.015 55);
 
   --shadow-card-value: 0 1px 2px oklch(0 0 0 / 0.35);
   --shadow-raised-value: 0 4px 12px -2px oklch(0 0 0 / 0.45);

@@ -1,6 +1,7 @@
 import { live, organisationOf, pointsOfRecord, recordsWithTag } from "@keepcv/core";
 import type { CareerRecord, CareerRecordKind, Store, Uuid } from "@keepcv/schema";
 import { CAREER_RECORD_KINDS } from "@keepcv/schema";
+import type { GlyphName } from "../../../components/icon/glyphs.js";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
 import { formatPartialDate } from "../../../lib/partial-date.js";
 
@@ -43,6 +44,20 @@ export const KIND_NAMES: Record<CareerRecordKind, string> = {
   volunteering: "Volunteering",
   speaking: "Speaking",
   custom_entry: "Custom entry",
+};
+
+export const KIND_GLYPHS: Record<CareerRecordKind, GlyphName> = {
+  experience: "experience",
+  education: "education",
+  project: "project",
+  skill: "skill",
+  certification: "certification",
+  publication: "publication",
+  award: "award",
+  language: "language",
+  volunteering: "volunteering",
+  speaking: "speaking",
+  custom_entry: "customEntry",
 };
 
 export const KIND_LABELS: Record<CareerRecordKind, string> = {

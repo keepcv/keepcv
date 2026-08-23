@@ -31,10 +31,10 @@ function Loses({ document }: { document: ResumeDocument }) {
   );
 }
 
+// The heading and the box come from the group this sits in.
 export function DownloadResume({ document }: { document: ResumeDocument }) {
   return (
-    <div className="space-y-2 rounded-lg bg-surface-sunken p-3">
-      <h3 className="text-xs font-medium text-text-muted">Take it with you</h3>
+    <div className="space-y-2">
       <Button
         tone="primary"
         className="w-full"

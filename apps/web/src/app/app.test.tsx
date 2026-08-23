@@ -442,6 +442,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a link");
     type("Address", "https://github.com/ada/engine");
     type("Shown as", "The source");
     press("Add link");
@@ -454,7 +455,7 @@ describe("what a record carries beside its points", () => {
       expect(store.recordLinks).toHaveLength(1);
     });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "remove" })[0] as HTMLElement);
+    fireEvent.click(screen.getAllByRole("button", { name: /^Remove / })[0] as HTMLElement);
 
     await waitFor(() => {
       expect(store.recordLinks[0]?.archivedAt).not.toBeNull();
@@ -467,6 +468,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a link");
     press("Add link");
 
     expect(await screen.findByText(/too small|expected/i)).toBeInTheDocument();
@@ -478,6 +480,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     type("Value", "AWS-1234");
     press("Add field");
@@ -498,6 +501,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     type("Value", "AWS-9999");
     press("Add field");
@@ -519,6 +523,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     press("Add field");
 
@@ -1486,8 +1491,7 @@ describe("a resume and its template", () => {
     expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
   });
 
-  const lintPanel = async () =>
-    await screen.findByRole("region", { name: "How a machine will read it" });
+  const lintPanel = async () => await screen.findByRole("region", { name: "How it reads" });
 
   it("reads the file back the way a machine would, and says so", async () => {
     const { server, resume } = aResumeToPrint();
@@ -1514,8 +1518,20 @@ describe("a resume and its template", () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
-    expect(await screen.findByText("What this template does")).toBeInTheDocument();
-    expect(screen.getByText(/never images or table cells/)).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "How it looks" })).toHaveTextContent(
+      /never images or table cells/,
+    );
+  });
+
+  // Beside the composition the preview is feedback on what was just placed, and
+  // a panel of export and template controls opens over the thing it changes.
+  it("offers export and template settings on the preview but not on the composition", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=composition`);
+
+    await printed();
+    expect(screen.queryByRole("button", { name: /Export and settings/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Print or save as PDF" })).not.toBeInTheDocument();
   });
 
   const POSTING = "We use Kubernetes and Terraform. Kubernetes above all.";

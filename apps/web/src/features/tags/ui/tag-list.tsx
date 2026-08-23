@@ -5,7 +5,7 @@ import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
-import { PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -187,7 +187,7 @@ function Row({
             </>
           )}
           <Button
-            tone={row.isArchived ? "secondary" : "danger"}
+            icon={row.isArchived ? "restore" : "archive"}
             disabled={setArchived.isPending}
             onClick={() => {
               setArchived.mutate({ tag, archived: !row.isArchived });
@@ -270,7 +270,7 @@ export function TagList({
   const live = tagRows(store, "all");
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <PageBody>
       <PageHeader title="Tags" icon="tag">
         {TAG_BLURBS[filter]}
       </PageHeader>
@@ -312,6 +312,6 @@ export function TagList({
           </ul>
         </Panel>
       )}
-    </div>
+    </PageBody>
   );
 }

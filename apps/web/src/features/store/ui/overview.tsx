@@ -1,4 +1,4 @@
-import { live, overview } from "@keepcv/core";
+import { live, overview, recordCounts } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -6,10 +6,98 @@ import { Empty } from "../../../app/states.js";
 import type { GlyphName } from "../../../components/icon/glyphs.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { ButtonLink } from "../../../components/ui/button.js";
-import { PageHeader } from "../../../components/ui/page.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
-import { Stat } from "../../../components/ui/stat.js";
-import { formatPeriod, KIND_NAMES } from "../../records/model/record-rows.js";
+import {
+  formatPeriod,
+  KIND_GLYPHS,
+  KIND_LABELS,
+  KIND_NAMES,
+} from "../../records/model/record-rows.js";
+
+// The gap is the rule: one pixel of the container showing between cells draws
+// the dividers at any column count, so the strip wraps without a rule ending up
+// on the outside of a row.
+function Totals({ children }: { children: ReactNode }) {
+  return (
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line-subtle shadow-card sm:grid-cols-4">
+      {children}
+    </dl>
+  );
+}
+
+function Total({
+  label,
+  value,
+  icon,
+  note,
+  to,
+  search,
+}: {
+  label: string;
+  value: number;
+  icon: GlyphName;
+  note?: string;
+  to?: string;
+  search?: Record<string, unknown>;
+}) {
+  const body = (
+    <>
+      <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-subtle">
+        <Icon name={icon} size="xs" />
+        {label}
+      </dt>
+      <dd className="mt-1.5 text-[2rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-text">
+        {value}
+      </dd>
+      {note === undefined ? null : <p className="mt-1 text-xs text-text-subtle">{note}</p>}
+    </>
+  );
+
+  if (to === undefined) return <div className="bg-surface px-4 py-3.5">{body}</div>;
+
+  return (
+    <Link
+      to={to}
+      {...(search === undefined ? {} : { search })}
+      className="bg-surface px-4 py-3.5 transition-colors duration-120 ease-out-soft hover:bg-surface-hover"
+    >
+      {body}
+    </Link>
+  );
+}
+
+// What the store actually holds, by kind. The overview is the screen that says
+// how big the archive has got, and four totals do not say that.
+function Holdings({ store }: { store: Store }) {
+  const counts = recordCounts(store).filter((count) => count.live > 0);
+  if (counts.length === 0) return null;
+
+  return (
+    <Panel>
+      <PanelHeader title="What the store holds" icon="record">
+        Every kind with something filed under it.
+      </PanelHeader>
+      <PanelBody className="px-2 py-2">
+        <ul className="space-y-0.5">
+          {counts.map((count) => (
+            <li key={count.kind}>
+              <Link
+                to="/records"
+                search={{ kind: count.kind, archived: "exclude" }}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted transition-colors duration-120 ease-out-soft hover:bg-surface-hover hover:text-text"
+              >
+                <Icon name={KIND_GLYPHS[count.kind]} size="sm" className="text-text-subtle" />
+                <span className="min-w-0 flex-1 truncate">{KIND_LABELS[count.kind]}</span>
+                <span className="shrink-0 tabular-nums text-text-subtle">{count.live}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </PanelBody>
+    </Panel>
+  );
+}
 
 function Tally({ count }: { count: number }) {
   return (
@@ -76,7 +164,7 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <PageBody width="full" className="space-y-6">
       <PageHeader
         title="Overview"
         icon="overview"
@@ -94,37 +182,37 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
         Everything the store holds, and what is still half-finished.
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
+      <Totals>
+        <Total
           label="Records"
           value={summary.totals.records}
           icon="record"
           to="/records"
           search={{ archived: "exclude" }}
         />
-        <Stat
+        <Total
           label="Points"
           value={summary.totals.points}
           icon="point"
           to="/points"
           search={{ filter: "all" }}
         />
-        <Stat
+        <Total
           label="Resumes"
           value={live(store.resumes).length}
           icon="resume"
           to="/resumes"
           search={{ archived: "exclude" }}
         />
-        <Stat
+        <Total
           label="Archived"
           value={summary.totals.archived}
           icon="archive"
           note="Kept, never deleted."
         />
-      </div>
+      </Totals>
 
-      <div className="grid gap-5 xl:grid-cols-2 xl:items-start">
+      <div className="grid gap-5 xl:grid-cols-3 xl:items-start">
         {/* Every row here opens: the screen whose job is re-entry cannot be a
             dead end. */}
         <Panel>
@@ -220,7 +308,9 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
             )}
           </PanelBody>
         </Panel>
+
+        <Holdings store={store} />
       </div>
-    </div>
+    </PageBody>
   );
 }

@@ -84,11 +84,11 @@ function Workspace({
       <div className="min-h-0 overflow-y-auto pr-1">
         <Composer store={store} client={client} detail={detail} resumeId={resume.id} />
       </div>
-      <div className="hidden min-h-0 overflow-y-auto xl:block">
+      <div className="hidden min-h-0 xl:block">
         {document === undefined ? (
           <Empty title="Nothing to compile yet" spot="compose" />
         ) : (
-          <DocumentPreview client={client} resume={resume} document={document} />
+          <DocumentPreview client={client} resume={resume} document={document} settings={false} />
         )}
       </div>
     </div>
@@ -123,7 +123,7 @@ function Chosen({
       );
     case "preview":
       return (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1">
           {document === undefined ? (
             <Empty title="Nothing to compile yet" spot="compose" />
           ) : (
@@ -180,7 +180,6 @@ export function ResumeDetailScreen({
               }}
             />
             <Button
-              tone={header.isArchived ? "secondary" : "danger"}
               icon={header.isArchived ? "restore" : "archive"}
               onClick={() => {
                 setArchived.mutate({ resume, archived: !header.isArchived });

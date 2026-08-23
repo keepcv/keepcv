@@ -70,28 +70,29 @@ function Controls({
   writes: Writes;
 }) {
   return (
-    <span className="flex shrink-0 items-center gap-1">
+    // Glyphs, not words: "Hide" and "Remove" spelled out on every section, entry
+    // and point put two words of chrome beside every line of the user's content.
+    // Each still carries the label naming its own row.
+    <span className="flex shrink-0 items-center gap-0.5">
       {reorder}
       <Button
         tone="ghost"
         size="sm"
+        icon={isVisible ? "visible" : "hidden"}
         label={`${isVisible ? "Stop printing" : "Print"} ${subject}`}
         onClick={() => {
           writes.toggle(placed, !isVisible);
         }}
-      >
-        {isVisible ? "Hide" : "Show"}
-      </Button>
+      />
       <Button
         tone="ghost"
         size="sm"
+        icon="close"
         label={`Take ${subject} off this resume`}
         onClick={() => {
           writes.remove(placed);
         }}
-      >
-        Remove
-      </Button>
+      />
     </span>
   );
 }

@@ -2,9 +2,10 @@ import type { CareerRecord, Store } from "@keepcv/schema";
 import { careerRecordPatchSchema } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
+import { Icon } from "../../../components/icon/icon.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
-import { PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -15,6 +16,7 @@ import { TaggedNote } from "../../tags/ui/tagged-note.js";
 import { useUpdateRecord } from "../api/use-records.js";
 import {
   groupedRecordRows,
+  KIND_GLYPHS,
   KIND_LABELS,
   type RecordFilters,
   type RecordGroup,
@@ -51,6 +53,8 @@ function Row({
   order: Reorder<CareerRecord>;
   entry: CareerRecord | undefined;
 }) {
+  const details = [row.organisation, row.subtitle, row.period].filter(Boolean).join(" - ");
+
   return (
     <li
       {...(entry === undefined ? {} : order.rowProps(entry))}
@@ -60,26 +64,29 @@ function Row({
       <Link
         to="/records/$recordId"
         params={{ recordId: row.id }}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-hover data-[archived=true]:opacity-60"
+        className="flex min-w-0 flex-1 items-start gap-3 rounded-lg px-2.5 py-2 transition-colors duration-120 ease-out-soft hover:bg-surface-hover data-[archived=true]:opacity-60"
         data-archived={row.isArchived}
       >
-        <span className="min-w-0 flex-[2] truncate text-sm font-medium text-text">{row.title}</span>
-        <span className="hidden min-w-0 flex-[2] truncate text-sm text-text-muted sm:block">
-          {[row.organisation, row.subtitle].filter(Boolean).join(" - ")}
+        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-surface-sunken text-text-subtle">
+          <Icon name={KIND_GLYPHS[row.kind]} size="sm" />
         </span>
-        <span className="hidden w-36 shrink-0 text-right text-xs tabular-nums text-text-subtle sm:block">
-          {row.period}
+        {/* Everything about the record in one block against the left edge. Laid
+            out as four columns, this list put the period and the point count a
+            thousand pixels from the title they belonged to. */}
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="min-w-0 truncate text-sm font-medium text-text">{row.title}</span>
+            {row.pointCount === 0 ? null : (
+              <Badge icon="point">
+                {row.pointCount} point{row.pointCount === 1 ? "" : "s"}
+              </Badge>
+            )}
+            {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
+          </span>
+          {details === "" ? null : (
+            <span className="mt-0.5 block truncate text-xs text-text-subtle">{details}</span>
+          )}
         </span>
-        <span className="w-20 shrink-0 text-right text-xs tabular-nums text-text-subtle">
-          {row.pointCount === 0
-            ? "no points"
-            : `${String(row.pointCount)} point${row.pointCount === 1 ? "" : "s"}`}
-        </span>
-        {row.isArchived ? (
-          <Badge tone="warning" className="shrink-0">
-            Archived
-          </Badge>
-        ) : null}
       </Link>
       {entry === undefined ? null : (
         <span className="flex shrink-0 items-center gap-0.5 pr-1">
@@ -169,7 +176,7 @@ export function RecordList({
   const total = groups.reduce((count, group) => count + group.rows.length, 0);
 
   return (
-    <div className="space-y-5">
+    <PageBody width="full">
       <PageHeader
         title={filters.kind === undefined ? "Records" : KIND_LABELS[filters.kind]}
         icon="record"
@@ -221,8 +228,9 @@ export function RecordList({
               {/* Always for a custom entry: its heading is what tells two
                   otherwise identical groups apart. */}
               {filters.kind === undefined || group.kind === "custom_entry" ? (
-                <h2 className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                <h2 className="flex items-center gap-3 px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
                   {group.heading}
+                  <span className="h-px flex-1 bg-line" aria-hidden="true" />
                 </h2>
               ) : null}
               <Group group={group} client={client} />
@@ -230,6 +238,6 @@ export function RecordList({
           ))}
         </div>
       )}
-    </div>
+    </PageBody>
   );
 }
