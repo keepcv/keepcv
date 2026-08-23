@@ -442,6 +442,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a link");
     type("Address", "https://github.com/ada/engine");
     type("Shown as", "The source");
     press("Add link");
@@ -454,7 +455,7 @@ describe("what a record carries beside its points", () => {
       expect(store.recordLinks).toHaveLength(1);
     });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "remove" })[0] as HTMLElement);
+    fireEvent.click(screen.getAllByRole("button", { name: /^Remove / })[0] as HTMLElement);
 
     await waitFor(() => {
       expect(store.recordLinks[0]?.archivedAt).not.toBeNull();
@@ -467,6 +468,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a link");
     press("Add link");
 
     expect(await screen.findByText(/too small|expected/i)).toBeInTheDocument();
@@ -478,6 +480,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     type("Value", "AWS-1234");
     press("Add field");
@@ -498,6 +501,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     type("Value", "AWS-9999");
     press("Add field");
@@ -519,6 +523,7 @@ describe("what a record carries beside its points", () => {
     mount(server.answer, `/records/${record.id}`);
 
     await screen.findByRole("heading", { name: "Difference Engine" });
+    press("Add a field");
     type("Name", "Credential ID");
     press("Add field");
 

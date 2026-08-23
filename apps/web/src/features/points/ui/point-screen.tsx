@@ -68,7 +68,7 @@ export function PointScreen({
           )}
           <Button
             className="ml-auto"
-            tone={isArchived ? "secondary" : "danger"}
+            icon={isArchived ? "restore" : "archive"}
             disabled={setArchived.isPending}
             onClick={() => {
               setArchived.mutate({ point, archived: !isArchived });

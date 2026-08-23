@@ -214,6 +214,17 @@ the page limit and the template settings are one collapsing column on the previe
 tab, and are absent beside the composition**, where they would open over the very
 thing they change.
 
+**`danger` is for losing something, and archiving is not that.** Nothing here is
+destroyed, so a red Archive taught users to fear the mechanism that keeps them
+safe; it is a secondary button with the `archive` glyph, and `danger` is left on
+merging a tag and discarding a draft. **A form nobody is filling in is not on the
+screen** - it sits behind the control that names it and opens as a bounded block
+with its own confirm and cancel, rather than leaving empty inputs open with the
+submit button under them. A repeated row action is a glyph and still passes
+`label`. Note that TypeScript does not excess-check a hyphenated JSX attribute,
+so `aria-expanded` on a component that does not forward it type-checks and is
+dropped; `Button` takes `expanded`.
+
 **`Ctrl-K` opens a palette over `search(store, query)`**, the same selector the
 search screen reads, so the two cannot disagree about what matches. Arriving with
 no token renders a landing page rather than a 401 panel, and the router never

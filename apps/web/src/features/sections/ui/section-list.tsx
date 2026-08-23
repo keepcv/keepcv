@@ -103,7 +103,7 @@ function Row({
             </>
           )}
           <Button
-            tone={row.isArchived ? "secondary" : "danger"}
+            icon={row.isArchived ? "restore" : "archive"}
             disabled={setArchived.isPending}
             onClick={() => {
               setArchived.mutate({ section, archived: !row.isArchived });

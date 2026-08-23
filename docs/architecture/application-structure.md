@@ -1007,7 +1007,36 @@ the paper, or floating above it - is either invisible or in the way. The page
 count stays, because that is feedback. Changing the template is a click away on
 the tab whose job it is.
 
-### 10.5 The palette
+### 10.5 What a control looks like is a claim about what it does
+
+**`danger` is for losing something, and archiving is not that.** Six screens
+painted Archive in critical red. Nothing in this product is destroyed - archiving
+is the reversible safety net the whole store is built on - and red is the
+universal signal for the opposite, so the styling taught users to fear the
+mechanism that keeps them safe. Archive is a secondary button carrying the
+`archive` glyph, and `Put back` carries `restore`. `danger` is left on the two
+actions that genuinely cost something: merging a tag, which moves everything off
+the losing one before archiving it, and discarding a draft, which throws away
+text that was never committed.
+
+**A form that is not being filled in is not on the screen.** A record's links and
+fields each had three empty inputs open permanently with the button that submits
+them underneath, so the panel read backwards and two-thirds of a record's screen
+was blank boxes. They sit behind the control that names them - `Add a link`,
+`Add a field` - and open as a bounded block with its own confirm and cancel, so
+the submit button belongs to something visible. That is the same shape the resume
+list already used for naming a new resume.
+
+**A repeated row action is a glyph, and it keeps the label that names its row.**
+`Hide` and `Remove` spelled out on every section, entry and point put two words
+of chrome beside every line of the user's own content. Each still passes `label`,
+because `Up` on its own tells a screen reader nothing about which row moved.
+
+Beware `aria-*` passed into a component that does not forward it: TypeScript does
+not excess-check a hyphenated JSX attribute, so `aria-expanded` on `Button`
+type-checked and was dropped on the floor. `Button` takes `expanded`.
+
+### 10.6 The palette
 
 `Ctrl-K` or `/` opens a palette over `search(store, query)` - the same selector
 the search screen reads, so the two cannot disagree about what matches. It
@@ -1020,7 +1049,7 @@ nothing inside has claimed focus already**. The close button is that first
 element, so focusing it unconditionally took focus back from the palette's field
 and swallowed everything typed after opening.
 
-### 10.6 Arriving without a credential
+### 10.7 Arriving without a credential
 
 `main.tsx` awaits `GET /auth/mode` before the first render, because which of
 three screens belongs here is not a thing to decide twice, and an effect that

@@ -180,7 +180,6 @@ export function ResumeDetailScreen({
               }}
             />
             <Button
-              tone={header.isArchived ? "secondary" : "danger"}
               icon={header.isArchived ? "restore" : "archive"}
               onClick={() => {
                 setArchived.mutate({ resume, archived: !header.isArchived });

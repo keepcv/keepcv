@@ -268,7 +268,7 @@ function ChannelRow({
             </>
           )}
           <Button
-            tone={isArchived ? "secondary" : "danger"}
+            icon={isArchived ? "restore" : "archive"}
             disabled={setArchived.isPending}
             onClick={() => {
               setArchived.mutate({ channel, archived: !isArchived });

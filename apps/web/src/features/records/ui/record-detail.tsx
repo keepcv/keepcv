@@ -153,7 +153,6 @@ export function RecordDetail({
             {/* Archiving is the only removal there is, and it reverses from the
                 same button. */}
             <Button
-              tone={row.isArchived ? "secondary" : "danger"}
               icon={row.isArchived ? "restore" : "archive"}
               disabled={setArchived.isPending}
               onClick={() => {
