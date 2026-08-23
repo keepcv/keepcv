@@ -1,81 +1,23 @@
-import { fold } from "@keepcv/core";
 import type {
   ContactChannelKind,
   Intake,
   IntakeContactChannel,
-  IntakeLink,
-  IntakeOrganisation,
-  IntakePoint,
   IntakeRecord,
-  OrganisationKind,
-  PartialDate,
-  RecordLinkKind,
-  SkillProficiency,
 } from "@keepcv/schema";
-import { CONTACT_CHANNEL_KINDS, partialDateSchema, SKILL_PROFICIENCIES } from "@keepcv/schema";
 import type { JsonResume, JsonResumeLocation, JsonResumeProfile } from "./json-resume.js";
-
-// Collects what each entry named its organisation, so one name mentioned in
-// three lists arrives as one organisation the reviewer decides about once.
-class Organisations {
-  private readonly byName = new Map<string, IntakeOrganisation>();
-
-  seen(name: string | undefined, kind: OrganisationKind): string | null {
-    const trimmed = name?.trim();
-    if (trimmed === undefined || trimmed === "") return null;
-    const key = fold(trimmed);
-    if (!this.byName.has(key)) {
-      this.byName.set(key, { name: trimmed, kind, website: null, location: null });
-    }
-    return trimmed;
-  }
-
-  all(): IntakeOrganisation[] {
-    return [...this.byName.values()];
-  }
-}
-
-// Every note names the entry it is about, because a report saying a date was
-// dropped is no use without saying which one.
-class Notes {
-  private readonly said: string[] = [];
-
-  add(note: string): void {
-    if (!this.said.includes(note)) this.said.push(note);
-  }
-
-  date(value: string | undefined, about: string): PartialDate | null {
-    const trimmed = value?.trim();
-    if (trimmed === undefined || trimmed === "") return null;
-    const parsed = partialDateSchema.safeParse(trimmed);
-    if (parsed.success) return parsed.data;
-    this.add(`"${trimmed}" on ${about} is not a year, month or day, so that date is empty.`);
-    return null;
-  }
-
-  all(): string[] {
-    return this.said;
-  }
-}
-
-const text = (value: string | undefined): string | null => {
-  const trimmed = value?.trim();
-  return trimmed === undefined || trimmed === "" ? null : trimmed;
-};
-
-const pointsOf = (highlights: string[] | undefined): IntakePoint[] =>
-  (highlights ?? [])
-    .map((highlight) => highlight.trim())
-    .filter((highlight) => highlight !== "")
-    .map((highlight) => ({ text: highlight, occurredOn: null }));
-
-const linksOf = (url: string | undefined, kind: RecordLinkKind = "other"): IntakeLink[] => {
-  const found = text(url);
-  return found === null ? [] : [{ kind, label: null, url: found }];
-};
-
-const tagsOf = (keywords: string[] | undefined): string[] =>
-  (keywords ?? []).map((keyword) => keyword.trim()).filter((keyword) => keyword !== "");
+import type { Period } from "./reading.js";
+import {
+  at,
+  channelOfNetwork,
+  linksOf,
+  Notes,
+  nothing,
+  Organisations,
+  pointsOf,
+  proficiencyOf,
+  tagsOf,
+  text,
+} from "./reading.js";
 
 // One free-text line out of five named parts, which is the shape the store
 // holds and the reverse of what the adapter writes.
@@ -89,16 +31,9 @@ const locationOf = (location: JsonResumeLocation | undefined): string | null => 
   return joined === "" ? null : joined;
 };
 
-const CONTACT_KINDS = new Set<string>(CONTACT_CHANNEL_KINDS);
-
 function channelOf(profile: JsonResumeProfile): IntakeContactChannel | undefined {
   const value = text(profile.username) ?? text(profile.url);
-  if (value === null) return undefined;
-  const network = profile.network.trim();
-  const folded = fold(network);
-  return CONTACT_KINDS.has(folded)
-    ? { kind: folded as ContactChannelKind, label: null, value }
-    : { kind: "other", label: network === "" ? null : network, value };
+  return value === null ? undefined : channelOfNetwork(text(profile.network), value);
 }
 
 function channelsOf(resume: JsonResume): IntakeContactChannel[] {
@@ -117,23 +52,6 @@ function channelsOf(resume: JsonResume): IntakeContactChannel[] {
   ];
 }
 
-// Only the four this store holds. A level outside them is reported rather than
-// rounded to the nearest one, which would claim expertise nobody wrote down.
-function proficiencyOf(level: string | undefined, notes: Notes): SkillProficiency | null {
-  const found = text(level);
-  if (found === null) return null;
-  const matched = SKILL_PROFICIENCIES.find((each) => each === fold(found));
-  if (matched !== undefined) return matched;
-  notes.add(`"${found}" is not one of the four levels a skill can hold here, so it is not set.`);
-  return null;
-}
-
-interface Period {
-  startedOn: PartialDate | null;
-  endedOn: PartialDate | null;
-  isCurrent: boolean;
-}
-
 // No end date means ongoing only where the kind has a period at all. An award
 // carries one date, and calling it current would be nonsense.
 function periodOf(
@@ -145,30 +63,6 @@ function periodOf(
   const endedOn = notes.date(dates.endDate, about);
   return { startedOn, endedOn, isCurrent: startedOn !== null && endedOn === null };
 }
-
-const at = (value: PartialDate | null): Period => ({
-  startedOn: value,
-  endedOn: null,
-  isCurrent: false,
-});
-
-interface Common {
-  subtitle: string | null;
-  location: string | null;
-  summary: string | null;
-  points: IntakePoint[];
-  links: IntakeLink[];
-  tags: string[];
-}
-
-const nothing: Common = {
-  subtitle: null,
-  location: null,
-  summary: null,
-  points: [],
-  links: [],
-  tags: [],
-};
 
 function workRecords(resume: JsonResume, orgs: Organisations, notes: Notes): IntakeRecord[] {
   return (resume.work ?? []).map((job) => {

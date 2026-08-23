@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fromLines } from "../from-lines.js";
 import { docxLines, NotADocxError } from "./docx.js";
 import { NotAPdfError, pdfLines } from "./pdf.js";
+import { NotARenderCvError, parseRenderCv } from "./yaml.js";
 
 interface Drawn {
   text: string;
@@ -303,5 +304,33 @@ describe("which heading level a DOCX means as a section", () => {
     ].join("");
 
     expect(of(body)).toEqual(["heading", "normal"]);
+  });
+});
+
+const yaml = (...lines: string[]) => lines.join("\n");
+
+describe("reading a RenderCV file", () => {
+  it("answers the object under `cv`, which is all this format keeps content in", () => {
+    const file = parseRenderCv(
+      yaml("cv:", "  name: Ada Lovelace", "  sections:", "    Work:", "      - company: Acme"),
+    );
+
+    expect(file.cv?.name).toBe("Ada Lovelace");
+    expect(file.cv?.sections?.["Work"]).toEqual([{ company: "Acme" }]);
+  });
+
+  // A year is unquoted in every example the tool ships, so it arrives as a
+  // number and a reader that only accepts strings loses every date.
+  it("reads an unquoted year as the number YAML says it is", () => {
+    const file = parseRenderCv(
+      yaml("cv:", "  sections:", "    Education:", "      - start_date: 2015"),
+    );
+
+    expect(file.cv?.sections?.["Education"]).toEqual([{ start_date: 2015 }]);
+  });
+
+  it("refuses YAML that is not this format rather than answering an empty cv", () => {
+    expect(() => parseRenderCv(yaml("basics:", "  name: Ada"))).toThrow(NotARenderCvError);
+    expect(() => parseRenderCv("cv: [unclosed")).toThrow(NotARenderCvError);
   });
 });

@@ -114,6 +114,9 @@ catalogs:
     vitest:
       specifier: ^4.1.10
       version: 4.1.10
+    yaml:
+      specifier: ^2.9.0
+      version: 2.9.0
     zod:
       specifier: ^4.4.3
       version: 4.4.3
@@ -404,6 +407,9 @@ importers:
       pdfjs-dist:
         specifier: 'catalog:'
         version: 6.2.108
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.0
     devDependencies:
       '@keepcv/templates':
         specifier: workspace:*
