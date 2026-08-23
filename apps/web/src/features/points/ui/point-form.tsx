@@ -153,7 +153,7 @@ export function PointForm({
             placeholder="Cut p95 ingest latency from 800ms to 120ms across 40 services"
             error={errors["phrasing.body"]}
           />
-          <p className="text-right text-xs tabular-nums text-slate-400">
+          <p className="text-right text-xs tabular-nums text-text-subtle">
             {values.text.trim().length} characters
           </p>
         </PanelBody>

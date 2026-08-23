@@ -35,15 +35,14 @@ const STATUS_NOTES: Record<EditorStatus, string> = {
   committed: "Saved",
 };
 
-const TEXT_BUTTON =
-  "text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline";
+const TEXT_BUTTON = "text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline";
 
 function UsedBy({ store, phrasingId }: { store: Store; phrasingId: Uuid }) {
   const resumes = resumesUsingPhrasing(store, phrasingId);
   if (resumes.length === 0) return null;
 
   return (
-    <span className="text-xs text-slate-500">
+    <span className="text-xs text-text-subtle">
       on{" "}
       {resumes.map((resume, index) => (
         <span key={resume.id}>
@@ -74,11 +73,11 @@ function DraftWaiting({
   onDiscard: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-      <p className="text-xs font-medium text-amber-900">
+    <div className="rounded-lg border border-caution/40 bg-caution-soft px-3 py-2">
+      <p className="text-xs font-medium text-caution-text">
         You were part-way through rewording this.
       </p>
-      <p className="mt-1 text-sm text-amber-900">{text}</p>
+      <p className="mt-1 text-sm text-caution-text">{text}</p>
       <div className="mt-2 flex gap-2">
         <Button onClick={onRestore}>Put it back</Button>
         <Button tone="danger" onClick={onDiscard}>
@@ -106,7 +105,7 @@ function Label({ client, phrasing }: { client: ApiClient; phrasing: Phrasing }) 
         if (trimmed === (phrasing.label ?? "")) return;
         update.mutate({ phrasing, patch: { label: trimmed === "" ? null : trimmed } });
       }}
-      className="w-40 border-b border-transparent bg-transparent text-xs text-slate-600 outline-none placeholder:text-slate-400 hover:border-slate-300 focus:border-slate-900"
+      className="w-40 border-b border-transparent bg-transparent text-xs text-text-muted outline-none placeholder:text-text-subtle hover:border-line-strong focus:border-brand"
     />
   );
 }
@@ -137,7 +136,7 @@ function Wording({
     <div
       {...order.rowProps(phrasing)}
       data-archived={isArchived}
-      className="space-y-2 rounded-lg border border-slate-200 p-3 data-[archived=true]:opacity-60 data-[held=true]:opacity-40"
+      className="space-y-2 rounded-lg border border-line p-3 data-[archived=true]:opacity-60 data-[held=true]:opacity-40"
     >
       <div className="flex flex-wrap items-center gap-2">
         <DragGrip />
@@ -150,7 +149,7 @@ function Wording({
               patch: { variant: event.target.value as PhrasingVariant },
             });
           }}
-          className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700"
+          className="rounded border border-line bg-surface px-1.5 py-0.5 text-xs text-text-muted"
         >
           {PHRASING_VARIANTS.map((option) => (
             <option key={option} value={option}>
@@ -186,12 +185,12 @@ function Wording({
           text.onChange(event.target.value);
         }}
         onBlur={text.onBlur}
-        className="w-full resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-relaxed text-slate-900 outline-none read-only:bg-slate-50 focus:border-slate-900"
+        className="w-full resize-y rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm leading-relaxed text-text outline-none read-only:bg-surface-sunken focus:border-brand"
       />
 
       {text.error === null ? null : <Failure error={text.error} />}
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-subtle">
         <span className="tabular-nums">{text.typed.trim().length} characters</span>
         <span aria-live="polite">{STATUS_NOTES[text.status]}</span>
         <span className="ml-auto flex gap-3">
@@ -250,14 +249,14 @@ function AddWording({
   const [label, setLabel] = useState("");
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+    <div className="flex flex-wrap items-center gap-2 border-t border-line-subtle pt-3">
       <select
         value={variant}
         aria-label="New variant"
         onChange={(event) => {
           setVariant(event.target.value as PhrasingVariant);
         }}
-        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700"
+        className="rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-sm text-text-muted"
       >
         {PHRASING_VARIANTS.map((option) => (
           <option key={option} value={option}>
@@ -272,7 +271,7 @@ function AddWording({
         onChange={(event) => {
           setLabel(event.target.value);
         }}
-        className="w-48 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900"
+        className="w-48 rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm text-text outline-none placeholder:text-text-subtle focus:border-brand"
       />
       <Button
         disabled={add.isPending}
@@ -283,7 +282,7 @@ function AddWording({
       >
         Add a wording
       </Button>
-      <span className="text-xs text-slate-500">{VARIANT_HINTS[variant]}</span>
+      <span className="text-xs text-text-subtle">{VARIANT_HINTS[variant]}</span>
     </div>
   );
 }
@@ -320,7 +319,7 @@ export function PhrasingEditor({
       <Panel>
         <PanelHeader title={TITLES[subject]} />
         <PanelBody>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-text-muted">
             This {subject} names a wording the store does not hold, which no screen can repair.
           </p>
         </PanelBody>

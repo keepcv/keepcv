@@ -205,7 +205,7 @@ export function TemplateFrame({
       {/* Sized to what the page looks like after scaling, so it takes the room
           it occupies rather than the room it would occupy unscaled. */}
       <div
-        className="relative overflow-hidden shadow-sm ring-1 ring-slate-200"
+        className="relative overflow-hidden shadow-sm ring-1 ring-paper-edge"
         style={
           measured
             ? { width: paper.width * scale, height: paper.height * scale }
@@ -215,7 +215,7 @@ export function TemplateFrame({
         <iframe
           ref={frame}
           title={title}
-          className="block border-0 bg-white"
+          className="block border-0 bg-surface"
           style={{
             width: measured ? paper.width : "100%",
             height: measured ? paper.height : "60vh",
@@ -230,13 +230,15 @@ export function TemplateFrame({
               key={at}
               aria-hidden
               className={`pointer-events-none absolute inset-x-0 border-t border-dashed ${
-                page > from ? "border-amber-400" : "border-slate-300"
+                page > from ? "border-caution" : "border-line-strong"
               }`}
               style={{ top: (origin + at) * scale }}
             >
               <span
                 className={`absolute right-1 -top-2.5 rounded px-1 text-[10px] leading-4 ${
-                  page > from ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"
+                  page > from
+                    ? "bg-caution-soft text-caution-text"
+                    : "bg-surface-sunken text-text-subtle"
                 }`}
               >
                 Page {page}

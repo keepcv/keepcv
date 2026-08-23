@@ -19,16 +19,16 @@ import { PointMetrics } from "./point-metrics.js";
 function FiledUnder({ store, point }: { store: Store; point: Point }) {
   const record = store.records.find((row) => row.id === point.recordId);
   if (record === undefined) {
-    return <p className="text-sm text-slate-500">Not filed under a record yet.</p>;
+    return <p className="text-sm text-text-subtle">Not filed under a record yet.</p>;
   }
 
   return (
-    <p className="text-sm text-slate-500">
+    <p className="text-sm text-text-subtle">
       Filed under{" "}
       <Link
         to="/records/$recordId"
         params={{ recordId: record.id }}
-        className="text-slate-700 underline-offset-2 hover:underline"
+        className="text-text-muted underline-offset-2 hover:underline"
       >
         {record.title ?? "Untitled"}
       </Link>
@@ -112,7 +112,7 @@ export function PointScreen({
             {update.isPending ? "Saving" : "Save"}
           </Button>
           {update.isSuccess && !update.isPending ? (
-            <span className="text-xs text-slate-500">Saved</span>
+            <span className="text-xs text-text-subtle">Saved</span>
           ) : null}
         </div>
       </Panel>

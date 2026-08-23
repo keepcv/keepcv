@@ -73,7 +73,7 @@ export function Shell({ store }: { store: Store }) {
 
   return (
     <ToastRegion>
-      <div className="flex min-h-screen bg-canvas text-text">
+      <div className="flex h-dvh overflow-hidden bg-canvas text-text">
         <aside
           className={cn(
             "hidden shrink-0 flex-col gap-4 border-r border-line bg-surface px-3 py-4 lg:flex",
@@ -110,7 +110,7 @@ export function Shell({ store }: { store: Store }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
+          <header className="z-20 shrink-0 border-b border-line bg-surface">
             <div className="flex h-14 w-full items-center gap-3 px-4 lg:px-6">
               <Button
                 tone="ghost"
@@ -135,7 +135,7 @@ export function Shell({ store }: { store: Store }) {
             </div>
           </header>
 
-          <main className="w-full flex-1 px-4 py-6 lg:px-6">
+          <main className="min-h-0 w-full flex-1 overflow-y-auto px-4 py-6 lg:px-6">
             <Outlet />
           </main>
         </div>

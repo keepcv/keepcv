@@ -1,9 +1,10 @@
 import type { Resume, Store, Uuid } from "@keepcv/schema";
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { NameBox } from "../../../components/ui/name-box.js";
+import { PageHeader } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { usePatchResume, useSetResumeArchived } from "../api/use-resumes.js";
@@ -24,50 +25,72 @@ const VIEW_LABELS: Record<ResumeView, string> = {
   history: "History",
 };
 
-function Rename({ resume, onRename }: { resume: Resume; onRename: (name: string) => void }) {
-  const [typed, setTyped] = useState<string | null>(null);
+const VIEW_ICONS = {
+  composition: "variants",
+  target: "match",
+  preview: "resume",
+  history: "history",
+} as const;
 
-  if (typed === null) {
+function Rename({ resume, onRename }: { resume: Resume; onRename: (name: string) => void }) {
+  const [naming, setNaming] = useState(false);
+
+  if (!naming) {
     return (
-      <button
-        type="button"
+      <Button
+        tone="ghost"
+        size="sm"
+        icon="edit"
+        label="Rename this resume"
         onClick={() => {
-          setTyped(resume.name);
+          setNaming(true);
         }}
-        className="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
-      >
-        Rename
-      </button>
+      />
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <input
-        aria-label={`A name for ${resume.name}`}
-        value={typed}
-        onChange={(event) => {
-          setTyped(event.target.value);
-        }}
-        className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1 text-sm"
-      />
-      <Button
-        tone="primary"
-        disabled={typed.trim() === ""}
-        onClick={() => {
-          onRename(typed.trim());
-          setTyped(null);
-        }}
-      >
-        Save
-      </Button>
-      <Button
-        onClick={() => {
-          setTyped(null);
-        }}
-      >
-        Cancel
-      </Button>
+    <NameBox
+      label={`A name for ${resume.name}`}
+      initial={resume.name}
+      confirm="Save"
+      onSave={(name) => {
+        onRename(name);
+        setNaming(false);
+      }}
+      onCancel={() => {
+        setNaming(false);
+      }}
+    />
+  );
+}
+
+// Composition and preview are one workspace: the selection on the left, what it
+// compiles to on the right, each scrolling on its own. Below `xl` there is not
+// room for two, and the preview has its own view.
+function Workspace({
+  store,
+  client,
+  detail,
+}: {
+  store: Store;
+  client: ApiClient;
+  detail: ResumeDetail;
+}) {
+  const { resume, document } = detail;
+
+  return (
+    <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="min-h-0 overflow-y-auto pr-1">
+        <Composer store={store} client={client} detail={detail} resumeId={resume.id} />
+      </div>
+      <div className="hidden min-h-0 overflow-y-auto rounded-xl bg-paper p-4 xl:block">
+        {document === undefined ? (
+          <Empty title="Nothing to compile yet" spot="compose" />
+        ) : (
+          <DocumentPreview client={client} resume={resume} document={document} />
+        )}
+      </div>
     </div>
   );
 }
@@ -87,17 +110,29 @@ function Chosen({
 
   switch (view) {
     case "history":
-      return <ResumeHistory client={client} resumeId={resume.id} />;
+      return (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ResumeHistory client={client} resumeId={resume.id} />
+        </div>
+      );
     case "target":
-      return <TargetScreen store={store} client={client} resume={resume} />;
+      return (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <TargetScreen store={store} client={client} resume={resume} />
+        </div>
+      );
     case "preview":
-      return document === undefined ? (
-        <Empty title="Nothing to compile yet" />
-      ) : (
-        <DocumentPreview client={client} resume={resume} document={document} />
+      return (
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-paper p-4">
+          {document === undefined ? (
+            <Empty title="Nothing to compile yet" spot="compose" />
+          ) : (
+            <DocumentPreview client={client} resume={resume} document={document} />
+          )}
+        </div>
       );
     case "composition":
-      return <Composer store={store} client={client} detail={detail} resumeId={resume.id} />;
+      return <Workspace store={store} client={client} detail={detail} />;
   }
 }
 
@@ -120,7 +155,7 @@ export function ResumeDetailScreen({
 
   if (detail === undefined) {
     return (
-      <Empty title="No resume with that id">
+      <Empty title="No resume with that id" spot="noResults">
         It may have been on another store, or the link may be older than the row. Every resume the
         store holds is on the resumes list.
       </Empty>
@@ -129,54 +164,60 @@ export function ResumeDetailScreen({
 
   const { header, resume } = detail;
 
+  // Full height with the panes scrolling on their own: a preview that scrolls
+  // the page away from the control that changed it is a preview nobody watches.
   return (
-    <div className="space-y-5">
-      <div>
-        <Link
-          to="/resumes"
-          search={{ archived: "exclude" }}
-          className="text-xs text-slate-500 hover:text-slate-900"
-        >
-          Resumes
-        </Link>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-xl font-semibold tracking-tight">{header.name}</h1>
-          {header.isArchived ? <Badge tone="warning">Archived, and kept</Badge> : null}
-          <Rename
-            resume={resume}
-            onRename={(name) => {
-              patch.mutate({ resume, patch: { name } });
-            }}
-          />
-          <Button
-            onClick={() => {
-              setArchived.mutate({ resume, archived: !header.isArchived });
-            }}
-          >
-            {header.isArchived ? "Put this resume back" : "Archive this resume"}
-          </Button>
-        </div>
-        <p className="mt-1 text-sm text-slate-600">
-          {header.target ?? "No target role recorded"}
-          {header.applied === null ? "" : ` - sent ${header.applied}`}
-        </p>
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <PageHeader
+        title={header.name}
+        trail={[{ label: "Resumes", to: "/resumes", search: { archived: "exclude" } }]}
+        actions={
+          <>
+            <Rename
+              resume={resume}
+              onRename={(name) => {
+                patch.mutate({ resume, patch: { name } });
+              }}
+            />
+            <Button
+              tone={header.isArchived ? "secondary" : "danger"}
+              icon={header.isArchived ? "restore" : "archive"}
+              onClick={() => {
+                setArchived.mutate({ resume, archived: !header.isArchived });
+              }}
+            >
+              {header.isArchived ? "Put back" : "Archive"}
+            </Button>
+          </>
+        }
+      >
+        {header.target ?? "No target role recorded"}
+        {header.applied === null ? "" : ` - sent ${header.applied}`}
+      </PageHeader>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented label="View">
-          {RESUME_VIEWS.map((option) => (
-            <Segment
-              key={option}
-              to="/resumes/$resumeId"
-              params={{ resumeId }}
-              search={{ view: option }}
-              active={view === option}
-            >
-              {VIEW_LABELS[option]}
-            </Segment>
-          ))}
-        </Segmented>
-        <p className="text-xs tabular-nums text-slate-500">
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented label="View">
+            {RESUME_VIEWS.map((option) => (
+              <Segment
+                key={option}
+                to="/resumes/$resumeId"
+                params={{ resumeId }}
+                search={{ view: option }}
+                active={view === option}
+                icon={VIEW_ICONS[option]}
+              >
+                {VIEW_LABELS[option]}
+              </Segment>
+            ))}
+          </Segmented>
+          {header.isArchived ? (
+            <Badge tone="warning" icon="archive">
+              Archived, and kept
+            </Badge>
+          ) : null}
+        </div>
+        <p className="text-xs tabular-nums text-text-subtle">
           {header.hidden === 0
             ? "Everything placed prints."
             : `${String(header.hidden)} placed and toggled off, kept either way.`}

@@ -34,16 +34,16 @@ function Line({ line }: { line: ChangeLine }) {
           {CHANGE_LABELS[line.change]}
         </Badge>
         {line.subject === null ? null : (
-          <span className="min-w-0 flex-1 text-sm text-slate-800">{line.subject}</span>
+          <span className="min-w-0 flex-1 text-sm text-text">{line.subject}</span>
         )}
       </div>
       {line.fields.length === 0 ? null : (
         <dl className="mt-1 space-y-0.5">
           {line.fields.map((field) => (
             <div key={field.key} className="flex flex-wrap gap-x-2 text-xs">
-              <dt className="text-slate-500">{field.label}</dt>
-              <dd className="min-w-0 flex-1 text-slate-700">
-                <span className="text-slate-400 line-through">{field.from}</span>{" "}
+              <dt className="text-text-subtle">{field.label}</dt>
+              <dd className="min-w-0 flex-1 text-text-muted">
+                <span className="text-text-subtle line-through">{field.from}</span>{" "}
                 <span>{field.to}</span>
               </dd>
             </div>
@@ -72,7 +72,7 @@ function Comparison({
 
   const lines = diffLines(diff.data);
   if (lines.length === 0) {
-    return <p className="text-sm text-slate-600">These two say exactly the same thing.</p>;
+    return <p className="text-sm text-text-muted">These two say exactly the same thing.</p>;
   }
 
   return (
@@ -88,7 +88,7 @@ function Omissions({ omissions }: { omissions: readonly RestoreOmission[] }) {
   if (omissions.length === 0) return null;
 
   return (
-    <p className="mt-2 text-xs text-amber-800">
+    <p className="mt-2 text-xs text-caution-text">
       Put back what it could. The store no longer holds{" "}
       {omissions.map((row) => row.reference).join(", ")}.
     </p>
@@ -133,7 +133,7 @@ function Starring({ row, onStar }: { row: VersionRow; onStar: (star: Star) => vo
         onChange={(event) => {
           setTyped(event.target.value);
         }}
-        className="w-48 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+        className="w-48 rounded-lg border border-line px-2 py-1 text-sm"
       />
       <Button
         tone="primary"
@@ -171,7 +171,7 @@ function ExportVersion({ client, row }: { client: ApiClient; row: VersionRow }) 
             <Skeleton rows={1} />
           ) : (
             <div className="max-w-xs">
-              <p className="pb-2 text-xs text-slate-500">
+              <p className="pb-2 text-xs text-text-subtle">
                 Version #{row.seq}, in the words it pinned rather than the ones the store holds now.
               </p>
               <DownloadResume document={document.data} />
@@ -231,14 +231,12 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
               {rows.map((row) => (
                 <li
                   key={row.id}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-slate-100 py-2 first:border-t-0 first:pt-0"
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line-subtle py-2 first:border-t-0 first:pt-0"
                 >
-                  <span className="w-8 text-sm font-medium tabular-nums text-slate-900">
-                    #{row.seq}
-                  </span>
+                  <span className="w-8 text-sm font-medium tabular-nums text-text">#{row.seq}</span>
                   <Badge>{row.trigger}</Badge>
                   {row.label === null ? null : <Badge tone="accent">{row.label}</Badge>}
-                  <span className="min-w-0 flex-1 text-xs tabular-nums text-slate-500">
+                  <span className="min-w-0 flex-1 text-xs tabular-nums text-text-subtle">
                     {row.when}
                     {row.restoredFrom === null ? "" : ` - from #${String(row.restoredFrom)}`}
                   </span>
@@ -278,7 +276,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
                 onChange={(event) => {
                   setChosen({ a: event.target.value as Uuid, b: compare.b });
                 }}
-                className="rounded-lg border border-slate-200 px-2 py-1"
+                className="rounded-lg border border-line px-2 py-1"
               >
                 {rows.map((row) => (
                   <option key={row.id} value={row.id}>
@@ -286,14 +284,14 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
                   </option>
                 ))}
               </select>
-              <span className="text-slate-500">with</span>
+              <span className="text-text-subtle">with</span>
               <select
                 aria-label="Compare with"
                 value={compare.b}
                 onChange={(event) => {
                   setChosen({ a: compare.a, b: event.target.value as Uuid });
                 }}
-                className="rounded-lg border border-slate-200 px-2 py-1"
+                className="rounded-lg border border-line px-2 py-1"
               >
                 {rows.map((row) => (
                   <option key={row.id} value={row.id}>
@@ -303,7 +301,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
               </select>
             </div>
             {compare.a === compare.b ? (
-              <p className="text-sm text-slate-600">Pick two different versions.</p>
+              <p className="text-sm text-text-muted">Pick two different versions.</p>
             ) : (
               <Comparison client={client} resumeId={resumeId} a={compare.a} b={compare.b} />
             )}

@@ -112,7 +112,7 @@ function AddPicker<T extends { label: string }>({
   const [chosen, setChosen] = useState("");
   const picked = options[Number(chosen)];
 
-  if (options.length === 0) return <p className="text-xs text-slate-400">{empty}</p>;
+  if (options.length === 0) return <p className="text-xs text-text-subtle">{empty}</p>;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -122,7 +122,7 @@ function AddPicker<T extends { label: string }>({
         onChange={(event) => {
           setChosen(event.target.value);
         }}
-        className="min-w-0 max-w-full flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700"
+        className="min-w-0 max-w-full flex-1 rounded-lg border border-line px-2 py-1 text-xs text-text-muted"
       >
         <option value="">{label}</option>
         {options.map((option, at) => (
@@ -160,7 +160,7 @@ function Point({
   return (
     <li
       {...order.rowProps(point.row)}
-      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5 text-sm text-slate-700 data-[held=true]:opacity-40 data-[off=true]:opacity-50"
+      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5 text-sm text-text-muted data-[held=true]:opacity-40 data-[off=true]:opacity-50"
       data-off={!point.isVisible}
     >
       <DragGrip />
@@ -178,7 +178,7 @@ function Point({
           onChange={(event) => {
             onChooseWording(event.target.value as Uuid);
           }}
-          className="max-w-40 rounded border border-slate-200 px-1 py-0.5 text-xs text-slate-600"
+          className="max-w-40 rounded border border-line px-1 py-0.5 text-xs text-text-muted"
         >
           {point.wordings.map((wording) => (
             <option key={wording.id} value={wording.id}>
@@ -221,7 +221,7 @@ function Entry({
   return (
     <li
       {...order.rowProps(entry.row)}
-      className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0 last:pb-0 data-[held=true]:opacity-40"
+      className="border-t border-line-subtle py-3 first:border-t-0 first:pt-0 last:pb-0 data-[held=true]:opacity-40"
     >
       {/* Wraps rather than hiding: which role, where and when is the whole
           identity of an entry, and dropping it below `sm` leaves a bare title. */}
@@ -233,14 +233,14 @@ function Entry({
         <Link
           to="/records/$recordId"
           params={{ recordId: entry.recordId }}
-          className="min-w-40 flex-1 truncate text-sm font-medium text-slate-900 underline-offset-2 hover:underline"
+          className="min-w-40 flex-1 truncate text-sm font-medium text-text underline-offset-2 hover:underline"
         >
           {entry.title}
         </Link>
         {entry.isVisible ? null : <Off />}
         {entry.isArchived ? <Badge tone="warning">Archived</Badge> : null}
-        <span className="text-xs text-slate-500">{entry.organisation}</span>
-        <span className="text-xs tabular-nums text-slate-500">{entry.period}</span>
+        <span className="text-xs text-text-subtle">{entry.organisation}</span>
+        <span className="text-xs tabular-nums text-text-subtle">{entry.period}</span>
         <Controls
           subject={entry.title}
           placed={{ level: "entry", row: entry.row }}
@@ -252,7 +252,7 @@ function Entry({
 
       {entry.points.length === 0 ? (
         entry.available === 0 ? null : (
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-text-subtle">
             None of its {entry.available} points are on this resume.
           </p>
         )
@@ -302,7 +302,7 @@ function Heading({
         onClick={() => {
           setTyped(section.isDefaultHeading ? "" : section.heading);
         }}
-        className="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+        className="text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline"
       >
         {section.isDefaultHeading
           ? `Rename, currently the default "${section.heading}"`
@@ -320,7 +320,7 @@ function Heading({
         onChange={(event) => {
           setTyped(event.target.value);
         }}
-        className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+        className="min-w-0 flex-1 rounded-lg border border-line px-2 py-1 text-sm"
       />
       <Button
         tone="primary"
@@ -385,7 +385,7 @@ function Section({
           <Heading section={section} onRename={onRename} />
 
           {section.entries.length === 0 ? (
-            <p className="text-sm text-slate-600">Nothing placed in this section yet.</p>
+            <p className="text-sm text-text-muted">Nothing placed in this section yet.</p>
           ) : (
             <ul>
               {section.entries.map((entry) => (
@@ -442,10 +442,10 @@ function Contacts({
         <ul className="space-y-1.5">
           {contacts.map((contact) => (
             <li key={contact.channel.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="w-20 shrink-0 text-xs uppercase tracking-wide text-slate-400">
+              <span className="w-20 shrink-0 text-xs uppercase tracking-wide text-text-subtle">
                 {contact.label}
               </span>
-              <span className="min-w-40 flex-1 truncate text-sm text-slate-700">
+              <span className="min-w-40 flex-1 truncate text-sm text-text-muted">
                 {contact.channel.value}
               </span>
               {contact.prints ? null : <Off />}

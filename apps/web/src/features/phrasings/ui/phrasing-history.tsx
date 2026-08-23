@@ -27,15 +27,15 @@ export function PhrasingHistory({ client, phrasing }: { client: ApiClient; phras
   return (
     <ol
       aria-label="Everything this wording has said"
-      className="space-y-2 border-l border-slate-200 pl-3"
+      className="space-y-2 border-l border-line pl-3"
     >
       {[...history.data.items].reverse().map((revision, index) => (
         <li key={revision.id} className="text-xs">
-          <p className="text-slate-400">
+          <p className="text-text-subtle">
             {formatTimestamp(revision.createdAt)}
             {index === 0 ? " - what it says now" : null}
           </p>
-          <p className="text-slate-700">{revision.plainText}</p>
+          <p className="text-text-muted">{revision.plainText}</p>
         </li>
       ))}
     </ol>

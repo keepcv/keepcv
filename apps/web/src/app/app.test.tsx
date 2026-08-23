@@ -842,6 +842,25 @@ describe("a resume", () => {
 
   // The preview compiles in the browser from the cached store, which is the
   // whole reason `@keepcv/core` does no I/O.
+  // Composition and preview are one workspace: a preview reached by leaving the
+  // screen that changes it is a preview nobody watches while composing.
+  it("shows the composition and what it compiles to at the same time", async () => {
+    const store = aFilledStore();
+    const resumeId = store.resumes[0]?.id ?? "";
+    const answer = vi.fn(() => jsonOf(store));
+
+    mount(answer, `/resumes/${resumeId}?view=composition`);
+
+    expect(await screen.findByRole("navigation", { name: "View" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Take Experience off this resume/ }),
+    ).toBeInTheDocument();
+
+    const page = await printed();
+    expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
+    expect(answer).toHaveBeenCalledTimes(1);
+  });
+
   it("compiles the document client-side, without a second request", async () => {
     const store = aFilledStore();
     const resumeId = store.resumes[0]?.id ?? "";
@@ -1272,17 +1291,17 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}`);
 
     await screen.findByRole("heading", { name: resume.name });
-    press("Rename");
+    press("Rename this resume");
     type(`A name for ${resume.name}`, "Staff engineer, Babbage");
     press("Save");
     expect(
       await screen.findByRole("heading", { name: "Staff engineer, Babbage" }),
     ).toBeInTheDocument();
 
-    press("Archive this resume");
+    press("Archive");
     expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
 
-    press("Put this resume back");
+    press("Put back");
     await waitFor(() => {
       expect(screen.queryByText("Archived, and kept")).not.toBeInTheDocument();
     });

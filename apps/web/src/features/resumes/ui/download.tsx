@@ -15,14 +15,14 @@ function Loses({ document }: { document: ResumeDocument }) {
   if (losses.length === 0) return null;
 
   return (
-    <details className="text-xs text-slate-500">
-      <summary className="cursor-pointer underline-offset-2 hover:text-slate-900 hover:underline">
+    <details className="text-xs text-text-subtle">
+      <summary className="cursor-pointer underline-offset-2 hover:text-text hover:underline">
         {losses.length} {losses.length === 1 ? "thing does" : "things do"} not fit that format
       </summary>
       <ul className="mt-1.5 space-y-1 leading-relaxed">
         {losses.map((loss) => (
           <li key={loss.what}>
-            <span className="font-medium text-slate-700">
+            <span className="font-medium text-text-muted">
               {loss.what} ({loss.count})
             </span>{" "}
             {loss.detail}
@@ -35,8 +35,8 @@ function Loses({ document }: { document: ResumeDocument }) {
 
 export function DownloadResume({ document }: { document: ResumeDocument }) {
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3">
-      <h3 className="text-xs font-medium text-slate-600">Take it with you</h3>
+    <div className="space-y-2 rounded-lg bg-surface-sunken p-3">
+      <h3 className="text-xs font-medium text-text-muted">Take it with you</h3>
       <Button
         tone="primary"
         className="w-full"
@@ -54,11 +54,11 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
       >
         Download HTML
       </Button>
-      <p className="text-xs leading-relaxed text-slate-500">
+      <p className="text-xs leading-relaxed text-text-subtle">
         One file, carrying its own styling and fetching nothing. Evidence never travels in it.
       </p>
 
-      <div className="space-y-2 border-t border-slate-200 pt-2">
+      <div className="space-y-2 border-t border-line pt-2">
         <Button
           className="w-full"
           onClick={() => {

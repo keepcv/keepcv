@@ -49,19 +49,19 @@ export function RecordLinks({
               <li key={link.id} className="flex items-center gap-2 text-sm">
                 <a
                   href={link.url}
-                  className="truncate text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                  className="truncate text-brand-text underline underline-offset-2 hover:text-brand-hover"
                   rel="noreferrer noopener"
                   target="_blank"
                 >
                   {link.label ?? link.url}
                 </a>
-                <span className="text-xs text-slate-400">{link.kind}</span>
+                <span className="text-xs text-text-subtle">{link.kind}</span>
                 <button
                   type="button"
                   onClick={() => {
                     archive.mutate(link);
                   }}
-                  className="ml-auto text-xs text-slate-500 underline-offset-2 hover:text-red-700 hover:underline"
+                  className="ml-auto text-xs text-text-subtle underline-offset-2 hover:text-critical-text hover:underline"
                 >
                   remove
                 </button>

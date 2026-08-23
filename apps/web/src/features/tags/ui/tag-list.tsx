@@ -5,6 +5,7 @@ import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
+import { PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -27,12 +28,12 @@ import {
 
 function Count({ n, noun, to, search }: { n: number; noun: string; to: string; search: object }) {
   const text = `${String(n)} ${noun}${n === 1 ? "" : "s"}`;
-  if (n === 0) return <span className="text-xs tabular-nums text-slate-400">{text}</span>;
+  if (n === 0) return <span className="text-xs tabular-nums text-text-subtle">{text}</span>;
   return (
     <Link
       to={to}
       search={search}
-      className="text-xs tabular-nums text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+      className="text-xs tabular-nums text-text-subtle underline-offset-2 hover:text-text hover:underline"
     >
       {text}
     </Link>
@@ -108,19 +109,19 @@ function Merge({
   const [intoTagId, setIntoTagId] = useState(others[0]?.tag.id);
 
   if (intoTagId === undefined) {
-    return <p className="text-sm text-slate-600">There is no other tag to merge this one into.</p>;
+    return <p className="text-sm text-text-muted">There is no other tag to merge this one into.</p>;
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="text-slate-600">Move everything onto</span>
+      <span className="text-text-muted">Move everything onto</span>
       <select
         aria-label={`Merge ${row.tag.label} into`}
         value={intoTagId}
         onChange={(event) => {
           setIntoTagId(event.target.value as typeof intoTagId);
         }}
-        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm"
+        className="rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm"
       >
         {others.map((other) => (
           <option key={other.tag.id} value={other.tag.id}>
@@ -159,9 +160,9 @@ function Row({
   const { tag } = row;
 
   return (
-    <li className="border-t border-slate-100 px-4 py-3 first:border-t-0">
+    <li className="border-t border-line-subtle px-4 py-3 first:border-t-0">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-sm font-medium text-slate-900">{tag.label}</span>
+        <span className="text-sm font-medium text-text">{tag.label}</span>
         {tag.category === null ? null : <Badge>{tag.category}</Badge>}
         {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
         <Count n={row.records} noun="record" to="/records" search={{ tag: tag.id }} />
@@ -200,7 +201,7 @@ function Row({
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}
 
       {open === undefined ? null : (
-        <div className="mt-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 border-t border-line-subtle pt-3">
           {open === "rename" ? (
             <Rename
               store={store}
@@ -270,11 +271,11 @@ export function TagList({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Tags</h1>
-          <p className="max-w-xl text-xs text-slate-500">{TAG_BLURBS[filter]}</p>
-        </div>
+      <PageHeader title="Tags" icon="tag">
+        {TAG_BLURBS[filter]}
+      </PageHeader>
+
+      <Toolbar>
         <Segmented label="Tags">
           {TAG_FILTERS.map((option) => (
             <Segment key={option} to="/tags" search={{ filter: option }} active={filter === option}>
@@ -282,7 +283,7 @@ export function TagList({
             </Segment>
           ))}
         </Segmented>
-      </div>
+      </Toolbar>
 
       {filter === "archived" ? null : (
         <Panel>
@@ -293,7 +294,7 @@ export function TagList({
       )}
 
       {rows.length === 0 ? (
-        <Empty title={filter === "all" ? "No tags yet" : "Nothing here"}>
+        <Empty title={filter === "all" ? "No tags yet" : "Nothing here"} spot="noResults">
           {filter === "all"
             ? "A tag is a word you file work under. Add one here, or type a new one straight onto a record or a point."
             : "Nothing matches that filter, which on this screen is usually good news."}

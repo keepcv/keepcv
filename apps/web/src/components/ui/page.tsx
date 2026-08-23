@@ -67,13 +67,13 @@ export function PageHeader({
   );
 }
 
-// Sticky so a long list keeps its filters reachable. `top-14` clears the app
-// header, which is the only fixed thing above it.
+// Sticky against `main`, which is the scroll container: the app header sits
+// outside it, so this pins at zero rather than clearing a bar.
 export function Toolbar({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <div
       className={cn(
-        "sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface/85 px-3 py-2 backdrop-blur",
+        "sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface/85 px-3 py-2 backdrop-blur",
         className,
       )}
     >

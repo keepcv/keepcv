@@ -11,6 +11,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Conflict } from "../../../components/ui/conflict.js";
 import { CheckboxField, SelectField, TextField } from "../../../components/ui/field.js";
+import { PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
@@ -243,14 +244,14 @@ function ChannelRow({
   return (
     <li
       {...order.rowProps(channel)}
-      className="border-t border-slate-100 px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
+      className="border-t border-line-subtle px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <DragGrip />
-        <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-slate-400">
+        <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-text-subtle">
           {label}
         </span>
-        <span className="min-w-40 flex-1 truncate text-sm text-slate-800">{channel.value}</span>
+        <span className="min-w-40 flex-1 truncate text-sm text-text">{channel.value}</span>
         {channel.isDefaultVisible ? null : <Badge>off by default</Badge>}
         {isArchived ? <Badge tone="warning">Archived</Badge> : null}
         <div className="ml-auto flex items-center gap-2">
@@ -282,7 +283,7 @@ function ChannelRow({
       {update.error === null ? null : <Failure error={update.error} />}
 
       {values === undefined ? null : (
-        <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 space-y-3 border-t border-line-subtle pt-3">
           <ChannelFields
             values={values}
             errors={errors}
@@ -337,14 +338,14 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
       <PanelHeader
         title="How to reach you"
         aside={
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-1.5 text-xs text-text-subtle">
             <input
               type="checkbox"
               checked={showArchived}
               onChange={(event) => {
                 setShowArchived(event.target.checked);
               }}
-              className="size-3.5 rounded border-slate-300"
+              className="size-3.5 rounded border-line-strong"
             />
             Show archived
           </label>
@@ -354,7 +355,7 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
       </PanelHeader>
 
       {missing.length === 0 ? null : (
-        <div className="mx-4 mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="mx-4 mt-3 rounded-lg bg-caution-soft px-3 py-2 text-xs text-caution-text">
           No {missing.map((kind) => CHANNEL_LABELS[kind].toLowerCase()).join(" and no ")} yet.{" "}
           {missing.length === EXTRACTABLE_KINDS.length
             ? "A resume with neither is one a machine reading it cannot file an application from."
@@ -377,7 +378,7 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
         </ul>
       )}
 
-      <PanelBody className="space-y-3 border-t border-slate-100">
+      <PanelBody className="space-y-3 border-t border-line-subtle">
         <ChannelFields
           values={values}
           errors={errors}
@@ -456,13 +457,10 @@ function Summary({
 export function ProfileScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Profile</h1>
-        <p className="max-w-xl text-xs text-slate-500">
-          One profile, and every resume prints from it. Nothing here is per-resume except which
-          contacts a resume shows.
-        </p>
-      </div>
+      <PageHeader title="Profile" icon="profile">
+        One profile, and every resume prints from it. Nothing here is per-resume except which
+        contacts a resume shows.
+      </PageHeader>
 
       <Identity profile={store.profile} client={client} />
       <Summary store={store} client={client} profile={store.profile} />
