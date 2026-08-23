@@ -3,6 +3,8 @@ import { Fragment, type ReactElement } from "react";
 import type { TemplateConfig } from "../contract.js";
 import { Fields, joined, Links, Marks, Points } from "../prose.js";
 
+// The period runs on with the rest rather than sitting at the right margin: the
+// content column is the page minus the gutter, and a flexed date collided.
 function Entry({
   entry,
   showOrganisation,
@@ -10,16 +12,18 @@ function Entry({
   entry: DocumentEntry;
   showOrganisation: boolean;
 }): ReactElement {
-  const title = joined([entry.title, showOrganisation ? entry.organisation?.name : undefined]);
-  const sub = joined([entry.subtitle, entry.location, entry.mode]);
+  const meta = joined([
+    showOrganisation ? entry.organisation?.name : undefined,
+    entry.subtitle,
+    entry.location,
+    entry.mode,
+    entry.period?.display,
+  ]);
 
   return (
     <div className="kc-entry" data-key={entry.key}>
-      <div className="kc-row">
-        <p className="kc-title">{title}</p>
-        {entry.period === undefined ? null : <p className="kc-meta">{entry.period.display}</p>}
-      </div>
-      {sub === "" ? null : <p className="kc-sub">{sub}</p>}
+      <p className="kc-title">{entry.title}</p>
+      {meta === "" ? null : <p className="kc-meta">{meta}</p>}
       {entry.summary === undefined ? null : (
         <p>
           <Marks nodes={entry.summary} />
@@ -39,13 +43,12 @@ function Group({
   group: DocumentGroup;
   entries: Map<string, DocumentEntry>;
 }): ReactElement {
+  const meta = joined([group.subtitle, group.period?.display]);
+
   return (
     <div className="kc-group" data-key={group.key}>
-      <div className="kc-row">
-        <p className="kc-title">{group.title}</p>
-        {group.period === undefined ? null : <p className="kc-meta">{group.period.display}</p>}
-      </div>
-      {group.subtitle === undefined ? null : <p className="kc-sub">{group.subtitle}</p>}
+      <p className="kc-title">{group.title}</p>
+      {meta === "" ? null : <p className="kc-meta">{meta}</p>}
       {group.entryKeys.map((key) => {
         const entry = entries.get(key);
         return entry === undefined ? null : (

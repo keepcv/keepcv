@@ -5,14 +5,24 @@ export const FIELDS = [
   PAGE_SIZE_FIELD,
   FONT_FAMILY_FIELD,
   {
-    key: "headings",
-    label: "Section headings",
+    key: "headingAlign",
+    label: "Headings sit",
     kind: "choice",
     options: [
-      { value: "uppercase", label: "Upper case" },
-      { value: "as-written", label: "As written" },
+      { value: "right", label: "Against the text" },
+      { value: "left", label: "Against the margin" },
     ],
-    default: "uppercase",
+    default: "right",
+  },
+  {
+    key: "headingWidth",
+    label: "Heading column",
+    kind: "number",
+    min: 22,
+    max: 48,
+    step: 1,
+    unit: "mm",
+    default: 34,
   },
   {
     key: "fontSize",
@@ -32,7 +42,7 @@ export const FIELDS = [
     max: 1.7,
     step: 0.05,
     unit: "x",
-    default: 1.35,
+    default: 1.4,
   },
   {
     key: "margin",
@@ -42,7 +52,7 @@ export const FIELDS = [
     max: 30,
     step: 1,
     unit: "mm",
-    default: 18,
+    default: 16,
   },
   {
     key: "sectionGap",
@@ -52,8 +62,8 @@ export const FIELDS = [
     max: 20,
     step: 1,
     unit: "pt",
-    default: 12,
+    default: 11,
   },
 ] as const satisfies readonly ConfigField[];
 
-export type AtsConfig = ConfigOf<typeof FIELDS>;
+export type LeftHeadingConfig = ConfigOf<typeof FIELDS>;

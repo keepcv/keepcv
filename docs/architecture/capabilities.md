@@ -220,9 +220,10 @@ preview and a version pinned months ago therefore render through one path.
 The template contract is built too, in `@keepcv/templates`: a template declares
 its settings as fields, ships its own stylesheet, and passes `isATemplate` over
 the shared fixture, which is what "is a template" means
-([`template-model.md`](template-model.md) #5). `ats-single-column` is the first
-one, the resume screen picks it and tunes its typography and spacing, and the
-preview mounts it in an iframe of its own at the size it will print at.
+([`template-model.md`](template-model.md) #5). `ats-single-column` and
+`ats-left-heading` are the two, the resume screen picks between them and tunes
+whatever the chosen one declares, and the preview mounts it in an iframe of its
+own at the size it will print at.
 
 A resume pins the template it chose along with everything else it says, so a
 template swapped later cannot change what an older version claims was sent.

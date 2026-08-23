@@ -1,34 +1,15 @@
 import { configOf, type TemplateConfig } from "../contract.js";
-import type { AtsConfig } from "./config.js";
+import { pageRule, STACKS } from "../paper.js";
 import { FIELDS } from "./config.js";
 
-// Keyed by the option values `fontFamily` declares, so a typeface added to the
-// picker without a stack here is a compile error.
-const STACKS: Record<AtsConfig["fontFamily"], string> = {
-  arial: "Arial, 'Helvetica Neue', Helvetica, sans-serif",
-  calibri: "Calibri, Carlito, 'Segoe UI', sans-serif",
-  georgia: "Georgia, 'Times New Roman', Times, serif",
-  times: "'Times New Roman', Times, serif",
-};
-
-const PAGES: Record<AtsConfig["pageSize"], { name: string; width: string; height: number }> = {
-  a4: { name: "A4", width: "210mm", height: 297 },
-  letter: { name: "Letter", width: "215.9mm", height: 279.4 },
-};
-
-// Physical units throughout, so the preview and the printed page are the same
-// measurement. Fitting that on a screen is the host's job, not the template's.
 export function styles(config: TemplateConfig): string {
   const { fontFamily, fontSize, headings, lineHeight, margin, sectionGap, pageSize } = configOf(
     FIELDS,
     config,
   );
-  const page = PAGES[pageSize];
 
   return `
-@page { size: ${page.name}; margin: ${margin}mm; }
-
-:root { --kc-page-content-height: ${String(page.height - margin * 2)}mm; }
+${pageRule(pageSize, margin)}
 
 .kc-doc {
   font-family: ${STACKS[fontFamily]};
@@ -41,13 +22,6 @@ export function styles(config: TemplateConfig): string {
 .kc-doc * { margin: 0; padding: 0; box-sizing: border-box; }
 .kc-doc a { color: inherit; text-decoration: underline; text-underline-offset: 1.5pt; }
 .kc-doc ul { list-style: none; }
-
-.kc-page {
-  width: ${page.width};
-  min-height: ${String(page.height)}mm;
-  padding: ${margin}mm;
-  background: #fff;
-}
 
 .kc-name { font-size: 1.85em; font-weight: 700; letter-spacing: -0.01em; }
 .kc-headline { margin-top: 1pt; }
@@ -84,9 +58,5 @@ export function styles(config: TemplateConfig): string {
 .kc-metrics { color: #374151; }
 .kc-fields li, .kc-links { margin-top: 1.5pt; color: #374151; }
 .kc-label { font-weight: 700; }
-
-@media print {
-  .kc-page { width: auto; min-height: 0; padding: 0; }
-}
 `.trim();
 }

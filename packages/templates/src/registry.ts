@@ -1,8 +1,9 @@
 import type { ResumeDocument } from "@keepcv/schema";
+import { atsLeftHeading } from "./ats-left-heading/index.js";
 import { atsSingleColumn } from "./ats-single-column/index.js";
 import { configFor, type Template, type TemplateConfig } from "./contract.js";
 
-export const TEMPLATES: readonly Template[] = [atsSingleColumn];
+export const TEMPLATES: readonly Template[] = [atsSingleColumn, atsLeftHeading];
 
 export const DEFAULT_TEMPLATE_ID = atsSingleColumn.id;
 
