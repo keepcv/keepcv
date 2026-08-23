@@ -812,9 +812,10 @@ apps/web/src/
       model/            DTO -> view model selectors, local state machines
       ui/               components
       routes/           route definitions and loaders
-  components/ui/        shadcn-owned primitives
+  components/icon/      the glyph registry and the spot illustrations
+  components/ui/        the primitives every screen is built from
   lib/                  api client, the store cache, formatting, date helpers
-  styles/               tokens, themes
+  styles/               the token layer, light and dark
 ```
 
 Rules:
@@ -840,8 +841,8 @@ Rules:
   binds nothing from `core` and shares nothing with either of the above.
 - DTO -> view model mapping happens in `model/`, never inline in components.
   This keeps formatting decisions in one place per feature and out of JSX.
-- **Directories arrive with something in them.** `components/ui/` appears with
-  the first shadcn primitive a screen actually needs; a `routes/` directory
+- **Directories arrive with something in them.** A primitive appears in
+  `components/ui/` when a screen actually needs it; a `routes/` directory
   appears when a feature has more than one route to put in it. An empty folder
   is a claim about where code will go that the code has not agreed to yet.
 - **Routes are declared in code, not generated from filenames.** The generator
@@ -886,3 +887,101 @@ Part of the Definition of Complete, not polish.
   the first entry, not report a count of zero.
 - **Archived content is reachable**, never hidden. A filter toggle reveals it,
   because "where did my old bullet go" must always have an answer.
+
+## 10. The design system
+
+### 10.1 Screens name meaning, never colour
+
+`styles/app.css` declares two layers. Underneath are the raw ramps - `ink`,
+`brand`, `accent` and the status trio - and above them semantic tokens:
+`surface`, `surface-raised`, `surface-sunken`, `line`, `text`, `text-muted`,
+`text-subtle`, `brand`, `positive`, `caution`, `critical`, `focus` and `paper`.
+**A screen names the second layer only.** A screen that writes `bg-white` or
+`text-ink-500` is a screen that will not flip, and forty of them did.
+
+The semantic block is `@theme inline`, so the generated utility emits
+`background-color: var(--surface)` rather than a resolved colour. That
+indirection is the whole mechanism: `.dark` reassigns the variables and every
+utility follows.
+
+`paper` is the odd one out and is deliberately quiet in both schemes. It is the
+ground a rendered document sits on, and bold chrome around a resume is chrome
+competing with the resume.
+
+### 10.2 The scheme is applied before first paint
+
+The choice - `system`, `light` or `dark` - is in `localStorage`, and an inline
+script in `index.html` reads it and sets the class before the bundle loads.
+Doing it in an effect flashes a white page on the way into a dark one. The key
+and the vocabulary therefore appear in both that script and `lib/theme.ts`,
+which cannot import each other, so a test feeds both the same values.
+
+The choice lives on the shell rather than inside the toggle: the rail and the
+narrow header each render one, and two hooks let them disagree.
+
+### 10.3 Icons are keyed by meaning
+
+`components/icon/glyphs.ts` maps a name this product uses - `record`, `point`,
+`lint`, `budget` - onto a lucide component. Screens name the left-hand side, so
+changing the drawing for a point is one line and no screen mentions a vendor.
+The union of those keys is the `Icon` component's `name` type, so a typo fails
+the build.
+
+Larger illustrations for empty states are hand-drawn in `components/icon/spot.tsx`
+against the same tokens. They are not icons and lucide has no vocabulary for
+"nothing is ever deleted".
+
+An icon is `aria-hidden` unless it is given a `label`, because an icon beside
+its own text is announced twice.
+
+### 10.4 Three screen shapes, not one
+
+Every screen used to be a stack of bordered boxes in a centred column, which is
+why the canvas went unused and why a two-pane task looked like a one-pane one.
+
+- **Browse** - records, points, tags, sections, resumes. Full width, a
+  `PageHeader`, then a sticky `Toolbar` carrying the archived scope and the
+  saved filters. `Toolbar` sticks to `main`, which is the scroll container.
+- **Detail** - a record, a point. Two columns above `xl`: what the thing says on
+  the left, what it is filed under and where it prints on the right.
+- **Workspace** - the resume. Full height, no page scroll, panes scrolling
+  independently: the composition on the left and the compiled preview on the
+  right. A preview reached by leaving the screen that changes it is a preview
+  nobody watches while composing.
+
+Forms and prose are capped rather than full width. Using the whole canvas is
+right for a list and wrong for a name field.
+
+The shell is `h-dvh` with `main` as the scroll container, which is what gives a
+workspace a definite height to fill.
+
+**A pane's own layout is a container query, not a viewport breakpoint.** The
+preview renders both full width on its own tab and in half a workspace; keyed to
+the viewport it reserved a 15rem sidebar in both and left the page unreadable in
+the second.
+
+### 10.5 The palette
+
+`Ctrl-K` or `/` opens a palette over `search(store, query)` - the same selector
+the search screen reads, so the two cannot disagree about what matches. It
+offers destinations and creates before anything is typed, the first few records
+and points once something is, and a row that opens the whole result list, which
+is also the only way to reach an archived hit from it.
+
+The dialog moves focus to its first focusable element on open **only when
+nothing inside has claimed focus already**. The close button is that first
+element, so focusing it unconditionally took focus back from the palette's field
+and swallowed everything typed after opening.
+
+### 10.6 Arriving without a token
+
+The app is reached through a URL the launcher prints, so anyone arriving without
+one used to get a red 401 panel. `main.tsx` renders a landing page instead and
+the router never mounts - every route under it would only render the same 401. A
+token that is present and refused is a different case, and the app's own failure
+state says what to do about it.
+
+That page is also the marketing surface, and it names the things that were
+otherwise buried a level or two inside the app: the linter, the length budget,
+reading a posting, version history, phrasing variants, and what JSON Resume
+cannot carry.
