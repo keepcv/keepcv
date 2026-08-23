@@ -275,8 +275,10 @@ one through `/v1/export` and reads one back through `/v1/import`. There is no
 `/v1/backup/*`, because those routes would have handed `createApi` a filesystem
 (application-structure.md #5.9).
 
-What remains is JSON Resume **import** with the reconciliation interface, and
-DOCX, LaTeX and Typst.
+What remains is **DOCX, LaTeX and Typst as things a resume leaves as**. Reading a
+DOCX is built and writing one is not, which is the harder half: the reader takes
+whatever a file happens to look like, and a writer has to decide what this
+product's output looks like in a format with no page model of its own.
 
 ### Versions and snapshots
 
