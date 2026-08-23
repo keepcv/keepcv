@@ -382,6 +382,20 @@ no browser sends to a server, and the app moves it into `sessionStorage` and
 clears the address bar. A token in a query string would be in every log between
 here and nowhere.
 
+**The launcher decides who is asking, three ways, and `createApi` still knows
+none of them.** `--auth token` is the launch token; `--auth password` is a
+scrypt hash and a signing secret in `auth.json`, handed out as a stateless
+`HttpOnly` cookie by `POST /auth/sign-in` and throttled to five refusals a
+minute; `--auth proxy` reads a header, but only from `--proxy-from`, because
+anyone who can reach the port otherwise sets that header themselves. Binding off
+loopback refuses `token`: a credential minted per run and printed to a terminal
+cannot survive a restart and cannot be typed on the device reading the store.
+`GET /auth/mode` answers `{ mode, signedIn }` without a credential, because the
+app has to know which of three screens to render before it has anything to send,
+and the cookie is `HttpOnly` so only the launcher can say whether it is still
+good. All three answer the same single owner: this is what a self-hoster needs,
+not a user system, and nothing here may grow one.
+
 **Screens read the cached store through selectors in `@keepcv/core`**, never
 through a request of their own. **What a resume is made of is one of them** -
 `composition(store, resumeId)`, not a route: every row it resolves is in the boot

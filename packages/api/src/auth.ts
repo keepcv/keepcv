@@ -5,6 +5,23 @@ import type { Uuid } from "@keepcv/schema";
 export type Authenticate = (request: Request) => Promise<Uuid | undefined>;
 
 export const SESSION_TOKEN_HEADER = "x-keepcv-session";
+export const SESSION_COOKIE = "keepcv.session";
+
+// How a deployment decides who is asking (api-contract.md #6). Implemented by
+// whatever serves this, never by `createApi`.
+export const AUTH_MODES = ["token", "password", "proxy"] as const;
+export type AuthMode = (typeof AUTH_MODES)[number];
+
+// The body of `GET /auth/mode`, which takes no credential: the app has to know
+// what to render before it has anything to authenticate with.
+export interface AuthState {
+  mode: AuthMode;
+  signedIn: boolean;
+}
+
+export function isAuthMode(value: unknown): value is AuthMode {
+  return AUTH_MODES.some((mode) => mode === value);
+}
 
 // Constant time: a plain comparison returns on the first wrong byte, which makes
 // the token guessable one character at a time.

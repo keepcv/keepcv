@@ -77,7 +77,8 @@ drivers, the migration runner and the repository port; the domain package with
 sort-key arithmetic, rich-text canonicalisation, content hashing and identifier
 generation; the Hono API with validation, `problem+json` and a typed client;
 the web app shell, its command palette and the landing page it shows without a
-token; the `npx keepcv` local launcher; the JSON mirror and `keepcv restore`;
+token; the `npx keepcv` local launcher and the three ways it decides who is
+asking (`api-contract.md` #6); the JSON mirror and `keepcv restore`;
 and the test harness.
 
 **Native export and import, with the round-trip test, belong here** rather than
@@ -85,7 +86,14 @@ later. Once that test exists, everything built afterwards inherits a test provin
 it did not break portability. It is a whole-store read and write rather than an
 adapter, so it lives on the repository port and not in `@keepcv/interop`.
 
-**Non-goals:** no auth, no hosted deployment, no telemetry.
+**What a self-hoster needs is not a user system.** A store reached from a
+phone or a LAN needs a credential that survives a restart, which the launch
+token is not; that is `--auth password` and `--auth proxy`, and it is the whole
+of it. Accounts, sign-up, verification, OAuth and anything that could gate a
+feature belong to the hosted product and not to this repository - a shared
+package that learns what an entitlement is has already lost the argument.
+
+**Non-goals:** no accounts, no hosted deployment, no telemetry, no OIDC client.
 
 ### Profile
 

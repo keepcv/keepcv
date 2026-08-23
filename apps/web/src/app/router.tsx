@@ -27,6 +27,10 @@ import { Failure, Skeleton } from "./states.js";
 export interface RouterContext {
   queries: QueryClient;
   api: ApiClient;
+  // Undefined when there is nothing to sign out of, which is every mode but
+  // one: the navigation asks whether signing out is a thing here, not which
+  // mode the launcher is in.
+  signOut: (() => void) | undefined;
 }
 
 // One loader, on the root: the shell navigates by what the store holds, so every
@@ -36,7 +40,8 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
     await prefetchStore(context.queries, context.api);
   },
   component: function Frame() {
-    return <Shell store={useStore(rootRoute.useRouteContext().api)} />;
+    const { api, signOut } = rootRoute.useRouteContext();
+    return <Shell store={useStore(api)} onSignOut={signOut} />;
   },
   errorComponent: ({ error }) => <Failure error={error} />,
   pendingComponent: () => <Skeleton rows={4} />,

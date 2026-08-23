@@ -1,21 +1,29 @@
-import { randomBytes } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
-import { createApi, sessionTokenAuth } from "@keepcv/api";
+import { type AuthMode, createApi } from "@keepcv/api";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
+import { type AuthSetting, launcherAuth } from "./auth.js";
 import { mirrorPath, writeMirror } from "./mirror.js";
 import { serveWebApp, webAssetsDir } from "./web-assets.js";
 
 // Under the home directory, not wherever this was run from.
 export const DEFAULT_DATA_DIR = join(homedir(), ".keepcv");
 export const DEFAULT_PORT = 4319;
+export const DEFAULT_HOST = "127.0.0.1";
 
 export interface RunningServer {
   port: number;
-  token: string;
+  host: string;
+  mode: AuthMode;
+  // Token mode only: the other two have a credential that outlives the run.
+  token: string | undefined;
   mirror: string;
   stop: () => Promise<void>;
+}
+
+export function isLoopback(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
 }
 
 // Often enough that a hard kill costs minutes rather than a session, and the
@@ -25,31 +33,47 @@ export const MIRROR_EVERY_MS = 5 * 60 * 1000;
 export async function startServer(options: {
   port: number;
   dataDir: string;
+  host?: string;
+  auth?: AuthSetting;
   mirrorEveryMs?: number;
 }): Promise<RunningServer> {
+  const setting: AuthSetting = options.auth ?? { mode: "token" };
+  const host = options.host ?? DEFAULT_HOST;
+  if (!isLoopback(host) && setting.mode === "token") {
+    throw new Error(
+      `Serving on ${host} needs --auth password or --auth proxy: the launch token is minted per run and printed to this terminal.`,
+    );
+  }
+
   const store = openLocalStore({ dataDir: options.dataDir });
   await store.migrate();
   const ownerId = await store.ensureLocalOwner();
 
-  // Held in memory: a token written to disk outlives the process that needed it.
-  const token = randomBytes(32).toString("base64url");
-
+  const auth = launcherAuth(setting, ownerId);
   const api = createApi({
     unitOfWork: store.unitOfWork,
     runAsOwner,
-    authenticate: sessionTokenAuth(token, ownerId),
+    authenticate: auth.authenticate,
   });
 
-  // Composed here, so `createApi` knows nothing about a filesystem and the
-  // hosted adapter reuses it unchanged.
+  // Composed here, so `createApi` knows nothing about a filesystem, a cookie or
+  // a password, and the hosted adapter reuses it unchanged.
   const web = serveWebApp(webAssetsDir());
-  const handle = async (request: Request): Promise<Response> =>
-    new URL(request.url).pathname.startsWith("/v1/")
-      ? await api.fetch(request)
-      : await web(request);
+  const handle = async (request: Request, from: string | undefined): Promise<Response> => {
+    // Proxy mode believes a header. Anything that did not arrive through the
+    // upstream could have written that header itself.
+    if (!auth.trusts(from)) return new Response(null, { status: 403 });
 
-  // Loopback only: nothing here is built to face a network.
-  const server = serve({ fetch: handle, port: options.port, hostname: "127.0.0.1" });
+    const { pathname } = new URL(request.url);
+    if (pathname.startsWith("/v1/")) return await api.fetch(request);
+    return (await auth.routes(request)) ?? (await web(request));
+  };
+
+  const server = serve({
+    fetch: (request, env) => handle(request, env.incoming.socket?.remoteAddress),
+    port: options.port,
+    hostname: host,
+  });
 
   const port = await new Promise<number>((resolve) => {
     server.once("listening", () => {
@@ -81,7 +105,9 @@ export async function startServer(options: {
 
   return {
     port,
-    token,
+    host,
+    mode: auth.mode,
+    token: auth.token,
     mirror: path,
     stop: async () => {
       clearInterval(ticking);

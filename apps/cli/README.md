@@ -47,7 +47,47 @@ The contract is at `/v1/openapi.json`, which needs no token.
 | Option | Default |
 |---|---|
 | `--port <number>` | `4319` |
+| `--host <address>` | `127.0.0.1` |
 | `--data-dir <path>` | `~/.keepcv` |
+| `--auth <mode>` | `token` |
+
+## Reaching it from somewhere else
+
+The default is one person on one machine, and the launch token is exactly right
+for that. It is wrong the moment the store has to be reachable from your phone,
+your other laptop or a box in a cupboard: it is minted per run, printed to a
+terminal and held in memory, so it changes on every restart and cannot be typed
+in. `keepcv serve` refuses to bind off loopback with nothing but that token.
+
+**A password.** Set one, then serve behind it:
+
+```sh
+npx keepcv set-password
+npx keepcv serve --host 0.0.0.0 --auth password
+```
+
+The password is hashed with scrypt into `auth.json` in the data directory, mode
+`0600`. Signing in sets a cookie that lasts thirty days and survives a restart.
+Setting a password again ends every session there is. Sign-in is throttled to
+five wrong answers a minute. Pipe it instead of typing it if you are scripting:
+`echo "$PASSWORD" | npx keepcv set-password`.
+
+**Or whatever is already in front of it.** If this is going behind Tailscale,
+oauth2-proxy, Authelia, Cloudflare Access or a corporate gateway, let that thing
+say who you are:
+
+```sh
+npx keepcv serve --auth proxy --proxy-header X-Forwarded-User
+```
+
+The header is read **only** from `--proxy-from`, which defaults to `127.0.0.1`.
+Point it at your proxy if the proxy is elsewhere, because anything that can
+reach the port directly can otherwise set that header itself. `--proxy-user`
+pins the one value it may carry.
+
+There is no account system here, and there will not be one. All three modes
+answer the same single owner: this is your store, and the question is only
+whether the request came from you.
 
 ## Writing a resume out
 
@@ -105,11 +145,12 @@ database - real PostgreSQL, compiled to WebAssembly, running in-process with no
 Docker and no daemon - and it is yours: `GET /v1/export` hands the whole thing
 back losslessly and is never gated by anything.
 
-The server binds to loopback only. This is a personal store, and nothing in it
-is built to face a network.
+The server binds to loopback unless you tell it otherwise, and it will not go
+further with nothing but a launch token.
 
-The session token is minted per launch and held in memory, so it changes every
-time and never lands on disk.
+That token is minted per launch and held in memory, so it changes every time and
+never lands on disk. A password does land on disk, hashed; the secret that signs
+sessions sits beside it, and rotating it is what ending every session means.
 
 ## Licence
 

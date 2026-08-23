@@ -38,6 +38,7 @@ import {
   ListFilter,
   LoaderCircle,
   Lock,
+  LogOut,
   Menu,
   Merge,
   Monitor,
@@ -78,6 +79,7 @@ export const GLYPHS = {
   organisation: Building2,
   data: DatabaseBackup,
   search: Search,
+  signOut: LogOut,
 
   add: Plus,
   edit: Pencil,
