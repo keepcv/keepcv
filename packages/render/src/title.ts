@@ -3,8 +3,6 @@ import type { ResumeDocument } from "@keepcv/schema";
 const named = (text: string | undefined): string | undefined =>
   text === undefined || text.trim() === "" ? undefined : text.trim();
 
-// Both the window title and the filename a browser offers when it prints, so it
-// is the name a reader of the file sees rather than an internal label.
 export function documentTitle(document: ResumeDocument): string {
   const fullName = named(document.header.fullName);
   const resumeName = named(document.meta.resumeName) ?? "Resume";

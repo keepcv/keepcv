@@ -17,8 +17,6 @@ import {
 const CHIP =
   "inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-text-muted hover:border-line-strong";
 
-// One row above the list rather than a screen of its own: a saved filter is a
-// shortcut back to a list, so it lives where that list is.
 export function SavedFilters({
   store,
   client,

@@ -156,8 +156,6 @@ function Nothing({ filters }: { filters: RecordFilters }) {
   );
 }
 
-// Grouped by kind rather than one flat wall: sixty records in one list is a
-// scroll nobody reads, and the kind is the first thing anyone narrows by.
 export function RecordList({
   store,
   client,

@@ -39,8 +39,6 @@ const RENAMED_TO: Record<string, string> = {
   project: "projects",
 };
 
-// Counted against this resume rather than listed as a standing disclaimer: a
-// warning naming three metrics and two talks is one somebody reads.
 export function lossOf(document: ResumeDocument): Loss[] {
   const entries = entriesOf(document);
   const dropped = document.sections.filter((section) => !KEPT_KINDS.has(section.kind));

@@ -38,6 +38,7 @@
         }
       },
       "complexity": {
+        "useLiteralKeys": "off",
         "noExcessiveCognitiveComplexity": {
           "level": "warn",
           "options": {

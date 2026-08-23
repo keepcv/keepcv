@@ -6,9 +6,6 @@ export const CHANGE_KINDS = ["added", "removed", "moved", "changed"] as const;
 
 export const changeKindSchema = z.enum(CHANGE_KINDS);
 
-// Both sides as text, and the pinned wording is one of these rather than a pair
-// of revision ids: a diff is read once and a reader who has to fetch the two
-// wordings separately is reading a diff that did not answer the question.
 export const fieldChangeSchema = z
   .object({
     field: z.string(),

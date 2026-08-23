@@ -25,7 +25,6 @@ export const problemSchema = z
     instance: z.string(),
     errors: z.array(z.object({ path: z.string(), code: z.string() })).optional(),
     constraint: z.string().optional(),
-    // The state the server holds, so the UI can show both sides.
     current: z.unknown().optional(),
   })
   .meta({ id: "Problem", title: "Problem" });

@@ -197,6 +197,54 @@ function amendIn<T extends { id: string }>(
   return jsonOf(row);
 }
 
+interface Amendable {
+  rows: { id: string }[];
+  parse: (value: unknown) => { id: string };
+}
+
+const AMENDABLE: Record<string, (store: Store) => Amendable> = {
+  points: (store) => ({ rows: store.points, parse: (v) => pointSchema.parse(v) }),
+  metrics: (store) => ({ rows: store.metrics, parse: (v) => metricSchema.parse(v) }),
+  phrasings: (store) => ({ rows: store.phrasings, parse: (v) => phrasingSchema.parse(v) }),
+  "phrasing-sets": (store) => ({
+    rows: store.phrasingSets,
+    parse: (v) => phrasingSetSchema.parse(v),
+  }),
+  resumes: (store) => ({ rows: store.resumes, parse: (v) => resumeSchema.parse(v) }),
+  "resume-sections": (store) => ({
+    rows: store.resumeSections,
+    parse: (v) => resumeSectionSchema.parse(v),
+  }),
+  "resume-entries": (store) => ({
+    rows: store.resumeEntries,
+    parse: (v) => resumeEntrySchema.parse(v),
+  }),
+  "resume-entry-points": (store) => ({
+    rows: store.resumeEntryPoints,
+    parse: (v) => resumeEntryPointSchema.parse(v),
+  }),
+  records: (store) => ({ rows: store.records, parse: (v) => careerRecordSchema.parse(v) }),
+  evidence: (store) => ({ rows: store.evidence, parse: (v) => evidenceSchema.parse(v) }),
+  "record-links": (store) => ({ rows: store.recordLinks, parse: (v) => recordLinkSchema.parse(v) }),
+  "record-fields": (store) => ({
+    rows: store.recordFields,
+    parse: (v) => recordFieldSchema.parse(v),
+  }),
+  "custom-sections": (store) => ({
+    rows: store.customSections,
+    parse: (v) => customSectionSchema.parse(v),
+  }),
+  "saved-filters": (store) => ({
+    rows: store.savedFilters,
+    parse: (v) => savedFilterSchema.parse(v),
+  }),
+  "contact-channels": (store) => ({
+    rows: store.contactChannels,
+    parse: (v) => contactChannelSchema.parse(v),
+  }),
+  tags: (store) => ({ rows: store.tags, parse: (v) => tagSchema.parse(v) }),
+};
+
 function amend(store: Store, { method, path, body }: Call, at: string): Response {
   const [, collection, id] = /^\/v1\/([^/]+)\/([^/]+)/.exec(path) ?? [];
   const patch =
@@ -207,65 +255,19 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
         : (body as { patch: object }).patch;
   const merged = { ...patch, updatedAt: at };
 
-  if (collection === "points") {
-    return amendIn(store.points, id, merged, (value) => pointSchema.parse(value));
-  }
-  if (collection === "metrics") {
-    return amendIn(store.metrics, id, merged, (value) => metricSchema.parse(value));
-  }
-  if (collection === "phrasings") {
-    return amendIn(store.phrasings, id, merged, (value) => phrasingSchema.parse(value));
-  }
-  if (collection === "phrasing-sets") {
-    return amendIn(store.phrasingSets, id, merged, (value) => phrasingSetSchema.parse(value));
-  }
-  if (collection === "resumes") {
-    return amendIn(store.resumes, id, merged, (value) => resumeSchema.parse(value));
-  }
-  if (collection === "resume-sections") {
-    return amendIn(store.resumeSections, id, merged, (value) => resumeSectionSchema.parse(value));
-  }
-  if (collection === "resume-entries") {
-    return amendIn(store.resumeEntries, id, merged, (value) => resumeEntrySchema.parse(value));
-  }
-  if (collection === "resume-entry-points") {
-    return amendIn(store.resumeEntryPoints, id, merged, (value) =>
-      resumeEntryPointSchema.parse(value),
-    );
-  }
-  if (collection === "records") {
-    return amendIn(store.records, id, merged, (value) => careerRecordSchema.parse(value));
-  }
-  if (collection === "evidence") {
-    return amendIn(store.evidence, id, merged, (value) => evidenceSchema.parse(value));
-  }
-  if (collection === "record-links") {
-    return amendIn(store.recordLinks, id, merged, (value) => recordLinkSchema.parse(value));
-  }
-  if (collection === "record-fields") {
-    return amendIn(store.recordFields, id, merged, (value) => recordFieldSchema.parse(value));
-  }
-  if (collection === "custom-sections") {
-    return amendIn(store.customSections, id, merged, (value) => customSectionSchema.parse(value));
-  }
-  if (collection === "saved-filters") {
-    return amendIn(store.savedFilters, id, merged, (value) => savedFilterSchema.parse(value));
-  }
-  if (collection === "contact-channels") {
-    return amendIn(store.contactChannels, id, merged, (value) => contactChannelSchema.parse(value));
-  }
-  if (collection === "tags") {
-    const { label } = merged as { label?: string };
-    return amendIn(
-      store.tags,
-      id,
-      label === undefined ? merged : { ...merged, slug: tagSlug(label) },
-      (value) => tagSchema.parse(value),
-    );
-  }
+  const target = AMENDABLE[collection ?? ""];
   // Named rather than defaulted: a path this stub has never heard of used to
   // amend a record, so a typo in a test passed while writing to the wrong table.
-  throw new Error(`the store stub has no collection ${String(collection)}`);
+  if (target === undefined) {
+    throw new Error(`the store stub has no collection ${String(collection)}`);
+  }
+
+  const { label } = merged as { label?: string };
+  const withSlug =
+    collection === "tags" && label !== undefined ? { ...merged, slug: tagSlug(label) } : merged;
+
+  const { rows, parse } = target(store);
+  return amendIn(rows, id, withSlug, parse);
 }
 
 // The pair is the whole row: putting it twice is the same answer, and taking it
@@ -529,13 +531,25 @@ function onDerive(store: Store, from: RegExpExecArray, call: Call, at: string): 
   return jsonOf(resume, 201);
 }
 
-function write(store: Store, archive: Archive, call: Call, at: string): Response {
-  const { versions, snapshots } = archive;
-  const target = DRAFT.exec(call.path);
-  if (target !== null) return onDraft(store, target, call, at);
-  const pair = CONTACT.exec(call.path);
-  if (pair !== null) return onContactChannel(store, pair, call);
+// All or nothing, and only into a store nothing has been written to yet.
+function onImport(store: Store, call: Call): Response {
+  if (store.records.length > 0 || store.resumes.length > 0) {
+    return jsonOf(
+      {
+        type: "https://keepcv.app/problems/conflict",
+        title: "Conflict",
+        status: 409,
+        detail: "The store already holds something.",
+        instance: "/v1/import",
+      },
+      409,
+    );
+  }
+  Object.assign(store, (call.body as { store: Store }).store);
+  return new Response(null, { status: 204 });
+}
 
+function onTagAssignment(store: Store, call: Call): Response | undefined {
   const onRecord = RECORD_TAG.exec(call.path);
   if (onRecord !== null) {
     return onAssignment(
@@ -545,6 +559,7 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
       (row) => row.recordId,
     );
   }
+
   const onPoint = POINT_TAG.exec(call.path);
   if (onPoint !== null) {
     return onAssignment(
@@ -554,6 +569,19 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
       (row) => row.pointId,
     );
   }
+
+  return undefined;
+}
+
+function write(store: Store, archive: Archive, call: Call, at: string): Response {
+  const { versions, snapshots } = archive;
+  const target = DRAFT.exec(call.path);
+  if (target !== null) return onDraft(store, target, call, at);
+  const pair = CONTACT.exec(call.path);
+  if (pair !== null) return onContactChannel(store, pair, call);
+
+  const tagged = onTagAssignment(store, call);
+  if (tagged !== undefined) return tagged;
   const merging = MERGE.exec(call.path);
   if (merging !== null) {
     return onMerge(store, merging[1] ?? "", (call.body as { intoTagId: string }).intoTagId, at);
@@ -562,23 +590,7 @@ function write(store: Store, archive: Archive, call: Call, at: string): Response
   const deriving = DERIVE.exec(call.path);
   if (deriving !== null) return onDerive(store, deriving, call, at);
 
-  // All or nothing, and only into a store nothing has been written to yet.
-  if (call.path === "/v1/import") {
-    if (store.records.length > 0 || store.resumes.length > 0) {
-      return jsonOf(
-        {
-          type: "https://keepcv.app/problems/conflict",
-          title: "Conflict",
-          status: 409,
-          detail: "The store already holds something.",
-          instance: "/v1/import",
-        },
-        409,
-      );
-    }
-    Object.assign(store, (call.body as { store: Store }).store);
-    return new Response(null, { status: 204 });
-  }
+  if (call.path === "/v1/import") return onImport(store, call);
 
   if (call.path.startsWith("/v1/resume-snapshots")) return onSnapshot(snapshots, call, at);
   if (call.path.startsWith("/v1/resume-versions")) return onVersion(versions, store, call, at);

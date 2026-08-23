@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn.js";
 
-// Larger than a glyph and drawn here rather than pulled from the icon set: an
-// empty state wants one picture that says what the screen is for, and lucide
-// has no vocabulary for "nothing is ever deleted".
 const SPOTS = {
   emptyStore: (
     <>

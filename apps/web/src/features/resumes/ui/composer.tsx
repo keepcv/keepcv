@@ -96,8 +96,6 @@ function Controls({
   );
 }
 
-// A picker rather than a dialog: what can be added is a list the boot payload
-// already answers, and a row taken off comes back through the same control.
 function AddPicker<T extends { label: string }>({
   label,
   empty,

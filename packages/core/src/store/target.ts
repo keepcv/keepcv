@@ -1,7 +1,9 @@
-import type { Resume, Store, Uuid } from "@keepcv/schema";
+import type { CareerRecord, Resume, Store, Uuid } from "@keepcv/schema";
 import { fold } from "../text/fold.js";
 import { STOPWORDS } from "../text/stopwords.js";
 import {
+  type ComposedPoint,
+  type Composition,
   composition,
   live,
   organisationOf,
@@ -129,6 +131,56 @@ interface Candidate {
   words: string[];
 }
 
+function contextWords(store: Store, record: CareerRecord): string[] {
+  return [
+    ...words(record.title),
+    ...words(record.subtitle),
+    ...words(organisationOf(store, record)?.name ?? null),
+    ...tagsOfRecord(store, record.id).flatMap((tag) => words(tag.label)),
+  ];
+}
+
+function pointWords(store: Store, point: ComposedPoint): string[] {
+  return [
+    ...words(textOfPhrasing(store, point.phrasing)),
+    ...tagsOfPoint(store, point.point.id).flatMap((tag) => words(tag.label)),
+  ];
+}
+
+// Only what prints: a point toggled off is neither covering anything nor a
+// candidate to drop.
+function printed(
+  store: Store,
+  composed: Composition,
+): { covering: string[][]; candidates: Candidate[] } {
+  const covering: string[][] = [];
+  const candidates: Candidate[] = [];
+
+  const entries = composed.sections
+    .filter((section) => section.section.isVisible)
+    .flatMap((section) => section.entries)
+    .filter((entry) => entry.entry.isVisible);
+
+  for (const entry of entries) {
+    const context = contextWords(store, entry.record);
+    covering.push(context);
+
+    for (const point of entry.points.filter((row) => row.entryPoint.isVisible)) {
+      const own = pointWords(store, point);
+      covering.push(own);
+      candidates.push({
+        pointId: point.point.id,
+        entryPointId: point.entryPoint.id,
+        // The record it sits under counts for it: a point under a job nothing
+        // in the posting asks about is the better one to drop.
+        words: [...own, ...context],
+      });
+    }
+  }
+
+  return { covering, candidates };
+}
+
 export function targetMatch(store: Store, resumeId: Uuid): TargetMatch | undefined {
   const composed = composition(store, resumeId);
   if (composed === undefined) return undefined;
@@ -136,40 +188,7 @@ export function targetMatch(store: Store, resumeId: Uuid): TargetMatch | undefin
   const terms = postingTerms(store, composed.resume);
   if (terms.length === 0) return { terms: [], points: [] };
 
-  // Only what prints: a point toggled off is neither covering anything nor a
-  // candidate to drop.
-  const covering: string[][] = [];
-  const candidates: Candidate[] = [];
-
-  for (const section of composed.sections) {
-    if (!section.section.isVisible) continue;
-    for (const entry of section.entries) {
-      if (!entry.entry.isVisible) continue;
-      const context = [
-        ...words(entry.record.title),
-        ...words(entry.record.subtitle),
-        ...words(organisationOf(store, entry.record)?.name ?? null),
-        ...tagsOfRecord(store, entry.record.id).flatMap((tag) => words(tag.label)),
-      ];
-      covering.push(context);
-
-      for (const point of entry.points) {
-        if (!point.entryPoint.isVisible) continue;
-        const own = [
-          ...words(textOfPhrasing(store, point.phrasing)),
-          ...tagsOfPoint(store, point.point.id).flatMap((tag) => words(tag.label)),
-        ];
-        covering.push(own);
-        candidates.push({
-          pointId: point.point.id,
-          entryPointId: point.entryPoint.id,
-          // The record it sits under counts for it: a point under a job nothing
-          // in the posting asks about is the better one to drop.
-          words: [...own, ...context],
-        });
-      }
-    }
-  }
+  const { covering, candidates } = printed(store, composed);
 
   const covered = (term: PostingTerm): boolean =>
     covering.some((list) => list.some((word) => matches(term.word, word)));

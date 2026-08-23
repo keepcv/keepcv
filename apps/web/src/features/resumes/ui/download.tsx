@@ -8,8 +8,6 @@ import { printFile, saveFile } from "../../../lib/files.js";
 const HTML = "text/html;charset=utf-8";
 const JSON_TYPE = "application/json;charset=utf-8";
 
-// Named before the download rather than after it: the point of an adapter with a
-// declared loss is that the user reads it while the choice is still theirs.
 function Loses({ document }: { document: ResumeDocument }) {
   const losses = useMemo(() => lossOf(document), [document]);
   if (losses.length === 0) return null;
