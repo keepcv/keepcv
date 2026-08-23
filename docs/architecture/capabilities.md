@@ -346,7 +346,26 @@ A second renderer over `ResumeDocument`, not a second product.
 
 ---
 
-## 4. Standing non-goals
+## 4. What the hosted product may and may not do to this one
+
+The hosted product is a separate private repository. It depends on these
+packages as published artifacts and adds accounts, OAuth, verification and
+billing on top. It does not fork them, patch them or vendor them.
+
+That makes one question part of reviewing anything built here: **could the
+hosted side use this by configuring it, or would it have to edit a file in this
+repo?** Three shapes pass - a function injected at the boundary
+(`createApi`'s `authenticate`), a capability the implementation declares and the
+caller renders (a template's `fields`), and a surface composed around rather
+than inside (the launcher's `/auth` routes, its backup mirror). Anything that
+would need a constant changed, a union widened or a module re-exported is a seam
+in the wrong place, and it is cheaper to move now than after two copies exist.
+
+The traffic goes one way. Nothing here may learn what a plan, a quota, a tier or
+an entitlement is, because the moment a shared package can express one, "export
+is never gated" stops being true by construction.
+
+## 5. Standing non-goals
 
 Restated because they will be requested: no job application tracking, no job
 boards, no interview preparation, no recruiter-facing products, no AI writing

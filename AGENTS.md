@@ -529,6 +529,20 @@ These are the point of the product, not preferences.
   take the owner from ambient request scope, never a caller parameter.
 - **Ordering uses fractional sort keys**, not integer positions, so a
   drag-and-drop move writes one row.
+- **The hosted product is configuration over this repository, never a patch to
+  it.** It is a separate private repo that depends on these packages as
+  published artifacts. So a feature added here has to be reachable from outside
+  without editing a file inside: injected like `authenticate`, declared like a
+  template's `fields`, or composed around like the launcher's `/auth` routes. If
+  the hosted side would have to fork a file, change a constant or re-export a
+  module to use what you built, the seam is in the wrong place - move it before
+  merging, because a fork is discovered a year later as two products that
+  disagree.
+- **No shared package learns what a plan, quota, tier or entitlement is.** Not
+  `@keepcv/schema`, not `@keepcv/core`, not `@keepcv/api`. A descriptor the
+  hosted side fills in is fine; a field named after a paid feature is not, and
+  it is how "export is never gated" stops being true by construction and starts
+  being true by review.
 
 ## Terminology (used consistently in code, API and UI copy)
 
