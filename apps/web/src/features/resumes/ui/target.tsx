@@ -55,12 +55,12 @@ function Weakest({
   onTakeOff: (point: WeakPoint) => void;
 }) {
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-line-subtle">
       {points.slice(0, DROPS_AT_MOST).map((point) => (
         <li key={point.row.id} className="flex items-start justify-between gap-3 py-2.5">
           <div className="min-w-0">
-            <p className="text-sm text-slate-800">{point.text || "an empty point"}</p>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="text-sm text-text">{point.text || "an empty point"}</p>
+            <p className="mt-0.5 text-xs text-text-subtle">
               {point.under} - {answers(point.matched)}
             </p>
           </div>
@@ -221,7 +221,7 @@ export function TargetScreen({
       {asked === 0 ? (
         <Panel>
           <PanelBody>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-text-muted">
               Paste the posting above and this resume is measured against it: which of the terms it
               leans on you answer, and which placed points answer none of them.
             </p>
@@ -233,7 +233,7 @@ export function TargetScreen({
             <PanelHeader
               title="What the posting asks for"
               aside={
-                <span className="text-xs tabular-nums text-slate-500">
+                <span className="text-xs tabular-nums text-text-subtle">
                   {String(reading.covered.length)} of {String(asked)} answered
                 </span>
               }
@@ -244,13 +244,15 @@ export function TargetScreen({
             <PanelBody className="space-y-3">
               {reading.missing.length === 0 ? null : (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-slate-600">Nothing placed answers these</p>
+                  <p className="text-xs font-medium text-text-muted">
+                    Nothing placed answers these
+                  </p>
                   <Terms terms={reading.missing} tone="warning" />
                 </div>
               )}
               {reading.covered.length === 0 ? null : (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-slate-600">Answered</p>
+                  <p className="text-xs font-medium text-text-muted">Answered</p>
                   <Terms terms={reading.covered} tone="neutral" />
                 </div>
               )}

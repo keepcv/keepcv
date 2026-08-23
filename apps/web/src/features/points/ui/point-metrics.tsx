@@ -51,7 +51,7 @@ export function PointMetrics({
                   onClick={() => {
                     archive.mutate(metric);
                   }}
-                  className="text-xs text-slate-500 underline-offset-2 hover:text-red-700 hover:underline"
+                  className="text-xs text-text-subtle underline-offset-2 hover:text-critical-text hover:underline"
                 >
                   remove
                 </button>

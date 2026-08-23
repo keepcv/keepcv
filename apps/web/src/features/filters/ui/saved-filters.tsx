@@ -15,7 +15,7 @@ import {
 } from "../model/saved-filters.js";
 
 const CHIP =
-  "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 hover:border-slate-400";
+  "inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-text-muted hover:border-line-strong";
 
 // One row above the list rather than a screen of its own: a saved filter is a
 // shortcut back to a list, so it lives where that list is.
@@ -57,7 +57,7 @@ export function SavedFilters({
             onClick={() => {
               forget.mutate(filter);
             }}
-            className="text-slate-400 hover:text-slate-900"
+            className="text-text-subtle hover:text-text"
           >
             x
           </button>
@@ -65,7 +65,7 @@ export function SavedFilters({
       ))}
 
       {held !== undefined ? (
-        <span className="text-xs text-slate-400">Saved as {held.name}</span>
+        <span className="text-xs text-text-subtle">Saved as {held.name}</span>
       ) : typed === null ? (
         <Button
           onClick={() => {

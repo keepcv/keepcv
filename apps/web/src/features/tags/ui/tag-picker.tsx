@@ -20,13 +20,13 @@ function carried(store: Store, subject: TagSubject): Tag[] {
 
 function Chip({ tag, onRemove }: { tag: Tag; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 py-0.5 pl-1.5 pr-1 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-sunken py-0.5 pl-1.5 pr-1 text-xs font-medium text-text-muted">
       {tag.label}
       <button
         type="button"
         aria-label={`Take ${tag.label} off`}
         onClick={onRemove}
-        className="rounded px-1 text-slate-400 hover:bg-slate-200 hover:text-slate-900"
+        className="rounded px-1 text-text-subtle hover:bg-surface-hover hover:text-text"
       >
         x
       </button>
@@ -81,7 +81,7 @@ export function TagPicker({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {on.length === 0 ? (
-          <p className="text-sm text-slate-500">Nothing filed under a tag yet.</p>
+          <p className="text-sm text-text-subtle">Nothing filed under a tag yet.</p>
         ) : (
           on.map((tag) => (
             <Chip
@@ -112,14 +112,16 @@ export function TagPicker({
               add();
             }}
             aria-invalid={problem !== undefined}
-            className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 aria-[invalid=true]:border-red-400"
+            className="w-full rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm text-text outline-none placeholder:text-text-subtle focus:border-brand aria-[invalid=true]:border-critical"
           />
           <datalist id={listId}>
             {offered.map((tag) => (
               <option key={tag.id} value={tag.label} />
             ))}
           </datalist>
-          {problem === undefined ? null : <p className="mt-1 text-xs text-red-700">{problem}</p>}
+          {problem === undefined ? null : (
+            <p className="mt-1 text-xs text-critical-text">{problem}</p>
+          )}
         </div>
         <Button disabled={assign.isPending} onClick={add}>
           Add

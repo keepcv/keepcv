@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
+import { PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -53,25 +54,23 @@ function Row({
   return (
     <li
       {...(entry === undefined ? {} : order.rowProps(entry))}
-      className="flex items-baseline gap-1 data-[held=true]:opacity-40"
+      className="group flex items-center gap-1 rounded-lg transition-opacity data-[held=true]:opacity-40"
     >
       <DragGrip />
       <Link
         to="/records/$recordId"
         params={{ recordId: row.id }}
-        className="flex min-w-0 flex-1 items-baseline gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 data-[archived=true]:opacity-60"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-hover data-[archived=true]:opacity-60"
         data-archived={row.isArchived}
       >
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
-          {row.title}
-        </span>
-        <span className="hidden min-w-0 flex-1 truncate text-sm text-slate-500 sm:block">
+        <span className="min-w-0 flex-[2] truncate text-sm font-medium text-text">{row.title}</span>
+        <span className="hidden min-w-0 flex-[2] truncate text-sm text-text-muted sm:block">
           {[row.organisation, row.subtitle].filter(Boolean).join(" - ")}
         </span>
-        <span className="hidden w-36 shrink-0 text-right text-xs tabular-nums text-slate-500 sm:block">
+        <span className="hidden w-36 shrink-0 text-right text-xs tabular-nums text-text-subtle sm:block">
           {row.period}
         </span>
-        <span className="w-20 shrink-0 text-right text-xs tabular-nums text-slate-400">
+        <span className="w-20 shrink-0 text-right text-xs tabular-nums text-text-subtle">
           {row.pointCount === 0
             ? "no points"
             : `${String(row.pointCount)} point${row.pointCount === 1 ? "" : "s"}`}
@@ -83,7 +82,9 @@ function Row({
         ) : null}
       </Link>
       {entry === undefined ? null : (
-        <ReorderControls order={order} row={entry} subject={row.title} />
+        <span className="flex shrink-0 items-center gap-0.5 pr-1">
+          <ReorderControls order={order} row={entry} subject={row.title} />
+        </span>
       )}
     </li>
   );
@@ -105,7 +106,7 @@ function Group({ group, client }: { group: RecordGroup; client: ApiClient }) {
   });
 
   return (
-    <ul className="rounded-xl border border-slate-200 bg-white p-1">
+    <ul className="rounded-xl border border-line bg-surface p-1 shadow-card">
       {group.rows.map((row) => (
         <Row
           key={row.id}
@@ -121,28 +122,36 @@ function Group({ group, client }: { group: RecordGroup; client: ApiClient }) {
 function Nothing({ filters }: { filters: RecordFilters }) {
   if (filters.tagId !== undefined) {
     return (
-      <Empty title="Nothing carries that tag">
+      <Empty title="Nothing carries that tag" spot="noResults">
         A record takes a tag on its own screen, and a point takes one on the point screen.
       </Empty>
     );
   }
   if (filters.archived === "only") {
     return (
-      <Empty title="Nothing archived here">
+      <Empty title="Nothing archived here" spot="permanent">
         Archiving keeps a record out of the way without destroying it. Nothing here has been put
         away.
       </Empty>
     );
   }
   return (
-    <Empty title="No records yet">
-      A record is a job, a degree, a project, a talk - anything you might one day want on a resume.
-      Points attach to it afterwards.
-      <span className="mt-4 block">
-        <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
+    <Empty
+      title="No records yet"
+      action={
+        <ButtonLink
+          tone="primary"
+          size="lg"
+          icon="add"
+          to="/records/new"
+          search={newRecordSearch(filters)}
+        >
           Add the first one
         </ButtonLink>
-      </span>
+      }
+    >
+      A record is a job, a degree, a project, a talk - anything you might one day want on a resume.
+      Points attach to it afterwards.
     </Empty>
   );
 }
@@ -163,37 +172,38 @@ export function RecordList({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {filters.kind === undefined ? "Records" : KIND_LABELS[filters.kind]}
-          </h1>
-          <p className="text-xs text-slate-500">
-            {total === 0 ? "Nothing here" : `${String(total)} shown`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Archived content is reachable, never hidden: "where did my old entry
-              go" must always have an answer. */}
-          <Segmented label="Archived">
-            {ARCHIVED_OPTIONS.map((option) => (
-              <Segment
-                key={option.value}
-                to="/records"
-                search={{ ...narrowing(filters), archived: option.value }}
-                active={filters.archived === option.value}
-              >
-                {option.label}
-              </Segment>
-            ))}
-          </Segmented>
-          <ButtonLink tone="primary" to="/records/new" search={newRecordSearch(filters)}>
+      <PageHeader
+        title={filters.kind === undefined ? "Records" : KIND_LABELS[filters.kind]}
+        icon="record"
+        {...(filters.kind === undefined
+          ? {}
+          : { trail: [{ label: "Records", to: "/records", search: { archived: "exclude" } }] })}
+        actions={
+          <ButtonLink tone="primary" icon="add" to="/records/new" search={newRecordSearch(filters)}>
             New record
           </ButtonLink>
-        </div>
-      </div>
+        }
+      >
+        {total === 0 ? "Nothing here" : `${String(total)} shown`}
+      </PageHeader>
 
-      <SavedFilters store={store} client={client} narrowing={recordNarrowing(filters)} />
+      <Toolbar>
+        {/* Archived content is reachable, never hidden: "where did my old entry
+            go" must always have an answer. */}
+        <Segmented label="Archived">
+          {ARCHIVED_OPTIONS.map((option) => (
+            <Segment
+              key={option.value}
+              to="/records"
+              search={{ ...narrowing(filters), archived: option.value }}
+              active={filters.archived === option.value}
+            >
+              {option.label}
+            </Segment>
+          ))}
+        </Segmented>
+        <SavedFilters store={store} client={client} narrowing={recordNarrowing(filters)} />
+      </Toolbar>
 
       {filters.tagId === undefined ? null : (
         <TaggedNote
@@ -213,7 +223,7 @@ export function RecordList({
               {/* Always for a custom entry: its heading is what tells two
                   otherwise identical groups apart. */}
               {filters.kind === undefined || group.kind === "custom_entry" ? (
-                <h2 className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                <h2 className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
                   {group.heading}
                 </h2>
               ) : null}

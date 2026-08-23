@@ -129,7 +129,7 @@ export function RecordForm({
 
   return (
     <form
-      className="space-y-5"
+      className="mx-auto w-full max-w-4xl space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
         void save(undefined);

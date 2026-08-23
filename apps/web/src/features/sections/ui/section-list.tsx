@@ -5,6 +5,7 @@ import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
+import { PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
@@ -71,19 +72,19 @@ function Row({
   return (
     <li
       {...order.rowProps(section)}
-      className="border-t border-slate-100 px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
+      className="border-t border-line-subtle px-4 py-3 first:border-t-0 data-[held=true]:opacity-40"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <DragGrip />
-        <span className="text-sm font-medium text-slate-900">{section.heading}</span>
+        <span className="text-sm font-medium text-text">{section.heading}</span>
         {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
         {row.records === 0 ? (
-          <span className="text-xs tabular-nums text-slate-400">nothing under it</span>
+          <span className="text-xs tabular-nums text-text-subtle">nothing under it</span>
         ) : (
           <Link
             to="/records"
             search={{ kind: "custom_entry", archived: "exclude" }}
-            className="text-xs tabular-nums text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+            className="text-xs tabular-nums text-text-subtle underline-offset-2 hover:text-text hover:underline"
           >
             {row.records} {row.records === 1 ? "entry" : "entries"}
           </Link>
@@ -116,7 +117,7 @@ function Row({
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}
 
       {renaming ? (
-        <div className="mt-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 border-t border-line-subtle pt-3">
           <Rename
             store={store}
             section={section}
@@ -178,15 +179,13 @@ export function SectionList({
   });
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Sections</h1>
-          <p className="max-w-xl text-xs text-slate-500">
-            Headings of your own, for work the eleven built-in kinds have no name for. A record
-            filed under one prints there and nowhere else.
-          </p>
-        </div>
+    <div className="mx-auto w-full max-w-5xl space-y-5">
+      <PageHeader title="Sections" icon="section">
+        Headings of your own, for work the eleven built-in kinds have no name for. A record filed
+        under one prints there and nowhere else.
+      </PageHeader>
+
+      <Toolbar>
         <Segmented label="Sections">
           <Segment to="/sections" search={{ archived: false }} active={!archived}>
             In use
@@ -195,7 +194,7 @@ export function SectionList({
             Archived
           </Segment>
         </Segmented>
-      </div>
+      </Toolbar>
 
       {archived ? null : (
         <Panel>
@@ -206,7 +205,10 @@ export function SectionList({
       )}
 
       {rows.length === 0 ? (
-        <Empty title={archived ? "Nothing put aside" : "No sections of your own yet"}>
+        <Empty
+          title={archived ? "Nothing put aside" : "No sections of your own yet"}
+          spot={archived ? "permanent" : "emptyStore"}
+        >
           {archived
             ? "A section archived here keeps everything filed under it."
             : "Add one and a record can be filed under it. Patents, licences, exhibitions - whatever the built-in kinds do not cover."}

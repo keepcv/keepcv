@@ -4,6 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>KeepCV</title>
+    <!-- Before first paint, not in an effect: applying the class after React
+         mounts flashes a white page on the way into a dark one. -->
+    <script>
+      (() => {
+        try {
+          const choice = localStorage.getItem("keepcv.theme") || "system";
+          if (
+            choice === "dark" ||
+            (choice === "system" && matchMedia("(prefers-color-scheme: dark)").matches)
+          ) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch {
+          /* Storage denied in private mode; the light default is the fallback. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

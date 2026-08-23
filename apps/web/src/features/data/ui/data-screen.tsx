@@ -3,6 +3,7 @@ import type { Store } from "@keepcv/schema";
 import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Button } from "../../../components/ui/button.js";
+import { PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { saveFile } from "../../../lib/files.js";
@@ -57,7 +58,7 @@ function TakeACopy({ client, store }: { client: ApiClient; store: Store }) {
         >
           {read.isPending ? "Reading" : "Download a backup"}
         </Button>
-        <p className="text-xs leading-relaxed text-slate-500">
+        <p className="text-xs leading-relaxed text-text-subtle">
           {held === "" ? "Just the profile so far." : `Currently ${held}.`} The launcher also keeps
           a copy of this beside the store on disk, and writes it again when it stops.
         </p>
@@ -83,13 +84,15 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
       </PanelHeader>
       <PanelBody className="space-y-2">
         {load.error === null ? null : <Failure error={load.error} />}
-        {unreadable === undefined ? null : <p className="text-sm text-red-700">{unreadable}</p>}
+        {unreadable === undefined ? null : (
+          <p className="text-sm text-critical-text">{unreadable}</p>
+        )}
 
         <input
           type="file"
           accept="application/json,.json"
           aria-label="A backup file to load"
-          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:text-white"
+          className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file === undefined) return;
@@ -105,9 +108,9 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
         />
 
         {load.isSuccess ? (
-          <p className="text-sm text-slate-700">Loaded. Everything below reads from it now.</p>
+          <p className="text-sm text-text-muted">Loaded. Everything below reads from it now.</p>
         ) : (
-          <p className="text-xs leading-relaxed text-slate-500">
+          <p className="text-xs leading-relaxed text-text-subtle">
             {isEmpty
               ? "This store is empty, so a backup will load straight into it."
               : "This store already holds something, so a load will be refused. Run the launcher against an empty --data-dir to read a backup into."}
@@ -120,14 +123,11 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
 
 export function DataScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Your data</h1>
-        <p className="max-w-xl text-xs text-slate-500">
-          The store is a file on your machine. Nothing here asks anything of a network you did not
-          start yourself.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-5xl space-y-5">
+      <PageHeader title="Your data" icon="data">
+        The store is a file on your machine. Nothing here asks anything of a network you did not
+        start yourself.
+      </PageHeader>
 
       <TakeACopy client={client} store={store} />
       <PutOneBack client={client} store={store} />
@@ -137,7 +137,7 @@ export function DataScreen({ store, client }: { store: Store; client: ApiClient 
           The same two things, without a browser open.
         </PanelHeader>
         <PanelBody>
-          <pre className="overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-100">
+          <pre className="overflow-x-auto rounded-lg border border-line bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-text">
             {
               "keepcv backup --out my-store.json\nkeepcv restore --from my-store.json --data-dir ./fresh"
             }

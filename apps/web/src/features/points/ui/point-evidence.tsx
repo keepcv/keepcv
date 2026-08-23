@@ -29,14 +29,14 @@ const KIND_OPTIONS = EVIDENCE_KINDS.map((kind) => ({
 function Value({ evidence }: { evidence: Evidence }) {
   const href = hrefOf(evidence);
   if (href === undefined) {
-    return <span className="break-words text-sm text-slate-800">{evidence.value}</span>;
+    return <span className="break-words text-sm text-text">{evidence.value}</span>;
   }
   return (
     <a
       href={href}
       rel="noreferrer noopener"
       target="_blank"
-      className="break-all text-sm text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+      className="break-all text-sm text-brand-text underline underline-offset-2 hover:text-brand-hover"
     >
       {evidence.value}
     </a>
@@ -82,7 +82,7 @@ export function PointEvidence({
                 <span className="min-w-0 flex-1">
                   <Value evidence={evidence} />
                   {evidence.note === null ? null : (
-                    <span className="block text-xs text-slate-500">{evidence.note}</span>
+                    <span className="block text-xs text-text-subtle">{evidence.note}</span>
                   )}
                 </span>
                 <button
@@ -90,7 +90,7 @@ export function PointEvidence({
                   onClick={() => {
                     archive.mutate(evidence);
                   }}
-                  className="text-xs text-slate-500 underline-offset-2 hover:text-red-700 hover:underline"
+                  className="text-xs text-text-subtle underline-offset-2 hover:text-critical-text hover:underline"
                 >
                   remove
                 </button>

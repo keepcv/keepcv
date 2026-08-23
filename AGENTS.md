@@ -168,19 +168,43 @@ than a row, so it has no routes: the resume carries `template_id` and
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-The web app is an application frame - a navigation rail that lists the kinds the
-store holds, a search field, and a disclosure in place of the rail below `lg` -
-over the store overview, the profile, the record list, a record's detail and its
-form, the point list, the tag vocabulary, the custom-section headings, the
-resume list, a resume's composition, its compiled preview and its history, the
-backup screen, and search results. All of it is fed by one
-`GET /v1/store` on the root route's
-loader, and the preview is `compile()` running in the browser over that same
-payload, handed to a template in an iframe of its own that reports back how many
-pages it came to. React, TanStack Router and
-Query, Tailwind v4, Vite, and
+The web app is an application frame - a collapsible navigation rail grouped into
+Store, Vocabulary, Resumes and System, a command palette on its header, and a
+sheet in place of the rail below `lg` - over the store overview, the profile, the
+record list, a record's detail and its form, the point list, the tag vocabulary,
+the custom-section headings, the resume list, a resume's composition, its
+compiled preview and its history, the backup screen, and search results. All of
+it is fed by one `GET /v1/store` on the root route's loader, and the preview is
+`compile()` running in the browser over that same payload, handed to a template
+in an iframe of its own that reports back how many pages it came to. React,
+TanStack Router and Query, Tailwind v4, Vite, lucide for glyphs, and
 `components/ui/` for the primitives a screen needs. Routes are declared in code
 rather than generated from filenames.
+
+**Screens name semantic tokens, never palette colours.** `styles/app.css` holds
+the ramps and, above them, `surface`, `line`, `text`, `brand`, the status trio
+and `paper`; the semantic block is `@theme inline`, so a utility emits
+`var(--surface)` and `.dark` reassigns it. Dark mode is a class on the root, set
+by an inline script in `index.html` before first paint - an effect flashes a
+white page on the way into a dark one - and the choice lives on the shell, since
+two toggles with two hooks disagree. `components/icon/` keys a glyph by what it
+means here rather than what lucide calls it, and hand-draws the larger spot
+illustrations an empty state wants (`application-structure.md` #10).
+
+**There are three screen shapes.** Browse is full width behind a page header and
+a sticky toolbar; detail is two columns above `xl`, the thing on the left and
+what it is filed under on the right; the resume is a full-height workspace with
+the composition and the compiled preview scrolling independently. The shell is
+`h-dvh` with `main` as the scroll container, which is what gives a workspace a
+height to fill. Forms and prose are capped - the whole canvas is right for a list
+and wrong for a name field. **A pane's own layout is a container query**: the
+preview renders full width on its own tab and in half a workspace, and a viewport
+breakpoint left it unreadable in the second.
+
+**`Ctrl-K` opens a palette over `search(store, query)`**, the same selector the
+search screen reads, so the two cannot disagree about what matches. Arriving with
+no token renders a landing page rather than a 401 panel, and the router never
+mounts: every route under it would only render the same 401.
 
 **Records, points, their wording, resumes and the composition all write.**
 Create, edit, archive and restore go through `useStoreMutation` in

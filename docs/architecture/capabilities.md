@@ -69,13 +69,16 @@ any future template builder.
 
 ### Foundation
 
-The workspace and toolchain; the Zod schema package with versioning and JSON
-Schema emit; the database package with Drizzle, the PGlite and Postgres
+The workspace and toolchain; the design system - semantic tokens over both
+schemes, a glyph registry keyed by meaning, the primitives, and the three screen
+shapes every screen is one of (`application-structure.md` #10); the Zod schema
+package with versioning and JSON Schema emit; the database package with Drizzle, the PGlite and Postgres
 drivers, the migration runner and the repository port; the domain package with
 sort-key arithmetic, rich-text canonicalisation, content hashing and identifier
 generation; the Hono API with validation, `problem+json` and a typed client;
-the web app shell; the `npx keepcv` local launcher; the JSON mirror and
-`keepcv restore`; and the test harness.
+the web app shell, its command palette and the landing page it shows without a
+token; the `npx keepcv` local launcher; the JSON mirror and `keepcv restore`;
+and the test harness.
 
 **Native export and import, with the round-trip test, belong here** rather than
 later. Once that test exists, everything built afterwards inherits a test proving

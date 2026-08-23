@@ -6,6 +6,7 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { NameBox } from "../../../components/ui/name-box.js";
+import { PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
@@ -74,22 +75,20 @@ function Row({
       <Link
         to="/resumes/$resumeId"
         params={{ resumeId: row.id }}
-        className="block rounded-lg px-3 py-2.5 hover:bg-slate-50 data-[archived=true]:opacity-60"
+        className="block rounded-lg px-3 py-2.5 hover:bg-surface-hover data-[archived=true]:opacity-60"
         data-archived={row.isArchived}
       >
         <div className="flex items-baseline gap-3">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
-            {row.name}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">{row.name}</span>
           {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
-          <span className="shrink-0 text-xs tabular-nums text-slate-400">
+          <span className="shrink-0 text-xs tabular-nums text-text-subtle">
             {row.applied === null ? "not sent" : `sent ${row.applied}`}
           </span>
         </div>
-        <p className="mt-0.5 truncate text-xs text-slate-500">
+        <p className="mt-0.5 truncate text-xs text-text-subtle">
           {row.target ?? "No target role recorded"}
         </p>
-        <p className="mt-1 text-xs tabular-nums text-slate-400">
+        <p className="mt-1 text-xs tabular-nums text-text-subtle">
           {[
             counted(row.sections, "section", "sections"),
             counted(row.entries, "entry", "entries"),
@@ -154,7 +153,7 @@ function NewResume({ client }: { client: ApiClient }) {
         onChange={(event) => {
           setTyped(event.target.value);
         }}
-        className="min-w-0 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+        className="min-w-0 rounded-lg border border-line px-2 py-1.5 text-sm"
       />
       <Button tone="primary" disabled={typed.trim() === ""} onClick={start}>
         Start it
@@ -183,38 +182,36 @@ export function ResumeList({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Resumes</h1>
-          <p className="text-xs text-slate-500">
-            A resume is a selection over the store, not a copy of it.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Segmented label="Archived">
-            {ARCHIVED_FILTERS.map((option) => (
-              <Segment
-                key={option}
-                to="/resumes"
-                search={{ archived: option }}
-                active={archived === option}
-              >
-                {ARCHIVED_LABELS[option]}
-              </Segment>
-            ))}
-          </Segmented>
-          <NewResume client={client} />
-        </div>
-      </div>
+      <PageHeader title="Resumes" icon="resume" actions={<NewResume client={client} />}>
+        A resume is a selection over the store, not a copy of it.
+      </PageHeader>
+
+      <Toolbar>
+        <Segmented label="Archived">
+          {ARCHIVED_FILTERS.map((option) => (
+            <Segment
+              key={option}
+              to="/resumes"
+              search={{ archived: option }}
+              active={archived === option}
+            >
+              {ARCHIVED_LABELS[option]}
+            </Segment>
+          ))}
+        </Segmented>
+      </Toolbar>
 
       {rows.length === 0 ? (
-        <Empty title={archived === "only" ? "Nothing archived here" : "No resumes yet"}>
+        <Empty
+          title={archived === "only" ? "Nothing archived here" : "No resumes yet"}
+          spot={archived === "only" ? "permanent" : "compose"}
+        >
           {archived === "only"
             ? "An archived resume keeps every version it ever had, so what you sent stays answerable."
             : "A resume picks records and points out of the store and arranges them. Nothing it leaves out is lost - it stays here, ready for the next one."}
         </Empty>
       ) : (
-        <ul className="rounded-xl border border-slate-200 bg-white p-1">
+        <ul className="rounded-xl border border-line bg-surface p-1">
           {rows.map((row) => (
             <Row
               key={row.id}

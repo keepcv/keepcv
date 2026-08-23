@@ -45,14 +45,14 @@ export function RecordFields({
           <dl className="space-y-1.5 text-sm">
             {fields.map((field) => (
               <div key={field.id} className="flex items-baseline gap-3">
-                <dt className="text-slate-500">{field.label}</dt>
-                <dd className="text-slate-800">{field.value}</dd>
+                <dt className="text-text-subtle">{field.label}</dt>
+                <dd className="text-text">{field.value}</dd>
                 <button
                   type="button"
                   onClick={() => {
                     archive.mutate(field);
                   }}
-                  className="ml-auto text-xs text-slate-500 underline-offset-2 hover:text-red-700 hover:underline"
+                  className="ml-auto text-xs text-text-subtle underline-offset-2 hover:text-critical-text hover:underline"
                 >
                   remove
                 </button>

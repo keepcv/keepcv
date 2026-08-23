@@ -75,12 +75,12 @@ const pages = (count: number) => `${String(count)} ${count === 1 ? "page" : "pag
 // point to drop (template-model.md #4).
 function Budget({ budget }: { budget: LengthBudget }) {
   if (budget.limit === null) {
-    return <p className="text-xs text-slate-500">This is {pages(budget.pages)} long.</p>;
+    return <p className="text-xs text-text-subtle">This is {pages(budget.pages)} long.</p>;
   }
 
   if (budget.fits) {
     return (
-      <p className="text-xs text-emerald-700">
+      <p className="text-xs text-positive-text">
         {pages(budget.pages)}, within the {pages(budget.limit)} you asked for.
       </p>
     );
@@ -88,21 +88,21 @@ function Budget({ budget }: { budget: LengthBudget }) {
 
   return (
     <div className="space-y-1.5">
-      <p className="text-xs text-amber-800">
+      <p className="text-xs text-caution-text">
         {pages(budget.pages)}, which is {pages(budget.pages - budget.limit)} over.
       </p>
       {budget.over.length === 0 ? null : (
         <>
-          <p className="text-xs text-slate-500">Past the break:</p>
-          <ul className="space-y-1 text-xs leading-relaxed text-slate-600">
+          <p className="text-xs text-text-subtle">Past the break:</p>
+          <ul className="space-y-1 text-xs leading-relaxed text-text-muted">
             {budget.over.slice(0, NAMES_AT_MOST).map((piece) => (
               <li key={piece.key} className="line-clamp-2">
-                <span className="text-slate-400">{piece.kind}</span> {piece.label}
+                <span className="text-text-subtle">{piece.kind}</span> {piece.label}
               </li>
             ))}
           </ul>
           {budget.over.length > NAMES_AT_MOST ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-text-subtle">
               and {String(budget.over.length - NAMES_AT_MOST)} more.
             </p>
           ) : null}
@@ -150,64 +150,71 @@ export function DocumentPreview({
     };
   }, [pending, resume, stored.template, mutate]);
 
+  // Keyed to this pane rather than the viewport: it renders both full width on
+  // its own tab and in half a workspace, and a 15rem sidebar off a viewport
+  // breakpoint left the page about 350px wide there.
   return (
-    <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
-      <aside className="space-y-4">
-        <DownloadResume document={document} />
+    <div className="@container">
+      <div className="grid gap-6 @3xl:grid-cols-[15rem_minmax(0,1fr)] @3xl:items-start">
+        <aside className="order-2 space-y-4 @3xl:order-1">
+          <DownloadResume document={document} />
 
-        <LintPanel document={document} />
+          <LintPanel document={document} />
 
-        <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+          <div className="space-y-2 rounded-lg bg-surface-sunken p-3">
+            <SelectField
+              label="How long it may be"
+              options={LIMITS}
+              value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
+              onChange={(chosen) => {
+                mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
+              }}
+            />
+            <Budget budget={budget} />
+          </div>
+
           <SelectField
-            label="How long it may be"
-            options={LIMITS}
-            value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
-            onChange={(chosen) => {
-              mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
+            label="Template"
+            options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
+            value={stored.template.id}
+            onChange={(templateId) => {
+              setPending(null);
+              mutate({ resume, patch: { templateId, templateConfig: {} } });
             }}
           />
-          <Budget budget={budget} />
+
+          {stored.template.fields.map((field) => (
+            <Control
+              key={field.key}
+              field={field}
+              config={config}
+              onChange={(value) => {
+                setPending({ ...config, [field.key]: value });
+              }}
+            />
+          ))}
+
+          <div className="rounded-lg bg-surface-sunken p-3">
+            <h3 className="text-xs font-medium text-text-muted">What this template does</h3>
+            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-text-subtle">
+              {stored.template.complianceNotes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+
+        <div className="order-1 rounded-xl bg-paper p-4 @3xl:order-2">
+          <TemplateFrame
+            title={`${resume.name}, as it prints`}
+            styles={stored.template.styles(config)}
+            overflowsFrom={resume.pageLimit ?? undefined}
+            onPaginate={onPaginate}
+          >
+            {stored.template.render(document, config)}
+          </TemplateFrame>
         </div>
-
-        <SelectField
-          label="Template"
-          options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
-          value={stored.template.id}
-          onChange={(templateId) => {
-            setPending(null);
-            mutate({ resume, patch: { templateId, templateConfig: {} } });
-          }}
-        />
-
-        {stored.template.fields.map((field) => (
-          <Control
-            key={field.key}
-            field={field}
-            config={config}
-            onChange={(value) => {
-              setPending({ ...config, [field.key]: value });
-            }}
-          />
-        ))}
-
-        <div className="rounded-lg bg-slate-50 p-3">
-          <h3 className="text-xs font-medium text-slate-600">What this template does</h3>
-          <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-slate-500">
-            {stored.template.complianceNotes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        </div>
-      </aside>
-
-      <TemplateFrame
-        title={`${resume.name}, as it prints`}
-        styles={stored.template.styles(config)}
-        overflowsFrom={resume.pageLimit ?? undefined}
-        onPaginate={onPaginate}
-      >
-        {stored.template.render(document, config)}
-      </TemplateFrame>
+      </div>
     </div>
   );
 }

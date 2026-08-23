@@ -4,6 +4,7 @@ import type { CareerRecordKind, Store, Uuid } from "@keepcv/schema";
 export interface SearchRow {
   key: string;
   subject: "record" | "point";
+  id: Uuid;
   // A point is opened through the record it prints under, so both rows link to
   // a record; a point with no record is captured and not yet placed.
   recordId: Uuid | null;
@@ -29,6 +30,7 @@ export function searchRows(store: Store, filters: SearchFilters): SearchRow[] {
           {
             key: `record:${hit.id}`,
             subject: hit.subject,
+            id: record.id,
             recordId: record.id,
             title: record.title ?? "Untitled",
             context: [organisation?.name, record.subtitle].filter(Boolean).join(" - "),
@@ -45,6 +47,7 @@ export function searchRows(store: Store, filters: SearchFilters): SearchRow[] {
         {
           key: `point:${hit.id}`,
           subject: hit.subject,
+          id: point.id,
           recordId: point.recordId,
           title: textOfPoint(store, point) || "an empty point",
           context: parent?.title ?? "not on a record yet",
