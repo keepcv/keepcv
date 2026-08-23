@@ -275,8 +275,10 @@ one through `/v1/export` and reads one back through `/v1/import`. There is no
 `/v1/backup/*`, because those routes would have handed `createApi` a filesystem
 (application-structure.md #5.9).
 
-What remains is JSON Resume **import** with the reconciliation interface, and
-DOCX, LaTeX and Typst.
+What remains is **DOCX, LaTeX and Typst as things a resume leaves as**. Reading a
+DOCX is built and writing one is not, which is the harder half: the reader takes
+whatever a file happens to look like, and a writer has to decide what this
+product's output looks like in a format with no page model of its own.
 
 ### Versions and snapshots
 
@@ -349,8 +351,39 @@ under itself unless the shallowest level present is taken as the section level;
 and two headings set at one height in two columns are one row and two lines, so
 joining them puts the right column's entries under the left column's heading.
 
-JSON Resume is built, both ways, with the round trip holding the two adapters
-together. What remains is the RenderCV and Reactive Resume adapters.
+**Which format a file is written in is not its extension.** The PDF and ZIP
+magic bytes answer first, then the shape of the parsed object; a file called
+`.json` can be any of three things, and a Reactive Resume export has `basics`
+just as a JSON Resume one does, so the order those branches are tried in is
+load-bearing and tested.
+
+**A format that stores a period as the line it printed goes through one date
+reader.** Reactive Resume holds `"March 2021 - Present"` where JSON Resume holds
+two ISO dates, and RenderCV holds either two dates, a bare year as a number, or
+an end date of `present`. The reader that already turns a printed period into a
+partial date is the one a PDF needs, so nothing new was written for these two,
+and a period no reader can read is named in `notes` rather than emptied quietly.
+
+**What the entry says outranks the heading above it.** RenderCV names its
+sections whatever the user liked and detects the entry type from which keys are
+set, so an entry carrying a company is experience even under a heading reading
+"Projects". Only the entry types that name nothing - a bare bullet, a one-line
+label, a generic entry - fall back to the heading, and a heading that matches
+nothing becomes a custom section rather than being forced into a near miss. The
+heading match is the one guess in either reader, and the kind it produced is on
+the row the reviewer approves.
+
+**An item the file was not printing is exactly what an import must not skip.**
+Reactive Resume marks trimmed content `hidden`, and a store that exists so a
+resume can be a selection over it has somewhere to put that. Likewise a role
+held at one company becomes a record of its own, which is what one organisation
+over several titles is for; and a custom section's items are typed, so they are
+filed as what they are and only the heading is reported lost.
+
+JSON Resume is built both ways, with the round trip holding the two adapters
+together. Reading RenderCV and Reactive Resume is built; writing them is not,
+and neither is a second export format in general - `lossOf` counts what one
+costs, and a format nobody asked to export is loss with no reader behind it.
 
 **Non-goals:** no resume parsing service, no model call, and no scraping of any
 profile anywhere. A reader misses rather than invents, and says in `notes` what

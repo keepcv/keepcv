@@ -1,3 +1,4 @@
+import type { IntakeReview } from "@keepcv/core";
 import { matchIntake, suggestedDecisions } from "@keepcv/core";
 import type { Intake, IntakeChoice, IntakeDecisions, Store } from "@keepcv/schema";
 import { useState } from "react";
@@ -18,6 +19,24 @@ interface Chosen {
 
 function replace(choices: IntakeChoice[], at: number, choice: IntakeChoice): IntakeChoice[] {
   return choices.map((each, index) => (index === at ? choice : each));
+}
+
+function detailOf(match: IntakeReview["records"][number]): string {
+  const fresh = match.points.filter((point) => point.duplicateOf === undefined).length;
+  const already = match.points.length - fresh;
+
+  return [
+    match.incoming.kind.replace("_", " "),
+    // A custom entry has no organisation, and the heading it lands under is the
+    // only thing telling two untitled ones apart.
+    match.incoming.kind === "custom_entry"
+      ? match.incoming.sectionHeading
+      : match.incoming.organisationName,
+    fresh === 0 ? null : `${String(fresh)} point${fresh === 1 ? "" : "s"}`,
+    already === 0 ? null : `${String(already)} already here`,
+  ]
+    .filter((part) => part !== null)
+    .join(" - ");
 }
 
 function Found({
@@ -141,30 +160,19 @@ function Found({
           {review.records.length === 0 ? (
             <p className="py-2 text-sm text-text-muted">The file held nothing to file.</p>
           ) : (
-            review.records.map((match, index) => {
-              const fresh = match.points.filter((point) => point.duplicateOf === undefined).length;
-              const already = match.points.length - fresh;
-              return (
-                <ChoiceRow
-                  key={`${match.incoming.kind}:${match.incoming.title ?? ""}:${String(index)}`}
-                  title={match.incoming.title ?? "Untitled"}
-                  detail={[
-                    match.incoming.kind.replace("_", " "),
-                    match.incoming.organisationName,
-                    fresh === 0 ? null : `${String(fresh)} point${fresh === 1 ? "" : "s"}`,
-                    already === 0 ? null : `${String(already)} already here`,
-                  ]
-                    .filter((part) => part !== null)
-                    .join(" - ")}
-                  existing={match.existing === undefined ? undefined : "a record like this"}
-                  choice={decisions.records[index]}
-                  mergeInto={match.existing?.id}
-                  onChoose={(choice) => {
-                    onChange({ ...decisions, records: replace(decisions.records, index, choice) });
-                  }}
-                />
-              );
-            })
+            review.records.map((match, index) => (
+              <ChoiceRow
+                key={`${match.incoming.kind}:${match.incoming.title ?? ""}:${String(index)}`}
+                title={match.incoming.title ?? "Untitled"}
+                detail={detailOf(match)}
+                existing={match.existing === undefined ? undefined : "a record like this"}
+                choice={decisions.records[index]}
+                mergeInto={match.existing?.id}
+                onChoose={(choice) => {
+                  onChange({ ...decisions, records: replace(decisions.records, index, choice) });
+                }}
+              />
+            ))
           )}
         </PanelBody>
       </Panel>
@@ -196,8 +204,8 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
   return (
     <Panel>
       <PanelHeader title="Choose a file">
-        A PDF, a Word document, or a resume in JSON Resume format. It is read in this tab and never
-        uploaded; what reaches the store is what you approve below.
+        A PDF, a Word document, or a resume written by JSON Resume, Reactive Resume or RenderCV. It
+        is read in this tab and never uploaded; what reaches the store is what you approve below.
       </PanelHeader>
       <PanelBody className="space-y-2">
         {unreadable === undefined ? null : (
@@ -205,7 +213,7 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
         )}
         <input
           type="file"
-          accept=".json,.pdf,.docx,application/json,application/pdf"
+          accept=".json,.yaml,.yml,.pdf,.docx,application/json,application/pdf"
           aria-label="A resume to read"
           className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
           onChange={(event) => {

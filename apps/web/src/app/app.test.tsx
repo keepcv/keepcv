@@ -2343,14 +2343,14 @@ describe("bringing a resume in", () => {
     expect(await screen.findByText(/whole-store backup/)).toBeInTheDocument();
   });
 
-  it("names the three formats it reads when the file is none of them", async () => {
+  it("names the formats it reads when the file is none of them", async () => {
     mount(() => jsonOf(emptyStore()), "/import");
 
     await screen.findByLabelText("A resume to read");
     chooseFile("not a resume at all", "notes.txt");
 
     expect(
-      await screen.findByText(/not a PDF, a Word document or a JSON resume/),
+      await screen.findByText(/A PDF, a Word document, JSON Resume, Reactive Resume and RenderCV/),
     ).toBeInTheDocument();
   });
 });

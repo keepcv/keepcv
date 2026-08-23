@@ -50,7 +50,8 @@
     "@keepcv/core": "workspace:*",
     "@keepcv/schema": "workspace:*",
     "fflate": "catalog:",
-    "pdfjs-dist": "catalog:"
+    "pdfjs-dist": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@keepcv/templates": "workspace:*",

@@ -258,8 +258,31 @@ nothing the second time.
 `@keepcv/interop/files` - a subpath, so nothing that only reads JSON loads a PDF
 engine - and both answer `DocumentLine[]`; `fromLines` does the reasoning. Same
 seam as pagination: the thing that knows about layout reports geometry, the pure
-function reasons about it. `pdfjs-dist` and `fflate` are the only parsers, and
-neither runs server-side.
+function reasons about it. `pdfjs-dist`, `fflate` and `yaml` are the only
+parsers, all three are behind that subpath, and none runs server-side.
+
+**Five formats read, and the extension decides none of it.** The PDF and ZIP
+magic bytes answer first, then the shape of the parsed object - a Reactive Resume
+export carries `basics` exactly as a JSON Resume one does, so that branch is
+tried first and a test fails if the order is swapped. `fromJsonResume`,
+`fromReactiveResume` and `fromRenderCv` all answer `Intake`, and the helpers
+three readers share are in `reading.ts` rather than copied per format.
+`readHtml` splits a Reactive Resume description into the summary and the points,
+and `readPeriod` - written for PDFs - reads `"March 2021 - Present"` there too.
+
+**RenderCV names its own sections, so the entry decides the kind and the heading
+only breaks a tie.** An entry carrying a company is experience under any heading;
+a bare bullet or a one-line label has said nothing, so the heading answers, and a
+heading that matches nothing becomes a custom section rather than a near miss.
+That match is the one guess in either reader, which is why neither is `inferred`:
+the kind is on the row the reviewer approves, and a warning banner claiming the
+layout was reverse-engineered would be untrue.
+
+**A Reactive Resume item marked `hidden` comes in.** It is content the user
+trimmed off a resume, and a store that exists so a resume can be a selection over
+it is the one place that belongs. Several roles at one company become several
+records under one organisation, and a custom section's items are typed, so they
+are filed as what they are with only the heading reported lost.
 
 **The store backs up to one readable file, and the launcher keeps a copy.**
 `keepcv serve` writes it beside the data directory on start, on a timer and on
