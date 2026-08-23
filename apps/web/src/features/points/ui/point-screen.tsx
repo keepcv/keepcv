@@ -57,7 +57,7 @@ export function PointScreen({
   const failure = update.error ?? setArchived.error;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5">
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-xl font-semibold tracking-tight">Point</h1>

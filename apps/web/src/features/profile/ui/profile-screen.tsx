@@ -456,7 +456,7 @@ function Summary({
 
 export function ProfileScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader title="Profile" icon="profile">
         One profile, and every resume prints from it. Nothing here is per-resume except which
         contacts a resume shows.

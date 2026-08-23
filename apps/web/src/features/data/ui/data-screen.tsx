@@ -123,7 +123,7 @@ function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
 
 export function DataScreen({ store, client }: { store: Store; client: ApiClient }) {
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader title="Your data" icon="data">
         The store is a file on your machine. Nothing here asks anything of a network you did not
         start yourself.

@@ -27,7 +27,12 @@ export function Dialog({
 
   useEffect(() => {
     const held = document.activeElement;
-    panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    // Only when nothing inside has claimed focus already. The close button is
+    // the first focusable in the panel, so focusing it unconditionally stole
+    // focus back from the palette's own field and swallowed what was typed.
+    if (panel.current?.contains(held) !== true) {
+      panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    }
     return () => {
       if (held instanceof HTMLElement) held.focus();
     };

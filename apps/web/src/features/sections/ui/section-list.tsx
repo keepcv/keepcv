@@ -179,7 +179,7 @@ export function SectionList({
   });
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader title="Sections" icon="section">
         Headings of your own, for work the eleven built-in kinds have no name for. A record filed
         under one prints there and nowhere else.

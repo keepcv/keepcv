@@ -189,6 +189,17 @@ describe("the command palette", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  // The dialog focuses its first focusable on open, and the close button is that
+  // element - so it stole focus back from the field and every keystroke after
+  // opening went nowhere. Found in a browser, not here.
+  it("puts focus in the field, not on the close button", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    openPalette();
+
+    expect(screen.getByRole("combobox")).toHaveFocus();
+  });
+
   it("offers destinations before anything is typed", async () => {
     mount(() => jsonOf(aFilledStore()));
     await screen.findByRole("navigation", { name: "Store" });

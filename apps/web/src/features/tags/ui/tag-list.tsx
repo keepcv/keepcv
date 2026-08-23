@@ -270,7 +270,7 @@ export function TagList({
   const live = tagRows(store, "all");
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader title="Tags" icon="tag">
         {TAG_BLURBS[filter]}
       </PageHeader>

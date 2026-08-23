@@ -84,7 +84,7 @@ function Workspace({
       <div className="min-h-0 overflow-y-auto pr-1">
         <Composer store={store} client={client} detail={detail} resumeId={resume.id} />
       </div>
-      <div className="hidden min-h-0 overflow-y-auto rounded-xl bg-paper p-4 xl:block">
+      <div className="hidden min-h-0 overflow-y-auto xl:block">
         {document === undefined ? (
           <Empty title="Nothing to compile yet" spot="compose" />
         ) : (
@@ -123,7 +123,7 @@ function Chosen({
       );
     case "preview":
       return (
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-paper p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {document === undefined ? (
             <Empty title="Nothing to compile yet" spot="compose" />
           ) : (
