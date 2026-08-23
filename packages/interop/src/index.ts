@@ -1,3 +1,4 @@
+export { fromJsonResume } from "./from-json-resume.js";
 export {
   JSON_RESUME_SCHEMA,
   type JsonResume,
@@ -5,12 +6,14 @@ export {
   type JsonResumeBasics,
   type JsonResumeCertificate,
   type JsonResumeEducation,
+  type JsonResumeInterest,
   type JsonResumeLanguage,
   type JsonResumeLocation,
   type JsonResumeMeta,
   type JsonResumeProfile,
   type JsonResumeProject,
   type JsonResumePublication,
+  type JsonResumeReference,
   type JsonResumeSkill,
   type JsonResumeVolunteer,
   type JsonResumeWork,

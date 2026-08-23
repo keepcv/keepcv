@@ -84,6 +84,9 @@ function workOf(entry: DocumentEntry): JsonResumeWork {
   return {
     ...(entry.organisation === undefined ? {} : { name: entry.organisation.name }),
     ...(entry.title === undefined ? {} : { position: entry.title }),
+    // `work` is the only list there with a location. Every other kind loses it,
+    // which `lossOf` counts.
+    ...(entry.location === undefined ? {} : { location: entry.location }),
     ...(url === undefined ? {} : { url }),
     ...dates(entry),
     ...(summary === undefined ? {} : { summary }),
@@ -96,8 +99,10 @@ function workOf(entry: DocumentEntry): JsonResumeWork {
 export function toJsonResume(document: ResumeDocument): JsonResume {
   const work = entriesOf(document, "experience").map(workOf);
 
+  // `location` is dropped rather than carried over from `workOf`: the volunteer
+  // list is the same shape there minus that one field.
   const volunteer = entriesOf(document, "volunteering").map((entry) => {
-    const { name, position, ...rest } = workOf(entry);
+    const { name, position, location: _at, ...rest } = workOf(entry);
     return {
       ...(name === undefined ? {} : { organization: name }),
       ...(position === undefined ? {} : { position }),
