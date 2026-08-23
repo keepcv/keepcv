@@ -2343,12 +2343,45 @@ describe("bringing a resume in", () => {
     expect(await screen.findByText(/whole-store backup/)).toBeInTheDocument();
   });
 
-  it("says so when the file is not a resume at all", async () => {
+  it("names the three formats it reads when the file is none of them", async () => {
     mount(() => jsonOf(emptyStore()), "/import");
 
     await screen.findByLabelText("A resume to read");
-    chooseFile("not json at all");
+    chooseFile("not a resume at all", "notes.txt");
 
-    expect(await screen.findByText(/is not JSON this build can read/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/not a PDF, a Word document or a JSON resume/),
+    ).toBeInTheDocument();
+  });
+});
+
+// A PDF is a print artifact: what a reader gets out of one is a guess, and a
+// screen that does not say so invites it being approved unread.
+describe("bringing in a file with no structure in it", () => {
+  it("says a Word document was read from its layout, and shows what it found", async () => {
+    const { zipSync, strToU8 } = await import("fflate");
+    const paragraph = (text: string, extra = "") =>
+      `<w:p>${extra}<w:r><w:t>${text}</w:t></w:r></w:p>`;
+    const body = [
+      paragraph("Ada Lovelace", '<w:pPr><w:pStyle w:val="Title"/></w:pPr>'),
+      paragraph("ada@example.org"),
+      paragraph("Experience", '<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>'),
+      paragraph("Senior Engineer, Acme", '<w:pPr><w:pStyle w:val="Heading2"/></w:pPr>'),
+      paragraph("Cut runtime by 40%.", '<w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr>'),
+    ].join("");
+    const docx = zipSync({
+      "word/document.xml": strToU8(
+        `<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
+      ),
+    });
+
+    mount(() => jsonOf(emptyStore()), "/import");
+    const input = await screen.findByLabelText("A resume to read");
+    const file = new File([docx as BlobPart], "cv.docx");
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    expect(await screen.findByText(/worked out from the layout/)).toBeInTheDocument();
+    expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
   });
 });

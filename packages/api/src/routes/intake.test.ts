@@ -1,12 +1,14 @@
 import type { Intake, IntakeDecisions, IntakeRecord, Store } from "@keepcv/schema";
-import { PROBLEM_TYPES, storeSchema } from "@keepcv/schema";
+import { intakeRecordSchema, PROBLEM_TYPES, storeSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { problemOf, withApi } from "../api.harness.js";
 
 const { send, raw, otherOwner } = withApi();
 
+// Parsed rather than cast: a partial date is branded, and a fixture the wire
+// format would reject is not one the route is being tested against.
 const anIntakeRecord = (overrides: Record<string, unknown> = {}): IntakeRecord =>
-  ({
+  intakeRecordSchema.parse({
     kind: "experience",
     title: "Staff engineer",
     subtitle: null,
@@ -22,7 +24,7 @@ const anIntakeRecord = (overrides: Record<string, unknown> = {}): IntakeRecord =
     employmentType: null,
     mode: null,
     ...overrides,
-  }) as IntakeRecord;
+  });
 
 const anIntake = (overrides: Partial<Intake> = {}): Intake => ({
   source: "json-resume",

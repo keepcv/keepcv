@@ -254,6 +254,13 @@ transaction. A merge adds what the file had and leaves the record the user
 curated alone, so every write is a create and applying one file twice writes
 nothing the second time.
 
+**A PDF and a DOCX go through one segmenter.** Both extractors live in
+`@keepcv/interop/files` - a subpath, so nothing that only reads JSON loads a PDF
+engine - and both answer `DocumentLine[]`; `fromLines` does the reasoning. Same
+seam as pagination: the thing that knows about layout reports geometry, the pure
+function reasons about it. `pdfjs-dist` and `fflate` are the only parsers, and
+neither runs server-side.
+
 **The store backs up to one readable file, and the launcher keeps a copy.**
 `keepcv serve` writes it beside the data directory on start, on a timer and on
 stop, whole-then-renamed and skipped when nothing changed; `keepcv backup` and

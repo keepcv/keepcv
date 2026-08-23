@@ -1,4 +1,6 @@
+export { type ReadPeriod, readDate, readPeriod } from "./dates.js";
 export { fromJsonResume } from "./from-json-resume.js";
+export { fromLines } from "./from-lines.js";
 export {
   JSON_RESUME_SCHEMA,
   type JsonResume,
@@ -18,5 +20,6 @@ export {
   type JsonResumeVolunteer,
   type JsonResumeWork,
 } from "./json-resume.js";
+export { type DocumentLine, looksLikeHeading, looksListed, withoutBullet } from "./lines.js";
 export { type Loss, lossOf } from "./loss.js";
 export { toJsonResume } from "./to-json-resume.js";

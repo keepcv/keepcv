@@ -25,6 +25,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./files": {
+      "types": "./dist/files/index.d.ts",
+      "import": "./dist/files/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -44,7 +48,9 @@
   },
   "dependencies": {
     "@keepcv/core": "workspace:*",
-    "@keepcv/schema": "workspace:*"
+    "@keepcv/schema": "workspace:*",
+    "fflate": "catalog:",
+    "pdfjs-dist": "catalog:"
   },
   "devDependencies": {
     "@keepcv/templates": "workspace:*",

@@ -334,9 +334,23 @@ backfill it. So every write in a plan is a create, no concurrency token is
 involved, and applying one file twice writes nothing the second time - the
 property the whole design rests on, tested at the plan and over the API.
 
+**A PDF and a DOCX go through one segmenter, not two readers.** Both extractors
+answer `DocumentLine[]` - text, emphasis, whether it was a list item, which
+column and which page - and `fromLines` does all the reasoning over that. A DOCX
+names its headings and its lists; a PDF has neither, so the extractor there
+works them out from size, font and the leading glyph. That seam is the same one
+pagination uses: the thing that knows about layout reports geometry, and the
+pure function reasons about it.
+
+Three failures shaped it and each has a test: the name at the top is set larger
+than everything else and the size rule alone files the whole resume under it; a
+DOCX that uses Heading1 for sections and Heading2 for job titles files every job
+under itself unless the shallowest level present is taken as the section level;
+and two headings set at one height in two columns are one row and two lines, so
+joining them puts the right column's entries under the left column's heading.
+
 JSON Resume is built, both ways, with the round trip holding the two adapters
-together. What remains is PDF and DOCX parsing, and the RenderCV and Reactive
-Resume adapters.
+together. What remains is the RenderCV and Reactive Resume adapters.
 
 **Non-goals:** no resume parsing service, no model call, and no scraping of any
 profile anywhere. A reader misses rather than invents, and says in `notes` what

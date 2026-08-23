@@ -34,6 +34,19 @@ function Found({
 
   return (
     <div className="space-y-5">
+      {intake.fidelity === "declared" ? null : (
+        <Panel>
+          <PanelBody className="flex gap-2.5">
+            <Icon name="warning" size="sm" className="mt-0.5 shrink-0 text-caution-text" />
+            <p className="text-sm text-text-muted">
+              A {intake.source === "pdf" ? "PDF" : "Word document"} says how a resume looked, not
+              what each part of it was. Everything below was worked out from the layout, so read it
+              before you bring it in - titles, employers and dates are the ones to check.
+            </p>
+          </PanelBody>
+        </Panel>
+      )}
+
       {review.identity.length === 0 && review.summary === undefined ? null : (
         <Panel>
           <PanelHeader title="You">
@@ -183,8 +196,8 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
   return (
     <Panel>
       <PanelHeader title="Choose a file">
-        A resume in JSON Resume format. It is read in this tab; nothing is sent anywhere until you
-        have looked at what it found.
+        A PDF, a Word document, or a resume in JSON Resume format. It is read in this tab and never
+        uploaded; what reaches the store is what you approve below.
       </PanelHeader>
       <PanelBody className="space-y-2">
         {unreadable === undefined ? null : (
@@ -192,7 +205,7 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
         )}
         <input
           type="file"
-          accept="application/json,.json"
+          accept=".json,.pdf,.docx,application/json,application/pdf"
           aria-label="A resume to read"
           className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
           onChange={(event) => {
@@ -220,7 +233,8 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader title="Bring a resume in" icon="upload">
-        Everything a file holds arrives as records and points you own, not as a resume. Nothing is
+        Everything a file holds arrives as records and points you own, not as a resume. A PDF has no
+        structure in it, so what a reader works out from one is a guess worth checking. Nothing is
         written until you say so.
       </PageHeader>
 
