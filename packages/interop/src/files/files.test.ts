@@ -156,16 +156,20 @@ describe("pulling lines out of a PDF", () => {
   });
 
   // Read top-to-bottom a two-column resume interleaves two unrelated sections,
-  // which is the failure that makes every entry in both of them wrong.
+  // which is the failure that makes every entry in both of them wrong. The
+  // columns are staggered because two independent columns do not share
+  // baselines; something that does share one is a right-aligned date.
   it("reads a two-column layout one column at a time", async () => {
     const lines = await pdfLines(
       aPdf([
         { text: "EXPERIENCE", size: 13, font: "F2", x: 60, y: 700 },
-        { text: "SKILLS", size: 13, font: "F2", x: 340, y: 700 },
+        { text: "SKILLS", size: 13, font: "F2", x: 340, y: 694 },
         { text: "Staff Engineer", size: 10, font: "F1", x: 60, y: 684 },
-        { text: "TypeScript", size: 10, font: "F1", x: 340, y: 684 },
+        { text: "TypeScript", size: 10, font: "F1", x: 340, y: 678 },
         { text: "Shipped the thing.", size: 10, font: "F1", x: 60, y: 670 },
-        { text: "Postgres", size: 10, font: "F1", x: 340, y: 670 },
+        { text: "Postgres", size: 10, font: "F1", x: 340, y: 662 },
+        { text: "Ran the other thing.", size: 10, font: "F1", x: 60, y: 656 },
+        { text: "Kubernetes", size: 10, font: "F1", x: 340, y: 646 },
       ]),
     );
 
@@ -173,9 +177,11 @@ describe("pulling lines out of a PDF", () => {
       "EXPERIENCE",
       "Staff Engineer",
       "Shipped the thing.",
+      "Ran the other thing.",
       "SKILLS",
       "TypeScript",
       "Postgres",
+      "Kubernetes",
     ]);
   });
 
