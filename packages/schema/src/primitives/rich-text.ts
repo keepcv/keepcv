@@ -42,7 +42,7 @@ function violation(nodes: Inline[], depth: number, insideLink: boolean): string 
   return null;
 }
 
-// One paragraph, no block constructs (data-model.md #3.6).
+// One paragraph, no block constructs.
 export const richTextSchema = z.array(inlineSchema).superRefine((nodes, ctx) => {
   const message = violation(nodes, 0, false);
   if (message !== null) ctx.addIssue({ code: "custom", message });

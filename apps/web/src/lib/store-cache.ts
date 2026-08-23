@@ -15,16 +15,16 @@ export function now(): Timestamp {
   return new Date().toISOString() as Timestamp;
 }
 
-// Every optimistic write puts one row into one collection, and a create puts one
-// there the payload did not have yet.
+// Every optimistic write puts one row into one collection, and a create puts
+// one there the payload did not have yet.
 export function replaceRow<T extends { id: Uuid }>(rows: readonly T[], row: T): T[] {
   return rows.some((existing) => existing.id === row.id)
     ? rows.map((existing) => (existing.id === row.id ? row : existing))
     : [...rows, row];
 }
 
-// One request boots the app (application-structure.md #4). Only this client
-// writes, so it stays fresh until a mutation says otherwise.
+// One request boots the app. Only this client writes, so it stays fresh until a
+// mutation says otherwise.
 export function storeQuery(client: ApiClient) {
   return queryOptions({
     queryKey: STORE_KEY,
@@ -44,9 +44,9 @@ export async function prefetchStore(queries: QueryClient, client: ApiClient): Pr
 }
 
 // Ids are minted on the client, so the row a screen shows before the response
-// arrives is the row the store ends up holding (application-structure.md #4).
-// `settle` writes the answer back instead of re-reading the payload, which is
-// what keeps a composition change off the network twice.
+// arrives is the row the store ends up holding. `settle` writes the answer back
+// instead of re-reading the payload, which is what keeps a composition change
+// off the network twice.
 export function useStoreMutation<Variables, Result>(options: {
   send: (variables: Variables) => Promise<Result>;
   optimistic: (store: Store, variables: Variables) => Store;

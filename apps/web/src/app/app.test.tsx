@@ -28,7 +28,8 @@ import {
 import { jsonOf, storeServer } from "../store-server.harness.js";
 import { buildRouter } from "./router.js";
 
-// Only the network is stubbed: the wiring is what a screen test would not touch.
+// Only the network is stubbed: the wiring is what a screen test would not
+// touch.
 function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"): void {
   vi.stubGlobal(
     "fetch",
@@ -189,9 +190,9 @@ describe("the command palette", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // The dialog focuses its first focusable on open, and the close button is that
-  // element - so it stole focus back from the field and every keystroke after
-  // opening went nowhere. Found in a browser, not here.
+  // The dialog focuses its first focusable on open, and the close button is
+  // that element - so it stole focus back from the field and every keystroke
+  // after opening went nowhere. Found in a browser, not here.
   it("puts focus in the field, not on the close button", async () => {
     mount(() => jsonOf(aFilledStore()));
     await screen.findByRole("navigation", { name: "Store" });
@@ -226,8 +227,8 @@ describe("the command palette", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // The palette shows only the first few of each subject, so the way to the rest
-  // has to be in it.
+  // The palette shows only the first few of each subject, so the way to the
+  // rest has to be in it.
   it("offers the whole result list as its first row", async () => {
     mount(() => jsonOf(aFilledStore()));
     await screen.findByRole("navigation", { name: "Store" });
@@ -719,7 +720,7 @@ describe("the phrasing editor", () => {
     server.calls.filter((call) => call.method === "POST" && call.path.endsWith("/revisions"));
 
   // Keystrokes never create revisions: a history of 400 single-character
-  // revisions is not history (application-structure.md #6).
+  // revisions is not history.
   it("keeps a draft while you type and appends only once you stop", async () => {
     const { store, server } = anOpenPoint();
     const box = await screen.findByLabelText("Wording, standard");
@@ -728,8 +729,8 @@ describe("the phrasing editor", () => {
     expect(await screen.findByText("Kept as a draft", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(store.drafts).toHaveLength(1);
     expect(wrote(server)).toHaveLength(0);
-    // The draft this editor just wrote is not one it found waiting, and offering
-    // it back would be the editor interrupting itself mid-sentence.
+    // The draft this editor just wrote is not one it found waiting, and
+    // offering it back would be the editor interrupting itself mid-sentence.
     expect(screen.queryByText("You were part-way through rewording this.")).not.toBeInTheDocument();
 
     fireEvent.blur(box);
@@ -994,7 +995,8 @@ describe("composing a resume", () => {
   });
 
   // `resume_entry_record_unique` covers archived rows, so a second insert is
-  // refused by the index: putting one back is a restore of the row that is there.
+  // refused by the index: putting one back is a restore of the row that is
+  // there.
   it("takes an entry off and puts the same row back", async () => {
     const { store, server, resumeId } = aComposedResume();
     mount(server.answer, `/resumes/${resumeId}`);
@@ -1126,7 +1128,7 @@ describe("a resume's history", () => {
   });
 
   // The pinned wordings come back resolved, so reading what changed costs no
-  // further request (api-contract.md #3).
+  // further request.
   it("compares two versions and shows the wording on both sides", async () => {
     const { store, server, resumeId } = aVersionedResume();
     const point = store.points[0];
@@ -1153,7 +1155,7 @@ describe("a resume's history", () => {
   });
 
   // Never rewinds: the restore is a third entry saying where it came from, and
-  // what happened in between is still on the timeline (data-model.md #9.2).
+  // what happened in between is still on the timeline.
   it("restores an older version by appending one that says where it came from", async () => {
     const { store, server, resumeId } = aVersionedResume();
     const point = store.points[0];
@@ -1213,8 +1215,8 @@ describe("a resume's history", () => {
     expect(within(changes).queryByText("nothing")).not.toBeInTheDocument();
   });
 
-  // A snapshot is a version the user named, and it is an owned row rather than a
-  // flag - so unstarring archives it and the label stops being shown.
+  // A snapshot is a version the user named, and it is an owned row rather than
+  // a flag - so unstarring archives it and the label stops being shown.
   it("stars a version with a name, and unstars it again", async () => {
     const { server, resumeId } = aVersionedResume();
     mount(server.answer, `/resumes/${resumeId}?view=history`);
@@ -1343,8 +1345,8 @@ describe("a resume and its template", () => {
     expect(server.calls.map((call) => call.method)).toEqual(["GET", "PATCH", "DELETE", "POST"]);
   });
 
-  // The template is a column on the resume, so tuning it is an ordinary write and
-  // the preview recompiles from the cached store rather than asking again.
+  // The template is a column on the resume, so tuning it is an ordinary write
+  // and the preview recompiles from the cached store rather than asking again.
   it("tunes the template without a request per pixel", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
@@ -1897,7 +1899,8 @@ describe("the profile", () => {
   });
 
   // A summary is a phrasing set like a point's, so it has to be made before
-  // there is anywhere to type: the profile names a set rather than holding text.
+  // there is anywhere to type: the profile names a set rather than holding
+  // text.
   it("starts a summary by making the set the profile names", async () => {
     const store = emptyStore();
     const server = storeServer(store);
@@ -1978,8 +1981,9 @@ describe("ordering", () => {
     expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(0);
   });
 
-  // A custom entry is scoped by the section it prints under, so two headings are
-  // two lists: one of them would otherwise collide on `record_sort_key_unique`.
+  // A custom entry is scoped by the section it prints under, so two headings
+  // are two lists: one of them would otherwise collide on
+  // `record_sort_key_unique`.
   it("keeps custom entries in a list per heading", async () => {
     const store = emptyStore();
     const patents = addCustomSection(store, "Patents");
@@ -2054,7 +2058,8 @@ describe("starting a resume from another", () => {
     });
     const copy = store.resumes[1];
     expect(copy?.name).toBe("Staff engineer copy");
-    // The posting does not come across: the copy is aimed at a different opening.
+    // The posting does not come across: the copy is aimed at a different
+    // opening.
     expect(copy?.targetCompany).toBeNull();
     expect(store.resumeSections.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);
     expect(store.resumeEntryPoints.filter((row) => row.resumeId === copy?.id)).toHaveLength(1);

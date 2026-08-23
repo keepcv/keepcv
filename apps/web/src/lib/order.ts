@@ -24,10 +24,10 @@ export interface Reorder<T extends Ordered> {
   rowProps: (row: T) => RowProps;
 }
 
-// `scope` is every row the sort-key index covers, archived included: a row taken
-// off a list keeps its key, and one computed from the live neighbours alone can
-// collide with it (data-model.md #3.5). A move writes one row, and a move that
-// changes nothing writes none.
+// `scope` is every row the sort-key index covers, archived included: a row
+// taken off a list keeps its key, and one computed from the live neighbours
+// alone can collide with it. A move writes one row, and a move that changes
+// nothing writes none.
 export function useReorder<T extends Ordered>(
   scope: readonly T[],
   onMove: (row: T, sortKey: SortKey) => void,

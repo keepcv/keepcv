@@ -15,7 +15,7 @@ export { PRESENTED_KINDS, type Presented, present } from "./document/presenters.
 export { type CompileOptions, renderManifest } from "./document/render.js";
 export { type RestoreChange, type RestorePlan, restorePlan } from "./document/restore.js";
 // This package must import no I/O of any kind - it runs unchanged in Node and
-// in the browser, and CI enforces it (application-structure.md #2).
+// in the browser, and CI enforces it.
 
 export {
   CanonicalJsonError,

@@ -21,8 +21,8 @@ const TRIGGERS = ["export", "manual_save", "restore"];
 
 const REF_KINDS = ["record", "point", "phrasing_revision", "contact_channel"];
 
-// IMMUTABLE: no `updated_at`, no `archived_at`, and a hand-written trigger in the
-// migration rejects any update (data-model.md I2).
+// IMMUTABLE: no `updated_at`, no `archived_at`, and a hand-written trigger in
+// the migration rejects any update.
 export const resumeVersion = pgTable(
   "resume_version",
   {
@@ -77,7 +77,7 @@ export const resumeSnapshot = pgTable(
 );
 
 // DERIVED from the manifests and rebuilt on import. Its parent is immutable, so
-// unlike a search index it has nothing to drift from (data-model.md #9.2).
+// unlike a search index it has nothing to drift from.
 export const resumeContentRef = pgTable(
   "resume_content_ref",
   {

@@ -20,7 +20,7 @@ export interface OwnedRow {
 }
 
 // Sort keys order by code unit, and a database initialised under a locale
-// collation puts a key in the upper-case magnitude last (data-model.md #3.4).
+// collation puts a key in the upper-case magnitude last.
 export function bySortKey(column: PgColumn): SQL {
   return sql`${column} collate "C" asc`;
 }
@@ -44,15 +44,15 @@ export function standardDto(row: {
   };
 }
 
-// Drizzle drops undefined from a `set`, which is what makes a sparse patch work.
-// `updatedAt` is always present, so a patch of nothing is still a valid statement.
+// Drizzle drops undefined from a `set`, which is what makes a sparse patch
+// work. `updatedAt` is always present, so a patch of nothing is still a valid
+// statement.
 export type Changes<Row> = { [Column in keyof Row]?: Row[Column] | undefined };
 
 export function owned(table: OwnedTable) {
   return eq(table.ownerId, currentOwnerId());
 }
 
-// Archived rows are filtered out by default (api-contract.md #4).
 export function live(table: OwnedTable, includeArchived: boolean | undefined): SQL | undefined {
   return includeArchived === true ? undefined : isNull(table.archivedAt);
 }
@@ -101,8 +101,8 @@ export async function insertOwned<T extends OwnedTable>(
   return row;
 }
 
-// A miss is one of two very different things: a 404 is a dead link, a 409 is two
-// edits racing and needs the user to compare.
+// A miss is one of two very different things: a 404 is a dead link, a 409 is
+// two edits racing and needs the user to compare.
 export async function updateOwned<Row extends OwnedRow>(
   db: Database,
   table: OwnedTable,

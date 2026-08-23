@@ -4,7 +4,7 @@ import { standardColumns } from "./owner.js";
 import { quoted } from "./vocabulary.js";
 
 // A CHECK rather than a Postgres enum: an enum cannot drop a value without a
-// type rewrite (data-model.md #3.3). Every vocabulary in this schema follows it.
+// type rewrite. Every vocabulary in this schema follows it.
 const KINDS = [
   "email",
   "phone",

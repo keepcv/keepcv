@@ -364,7 +364,7 @@ eachDriver(({ run, otherOwner }) => {
     });
 
     // The composite key is what makes this a refusal rather than a resume that
-    // lists an entry it cannot reach (data-model.md I15).
+    // lists an entry it cannot reach.
     it("refuses an entry whose section is on a different resume", async () => {
       const { sectionId } = await compose(run);
       const { strangerId, recordId } = await run(async (r) => {
@@ -481,7 +481,7 @@ eachDriver(({ run, otherOwner }) => {
     });
 
     // The live phrasing rather than a revision, so an edit to the wording shows
-    // up on the resume that chose it (data-model.md #9.1).
+    // up on the resume that chose it.
     it("swaps the phrasing a point prints in", async () => {
       const { resumeId, pointId, phrasingId } = await compose(run);
       const entryPoint = await run(async (r) => {
@@ -533,8 +533,9 @@ eachDriver(({ run, otherOwner }) => {
     });
   });
 
-  // Toggling something off is the whole reason this is composition rather than a
-  // list of ids: the wording chosen and the position it sat in have to survive.
+  // Toggling something off is the whole reason this is composition rather than
+  // a list of ids: the wording chosen and the position it sat in have to
+  // survive.
   describe("visibility", () => {
     it("keeps the phrasing and the position across a hide and a show", async () => {
       const composed = await compose(run);

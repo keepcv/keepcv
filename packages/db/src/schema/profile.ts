@@ -2,8 +2,8 @@ import { foreignKey, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzl
 import { standardColumns } from "./owner.js";
 import { phrasingSet } from "./phrasing.js";
 
-// Everything but the standard columns is nullable: a profile can be saved
-// half-entered (data-model.md P-A).
+// Everything but the standard columns is nullable: a profile can be saved half-
+// entered.
 export const profile = pgTable(
   "profile",
   {

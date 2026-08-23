@@ -14,7 +14,7 @@ import { standardColumns } from "./owner.js";
 // Repeated from `recordFieldValueKindSchema`; see the note in career-record.ts.
 const VALUE_KINDS = ["text", "url", "date", "number"];
 
-// `key` is what a specialised template addresses (template-model.md #3).
+// `key` is what a specialised template addresses.
 export const recordField = pgTable(
   "record_field",
   {

@@ -47,7 +47,7 @@ const BLOCKISH = new Set(["block", "flex", "grid", "list-item", "table"]);
 
 // A page's content height, stated by the template as a CSS length and resolved
 // by laying it out - so the host converts no units and knows no template's
-// class names (template-model.md #5).
+// class names.
 function usableHeight(inside: Document, into: HTMLElement): number {
   const probe = inside.createElement("div");
   probe.style.cssText =
@@ -138,8 +138,8 @@ function same(a: Pagination, b: Pagination): boolean {
 
 // A template's own document, not a corner of the app's. Its stylesheet carries
 // `@page` and physical units, so it needs a page to be a page rather than one
-// more block inside a layout that already has fonts, resets and a colour scheme
-// (template-model.md #5). Fitting that on a screen is scaling, not restyling.
+// more block inside a layout that already has fonts, resets and a colour
+// scheme. Fitting that on a screen is scaling, not restyling.
 export function TemplateFrame({
   title,
   styles,

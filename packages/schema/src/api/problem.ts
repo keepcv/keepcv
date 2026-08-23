@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// RFC 9457 (api-contract.md #2).
+// RFC 9457.
 const PROBLEM_BASE = "https://keepcv.app/problems/";
 
 export const PROBLEM_TYPES = {

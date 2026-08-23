@@ -32,8 +32,6 @@ import { mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 
-// Flat and narrowed, like every other collection keyed by its own id
-// (api-contract.md #3). Three routes and not six: a version is immutable.
 const versionsPath = "/v1/resume-versions";
 const noVersion = problemResponse("no resume version of this owner has that id");
 
@@ -107,9 +105,6 @@ const readVersion = createRoute({
   },
 });
 
-// A route rather than a function of the boot payload, for the reason `diff` is
-// one: a manifest pins its wordings by revision id and the payload carries only
-// what each phrasing currently says (api-contract.md #3).
 const readVersionDocument = createRoute({
   method: "get",
   path: `${versionsPath}/{id}/document`,

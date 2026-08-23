@@ -5,8 +5,8 @@ import { quoted } from "./vocabulary.js";
 
 const TARGET_KINDS = ["phrasing", "record"];
 
-// data-model.md #5. The target is the identity, so no id and no token; it is
-// polymorphic, so the repository checks it exists rather than a foreign key (I18).
+// The target is the identity, so no id and no token; it is polymorphic, so the
+// repository checks it exists rather than a foreign key (I18).
 export const draft = pgTable(
   "draft",
   {

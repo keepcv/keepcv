@@ -6,8 +6,8 @@ export const EVIDENCE_KINDS = ["url", "note", "file"] as const;
 
 export const evidenceKindSchema = z.enum(EVIDENCE_KINDS);
 
-// PRIVATE and never rendered: `ResumeDocument` has no field it could travel in
-// (template-model.md #2). It is in the native export all the same.
+// PRIVATE and never rendered: `ResumeDocument` has no field it could travel in.
+// It is in the native export all the same.
 export const evidenceSchema = z
   .object({
     ...standardFields,

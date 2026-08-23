@@ -1,8 +1,7 @@
 import { pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { standardColumns } from "./owner.js";
 
-// The entries under it are `record` rows of kind `custom_entry`, not rows here
-// (data-model.md #6).
+// The entries under it are `record` rows of kind `custom_entry`, not rows here.
 export const customSection = pgTable(
   "custom_section",
   {

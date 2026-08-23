@@ -6,7 +6,7 @@ defined in `@keepcv/core`.
 
 PostgreSQL is the only dialect. Locally that is **PGlite** - real PostgreSQL
 compiled to WebAssembly, running in-process with no Docker and no daemon -
-and hosted it is a server PostgreSQL. One schema, one migration set, one set of
+and on a server it is an ordinary PostgreSQL. One schema, one migration set, one set of
 queries, so there is no dialect drift to manage.
 
 > **Status: early development.** The public API is unstable and there is no
@@ -42,8 +42,8 @@ await runAsOwner(ownerId, async () => {
 Omit `dataDir` for an in-memory store, which is what the tests use.
 
 `openServerStore({ connectionString })` returns the same thing over a
-node-postgres pool, minus `ensureLocalOwner` - hosted deployments create owners
-when accounts are created, not when the process starts.
+node-postgres pool, minus `ensureLocalOwner`: a server is handed the owner rows
+it serves rather than minting one because a process started.
 
 ### Two rules the API shape enforces
 

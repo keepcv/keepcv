@@ -136,8 +136,8 @@ describe("compile", () => {
     expect(compile(store, resume.id, { generatedAt: AT })?.sections).toEqual([]);
   });
 
-  // Archiving a record leaves it on the resume with its phrasing choice intact
-  // (data-model.md #9.1); what it must not do is print.
+  // Archiving a record leaves it on the resume with its phrasing choice intact;
+  // what it must not do is print.
   it("leaves out an archived record, and a hidden or archived point", () => {
     const { store, resume, role, point } = aComposedStore();
     const [placed] = store.resumeEntryPoints;
@@ -230,8 +230,7 @@ describe("compile", () => {
     ]);
   });
 
-  // The presenter owns the canonical key; the user's value is still rendered
-  // (template-model.md #3).
+  // The presenter owns the canonical key; the user's value is still rendered.
   it("suffixes a user field whose key collides with a presenter's", () => {
     const { store, resume, role } = aComposedStore();
     aField(store, role.id, "employmentType", { label: "Employment Type", value: "Contract" });

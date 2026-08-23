@@ -1,7 +1,7 @@
 {
   "name": "@keepcv/db",
   "version": "0.0.0",
-  "description": "PostgreSQL persistence for KeepCV: Drizzle schema, migrations and repository implementations, on PGlite locally and server Postgres hosted.",
+  "description": "PostgreSQL persistence for KeepCV: Drizzle schema, migrations and repository implementations, on PGlite locally and on server PostgreSQL.",
   "keywords": [
     "keepcv",
     "postgres",

@@ -44,7 +44,7 @@ function Value({ evidence }: { evidence: Evidence }) {
 }
 
 // Private, and structurally so: `ResumeDocument` has no field this could travel
-// in (template-model.md #2).
+// in.
 export function PointEvidence({
   store,
   client,

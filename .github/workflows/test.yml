@@ -22,8 +22,8 @@ jobs:
 
     # The repository contract suite runs against every implementation of the
     # port. PGlite is real Postgres in WASM and needs nothing, but it is not the
-    # build that hosted deployments run, so the same suite runs against a server
-    # PostgreSQL here as well.
+    # build a server runs, so the same suite runs against a server PostgreSQL
+    # here as well.
     services:
       postgres:
         image: postgres:18

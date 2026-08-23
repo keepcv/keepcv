@@ -26,7 +26,7 @@ export const SKILL_PROFICIENCIES = ["familiar", "working", "proficient", "expert
 const nullableText = z.string().nullable();
 const nullablePartialDate = partialDateSchema.nullable();
 
-// Nullable by design: a record can be saved half-entered (data-model.md #3.2).
+// Nullable by design: a record can be saved half-entered.
 const recordBase = z.object({
   ...standardFields,
   title: nullableText,
@@ -48,8 +48,8 @@ function capitalise(text: string): string {
   return `${text[0]?.toUpperCase() ?? ""}${text.slice(1)}`;
 }
 
-// Narrowed before each kind's extra fields are added: narrowing afterwards loses
-// the key names to the generic and stops type-checking.
+// Narrowed before each kind's extra fields are added: narrowing afterwards
+// loses the key names to the generic and stops type-checking.
 function recordKind<K extends (typeof CAREER_RECORD_KINDS)[number], E extends z.ZodRawShape>(
   kind: K,
   extras: E,
@@ -79,7 +79,8 @@ const skill = recordKind("skill", {
   category: nullableText,
   proficiency: z.enum(SKILL_PROFICIENCIES).nullable(),
 });
-// `expiresOn` is not `endedOn`: conflating them breaks "what lapses in 90 days".
+// `expiresOn` is not `endedOn`: conflating them breaks "what lapses in 90
+// days".
 const certification = recordKind("certification", {
   credentialId: nullableText,
   expiresOn: nullablePartialDate,

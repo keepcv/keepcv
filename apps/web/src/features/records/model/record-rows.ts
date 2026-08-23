@@ -4,7 +4,6 @@ import { CAREER_RECORD_KINDS } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
 import { formatPartialDate } from "../../../lib/partial-date.js";
 
-// Formatting lives here rather than on the DTO (application-structure.md #1).
 export interface RecordRow {
   id: Uuid;
   kind: CareerRecordKind;
@@ -100,7 +99,7 @@ export interface RecordGroup {
   kind: CareerRecordKind;
   heading: string;
   // The list this group is dragged within, archived rows included: a record's
-  // sort key is scoped by `(kind, custom_section_id)` (data-model.md #3.5).
+  // sort key is scoped by `(kind, custom_section_id)`.
   scope: CareerRecord[];
   rows: RecordRow[];
 }

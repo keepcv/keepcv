@@ -529,6 +529,17 @@ These are the point of the product, not preferences.
   take the owner from ambient request scope, never a caller parameter.
 - **Ordering uses fractional sort keys**, not integer positions, so a
   drag-and-drop move writes one row.
+- **A feature is usable without editing the file that implements it.** These
+  are libraries, and a consumer that has to fork one has stopped being a
+  consumer. Three shapes do this and all three are already here: injected at the
+  boundary (`createApi`'s `authenticate`), declared by the implementation and
+  rendered by the caller (a template's `fields`), or composed around rather than
+  inside (the launcher's `/auth` routes, its backup mirror). If using what you
+  built would mean changing a constant, widening a union or re-exporting a
+  module, the seam is in the wrong place, and moving it costs less now than
+  after a fork of it exists.
+- **No package knows what a plan, quota, tier or entitlement is.** That is what
+  keeps "export is never gated" true by construction rather than by review.
 
 ## Terminology (used consistently in code, API and UI copy)
 
@@ -600,19 +611,23 @@ A comment earns its place by naming one of exactly three things:
 - **a case the types cannot express** and the next edit would silently break
 
 **"X rather than Y, so that Z" is not one of them.** That form is the design
-argument, and the design argument lives in `docs/architecture/`. If it matters,
-put it there and leave the bare pointer - `data-model.md #3.6` - as the entire
-comment. A pointer plus a paragraph is the paragraph in two places.
+argument, and the design argument lives in `docs/architecture/`. Write it there
+and write nothing in the code.
 
-**When the argument lives in an ADR, the code gets no comment at all.** ADRs are
-not pushed, so nothing in the code can reach one and nothing may cite one. Write
-the conclusion into `docs/architecture/` in the same change and point at that.
-The pull of an unreachable ADR is what produces most bad comments here.
+**No file paths and no section numbers in code.** Not `data-model.md #3.6`, not
+an ADR number, not a bare pointer of any kind. A pointer is not the argument, so
+it does not help the reader who needs the argument; it does rot the moment a
+section is renumbered, and nothing checks it. Someone who needs to know why a
+line exists reads `docs/architecture/` - they do not need the code to tell them
+it is there. If the answer to "should this be a comment?" is "no, but the
+section number is short", the answer is no.
 
 **One line. Two only if the case genuinely needs it.** Three is a spec section
 that has escaped into the code. Aim for zero comments in a file; one is normal;
 a file wanting three is telling you the naming is wrong or `docs/architecture/`
 is missing a paragraph.
+
+**A comment that survives says what breaks, not where it is written down.**
 
 A worked example, from this repository before the bar was applied:
 
@@ -624,8 +639,8 @@ A worked example, from this repository before the bar was applied:
 export const organisationSchema = z.object({ ... });
 ```
 
-Three sentences of `data-model.md` #6 copied, plus one restating a field that is
-not there. It became:
+Three sentences of the spec copied, a pointer to where they were copied from,
+and one restating a field that is not there. It became:
 
 ```ts
 export const organisationSchema = z.object({ ... });
@@ -672,7 +687,7 @@ Several of these look like bugs. They are not - do not "fix" them.
   `declare`d locally in `identity/uuid.ts` for the same reason.
 - **Dependency versions live in the `catalog:`**, one per dependency repo-wide.
   Add versions there and reference `"catalog:"` in package manifests.
-- **PostgreSQL is the only dialect**, local and hosted. Local uses PGlite (real
+- **PostgreSQL is the only dialect**, on a laptop and on a server. Local uses PGlite (real
   Postgres in WASM, no Docker). Do not introduce SQLite.
 - **Timestamp columns are `precision: 3`, not the Postgres default.** `updated_at`
   is the optimistic-concurrency token: it goes to the client as an ISO string and

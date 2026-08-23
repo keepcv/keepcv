@@ -42,10 +42,6 @@ export function derivePlan(
   );
 
   return {
-    // The template, the page limit and every toggle come across; the posting
-    // does not. A derived resume is the same shape aimed at a different opening,
-    // and inheriting the old company would put the wrong posting behind the
-    // match on the new one (application-structure.md #5.11).
     resume: {
       id: into.id,
       name: into.name,

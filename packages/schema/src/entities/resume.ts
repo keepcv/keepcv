@@ -31,7 +31,6 @@ const templateId = z.string().nullable();
 const templateConfig = z.record(z.string(), z.unknown());
 const pageLimit = z.number().int().positive().nullable();
 
-// data-model.md #9.1.
 export const resumeSchema = z
   .object({
     ...standardFields,
@@ -60,8 +59,7 @@ export const resumePatchSchema = resumeInputSchema
   .extend({ templateId, templateConfig, pageLimit })
   .partial();
 
-// `resumeId` is on every level below, not reached through the parent
-// (data-model.md #9.1).
+// `resumeId` is on every level below, not reached through the parent.
 export const resumeSectionSchema = z
   .object({
     ...standardFields,
@@ -107,7 +105,7 @@ export const resumeEntryPatchSchema = resumeEntryInputSchema
   .omit({ id: true, resumeId: true, resumeSectionId: true, recordId: true })
   .partial();
 
-// `phrasingId` and not a revision id (data-model.md #9.1).
+// `phrasingId` and not a revision id.
 export const resumeEntryPointSchema = z
   .object({
     ...standardFields,

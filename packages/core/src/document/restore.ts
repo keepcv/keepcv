@@ -91,8 +91,8 @@ function ordered<Slot extends { found: Existing | undefined }>(
 }
 
 // Only what differs, so a restore that agrees with a row does not bump a
-// concurrency token no edit was in conflict with. `undefined` means the manifest
-// says nothing about the field; `null` clears it.
+// concurrency token no edit was in conflict with. `undefined` means the
+// manifest says nothing about the field; `null` clears it.
 function sparse<Patch extends object>(wanted: Patch, row: object): Patch {
   const patch = {} as Record<string, unknown>;
   const current = row as Record<string, unknown>;
@@ -109,7 +109,7 @@ function change<Patch extends object>(row: Existing, patch: Patch): RestoreChang
 }
 
 // Toggled off rather than archived: what a resume prints is `is_visible`, and
-// the phrasing choice and the position survive it (data-model.md #9.1).
+// the phrasing choice and the position survive it.
 function hidden<Row extends Existing>(rows: readonly Row[], kept: ReadonlySet<Uuid>) {
   return rows
     .filter((row) => !kept.has(row.id) && row.isVisible && row.archivedAt === null)
@@ -127,8 +127,8 @@ function sectionKey(kind: SectionKind, heading: string): string {
   return kind === "custom" ? `custom:${heading}` : kind;
 }
 
-// No `targetJdText`: the manifest does not pin it, because it is what the resume
-// was composed against rather than part of what was sent.
+// No `targetJdText`: the manifest does not pin it, because it is what the
+// resume was composed against rather than part of what was sent.
 function targetPatch(resume: Resume, target: ManifestTarget): ResumePatch | null {
   const patch = sparse<ResumePatch>(
     {
@@ -303,8 +303,9 @@ function planEntryPoints(
       }
 
       kept.add(found.id);
-      // I13 again: no patch can move the row between entries, so one whose point
-      // has changed record since keeps its place and takes the pinned wording.
+      // I13 again: no patch can move the row between entries, so one whose
+      // point has changed record since keeps its place and takes the pinned
+      // wording.
       const stranded = found.resumeEntryId !== entry.id;
       if (stranded) plan.omissions.push({ subject: "point", reference: source.pointId });
       const wanted = {
@@ -334,8 +335,8 @@ function planContacts(
 
   for (const channel of live(store.contactChannels)) {
     const wanted = printed.has(channel.id);
-    // Cleared rather than pinned when the channel's own default already says it,
-    // so a later change to that default still reaches this resume.
+    // Cleared rather than pinned when the channel's own default already says
+    // it, so a later change to that default still reaches this resume.
     if (wanted === channel.isDefaultVisible) {
       if (overrides.has(channel.id)) plan.revertedContacts.push(channel.id);
     } else if (overrides.get(channel.id) !== wanted) {
@@ -346,7 +347,7 @@ function planContacts(
 
 // A manifest written back over the working composition, as the changes to make
 // rather than as rows. What a version pinned is the selection, so the records
-// and the wordings themselves are left exactly as they are (data-model.md #9.2).
+// and the wordings themselves are left exactly as they are.
 export function restorePlan(
   store: Store,
   resumeId: Uuid,

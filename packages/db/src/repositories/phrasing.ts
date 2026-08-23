@@ -117,8 +117,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
       }
     }
 
-    // Deliberately not `updateOwned`: bumping the token here would make committing
-    // text conflict with a rename it does not race.
+    // Deliberately not `updateOwned`: bumping the token here would make
+    // committing text conflict with a rename it does not race.
     await db
       .update(phrasing)
       .set({ currentRevisionId: revision.id })
@@ -153,8 +153,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
       return toPhrasingSet(await requireOwned<PhrasingSetRow>(db, phrasingSet, "phrasingSet", id));
     },
 
-    // Each of the three references the next, so the canonical pointer is written
-    // last, once there is something for it to point at (data-model.md #5).
+    // Each of the three references the next, so the canonical pointer is
+    // written last, once there is something for it to point at.
     async createSet(input) {
       const ownerId = currentOwnerId();
       await db.insert(phrasingSet).values({ id: input.id, ownerId, purpose: input.purpose });
@@ -226,8 +226,8 @@ export function createPhrasingRepository(db: Database): PhrasingRepository {
     },
 
     // Two revisions can share a millisecond, so the id breaks the tie.
-    // `currentOnly` joins through the pointer, so a phrasing with no revision yet
-    // contributes nothing instead of a null.
+    // `currentOnly` joins through the pointer, so a phrasing with no revision
+    // yet contributes nothing instead of a null.
     async listRevisions(options) {
       const base = db.select({ revision: phrasingRevision }).from(phrasingRevision);
       const selected = options?.currentOnly

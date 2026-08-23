@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { documentTitle } from "./title.js";
 
 // One file with nothing to fetch. The stylesheet goes inline and `isATemplate`
-// is what keeps it from naming an address (template-model.md #5), so the same
-// bytes print the same way on a machine that has never seen this store.
+// is what keeps it from naming an address, so the same bytes print the same way
+// on a machine that has never seen this store.
 export function renderHtml(document: ResumeDocument): string {
   const { template, config } = resolveTemplate(document);
 

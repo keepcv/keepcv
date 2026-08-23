@@ -24,7 +24,7 @@ export interface PointRow {
   tags: string[];
   confidence: PointConfidence;
   isArchived: boolean;
-  // A point can print under a record it is not filed under (data-model.md #7).
+  // A point can print under a record it is not filed under.
   isSecondary: boolean;
 }
 

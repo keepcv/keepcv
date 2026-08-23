@@ -24,8 +24,7 @@ describe("profileSchema", () => {
   });
 
   it("carries no owner id", () => {
-    // Tenancy comes from ambient scope, never from the payload
-    // (api-contract.md #4).
+    // Tenancy comes from ambient scope, never from the payload.
     expect(Object.keys(profileSchema.shape)).not.toContain("ownerId");
   });
 });

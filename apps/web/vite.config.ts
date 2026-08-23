@@ -6,10 +6,9 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // Served from the launcher's own origin, alongside /v1, so the app never needs
-  // to know where it was deployed.
+  // Served from the launcher's own origin, alongside /v1, so the app never
+  // needs to know where it was deployed.
   base: "/",
-  // application-structure.md #7 for the limit.
   build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 1100 },
   // The launcher serves both from one origin, so the dev server reproduces that
   // rather than teaching the app a second base URL.

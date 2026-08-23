@@ -11,16 +11,17 @@ import {
 import { z } from "zod";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 
-// Named rather than defaulted: `?format=jsonresume` has to fail rather than hand
-// back native data under the wrong name.
+// Named rather than defaulted: `?format=jsonresume` has to fail rather than
+// hand back native data under the wrong name.
 const formatQuery = z.object({ format: z.enum(["native"]).default("native") });
 
 // Deliberately not `exportDocumentSchema`, which pins the current version: an
-// older document is what import exists to accept, and `migrateDocument` runs first.
+// older document is what import exists to accept, and `migrateDocument` runs
+// first.
 const anyVersion = z.looseObject({ schemaVersion: z.number().int() });
 
-// Fetched once on boot and read through selectors (api-contract.md #3). Archived
-// rows come too: filtering them is the client's to do.
+// Fetched once on boot and read through selectors. Archived rows come too:
+// filtering them is the client's to do.
 const readStore = createRoute({
   method: "get",
   path: "/v1/store",

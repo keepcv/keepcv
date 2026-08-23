@@ -9,9 +9,6 @@ export function saveFile(name: string, type: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
-// The browser is the PDF writer. A template's stylesheet states `@page`, its
-// physical units and its break rules, so the print engine paginates the same
-// geometry the preview measured (application-structure.md #7).
 export function printFile(html: string): void {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");

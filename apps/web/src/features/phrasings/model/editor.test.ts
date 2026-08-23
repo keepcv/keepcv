@@ -31,9 +31,9 @@ describe("the editor's transitions", () => {
     expect(actionFor({ typed, committed, hasDraft: false }, "settle")).toBe("commit");
   });
 
-  // A history of 400 single-character revisions is not history, and a draft that
-  // outlives the text it differed from would offer to restore what is already
-  // there (application-structure.md #6).
+  // A history of 400 single-character revisions is not history, and a draft
+  // that outlives the text it differed from would offer to restore what is
+  // already there.
   it("throws the draft away rather than appending when the words come back", () => {
     expect(actionFor({ typed: committed, committed, hasDraft: true }, "settle")).toBe(
       "discard-draft",

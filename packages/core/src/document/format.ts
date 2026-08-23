@@ -2,7 +2,7 @@ import type { ContactChannelKind, DocumentMetric, DocumentPeriod, Metric } from 
 
 const MONTHS = 12;
 
-// A partial date is "2026", "2026-03" or "2026-03-14" (data-model.md #3.4).
+// A partial date is "2026", "2026-03" or "2026-03-14".
 export function formatPartialDate(value: string, locale: string): string {
   const [year, month, day] = value.split("-");
   if (year === undefined) return value;

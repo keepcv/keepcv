@@ -4,10 +4,10 @@ The HTTP boundary for [KeepCV](https://github.com/keepcv/keepcv): Hono routes,
 Zod validation, RFC 9457 `problem+json` errors, a generated OpenAPI document and
 a typed client.
 
-This is a first-class artifact rather than an emitted side effect. It is the
-boundary a self-hosted deployment talks to and the one a hosted adapter
-implements, so it is designed, versioned and stable - which framework-internal
-RPC would not be.
+This is a first-class artifact rather than an emitted side effect. A store
+people run themselves is one whose client and server drift out of step, so the
+boundary between them is designed, versioned and stable - which
+framework-internal RPC would not be.
 
 > **Status: early development.** The public API is unstable and there is no
 > release yet. Today it serves the whole record store - the profile, contact

@@ -5,7 +5,7 @@ import { standardFields } from "./standard-fields.js";
 export const tagSchema = z
   .object({
     ...standardFields,
-    // Derived from the label on write and never sent (data-model.md I17).
+    // Derived from the label on write and never sent.
     slug: z.string().min(1),
     label: z.string().min(1),
     category: z.string().min(1).nullable(),

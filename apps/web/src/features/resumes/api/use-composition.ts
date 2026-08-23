@@ -28,8 +28,6 @@ export type Placed =
   | { level: "entry"; row: ResumeEntry }
   | { level: "point"; row: ResumeEntryPoint };
 
-// Also the settle: a composition write answers with the row it wrote, so the
-// boot payload takes that rather than being read again (application-structure.md #4).
 function writeInto(store: Store, placed: Placed): Store {
   switch (placed.level) {
     case "section":

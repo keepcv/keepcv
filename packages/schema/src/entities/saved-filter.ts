@@ -9,7 +9,7 @@ export const ARCHIVED_SCOPES = ["exclude", "include", "only"] as const;
 
 // What a list narrows by that is a fact about the store rather than a mode of
 // the screen: a point with no record and a point with no metric are both things
-// the store can answer (data-model.md #8.1).
+// the store can answer.
 export const UNFINISHED_KINDS = ["unplaced", "unmeasured"] as const;
 
 export const filterSubjectSchema = z.enum(FILTER_SUBJECTS);

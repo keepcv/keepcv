@@ -55,7 +55,7 @@ eachDriver(({ run, otherOwner }) => {
     });
 
     // Three sends of one resume are three snapshots, not three timeline entries
-    // nobody can tell apart (data-model.md #9.2).
+    // nobody can tell apart.
     it("answers the current version when the manifest has not moved", async () => {
       const { resumeId } = await compose(run);
       const manifest = await manifestOf(run, resumeId);
@@ -89,8 +89,9 @@ eachDriver(({ run, otherOwner }) => {
       expect(restored.version.restoredFromVersionId).toBe(first.version.id);
     });
 
-    // A restore is an event rather than a state: landing on the manifest that is
-    // already current still has to show, or pressing it appears to do nothing.
+    // A restore is an event rather than a state: landing on the manifest that
+    // is already current still has to show, or pressing it appears to do
+    // nothing.
     it("appends a restore that lands on the current manifest", async () => {
       const { resumeId } = await compose(run);
       const manifest = await manifestOf(run, resumeId);

@@ -40,8 +40,6 @@ function Hit({ row }: { row: SearchRow }) {
   );
 }
 
-// Answered from the cached store, so this is a pure function of what the client
-// already holds - no request per keystroke (data-model.md #8).
 export function SearchResults({ store, filters }: { store: Store; filters: SearchFilters }) {
   const rows = filters.q.trim() === "" ? [] : searchRows(store, filters);
 

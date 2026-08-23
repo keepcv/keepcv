@@ -14,7 +14,7 @@ import { quoted } from "./vocabulary.js";
 
 const KINDS = ["repo", "demo", "docs", "verify", "recording", "other"];
 
-// A URL is a link; a labelled value is a field (data-model.md #6).
+// A URL is a link; a labelled value is a field.
 export const recordLink = pgTable(
   "record_link",
   {

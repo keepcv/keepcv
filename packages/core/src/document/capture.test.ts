@@ -67,7 +67,7 @@ describe("captureManifest", () => {
   });
 
   // The whole reason a manifest exists: what a version says was sent has to
-  // survive every later edit to the store (data-model.md #9.3).
+  // survive every later edit to the store.
   it("renders the same document after the store has moved on", () => {
     const { store, resume, role, acme } = aComposedStore();
     const manifest = captureManifest(store, resume.id);

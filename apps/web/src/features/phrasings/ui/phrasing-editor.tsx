@@ -61,8 +61,6 @@ function UsedBy({ store, phrasingId }: { store: Store; phrasingId: Uuid }) {
   );
 }
 
-// The offer the state machine owes a returning editor: it says a draft is there
-// and takes neither side until one is chosen (application-structure.md #6).
 function DraftWaiting({
   text,
   onRestore,

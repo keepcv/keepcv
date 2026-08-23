@@ -26,7 +26,7 @@ function versionsKey(resumeId: Uuid) {
 }
 
 // Not in the boot payload: a manifest is history, and history grows without
-// bound (api-contract.md #3).
+// bound.
 export function useVersions(client: ApiClient, resumeId: Uuid) {
   return useQuery({
     queryKey: versionsKey(resumeId),
@@ -73,8 +73,6 @@ function snapshotsKey(resumeId: Uuid) {
   return ["resume", resumeId, "snapshots"] as const;
 }
 
-// In the archive rather than the boot payload, alongside the versions each one
-// stars (api-contract.md #3).
 export function useSnapshots(client: ApiClient, resumeId: Uuid) {
   return useQuery({
     queryKey: snapshotsKey(resumeId),

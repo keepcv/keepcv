@@ -12,9 +12,9 @@ import { standardColumns } from "./owner.js";
 import { tag } from "./tag.js";
 import { quoted } from "./vocabulary.js";
 
-// Repeated rather than imported from @keepcv/schema: drizzle-kit loads this file
-// through a CJS require and cannot resolve the package. A drift test feeds both
-// sides the same values.
+// Repeated rather than imported from @keepcv/schema: drizzle-kit loads this
+// file through a CJS require and cannot resolve the package. A drift test feeds
+// both sides the same values.
 const SUBJECTS = ["record", "point"];
 const SCOPES = ["exclude", "include", "only"];
 const UNFINISHED = ["unplaced", "unmeasured"];
@@ -33,8 +33,7 @@ const KINDS = [
 ];
 
 // A named narrowing of one of the two lists. Only what the store can answer:
-// `unplaced` and `unmeasured` are facts about a point, not modes of a screen
-// (data-model.md #8.1).
+// `unplaced` and `unmeasured` are facts about a point, not modes of a screen.
 export const savedFilter = pgTable(
   "saved_filter",
   {

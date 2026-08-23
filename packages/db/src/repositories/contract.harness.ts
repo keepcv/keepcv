@@ -25,8 +25,6 @@ import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 import { runAsOwner } from "../owner-scope.js";
 import { openLocalStore, openServerStore, type Store } from "../store.js";
 
-// One suite, every implementation of the port: it asserts the invariants in
-// data-model.md #10 rather than the queries.
 const connectionString = process.env["DATABASE_URL"];
 
 // In CI the server half is not opt-in: turbo runs tasks in a strict environment
@@ -374,7 +372,8 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       return asOwner(ownerId);
     }
 
-    // The default hook budget is not enough for that many stores booting at once.
+    // The default hook budget is not enough for that many stores booting at
+    // once.
     beforeAll(async () => {
       store = open();
       await store.migrate();

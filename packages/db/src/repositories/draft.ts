@@ -8,8 +8,8 @@ import { type OwnedTable, requireOwned, toTimestamp } from "./owned-row.js";
 
 type DraftRow = typeof draft.$inferSelect;
 
-// An unknown kind falls through to draft_target_kind_check, so the vocabulary is
-// declared once rather than twice.
+// An unknown kind falls through to draft_target_kind_check, so the vocabulary
+// is declared once rather than twice.
 const TARGETS: Record<string, OwnedTable | undefined> = { phrasing, record };
 
 function toDraft(row: DraftRow): Draft {
@@ -67,7 +67,7 @@ export function createDraftRepository(db: Database): DraftRepository {
       return toDraft(row);
     },
 
-    // The one delete in the store, and deliberate (data-model.md #5).
+    // The one delete in the store, and deliberate.
     async discard(target) {
       await requireTarget(target);
       await db.delete(draft).where(keyed(target));

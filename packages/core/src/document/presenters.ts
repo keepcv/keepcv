@@ -42,12 +42,11 @@ function slots(record: CareerRecord, locale: string): Presented {
   };
 }
 
-// template-model.md #6. Adding a record kind adds one of these and one row to
-// that table, and touches no template.
+// Adding a record kind adds one of these and touches no template.
 const PRESENTERS: Presenters = {
   experience: (record, locale) => ({
     ...slots(record, locale),
-    // A slot, never a field: nothing may occupy both (template-model.md #6).
+    // A slot, never a field: nothing may occupy both.
     ...optional("mode", record.mode === null ? null : capitalised(record.mode)),
     fields: field("employmentType", "Employment type", record.employmentType),
   }),

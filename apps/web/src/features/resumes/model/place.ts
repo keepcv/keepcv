@@ -20,12 +20,12 @@ import type {
 } from "../api/use-composition.js";
 
 // Placing is a create or a put-back, never a second row: every uniqueness index
-// on the composition covers archived rows too (data-model.md #9.1).
+// on the composition covers archived rows too.
 export type Placement = { add: AddComposition } | { putBack: SetComposedArchived };
 
-// Each is the list one level drags within, archived rows included, which is both
-// the scope its sort-key index covers and the scope `useReorder` is handed
-// (data-model.md #3.5).
+// Each is the list one level drags within, archived rows included, which is
+// both the scope its sort-key index covers and the scope `useReorder` is
+// handed.
 export function sectionsOf(store: Store, resumeId: Uuid) {
   return store.resumeSections.filter((row) => row.resumeId === resumeId);
 }
@@ -123,7 +123,6 @@ export function toggled(placed: Placed, isVisible: boolean): PatchComposition {
   }
 }
 
-// One row moves, because the key is fractional (data-model.md #3.4).
 export function movedTo(placed: Placed, sortKey: SortKey): PatchComposition {
   switch (placed.level) {
     case "section":

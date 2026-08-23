@@ -98,7 +98,7 @@ describe("restorePlan", () => {
   });
 
   // What a resume prints is `is_visible`: archiving the row would take the
-  // phrasing choice and the position with it (data-model.md #9.1).
+  // phrasing choice and the position with it.
   it("toggles off what the manifest does not name rather than archiving it", () => {
     const { store, resume, experience, engine, latency } = aComposedStore();
     const manifest = capture(store, resume.id);

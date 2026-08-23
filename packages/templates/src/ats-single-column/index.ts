@@ -10,8 +10,8 @@ export const atsSingleColumn = defineTemplate({
   version: "1.0.0",
   documentVersions: [RESUME_DOCUMENT_SCHEMA_VERSION],
   fields: FIELDS,
-  // Observations about what this template does, not claims about what any
-  // named product accepts (template-model.md #5).
+  // Observations about what this template does, not claims about what any named
+  // product accepts.
   complianceNotes: [
     "One column: the page prints in the order the markup reads, so an extractor recovers the same order.",
     "Headings are ordinary text at the top of each section, never images or table cells.",

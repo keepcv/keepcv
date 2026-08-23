@@ -5,10 +5,6 @@ import { Button } from "./button.js";
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-// Hand-rolled rather than the `dialog` element: the palette wants the same
-// overlay with its own sizing and no backdrop of the browser's choosing, and
-// mixing `showModal` with React's ownership of the tree needs an effect either
-// way (application-structure.md #2).
 export function Dialog({
   title,
   describedBy,

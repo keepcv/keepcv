@@ -15,7 +15,7 @@ import { standardFields } from "./standard-fields.js";
 export const MANIFEST_SCHEMA_VERSION = 1;
 
 // Whole rows as they were, in the order they printed, so no sort key: the array
-// is the ordering (data-model.md #9.3).
+// is the ordering.
 export const manifestPointSchema = z
   .object({
     pointId: uuidSchema,
@@ -80,8 +80,6 @@ export const manifestTemplateSchema = z
   })
   .meta({ id: "ManifestTemplate", title: "Pinned template" });
 
-// Storage-shaped, not template-shaped: `renderManifest` turns it into the
-// uniform document (template-model.md #7).
 export const resumeManifestSchema = z
   .object({
     schemaVersion: z.number().int().positive(),
@@ -96,7 +94,7 @@ export const VERSION_TRIGGERS = ["export", "manual_save", "restore"] as const;
 
 export const versionTriggerSchema = z.enum(VERSION_TRIGGERS);
 
-// Immutable, so no `updatedAt` and no `archivedAt` (data-model.md I2).
+// Immutable, so no `updatedAt` and no `archivedAt`.
 export const resumeVersionSchema = z
   .object({
     id: uuidSchema,
@@ -169,7 +167,7 @@ export const CONTENT_REF_KINDS = [
 export const contentRefKindSchema = z.enum(CONTENT_REF_KINDS);
 
 // Which versions a row is printed in. Derived from manifests and rebuilt on
-// import, so it can never be the cause of a correctness bug (data-model.md #9.2).
+// import, so it can never be the cause of a correctness bug.
 export const versionRefSchema = z
   .object({
     resumeVersionId: uuidSchema,

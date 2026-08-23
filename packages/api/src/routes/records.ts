@@ -30,8 +30,6 @@ const records = collectionRoutes({
   }),
 });
 
-// Flat and narrowed by `?recordId`: a parent in the path would be an identifier
-// the store never reads and the row could contradict (api-contract.md #3).
 const byRecord = archivedQuery.extend({ recordId: uuidSchema.optional() });
 
 const links = collectionRoutes({

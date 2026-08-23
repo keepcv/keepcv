@@ -109,8 +109,6 @@ function everythingItem(query: string, matched: number): PaletteItem {
   };
 }
 
-// The same `search(store, query)` the search screen reads, so the palette can
-// never disagree with the page it links to (application-structure.md #6).
 export function paletteItems(store: Store, query: string): PaletteItem[] {
   const trimmed = query.trim();
   const folded = trimmed.toLowerCase();

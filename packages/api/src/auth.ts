@@ -1,14 +1,14 @@
 import type { Uuid } from "@keepcv/schema";
 
 // A route handler never sees a credential: it gets an owner from ambient scope
-// and cannot ask for a different one (api-contract.md #2).
+// and cannot ask for a different one.
 export type Authenticate = (request: Request) => Promise<Uuid | undefined>;
 
 export const SESSION_TOKEN_HEADER = "x-keepcv-session";
 export const SESSION_COOKIE = "keepcv.session";
 
-// How a deployment decides who is asking (api-contract.md #6). Implemented by
-// whatever serves this, never by `createApi`.
+// How a deployment decides who is asking. Implemented by whatever serves this,
+// never by `createApi`.
 export const AUTH_MODES = ["token", "password", "proxy"] as const;
 export type AuthMode = (typeof AUTH_MODES)[number];
 
@@ -23,8 +23,8 @@ export function isAuthMode(value: unknown): value is AuthMode {
   return AUTH_MODES.some((mode) => mode === value);
 }
 
-// Constant time: a plain comparison returns on the first wrong byte, which makes
-// the token guessable one character at a time.
+// Constant time: a plain comparison returns on the first wrong byte, which
+// makes the token guessable one character at a time.
 function equalsConstantTime(presented: Uint8Array, expected: Uint8Array): boolean {
   let mismatch = presented.length ^ expected.length;
   for (let index = 0; index < presented.length; index += 1) {
