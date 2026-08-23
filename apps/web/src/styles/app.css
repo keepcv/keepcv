@@ -1,5 +1,263 @@
 @import "tailwindcss";
 
+/* Class-based only. The system preference is read in `lib/theme.ts` and applied
+   as this class, so the dark values are written once rather than once here and
+   once inside a `prefers-color-scheme` block. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Ramps. Raw colour, referenced only by the semantic tokens below and by the
+   marketing utilities. A screen naming `ink-400` is a screen that will not flip.
+   --------------------------------------------------------------------------- */
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+
+  --color-ink-50: oklch(0.985 0.002 265);
+  --color-ink-100: oklch(0.968 0.004 265);
+  --color-ink-200: oklch(0.924 0.008 265);
+  --color-ink-300: oklch(0.868 0.012 265);
+  --color-ink-400: oklch(0.706 0.017 265);
+  --color-ink-500: oklch(0.556 0.02 265);
+  --color-ink-600: oklch(0.446 0.022 265);
+  --color-ink-700: oklch(0.372 0.023 265);
+  --color-ink-800: oklch(0.279 0.024 265);
+  --color-ink-900: oklch(0.211 0.023 265);
+  --color-ink-950: oklch(0.145 0.02 265);
+
+  --color-brand-50: oklch(0.97 0.018 292);
+  --color-brand-100: oklch(0.944 0.036 292);
+  --color-brand-200: oklch(0.895 0.072 292);
+  --color-brand-300: oklch(0.824 0.116 292);
+  --color-brand-400: oklch(0.73 0.164 292);
+  --color-brand-500: oklch(0.646 0.204 292);
+  --color-brand-600: oklch(0.573 0.226 292);
+  --color-brand-700: oklch(0.505 0.216 292);
+  --color-brand-800: oklch(0.435 0.185 292);
+  --color-brand-900: oklch(0.375 0.15 292);
+  --color-brand-950: oklch(0.268 0.11 292);
+
+  --color-accent-300: oklch(0.855 0.098 220);
+  --color-accent-400: oklch(0.78 0.128 220);
+  --color-accent-500: oklch(0.7 0.145 220);
+  --color-accent-600: oklch(0.61 0.14 220);
+  --color-accent-700: oklch(0.52 0.125 220);
+
+  --color-positive-100: oklch(0.945 0.048 158);
+  --color-positive-300: oklch(0.845 0.115 158);
+  --color-positive-500: oklch(0.7 0.155 158);
+  --color-positive-700: oklch(0.52 0.125 158);
+
+  --color-caution-100: oklch(0.958 0.055 85);
+  --color-caution-300: oklch(0.878 0.13 85);
+  --color-caution-500: oklch(0.78 0.165 68);
+  --color-caution-900: oklch(0.41 0.098 55);
+
+  --color-critical-100: oklch(0.945 0.035 20);
+  --color-critical-300: oklch(0.848 0.095 20);
+  --color-critical-500: oklch(0.645 0.205 22);
+  --color-critical-700: oklch(0.525 0.18 22);
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   Semantic tokens. `inline` so the generated utility emits `var(--surface)`
+   rather than the resolved colour, which is what lets the values below flip.
+   --------------------------------------------------------------------------- */
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-strong: var(--line-strong);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-inverted: var(--text-inverted);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-on-brand: var(--on-brand);
+
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-positive-text: var(--positive-text);
+
+  --color-caution: var(--caution);
+  --color-caution-soft: var(--caution-soft);
+  --color-caution-text: var(--caution-text);
+
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-critical-text: var(--critical-text);
+
+  --color-focus: var(--focus);
+
+  /* The ground a rendered document sits on. Quiet in both schemes: bold chrome
+     around a resume is chrome competing with the resume. */
+  --color-paper: var(--paper);
+  --color-paper-edge: var(--paper-edge);
+
+  --shadow-card: var(--shadow-card-value);
+  --shadow-raised: var(--shadow-raised-value);
+  --shadow-overlay: var(--shadow-overlay-value);
+}
+
+:root {
+  color-scheme: light;
+
+  --canvas: var(--color-ink-50);
+  --surface: oklch(1 0 0);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: var(--color-ink-100);
+  --surface-hover: var(--color-ink-100);
+
+  --line: var(--color-ink-200);
+  --line-subtle: var(--color-ink-100);
+  --line-strong: var(--color-ink-300);
+
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-ink-600);
+  --text-subtle: var(--color-ink-500);
+  --text-inverted: oklch(1 0 0);
+
+  --brand: var(--color-brand-600);
+  --brand-hover: var(--color-brand-700);
+  --brand-soft: var(--color-brand-50);
+  --brand-text: var(--color-brand-700);
+  --on-brand: oklch(1 0 0);
+
+  --positive: var(--color-positive-500);
+  --positive-soft: var(--color-positive-100);
+  --positive-text: var(--color-positive-700);
+
+  --caution: var(--color-caution-500);
+  --caution-soft: var(--color-caution-100);
+  --caution-text: var(--color-caution-900);
+
+  --critical: var(--color-critical-500);
+  --critical-soft: var(--color-critical-100);
+  --critical-text: var(--color-critical-700);
+
+  --focus: var(--color-brand-500);
+
+  --paper: var(--color-ink-200);
+  --paper-edge: var(--color-ink-300);
+
+  --shadow-card-value: 0 1px 2px oklch(0.145 0.02 265 / 0.05);
+  --shadow-raised-value: 0 4px 12px -2px oklch(0.145 0.02 265 / 0.1);
+  --shadow-overlay-value: 0 16px 40px -8px oklch(0.145 0.02 265 / 0.22);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --canvas: var(--color-ink-950);
+  --surface: var(--color-ink-900);
+  --surface-raised: var(--color-ink-800);
+  --surface-sunken: oklch(0.185 0.021 265);
+  --surface-hover: var(--color-ink-800);
+
+  --line: oklch(0.31 0.024 265);
+  --line-subtle: oklch(0.25 0.023 265);
+  --line-strong: oklch(0.4 0.024 265);
+
+  --text: var(--color-ink-50);
+  --text-muted: var(--color-ink-300);
+  --text-subtle: var(--color-ink-400);
+  --text-inverted: var(--color-ink-950);
+
+  --brand: var(--color-brand-500);
+  --brand-hover: var(--color-brand-400);
+  --brand-soft: oklch(0.29 0.09 292);
+  --brand-text: var(--color-brand-300);
+
+  --positive-soft: oklch(0.3 0.062 158);
+  --positive-text: var(--color-positive-300);
+
+  --caution-soft: oklch(0.32 0.07 68);
+  --caution-text: var(--color-caution-300);
+
+  --critical-soft: oklch(0.31 0.078 22);
+  --critical-text: var(--color-critical-300);
+
+  --focus: var(--color-brand-400);
+
+  --paper: var(--color-ink-950);
+  --paper-edge: oklch(0.29 0.023 265);
+
+  --shadow-card-value: 0 1px 2px oklch(0 0 0 / 0.35);
+  --shadow-raised-value: 0 4px 12px -2px oklch(0 0 0 / 0.45);
+  --shadow-overlay-value: 0 16px 40px -8px oklch(0 0 0 / 0.6);
+}
+
+@layer base {
+  body {
+    background-color: var(--canvas);
+    color: var(--text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Marketing surfaces. Bold lives here and in the chrome, never around a
+   rendered document.
+   --------------------------------------------------------------------------- */
+
+@utility text-gradient-brand {
+  background-image: linear-gradient(100deg, var(--color-brand-500), var(--color-accent-500));
+  background-clip: text;
+  color: transparent;
+}
+
+@utility surface-gradient-brand {
+  background-image: linear-gradient(
+    140deg,
+    var(--color-brand-600),
+    var(--color-brand-800) 45%,
+    var(--color-accent-700)
+  );
+}
+
+@utility backdrop-grid {
+  background-image:
+    linear-gradient(to right, var(--line-subtle) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line-subtle) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* biome-ignore-start lint/complexity/noImportantStyles: a utility class sets
+     the duration inline on the element, so nothing without `!important` beats
+     it. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* biome-ignore-end lint/complexity/noImportantStyles: see above. */
 }

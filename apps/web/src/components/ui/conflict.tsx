@@ -16,26 +16,28 @@ export function Conflict({
   onKeepMine: () => void;
 }) {
   return (
-    <Panel className="border-amber-300 bg-amber-50">
-      <PanelHeader title={title}>Nothing has been saved. Both versions are below.</PanelHeader>
+    <Panel className="border-caution/50 bg-caution-soft">
+      <PanelHeader title={title} icon="warning">
+        Nothing has been saved. Both versions are below.
+      </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? (
-          <p className="text-sm text-amber-900">
+          <p className="text-sm text-caution-text">
             The change was to a field this form does not show.
           </p>
         ) : (
           <dl className="space-y-2 text-sm">
             {rows.map((row) => (
               <div key={row.label} className="grid gap-1 sm:grid-cols-3">
-                <dt className="text-xs font-medium uppercase tracking-wide text-amber-800">
+                <dt className="text-xs font-medium uppercase tracking-wide text-caution-text">
                   {row.label}
                 </dt>
-                <dd className="text-slate-800">
-                  <span className="text-xs text-slate-500">yours: </span>
+                <dd className="text-text">
+                  <span className="text-xs text-text-subtle">yours: </span>
                   {row.mine}
                 </dd>
-                <dd className="text-slate-800">
-                  <span className="text-xs text-slate-500">stored: </span>
+                <dd className="text-text">
+                  <span className="text-xs text-text-subtle">stored: </span>
                   {row.theirs}
                 </dd>
               </div>

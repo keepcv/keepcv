@@ -41,10 +41,11 @@ export function NameBox({
           if (event.key === "Enter" && typed.trim() !== "") onSave(typed.trim());
           if (event.key === "Escape") onCancel();
         }}
-        className="min-w-0 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+        className="min-w-0 rounded-lg border border-line bg-surface px-2.5 py-1 text-sm text-text outline-none transition-colors placeholder:text-text-subtle focus:border-brand"
       />
       <Button
         tone="primary"
+        icon="confirm"
         disabled={typed.trim() === "" || disabled === true}
         onClick={() => {
           onSave(typed.trim());
@@ -52,7 +53,9 @@ export function NameBox({
       >
         {confirm}
       </Button>
-      <Button onClick={onCancel}>Cancel</Button>
+      <Button tone="ghost" onClick={onCancel}>
+        Cancel
+      </Button>
     </span>
   );
 }

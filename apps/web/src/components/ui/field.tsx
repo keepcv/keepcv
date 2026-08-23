@@ -2,7 +2,7 @@ import { type ReactNode, useId } from "react";
 import { cn } from "../../lib/cn.js";
 
 const CONTROL =
-  "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 aria-[invalid=true]:border-red-400";
+  "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm text-text outline-none transition-colors placeholder:text-text-subtle hover:border-line-strong focus:border-brand aria-[invalid=true]:border-critical";
 
 interface Common {
   label: string;
@@ -22,18 +22,18 @@ function Wrapper({
 }: Common & { controlId: string; describedBy: string; children: ReactNode }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={controlId} className="block text-xs font-medium text-slate-600">
+      <label htmlFor={controlId} className="block text-xs font-medium text-text-muted">
         {label}
       </label>
       {children}
       {error === undefined ? (
         hint === undefined ? null : (
-          <p id={describedBy} className="text-xs text-slate-500">
+          <p id={describedBy} className="text-xs text-text-subtle">
             {hint}
           </p>
         )
       ) : (
-        <p id={describedBy} className="text-xs text-red-700">
+        <p id={describedBy} className="text-xs text-critical-text">
           {error}
         </p>
       )}
@@ -188,9 +188,9 @@ export function RangeField({
             onChange(Number(event.target.value));
           }}
           aria-describedby={describedBy}
-          className="h-4 flex-1 cursor-pointer accent-slate-900"
+          className="h-4 flex-1 cursor-pointer accent-brand"
         />
-        <span className="w-12 shrink-0 text-right text-xs tabular-nums text-slate-600">
+        <span className="w-12 shrink-0 text-right text-xs tabular-nums text-text-muted">
           {value}
           {unit}
         </span>
@@ -223,13 +223,13 @@ export function CheckboxField({
         onChange={(event) => {
           onChange(event.target.checked);
         }}
-        className="mt-0.5 size-4 rounded border-slate-300"
+        className="mt-0.5 size-4 rounded border-line accent-brand"
       />
       <div>
-        <label htmlFor={controlId} className="text-sm text-slate-800">
+        <label htmlFor={controlId} className="text-sm text-text">
           {label}
         </label>
-        {hint === undefined ? null : <p className="text-xs text-slate-500">{hint}</p>}
+        {hint === undefined ? null : <p className="text-xs text-text-subtle">{hint}</p>}
       </div>
     </div>
   );

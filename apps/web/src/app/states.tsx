@@ -1,23 +1,38 @@
 import type { ReactNode } from "react";
+import { Icon } from "../components/icon/icon.js";
+import { Spot, type SpotName } from "../components/icon/spot.js";
+import { Button } from "../components/ui/button.js";
 import { isProblem } from "../lib/api.js";
 
 export function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="space-y-3" role="status" aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="h-16 animate-pulse rounded-lg bg-slate-200" />
+        <div key={index} className="h-16 animate-pulse rounded-xl bg-surface-sunken" />
       ))}
     </div>
   );
 }
 
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+export function Empty({
+  title,
+  spot = "emptyStore",
+  action,
+  children,
+}: {
+  title: string;
+  spot?: SpotName;
+  action?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-      <p className="text-base font-medium text-slate-900">{title}</p>
+    <div className="flex flex-col items-center rounded-xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
+      <Spot name={spot} className="mb-4" />
+      <p className="text-base font-medium text-text">{title}</p>
       {children === undefined ? null : (
-        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">{children}</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-text-muted">{children}</p>
       )}
+      {action === undefined ? null : <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -30,23 +45,25 @@ export function Failure({ error, retry }: { error: unknown; retry?: () => void }
     problem?.detail ?? (error instanceof Error ? error.message : "No detail came back.");
 
   return (
-    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-6 py-5">
-      <p className="text-base font-medium text-red-900">{title}</p>
-      <p className="mt-1 text-sm text-red-800">{detail}</p>
+    <div
+      role="alert"
+      className="rounded-xl border border-critical/40 bg-critical-soft px-5 py-4 text-critical-text"
+    >
+      <p className="flex items-center gap-2 text-base font-medium">
+        <Icon name="error" size="lg" />
+        {title}
+      </p>
+      <p className="mt-1 text-sm">{detail}</p>
       {problem?.status === 401 ? (
-        <p className="mt-3 text-sm text-red-800">
+        <p className="mt-3 text-sm">
           The launcher prints a URL carrying this session's token. Open that one - a token is minted
           per launch and the previous one stops working.
         </p>
       ) : null}
       {retry === undefined ? null : (
-        <button
-          type="button"
-          onClick={retry}
-          className="mt-4 rounded bg-red-900 px-3 py-1.5 text-sm font-medium text-white"
-        >
+        <Button className="mt-4" icon="refresh" onClick={retry}>
           Try again
-        </button>
+        </Button>
       )}
     </div>
   );

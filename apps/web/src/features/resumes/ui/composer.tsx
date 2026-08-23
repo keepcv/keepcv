@@ -12,7 +12,7 @@ import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
-import { DragGrip, ReorderControls, RowButton } from "../../../components/ui/reorder.js";
+import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
 import {
@@ -72,22 +72,26 @@ function Controls({
   return (
     <span className="flex shrink-0 items-center gap-1">
       {reorder}
-      <RowButton
+      <Button
+        tone="ghost"
+        size="sm"
         label={`${isVisible ? "Stop printing" : "Print"} ${subject}`}
         onClick={() => {
           writes.toggle(placed, !isVisible);
         }}
       >
         {isVisible ? "Hide" : "Show"}
-      </RowButton>
-      <RowButton
+      </Button>
+      <Button
+        tone="ghost"
+        size="sm"
         label={`Take ${subject} off this resume`}
         onClick={() => {
           writes.remove(placed);
         }}
       >
         Remove
-      </RowButton>
+      </Button>
     </span>
   );
 }
@@ -445,7 +449,9 @@ function Contacts({
                 {contact.channel.value}
               </span>
               {contact.prints ? null : <Off />}
-              <RowButton
+              <Button
+                tone="ghost"
+                size="sm"
                 label={`${contact.prints ? "Stop printing" : "Print"} ${contact.channel.value}`}
                 onClick={() => {
                   setVisibility.mutate({
@@ -456,9 +462,11 @@ function Contacts({
                 }}
               >
                 {contact.prints ? "Hide" : "Show"}
-              </RowButton>
+              </Button>
               {contact.isOverridden ? (
-                <RowButton
+                <Button
+                  tone="ghost"
+                  size="sm"
                   label={`Follow the default for ${contact.channel.value}`}
                   onClick={() => {
                     setVisibility.mutate({
@@ -469,7 +477,7 @@ function Contacts({
                   }}
                 >
                   Follow the default
-                </RowButton>
+                </Button>
               ) : null}
             </li>
           ))}
