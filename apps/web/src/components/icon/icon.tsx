@@ -16,7 +16,7 @@ export function Icon({
   // Supplied only when the icon is the whole control. An icon beside its own
   // label is announced twice unless it stays hidden.
   label?: string;
-  className?: string;
+  className?: string | undefined;
 }) {
   const Glyph = GLYPHS[name];
 

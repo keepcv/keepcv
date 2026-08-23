@@ -143,15 +143,138 @@ describe("the app", () => {
     expect(nudge).toHaveAttribute("href", expect.stringContaining("filter=unplaced"));
   });
 
-  // The kind list is navigation rather than a filter bar above the content, so
-  // it is on every screen and it lists only what the store actually holds.
+  // A kind is a filter of the records list, so it nests under Records rather
+  // than standing beside it, and it lists only what the store actually holds.
   it("navigates by what the store holds", async () => {
     mount(() => jsonOf(aFilledStore()));
 
     const nav = (await screen.findAllByRole("navigation", { name: "Store" }))[0];
+    expect(nav).not.toHaveTextContent("Experience");
+
+    press("Show record kinds");
+
     expect(nav).toHaveTextContent("Experience");
     expect(nav).toHaveTextContent("Projects");
     expect(nav).not.toHaveTextContent("Publications");
+  });
+});
+
+describe("the command palette", () => {
+  function openPalette(): void {
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+  }
+
+  it("opens on ctrl-K and on slash, and closes on escape", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+
+    openPalette();
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "/" });
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+  });
+
+  // Slash is a character someone is entitled to type into a field, and the
+  // palette stealing it was the bug this guards.
+  it("leaves slash alone while a field has focus", async () => {
+    mount(() => jsonOf(aFilledStore()), "/records/new");
+
+    const title = await screen.findByLabelText("Title");
+    fireEvent.keyDown(title, { key: "/" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("offers destinations before anything is typed", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    openPalette();
+
+    const results = within(screen.getByRole("listbox", { name: "Results" }));
+    expect(results.getByRole("option", { name: /New record/ })).toBeInTheDocument();
+    expect(results.getByRole("option", { name: /Resumes/ })).toBeInTheDocument();
+  });
+
+  // The same `search(store, query)` the search screen reads, so the two can
+  // never disagree about what matches.
+  it("finds a record by prefix and opens it", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    openPalette();
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "Engine l" } });
+
+    // The record and the point filed under it both name it; records rank first.
+    fireEvent.click(screen.getAllByRole("option", { name: /Engine lead/ })[0] as HTMLElement);
+
+    expect(await screen.findByRole("heading", { name: /Engine lead/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // The palette shows only the first few of each subject, so the way to the rest
+  // has to be in it.
+  it("offers the whole result list as its first row", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    openPalette();
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "engine" } });
+
+    const options = screen.getAllByRole("option");
+    expect(options[0]).toHaveTextContent(/Search for "engine"/);
+  });
+
+  it("moves through the rows with the arrow keys and opens with enter", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+    openPalette();
+
+    const box = screen.getByRole("combobox");
+    fireEvent.change(box, { target: { value: "Engine l" } });
+
+    expect(screen.getAllByRole("option")[0]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    expect(screen.getAllByRole("option")[1]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(await screen.findByRole("heading", { name: /Engine lead/ })).toBeInTheDocument();
+  });
+});
+
+describe("the app chrome", () => {
+  it("collapses the rail to icons and puts it back", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+
+    press("Collapse the navigation");
+    expect(screen.getAllByRole("navigation", { name: "Store" })[0]).not.toHaveTextContent(
+      "Vocabulary",
+    );
+
+    press("Expand the navigation");
+    expect(screen.getAllByRole("navigation", { name: "Store" })[0]).toHaveTextContent("Vocabulary");
+  });
+
+  // The rail and the narrow header each render a toggle, so the choice is the
+  // shell's rather than each component's: two hooks would let them disagree.
+  it("chooses a colour scheme, and both toggles agree", async () => {
+    mount(() => jsonOf(aFilledStore()));
+    await screen.findByRole("navigation", { name: "Store" });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Dark" })[0] as HTMLElement);
+
+    for (const toggle of screen.getAllByRole("button", { name: "Dark" })) {
+      expect(toggle).toHaveAttribute("aria-pressed", "true");
+    }
+    expect(document.documentElement).toHaveClass("dark");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Light" })[0] as HTMLElement);
+    expect(document.documentElement).not.toHaveClass("dark");
   });
 });
 
