@@ -2245,3 +2245,110 @@ describe("saved filters", () => {
     expect(store.savedFilters).toHaveLength(1);
   });
 });
+
+// A file the browser reads and never uploads: what the store is asked to write
+// is the reviewed intake, not the resume it came out of.
+function chooseFile(body: string, name = "resume.json"): void {
+  const input = screen.getByLabelText("A resume to read");
+  const file = new File([body], name, { type: "application/json" });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  fireEvent.change(input);
+}
+
+const A_RESUME = JSON.stringify({
+  basics: {
+    name: "Ada Lovelace",
+    email: "ada@example.org",
+    summary: "Ships measurable work.",
+  },
+  work: [
+    {
+      name: "Acme",
+      position: "Staff engineer",
+      startDate: "2023-04",
+      highlights: ["Cut runtime by 40%.", "Led the migration."],
+    },
+  ],
+  education: [{ institution: "UCL", studyType: "BSc", startDate: "bad-date" }],
+});
+
+describe("bringing a resume in", () => {
+  it("shows what the file held before anything is written", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+
+    expect(await screen.findByText("Staff engineer")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByText("ada@example.org")).toBeInTheDocument();
+    expect(server.calls.some((call) => call.path === "/v1/intake")).toBe(false);
+  });
+
+  it("names what it could not place rather than guessing at it", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+
+    expect(await screen.findByText(/is not a year, month or day/)).toBeInTheDocument();
+  });
+
+  it("sends the decisions with the intake, and says what came in", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+    await screen.findByText("Staff engineer");
+    press("Bring these in");
+
+    expect(await screen.findByText(/came in\./)).toBeInTheDocument();
+    const sent = server.calls.find((call) => call.path === "/v1/intake");
+    expect(sent).toBeDefined();
+    const body = sent?.body as {
+      intake: { records: unknown[] };
+      decisions: { records: unknown[] };
+    };
+    expect(body.decisions.records).toHaveLength(body.intake.records.length);
+  });
+
+  it("leaves a record out when it is skipped", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(A_RESUME);
+    await screen.findByText("Staff engineer");
+
+    const row = screen.getByText("Staff engineer").closest("div")?.parentElement;
+    fireEvent.click(within(row as HTMLElement).getByRole("radio", { name: "Skip" }));
+    press("Bring these in");
+
+    await screen.findByText(/came in\./);
+    const sent = server.calls.find((call) => call.path === "/v1/intake");
+    const body = sent?.body as { decisions: { records: { action: string }[] } };
+    expect(body.decisions.records[0]?.action).toBe("skip");
+  });
+
+  // A whole-store backup restores every row exactly; reading it as a resume
+  // would quietly turn history into a handful of records.
+  it("sends someone with a backup file to the screen that restores one", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile(JSON.stringify({ schemaVersion: 1, exportedAt: "2026-01-01T00:00:00.000Z" }));
+
+    expect(await screen.findByText(/whole-store backup/)).toBeInTheDocument();
+  });
+
+  it("says so when the file is not a resume at all", async () => {
+    mount(() => jsonOf(emptyStore()), "/import");
+
+    await screen.findByLabelText("A resume to read");
+    chooseFile("not json at all");
+
+    expect(await screen.findByText(/is not JSON this build can read/)).toBeInTheDocument();
+  });
+});

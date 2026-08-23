@@ -158,7 +158,7 @@ overrides, and seventeen owned collections: `/v1/contact-channels`,
 `/v1/resume-entry-points`.
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
 `POST /v1/resumes/{id}/derive`, the resume timeline at `/v1/resume-versions`,
-`/v1/resume-snapshots`, `GET /v1/resume-versions/diff`,
+`/v1/resume-snapshots`, `POST /v1/intake`, `GET /v1/resume-versions/diff`,
 `GET /v1/resume-versions/{id}/document`,
 `POST /v1/resume-versions/{id}/restore`, and `/v1/points/{id}/usage` and
 `/v1/records/{id}/usage`. There is no `/v1/backup/*`: those routes would have
@@ -240,6 +240,19 @@ it prints under.
 transaction; the composition and the template come across and the posting does
 not. `GET /v1/resume-versions/{id}/document` compiles what a version said in the
 words it pinned, so sending an old one no longer means restoring it first.
+
+**A resume somebody else's tool wrote comes in as an `Intake`.** That is what a
+file said before anything decides what to do about it: no ids, no ordering and
+no foreign keys, so an organisation arrives as the name that was printed. Its
+record union is built from the same `RECORD_EXTRAS` map the stored union is, and
+a test fails when a kind declares a field on one side only. Reading happens
+where the file is - the browser reads it in the tab - so parsing is off the API
+surface and the resume never leaves the machine. `matchIntake` answers what each
+incoming thing looks like it already is and `importPlan` answers the rows, both
+selectors; `POST /v1/intake` re-plans server-side and applies in one
+transaction. A merge adds what the file had and leaves the record the user
+curated alone, so every write is a create and applying one file twice writes
+nothing the second time.
 
 **The store backs up to one readable file, and the launcher keeps a copy.**
 `keepcv serve` writes it beside the data directory on start, on a timer and on

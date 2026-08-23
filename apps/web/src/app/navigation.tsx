@@ -189,6 +189,7 @@ export function Navigation({
       </Group>
 
       <Group title="System" collapsed={collapsed}>
+        <NavLink to="/import" icon="upload" label="Bring one in" collapsed={collapsed} />
         <NavLink to="/data" icon="data" label="Your data" collapsed={collapsed} />
         {onSignOut === undefined ? null : (
           <button

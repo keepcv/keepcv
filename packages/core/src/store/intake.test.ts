@@ -236,7 +236,7 @@ describe("planning the writes", () => {
 
     const [record] = planFor(store, intake).records;
 
-    expect(record?.sortKey > "a9").toBe(true);
+    expect((record?.sortKey ?? "") > "a9").toBe(true);
   });
 
   it("starts a profile summary when there is none, and leaves an existing one alone", () => {
