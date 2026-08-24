@@ -13,12 +13,20 @@ const LABELS: Record<ThemeChoice, string> = {
 export function ThemeToggle({
   choice,
   choose,
+  stacked = false,
 }: {
   choice: ThemeChoice;
   choose: (choice: ThemeChoice) => void;
+  // A collapsed rail is narrower than three buttons in a row.
+  stacked?: boolean;
 }) {
   return (
-    <fieldset className="flex items-center rounded-lg border border-line bg-surface-sunken p-0.5">
+    <fieldset
+      className={cn(
+        "flex items-center rounded-lg border border-line bg-surface-sunken p-0.5",
+        stacked && "flex-col",
+      )}
+    >
       <legend className="sr-only">Colour scheme</legend>
       {THEME_CHOICES.map((option) => (
         <button

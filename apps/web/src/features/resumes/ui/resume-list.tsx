@@ -10,12 +10,9 @@ import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
+import { counted } from "../../../lib/label.js";
 import { useCreateResume, useDeriveResume } from "../api/use-resumes.js";
 import { type ResumeRow, resumeRows } from "../model/resume-rows.js";
-
-function counted(value: number, singular: string, plural: string): string {
-  return `${String(value)} ${value === 1 ? singular : plural}`;
-}
 
 // The name is asked for, because two resumes called the same thing is the state
 // this is most likely to produce and the hardest to unpick later.
@@ -186,7 +183,7 @@ export function ResumeList({
         A resume is a selection over the store, not a copy of it.
       </PageHeader>
 
-      <Toolbar>
+      <Toolbar count={counted(rows.length, "resume", "resumes")}>
         <Segmented label="Archived">
           {ARCHIVED_FILTERS.map((option) => (
             <Segment

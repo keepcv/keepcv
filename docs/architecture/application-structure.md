@@ -956,6 +956,14 @@ why the canvas went unused and why a two-pane task looked like a one-pane one.
 - **Browse** - records, points, tags, sections, resumes. Full width, a
   `PageHeader`, then a sticky `Toolbar` carrying the archived scope and the
   saved filters. `Toolbar` sticks to `main`, which is the scroll container.
+  It is a rule with the controls on it rather than a panel around them: every
+  one of them holds a single pill group that already looks like a control, and
+  a bordered card made that a box inside a box with most of the row empty.
+  **What fills the rest of the row is the count**, because that is what a
+  narrowing produces and the only other way to read it was to count the rows.
+  It goes there and nowhere else - it used to be a page header's blurb on one
+  screen and a panel's own title on two more, which left three screens with no
+  description and two panels titled "7 shown".
 - **Detail** - a record, a point. Two columns above `xl`: what the thing says on
   the left, what it is filed under and where it prints on the right.
 - **Workspace** - the resume. Full height, no page scroll, panes scrolling
@@ -1035,6 +1043,27 @@ because `Up` on its own tells a screen reader nothing about which row moved.
 Beware `aria-*` passed into a component that does not forward it: TypeScript does
 not excess-check a hyphenated JSX attribute, so `aria-expanded` on `Button`
 type-checked and was dropped on the floor. `Button` takes `expanded`.
+
+**"You are here" is a marker in the margin, not a filled block.** The rail's
+active row was a solid brand pill - the only colour on it - so the one row the
+user had already reached shouted over the eleven they had not. It is a recess
+plus a two-pixel brand rule at the left edge, which is quieter and also lines the
+rows up down a single column. A group heading carries a rule to its right, the
+same device the record list uses.
+
+The whole marker is declared in the active class rather than being coloured in
+from a transparent one in the base: the router **appends** `activeProps.className`
+instead of merging it, so both `before:` colours land on the element and the
+stylesheet's own order decides - which it did, in favour of transparent, leaving
+no marker at all. The row itself is one function used by the links and by
+`Sign out`, which had carried its own copy of the classes.
+
+**A control does not move when its container resizes.** The collapse button used
+to sit beside the brand when the rail was open and jump to a row of its own when
+it was not, and the scheme toggle was dropped entirely below `w-16` - so the only
+way to change the scheme on a wide screen was to widen the rail again. Both live
+in a footer strip present in both states, and the toggle stacks vertically when
+the rail is narrower than three buttons in a row.
 
 ### 10.6 The palette
 

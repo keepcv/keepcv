@@ -1,6 +1,6 @@
 import { renderHtml } from "@keepcv/render";
 import type { DocumentContact, DocumentField, ResumeDocument } from "@keepcv/schema";
-import { FIXTURE_DOCUMENT } from "@keepcv/templates";
+import { FIXTURE_DOCUMENT, TEMPLATES } from "@keepcv/templates";
 import { describe, expect, it } from "vitest";
 import { lint } from "./lint.js";
 import type { LintFinding, LintRuleId } from "./report.js";
@@ -61,11 +61,17 @@ const aDate = (value: string): DocumentField => ({
 });
 
 describe("linting a resume the way a machine reads it", () => {
-  // The template this product ships is the one it recommends. If the file it
-  // writes ever stops linting clean, the two disagree about the same page.
-  it("finds nothing wrong with the file the shipping template writes", () => {
-    expect(linted(RESUME)).toEqual({ tier: "clean", findings: [] });
-  });
+  // A rule firing on any shipped template fires on every resume made with it.
+  it.each(TEMPLATES.map((template) => template.id))(
+    "finds nothing wrong with the file %s writes",
+    (id) => {
+      const document = { ...RESUME, meta: { ...RESUME.meta, templateId: id } };
+      expect(lint({ document, html: renderHtml(document) })).toEqual({
+        tier: "clean",
+        findings: [],
+      });
+    },
+  );
 
   describe("contact details", () => {
     it("refuses a resume with no email address on it", () => {

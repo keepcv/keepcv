@@ -89,15 +89,26 @@ export function PageHeader({
 
 // Sticky against `main`, which is the scroll container: the app header sits
 // outside it, so this pins at zero rather than clearing a bar.
-export function Toolbar({ className, children }: { className?: string; children: ReactNode }) {
+export function Toolbar({
+  count,
+  className,
+  children,
+}: {
+  count?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface/85 px-3 py-2 backdrop-blur",
+        "sticky top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-canvas/90 pb-2.5 pt-1 backdrop-blur",
         className,
       )}
     >
       {children}
+      {count === undefined ? null : (
+        <p className="ml-auto shrink-0 text-xs tabular-nums text-text-subtle">{count}</p>
+      )}
     </div>
   );
 }

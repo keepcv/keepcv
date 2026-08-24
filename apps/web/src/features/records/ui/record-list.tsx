@@ -9,6 +9,7 @@ import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { counted } from "../../../lib/label.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
 import { recordNarrowing } from "../../filters/model/saved-filters.js";
 import { SavedFilters } from "../../filters/ui/saved-filters.js";
@@ -77,9 +78,7 @@ function Row({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="min-w-0 truncate text-sm font-medium text-text">{row.title}</span>
             {row.pointCount === 0 ? null : (
-              <Badge icon="point">
-                {row.pointCount} point{row.pointCount === 1 ? "" : "s"}
-              </Badge>
+              <Badge icon="point">{counted(row.pointCount, "point", "points")}</Badge>
             )}
             {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
           </span>
@@ -189,10 +188,11 @@ export function RecordList({
           </ButtonLink>
         }
       >
-        {total === 0 ? "Nothing here" : `${String(total)} shown`}
+        The permanent record. A resume is a selection over this, so nothing filed here is ever
+        trimmed away to make one fit.
       </PageHeader>
 
-      <Toolbar>
+      <Toolbar count={counted(total, "record", "records")}>
         {/* Archived content is reachable, never hidden: "where did my old entry
             go" must always have an answer. */}
         <Segmented label="Archived">

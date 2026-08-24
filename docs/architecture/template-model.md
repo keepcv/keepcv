@@ -312,6 +312,31 @@ converts no units, knows no template's class names, and cannot disagree with
 what the printer will do. A template that declares no page height fails
 `isATemplate`, because nothing else in the stylesheet says how long a page is.
 
+**A template owns its layout and nothing else.** Escaping an inline mark,
+tagging an element with the `data-key` the host paginates by, printing a field
+as `label: value` and printing a link as its address are obligations every
+template has and none may reinterpret, so they live in `prose.tsx` and each
+template composes them. The page box is the same argument one level down:
+`paper.ts` states `@page`, `--kc-page-content-height` and the shared page-size
+and typeface vocabularies, because a template with its own copy drifts into
+reporting a wrong page count rather than failing. What is left in a template's
+own files - which slots go where, what is beside what, what is a heading - is
+the whole of what distinguishes one from another.
+
+That is also the test of whether a second template is worth having. Two
+templates that differ only in values one of them could have declared as a
+`ConfigField` are one template and a setting; `ats-left-heading` earns its place
+because it puts the section heading in a grid cell beside the section's first
+entry rather than above it, and that carries its own settings - a gutter width
+and which edge the heading sits against - which are meaningless to the other.
+
+**Side by side is a grid, never a float, a coordinate or a column count.** A
+multi-column flow splits a paragraph down the page and picks it up at the top of
+the next one, which is what makes a two-column resume come back interleaved; a
+grid one section deep leaves the printed order equal to the markup order. The
+lint rules refuse the first three by name, so a template reaching for them fails
+the suite that asserts every shipped template lints clean.
+
 Rules:
 
 - A template may not fetch, query, or reach outside its two arguments. Its

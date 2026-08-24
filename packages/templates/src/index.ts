@@ -1,3 +1,4 @@
+export { atsLeftHeading } from "./ats-left-heading/index.js";
 export { atsSingleColumn } from "./ats-single-column/index.js";
 export {
   type ConfigField,

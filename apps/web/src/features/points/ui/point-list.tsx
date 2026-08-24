@@ -6,6 +6,7 @@ import { ButtonLink } from "../../../components/ui/button.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
+import { counted } from "../../../lib/label.js";
 import { pointNarrowing } from "../../filters/model/saved-filters.js";
 import { SavedFilters } from "../../filters/ui/saved-filters.js";
 import { TaggedNote } from "../../tags/ui/tagged-note.js";
@@ -59,7 +60,7 @@ function Row({ row }: { row: PointListRow }) {
         <span className="tabular-nums">
           {row.placements === 0
             ? "on no resume"
-            : `on ${String(row.placements)} resume${row.placements === 1 ? "" : "s"}`}
+            : `on ${counted(row.placements, "resume", "resumes")}`}
         </span>
       </div>
     </li>
@@ -122,7 +123,7 @@ export function PointList({
         {BLURBS[filter]}
       </PageHeader>
 
-      <Toolbar>
+      <Toolbar count={counted(rows.length, "point", "points")}>
         <Segmented label="Points">
           {POINT_FILTERS.map((option) => (
             <Segment
