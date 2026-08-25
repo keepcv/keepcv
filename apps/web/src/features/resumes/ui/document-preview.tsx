@@ -1,13 +1,16 @@
 import type { LengthBudget, Pagination } from "@keepcv/core";
 import { lengthBudget } from "@keepcv/core";
-import type { Resume, ResumeDocument } from "@keepcv/schema";
-import type { ConfigField, Template, TemplateConfig } from "@keepcv/templates";
-import { resolveTemplate, TEMPLATES } from "@keepcv/templates";
+import type { Resume, ResumeDocument, Store } from "@keepcv/schema";
+import type { Template, TemplateConfig } from "@keepcv/templates";
+import { resolveTemplate } from "@keepcv/templates";
+import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { Button } from "../../../components/ui/button.js";
-import { RangeField, SelectField } from "../../../components/ui/field.js";
+import { SelectField } from "../../../components/ui/field.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { cn } from "../../../lib/cn.js";
+import { pickableTemplates } from "../../templates/model/template-rows.js";
+import { Control } from "../../templates/ui/control.js";
 import { usePatchResume } from "../api/use-resumes.js";
 import { DownloadResume } from "./download.js";
 import { LintPanel } from "./lint-report.js";
@@ -22,41 +25,6 @@ const SETTLES_AFTER = 500;
 function overrides(template: Template, config: TemplateConfig): TemplateConfig {
   return Object.fromEntries(
     Object.entries(config).filter(([key, value]) => template.defaultConfig[key] !== value),
-  );
-}
-
-function Control({
-  field,
-  config,
-  onChange,
-}: {
-  field: ConfigField;
-  config: TemplateConfig;
-  onChange: (value: string | number) => void;
-}) {
-  const value = config[field.key];
-
-  if (field.kind === "choice") {
-    return (
-      <SelectField
-        label={field.label}
-        options={field.options}
-        value={typeof value === "string" ? value : field.default}
-        onChange={onChange}
-      />
-    );
-  }
-
-  return (
-    <RangeField
-      label={field.label}
-      min={field.min}
-      max={field.max}
-      step={field.step}
-      unit={field.unit}
-      value={typeof value === "number" ? value : field.default}
-      onChange={onChange}
-    />
   );
 }
 
@@ -130,11 +98,13 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function DocumentPreview({
+  store,
   client,
   resume,
   document,
   settings = true,
 }: {
+  store: Store;
   client: ApiClient;
   resume: Resume;
   document: ResumeDocument;
@@ -230,13 +200,25 @@ export function DocumentPreview({
             <Group title="How it looks">
               <SelectField
                 label="Template"
-                options={TEMPLATES.map((option) => ({ value: option.id, label: option.name }))}
+                options={pickableTemplates(store).map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                }))}
                 value={stored.template.id}
                 onChange={(templateId) => {
                   setPending(null);
                   mutate({ resume, patch: { templateId, templateConfig: {} } });
                 }}
               />
+              {store.templates.some((row) => row.id === stored.template.id) ? (
+                <Link
+                  to="/templates/$templateId"
+                  params={{ templateId: stored.template.id }}
+                  className="inline-flex items-center gap-1 text-xs text-text-muted underline-offset-2 hover:text-text hover:underline"
+                >
+                  Change what this design is
+                </Link>
+              ) : null}
               {stored.template.fields.map((field) => (
                 <Control
                   key={field.key}

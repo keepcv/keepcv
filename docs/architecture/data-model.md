@@ -901,6 +901,33 @@ Archiving a tag does not archive the filters naming it. The tag is still there
 and the vocabulary screen is where it comes back; a filter that quietly vanished
 because a word was put aside would be a delete nobody asked for.
 
+### 8.2 `template` - a design of the user's own
+
+```sql
+name text  not null
+spec jsonb not null   -- { settings: Record<string, string|number>, extraCss: string }
+```
+
+**The shipped designs are not rows.** They exist in every build, so storing them
+would put one fact in two places and a store restored into an older build would
+carry a design that build cannot render. A resume's `template_id` names either.
+
+**`spec` is loose on purpose.** `settings` is values for the knobs the renderer
+declares, which is the same vocabulary a resume overrides through
+`template_config`, so the renderer's field list is the one statement of what a
+knob is and what range it takes - `configFor` refuses anything outside it. A
+typed column here would be that vocabulary written down twice, and adding a knob
+would need a migration. `extraCss` is refused by the schema if it would fetch or
+if it contains `</style` (template-model.md #5).
+
+**`template_name_unique` covers archived rows**, like every other uniqueness
+index here, so the screens name the clash rather than letting the store answer
+with a constraint.
+
+No `sort_key`: designs are listed by name, never dragged. Archiving one leaves
+every resume naming it alone - it goes on printing, and a version that used it
+pinned the whole design anyway.
+
 ---
 
 ## 9. Resumes
@@ -989,9 +1016,11 @@ declares and ignores the rest (template-model.md #5). There is no
 rather than anything the store can resolve, and the only thing that can render an
 old template is old code.
 
-**`template_id` is a plain `text` with no foreign key.** Templates live in code,
-not in a table, and a store must survive being opened by a build that does not
-have the one it names - which is why resolving falls back rather than refusing.
+**`template_id` is a plain `text` with no foreign key**, and it names either a
+shipped design or a `template` row (#8.2). It is not a uuid column because the
+shipped ones are not rows, and it is not a foreign key because a store must
+survive being opened by a build that does not have the design it names - which is
+why resolving falls back rather than refusing.
 
 **`page_limit` is a column rather than a template setting.** How long a resume
 may be is a fact about the application, so it has to survive swapping the
@@ -1232,10 +1261,13 @@ in `@keepcv/core` - so capture and restore cannot disagree about them.
 version resolves to cannot change, and a wording used by forty versions is
 stored once (I4).
 
-**No `template` block yet.** A `template_config` has nothing to validate against
-until a template package exists; it arrives with that capability, by the expand
-step of an expand/contract migration, as `template_id` and `template_version` do
-on `resume`.
+**The template block pins the whole design, not just the id.** A shipped design
+is in every build, so `manifest.template` carries its id and the resume's
+overrides and nothing else. A design the user wrote is a row they can edit, so
+`spec` carries the whole of it: an id alone would let an edit in June rewrite
+what a March version claims was printed, which is the same failure
+`phrasing_revision_id` exists to prevent for wording. `name` travels too, so an
+old version is legible after the row is renamed.
 
 **No `targetJdText`.** The job description is what the resume was composed
 against rather than part of what was sent, and it would multiply the size of

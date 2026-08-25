@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { atsSingleColumn } from "./ats-single-column/index.js";
+import { atsSingleColumn } from "./built-in.js";
 import { configFor } from "./contract.js";
 import { FIXTURE_DOCUMENT } from "./fixture.js";
 import { DEFAULT_TEMPLATE_ID, resolveTemplate, templateById } from "./registry.js";

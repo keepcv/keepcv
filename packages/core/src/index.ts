@@ -54,6 +54,7 @@ export {
   type StoreRepository,
   TagMergedIntoItselfError,
   type TagRepository,
+  type TemplateRepository,
   type UnitOfWork,
 } from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";

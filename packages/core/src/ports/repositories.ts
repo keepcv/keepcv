@@ -69,6 +69,9 @@ import type {
   SavedFilterInput,
   SavedFilterPatch,
   Store,
+  StoredTemplate,
+  StoredTemplateInput,
+  StoredTemplatePatch,
   Tag,
   TagInput,
   TagPatch,
@@ -187,6 +190,19 @@ export interface SavedFilterRepository {
   update(id: Uuid, patch: SavedFilterPatch, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
+}
+
+export interface TemplateRepository {
+  list(options?: { includeArchived?: boolean | undefined }): Promise<StoredTemplate[]>;
+  get(id: Uuid): Promise<StoredTemplate>;
+  create(input: StoredTemplateInput): Promise<StoredTemplate>;
+  update(
+    id: Uuid,
+    patch: StoredTemplatePatch,
+    expectedUpdatedAt: Timestamp,
+  ): Promise<StoredTemplate>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<StoredTemplate>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<StoredTemplate>;
 }
 
 export interface CareerRecordRepository {
@@ -483,6 +499,7 @@ export interface Repositories {
   organisations: OrganisationRepository;
   customSections: CustomSectionRepository;
   savedFilters: SavedFilterRepository;
+  templates: TemplateRepository;
   records: CareerRecordRepository;
   points: PointRepository;
   phrasings: PhrasingRepository;

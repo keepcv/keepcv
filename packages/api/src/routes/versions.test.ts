@@ -213,6 +213,8 @@ describe("resume versions", () => {
     expect(again.version.id).not.toBe(first.version.id);
     expect(again.version.manifest.template).toEqual({
       id: "ats-single-column",
+      name: null,
+      spec: null,
       config: { pageSize: "letter" },
     });
   });

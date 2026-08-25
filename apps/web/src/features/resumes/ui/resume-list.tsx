@@ -24,12 +24,13 @@ function Derive({ resume, client }: { resume: Resume; client: ApiClient }) {
   if (typed === null) {
     return (
       <Button
+        size="sm"
+        icon="copy"
+        label={`Start a resume from ${resume.name}`}
         onClick={() => {
           setTyped(`${resume.name} copy`);
         }}
-      >
-        Start one from this
-      </Button>
+      />
     );
   }
 
@@ -67,12 +68,14 @@ function Row({
   resume: Resume | undefined;
   client: ApiClient;
 }) {
+  // The copy control is a glyph on the row rather than a labelled button under
+  // it: one per resume, and a list of twelve was a list of twelve buttons.
   return (
-    <li>
+    <li className="flex items-start gap-2 pr-2">
       <Link
         to="/resumes/$resumeId"
         params={{ resumeId: row.id }}
-        className="block rounded-lg px-3 py-2.5 hover:bg-surface-hover data-[archived=true]:opacity-60"
+        className="block min-w-0 flex-1 rounded-lg px-3 py-2.5 hover:bg-surface-hover data-[archived=true]:opacity-60"
         data-archived={row.isArchived}
       >
         <div className="flex items-baseline gap-3">
@@ -92,13 +95,12 @@ function Row({
             counted(row.points, "point", "points"),
           ].join(" - ")}
           {row.hidden === 0 ? "" : ` - ${String(row.hidden)} toggled off`}
+          {row.template === undefined ? "" : ` - ${row.template}`}
         </p>
       </Link>
-      {resume === undefined || row.isArchived ? null : (
-        <div className="px-3 pb-2">
-          <Derive resume={resume} client={client} />
-        </div>
-      )}
+      <span className="shrink-0 pt-2.5">
+        {resume === undefined || row.isArchived ? null : <Derive resume={resume} client={client} />}
+      </span>
     </li>
   );
 }
@@ -204,8 +206,8 @@ export function ResumeList({
           spot={archived === "only" ? "permanent" : "compose"}
         >
           {archived === "only"
-            ? "An archived resume keeps every version it ever had, so what you sent stays answerable."
-            : "A resume picks records and points out of the store and arranges them. Nothing it leaves out is lost - it stays here, ready for the next one."}
+            ? "An archived resume keeps every version it ever had."
+            : "Nothing a resume leaves out is lost; it stays in the store, ready for the next one."}
         </Empty>
       ) : (
         <ul className="rounded-xl border border-line bg-surface p-1 shadow-card">

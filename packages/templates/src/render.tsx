@@ -1,25 +1,39 @@
 import type { DocumentEntry, DocumentGroup, DocumentSection, ResumeDocument } from "@keepcv/schema";
 import { Fragment, type ReactElement } from "react";
-import type { TemplateConfig } from "../contract.js";
-import { Fields, joined, Links, Marks, Points } from "../prose.js";
+import type { TemplateConfig } from "./contract.js";
+import { type Design, designOf } from "./knobs.js";
+import { Fields, joined, Links, Marks, Points } from "./prose.js";
 
+// `trailing` keeps the period out at the right margin and everything else on a
+// line under the title; `inline` runs the lot on after it, which is what a
+// narrow content column needs - a flexed date collided with the words.
 function Entry({
   entry,
+  design,
   showOrganisation,
 }: {
   entry: DocumentEntry;
+  design: Design;
   showOrganisation: boolean;
 }): ReactElement {
-  const title = joined([entry.title, showOrganisation ? entry.organisation?.name : undefined]);
-  const sub = joined([entry.subtitle, entry.location, entry.mode]);
+  const organisation = showOrganisation ? entry.organisation?.name : undefined;
+  const inline = design.entryMeta === "inline";
+  const title = inline ? entry.title : joined([entry.title, organisation]);
+  const meta = inline
+    ? joined([organisation, entry.subtitle, entry.location, entry.mode, entry.period?.display])
+    : joined([entry.subtitle, entry.location, entry.mode]);
 
   return (
     <div className="kc-entry" data-key={entry.key}>
-      <div className="kc-row">
+      {inline ? (
         <p className="kc-title">{title}</p>
-        {entry.period === undefined ? null : <p className="kc-meta">{entry.period.display}</p>}
-      </div>
-      {sub === "" ? null : <p className="kc-sub">{sub}</p>}
+      ) : (
+        <div className="kc-row">
+          <p className="kc-title">{title}</p>
+          {entry.period === undefined ? null : <p className="kc-meta">{entry.period.display}</p>}
+        </div>
+      )}
+      {meta === "" ? null : <p className={inline ? "kc-meta" : "kc-sub"}>{meta}</p>}
       {entry.summary === undefined ? null : (
         <p>
           <Marks nodes={entry.summary} />
@@ -34,22 +48,31 @@ function Entry({
 
 function Group({
   group,
+  design,
   entries,
 }: {
   group: DocumentGroup;
+  design: Design;
   entries: Map<string, DocumentEntry>;
 }): ReactElement {
+  const inline = design.entryMeta === "inline";
+  const meta = inline ? joined([group.subtitle, group.period?.display]) : (group.subtitle ?? "");
+
   return (
     <div className="kc-group" data-key={group.key}>
-      <div className="kc-row">
+      {inline ? (
         <p className="kc-title">{group.title}</p>
-        {group.period === undefined ? null : <p className="kc-meta">{group.period.display}</p>}
-      </div>
-      {group.subtitle === undefined ? null : <p className="kc-sub">{group.subtitle}</p>}
+      ) : (
+        <div className="kc-row">
+          <p className="kc-title">{group.title}</p>
+          {group.period === undefined ? null : <p className="kc-meta">{group.period.display}</p>}
+        </div>
+      )}
+      {meta === "" ? null : <p className={inline ? "kc-meta" : "kc-sub"}>{meta}</p>}
       {group.entryKeys.map((key) => {
         const entry = entries.get(key);
         return entry === undefined ? null : (
-          <Entry key={key} entry={entry} showOrganisation={false} />
+          <Entry key={key} entry={entry} design={design} showOrganisation={false} />
         );
       })}
     </div>
@@ -58,7 +81,7 @@ function Group({
 
 // An empty section says so rather than printing a heading over nothing, and an
 // entry no group claimed still prints.
-function Body({ section }: { section: DocumentSection }): ReactElement {
+function Body({ section, design }: { section: DocumentSection; design: Design }): ReactElement {
   if (section.entries.length === 0) {
     return <p className="kc-empty">Nothing under this heading prints yet.</p>;
   }
@@ -83,18 +106,19 @@ function Body({ section }: { section: DocumentSection }): ReactElement {
   return (
     <>
       {groups.map((group) => (
-        <Group key={group.key} group={group} entries={byKey} />
+        <Group key={group.key} group={group} design={design} entries={byKey} />
       ))}
       {section.entries
         .filter((entry) => !claimed.has(entry.key))
         .map((entry) => (
-          <Entry key={entry.key} entry={entry} showOrganisation />
+          <Entry key={entry.key} entry={entry} design={design} showOrganisation />
         ))}
     </>
   );
 }
 
-export function render(document: ResumeDocument, _config: TemplateConfig): ReactElement {
+export function render(document: ResumeDocument, config: TemplateConfig): ReactElement {
+  const design = designOf(config);
   const { header } = document;
 
   return (
@@ -128,7 +152,7 @@ export function render(document: ResumeDocument, _config: TemplateConfig): React
         {document.sections.map((section) => (
           <section className="kc-section" key={section.key} data-key={section.key}>
             <h2 className="kc-heading">{section.heading}</h2>
-            <Body section={section} />
+            <Body section={section} design={design} />
           </section>
         ))}
       </div>

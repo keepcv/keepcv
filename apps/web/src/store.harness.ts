@@ -24,10 +24,12 @@ import {
   resumeSchema,
   resumeSectionSchema,
   type Store,
+  type StoredTemplate,
   savedFilterSchema,
   storeSchema,
   type Tag,
   tagSchema,
+  templateSchema,
   type Uuid,
 } from "@keepcv/schema";
 
@@ -72,6 +74,7 @@ export function emptyStore(): Store {
     resumeEntryPoints: [],
     resumeContactChannels: [],
     savedFilters: [],
+    templates: [],
   });
 }
 
@@ -470,4 +473,18 @@ export function addSavedFilter(
       ...overrides,
     }),
   );
+}
+
+export function addTemplate(
+  store: Store,
+  name: string,
+  spec: Record<string, unknown> = {},
+): StoredTemplate {
+  const template = templateSchema.parse({
+    ...standard(),
+    name,
+    spec: { settings: {}, extraCss: "", ...spec },
+  });
+  store.templates.push(template);
+  return template;
 }

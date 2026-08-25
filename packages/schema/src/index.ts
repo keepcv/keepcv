@@ -334,6 +334,17 @@ export {
   tagPatchSchema,
   tagSchema,
 } from "./entities/tag.js";
+export {
+  extraCssSchema,
+  type StoredTemplate,
+  type StoredTemplateInput,
+  type StoredTemplatePatch,
+  type TemplateSpec,
+  templateInputSchema,
+  templatePatchSchema,
+  templateSchema,
+  templateSpecSchema,
+} from "./entities/template.js";
 export { EXPORT_JSON_SCHEMA_FILE, exportJsonSchema } from "./json-schema.js";
 export {
   type ContentHash,

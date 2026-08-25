@@ -186,6 +186,18 @@ async function fill(run: Run): Promise<void> {
     );
     await r.savedFilters.archive(droppedFilter.id, droppedFilter.updatedAt);
 
+    const navy = await r.templates.create({
+      id: newUuid(),
+      name: "Navy headings",
+      spec: { settings: { accent: "navy", headingPlace: "beside" }, extraCss: ".kc-name { }" },
+    });
+    const droppedTemplate = await r.templates.create({
+      id: newUuid(),
+      name: "One I stopped using",
+      spec: { settings: {}, extraCss: "" },
+    });
+    await r.templates.archive(droppedTemplate.id, droppedTemplate.updatedAt);
+
     await r.drafts.save(
       { targetKind: "phrasing", targetId: angled.id, field: "text" },
       { body: [{ t: "text", v: "half a rewrite" }] },
@@ -202,7 +214,9 @@ async function fill(run: Run): Promise<void> {
         pageLimit: 1,
       }),
     );
-    const shelvedResume = await r.resumes.create(resumeInput("An older draft"));
+    const shelvedResume = await r.resumes.create(
+      resumeInput("An older draft", { templateId: navy.id }),
+    );
     await r.resumes.archive(shelvedResume.id, shelvedResume.updatedAt);
 
     const experience = await r.resumes.addSection(sectionInput(applied.id, "experience", "a0"));
@@ -302,6 +316,7 @@ function reversed(store: Archive): Archive {
     resumeEntryPoints: [...store.resumeEntryPoints].reverse(),
     resumeContactChannels: [...store.resumeContactChannels].reverse(),
     savedFilters: [...store.savedFilters].reverse(),
+    templates: [...store.templates].reverse(),
     resumeVersions: [...store.resumeVersions].reverse(),
     resumeSnapshots: [...store.resumeSnapshots].reverse(),
   };

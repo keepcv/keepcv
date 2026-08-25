@@ -88,7 +88,13 @@ function Workspace({
         {document === undefined ? (
           <Empty title="Nothing to compile yet" spot="compose" />
         ) : (
-          <DocumentPreview client={client} resume={resume} document={document} settings={false} />
+          <DocumentPreview
+            store={store}
+            client={client}
+            resume={resume}
+            document={document}
+            settings={false}
+          />
         )}
       </div>
     </div>
@@ -127,7 +133,7 @@ function Chosen({
           {document === undefined ? (
             <Empty title="Nothing to compile yet" spot="compose" />
           ) : (
-            <DocumentPreview client={client} resume={resume} document={document} />
+            <DocumentPreview store={store} client={client} resume={resume} document={document} />
           )}
         </div>
       );
@@ -192,6 +198,7 @@ export function ResumeDetailScreen({
       >
         {header.target ?? "No target role recorded"}
         {header.applied === null ? "" : ` - sent ${header.applied}`}
+        {header.template === undefined ? "" : ` - prints through ${header.template}`}
       </PageHeader>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

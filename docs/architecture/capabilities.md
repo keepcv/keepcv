@@ -220,13 +220,23 @@ preview and a version pinned months ago therefore render through one path.
 The template contract is built too, in `@keepcv/templates`: a template declares
 its settings as fields, ships its own stylesheet, and passes `isATemplate` over
 the shared fixture, which is what "is a template" means
-([`template-model.md`](template-model.md) #5). `ats-single-column` and
-`ats-left-heading` are the two, the resume screen picks between them and tunes
-whatever the chosen one declares, and the preview mounts it in an iframe of its
-own at the size it will print at.
+([`template-model.md`](template-model.md) #5). The preview mounts it in an
+iframe of its own at the size it will print at.
 
-A resume pins the template it chose along with everything else it says, so a
-template swapped later cannot change what an older version claims was sent.
+**Templates are data, and the user can write one.** One renderer and one
+stylesheet builder are driven by a `TemplateSpec` - values for a catalogue of
+knobs, plus optional CSS of your own - and `fromSpec` turns a spec into a
+`Template`. `ats-single-column` and `ats-left-heading` are two specs held in
+code; anything else is a `template` row, edited on a screen of its own with a
+live preview, offered to every resume beside the shipped two, and saved out as a
+file you can keep or share. The knobs are split so a resume adjusts only what
+makes it fit - page size, typeface, sizes, margins - and the design itself
+belongs to the template, which is what lets each one's compliance notes be
+derived rather than claimed.
+
+A resume pins the template it chose along with everything else it says, and a
+template the user wrote is pinned **whole**: it is a row they can edit, so an
+id alone would let a June edit rewrite what a March version claims was sent.
 
 Length budgeting is built on top of that. The frame measures the column the
 template just laid out and `paginate` in `@keepcv/core` fills pages from it,
@@ -245,7 +255,7 @@ bounded to an inflection, and a weighting for what the store already files work
 under. There is no model and no service call; see
 `application-structure.md` #8.
 
-What remains is **further templates**.
+What remains is **further shipped designs**, which are now specs rather than code.
 
 ### Export
 

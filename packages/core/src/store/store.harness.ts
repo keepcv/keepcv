@@ -77,6 +77,7 @@ export function emptyStore(): Store {
     resumeEntryPoints: [],
     resumeContactChannels: [],
     savedFilters: [],
+    templates: [],
   });
 }
 

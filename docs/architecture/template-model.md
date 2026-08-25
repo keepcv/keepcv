@@ -323,12 +323,50 @@ reporting a wrong page count rather than failing. What is left in a template's
 own files - which slots go where, what is beside what, what is a heading - is
 the whole of what distinguishes one from another.
 
-That is also the test of whether a second template is worth having. Two
-templates that differ only in values one of them could have declared as a
-`ConfigField` are one template and a setting; `ats-left-heading` earns its place
-because it puts the section heading in a grid cell beside the section's first
-entry rather than above it, and that carries its own settings - a gutter width
-and which edge the heading sits against - which are meaningless to the other.
+**A template is a design, and a design is data.** Both shipped templates had
+been code, and their two `render.tsx` files differed in exactly two places:
+whether the section heading sat above the section or in a column beside it, and
+whether the period sat at the right margin or ran on after the title. That is a
+vocabulary, not two programs. So there is one renderer and one stylesheet
+builder, `fromSpec(id, name, spec)` builds a `Template` from a `TemplateSpec`,
+and the shipped designs are two specs rather than two directories. A template
+the user writes is the same kind of thing as a shipped one - which is what makes
+"create a template" a row rather than a fork.
+
+The knobs live in one catalogue, split in two:
+
+- **`FIT_KNOBS`** - page size, typeface, body size, line height, margin, section
+  gap. These are what a resume adjusts to make itself fit, so they are the
+  `fields` a template hands the preview panel, with the spec's values as their
+  defaults.
+- **`DESIGN_KNOBS`** - accent, name size, header alignment and rule, heading
+  placement, column width, case, alignment and rule, date arrangement, point
+  marker. These are what the template *is*. `fromSpec` layers them over whatever
+  config arrives rather than under it, so a resume cannot move one.
+
+That split is what lets `complianceNotes` be **derived** from the spec rather
+than written by hand. A note claiming the headings sit beside the section is
+true of every resume a template prints only because no resume can move that
+knob; a note written by hand would go on being printed after the design stopped
+earning it.
+
+**A design may carry CSS of its own, and it may not fetch.** `extraCss` is
+appended last so it wins, and the schema refuses `@import`, any `url()` that is
+not a `data:` one, and the string `</style` - React does not escape the children
+of a `style` element. Those are refusals, not lint findings, because a
+stylesheet that fetches is a resume that prints differently offline. What the
+CSS then does to the layout *is* a lint finding: the linter reads the rendered
+file, so a user's `position: absolute` is reported exactly as a shipped
+template's would be.
+
+**A version pins the whole design, not the id.** A shipped template exists in
+every build, so naming it is enough. A template the user wrote is a row they can
+edit, so a manifest naming one would print differently the day after it was
+edited, and the version would stop saying what was sent. `captureManifest`
+therefore freezes the spec into `manifest.template.spec`, `renderManifest`
+carries it onto `ResumeDocument.meta.templateSpec`, and `resolveTemplate` uses
+the spec ahead of the id. `renderHtml(document)` stays a pure function of the
+document, which is what keeps the CLI and the browser producing the same bytes.
 
 **Side by side is a grid, never a float, a coordinate or a column count.** A
 multi-column flow splits a paragraph down the page and picks it up at the top of

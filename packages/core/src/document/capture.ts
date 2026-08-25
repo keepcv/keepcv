@@ -5,6 +5,7 @@ import type {
   ManifestEntry,
   ManifestPoint,
   ManifestSection,
+  ManifestTemplate,
   Organisation,
   Phrasing,
   ResumeManifest,
@@ -43,6 +44,23 @@ function tagLabels(store: Store, ids: readonly Uuid[]): string[] {
     return tag === undefined ? [] : [tag.label];
   });
   return labels.sort((a, b) => a.localeCompare(b));
+}
+
+// A template the user wrote is frozen whole. The shipped ones are in every
+// build, so naming one is enough and copying it would be a second source of
+// truth for a design nobody can edit anyway.
+function templateOf(
+  store: Store,
+  id: string | null,
+  config: Record<string, unknown>,
+): ManifestTemplate {
+  const held = store.templates.find((row) => row.id === id);
+  return {
+    id,
+    name: held?.name ?? null,
+    config,
+    spec: held?.spec ?? null,
+  };
 }
 
 function organisationOf(store: Store, id: Uuid | null): Organisation | null {
@@ -133,7 +151,7 @@ export function captureManifest(store: Store, resumeId: Uuid): ResumeManifest | 
       targetUrl: composed.resume.targetUrl,
       appliedOn: composed.resume.appliedOn,
     },
-    template: { id: composed.resume.templateId, config: composed.resume.templateConfig },
+    template: templateOf(store, composed.resume.templateId, composed.resume.templateConfig),
     profile: {
       fullName: profile.fullName,
       headline: profile.headline,

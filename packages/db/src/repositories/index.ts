@@ -12,6 +12,7 @@ import { createResumeVersionRepository } from "./resume-version.js";
 import { createSavedFilterRepository } from "./saved-filter.js";
 import { createStoreRepository } from "./store.js";
 import { createTagRepository } from "./tag.js";
+import { createTemplateRepository } from "./template.js";
 
 export function createRepositories(db: Database): Repositories {
   const phrasings = createPhrasingRepository(db);
@@ -20,6 +21,7 @@ export function createRepositories(db: Database): Repositories {
     organisations: createOrganisationRepository(db),
     customSections: createCustomSectionRepository(db),
     savedFilters: createSavedFilterRepository(db),
+    templates: createTemplateRepository(db),
     records: createCareerRecordRepository(db),
     points: createPointRepository(db, phrasings),
     phrasings,

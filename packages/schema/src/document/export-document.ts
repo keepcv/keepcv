@@ -21,6 +21,7 @@ import {
 import { resumeSnapshotSchema, resumeVersionSchema } from "../entities/resume-version.js";
 import { savedFilterSchema } from "../entities/saved-filter.js";
 import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
+import { templateSchema } from "../entities/template.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -50,6 +51,7 @@ export const storeSchema = z
     pointTags: z.array(pointTagSchema),
     // In the boot payload too, unlike revision history.
     drafts: z.array(draftSchema),
+    templates: z.array(templateSchema),
     resumes: z.array(resumeSchema),
     resumeSections: z.array(resumeSectionSchema),
     resumeEntries: z.array(resumeEntrySchema),

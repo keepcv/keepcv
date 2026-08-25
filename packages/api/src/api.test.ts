@@ -148,6 +148,9 @@ describe("the OpenAPI document", () => {
       "/v1/tags/{id}",
       "/v1/tags/{id}/merge",
       "/v1/tags/{id}/restore",
+      "/v1/templates",
+      "/v1/templates/{id}",
+      "/v1/templates/{id}/restore",
     ]);
     expect(Object.keys(document.paths["/v1/contact-channels/{id}"] ?? {}).sort()).toEqual([
       "delete",
