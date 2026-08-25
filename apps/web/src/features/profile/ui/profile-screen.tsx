@@ -435,8 +435,7 @@ function Summary({
   return (
     <Panel>
       <PanelHeader title="Professional summary">
-        A paragraph at the top of the resume. It gets variants and a history like any other wording,
-        so the short one for a full page is a variant rather than a rewrite.
+        A paragraph at the top of the resume, with variants and a history like any other wording.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {start.error === null ? null : <Failure error={start.error} />}

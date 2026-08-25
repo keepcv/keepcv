@@ -65,10 +65,8 @@ export function Landing() {
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-text-muted">
-            Most people keep everything they have ever done inside one document, so every trim to
-            fit a page is a delete they cannot undo. KeepCV holds all of it permanently. A resume is
-            a selection over that store plus a template - made, named and kept, without taking
-            anything away.
+            Every trim to fit one page is a delete you cannot undo. KeepCV keeps all of it, and a
+            resume becomes a selection over the store rather than the store itself.
           </p>
 
           <div className="mt-8 max-w-lg space-y-2">
@@ -77,9 +75,8 @@ export function Landing() {
             </p>
             <Command>keepcv serve</Command>
             <p className="text-xs leading-relaxed text-text-subtle">
-              It prints a URL carrying this session's token in the fragment, which no browser sends
-              to a server. Open that one - the app has no other way to get a token, and a new one is
-              minted per launch.
+              Open the URL it prints: the token is in the fragment, which no browser sends to a
+              server, and the app has no other way to get one.
             </p>
           </div>
         </div>
@@ -87,7 +84,7 @@ export function Landing() {
 
       <Section
         title="Nothing you wrote is ever destroyed"
-        lead="Archiving is the only removal there is. A record taken off a resume stays on every resume it already printed on, so nothing about an application you already sent changes underneath you."
+        lead="Archiving is the only removal there is, so nothing about an application you already sent changes underneath you."
       >
         <div className="grid gap-8 sm:grid-cols-[auto_1fr] sm:items-center">
           <Spot name="permanent" className="w-32" />
@@ -114,47 +111,39 @@ export function Landing() {
       >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Feature icon="point" title="Points, not bullets">
-            A point is one thing you did and what it moved. Write it once; each resume picks the
-            wording it wants, and the alternatives stay.
+            One thing you did, and what it moved. Each resume picks the wording it wants.
           </Feature>
           <Feature icon="variants" title="Wording with a history">
-            Editing never overwrites. Every phrasing keeps its revisions, and a resume pins the
-            exact one it was sent with.
+            Editing appends. A resume pins the exact revision it was sent with.
           </Feature>
           <Feature icon="resume" title="A resume is a selection">
-            Choose sections, entries and points, order them, and toggle anything off. Removing from
-            a resume never touches the store.
+            Choose, order and toggle. Taking something off never touches the store.
           </Feature>
           <Feature icon="match" title="Read the posting">
-            Paste a job posting and see which of its terms this resume answers, and which placed
-            points answer least. It runs on your machine; the posting never leaves it.
+            Paste a posting to see which of its terms you answer. It never leaves the machine.
           </Feature>
           <Feature icon="lint" title="Checked as sent">
-            The linter reads the rendered file, not a preview of it - columns, floats, images, a
-            missing email, a date with no year. The tier is derived from what it found.
+            The linter reads the file you send, not a preview of it, and derives the tier from what
+            it found.
           </Feature>
           <Feature icon="budget" title="A length budget">
-            The browser lays the page out and the app counts the pages, naming exactly what sits
-            past your page limit.
+            The browser lays it out, the app counts the pages and names what sits past your limit.
           </Feature>
           <Feature icon="history" title="Versions and snapshots">
-            History is captured automatically; star one to keep it. An old version can be sent
-            again, in the words it pinned, without restoring it first.
+            Captured automatically; star one to keep it. An old one can be sent again as it was.
           </Feature>
           <Feature icon="download" title="Leaves in your format">
-            One self-contained HTML file, PDF through the browser's own printer, or JSON Resume -
-            which says up front exactly what that format cannot carry.
+            One self-contained HTML file, PDF through the browser's printer, or JSON Resume.
           </Feature>
           <Feature icon="data" title="One readable file">
-            The whole store exports as JSON you can read, and the launcher keeps a mirror of it
-            beside your data directory.
+            The store exports as JSON you can read, mirrored beside your data directory.
           </Feature>
         </div>
       </Section>
 
       <Section
         title="It runs on your machine"
-        lead="One process serves the app and the API on a single origin, so there is no CORS surface and the client never learns where its store is. PostgreSQL is the only dialect, and locally that is PGlite - real Postgres in WebAssembly, no Docker."
+        lead="One process serves the app and the API on a single origin. PostgreSQL is the only dialect, and locally that is PGlite - real Postgres in WebAssembly, no Docker."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-line bg-surface p-4 shadow-card">

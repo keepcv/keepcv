@@ -182,8 +182,7 @@ export function SectionList({
   return (
     <PageBody>
       <PageHeader title="Sections" icon="section">
-        Headings of your own, for work the eleven built-in kinds have no name for. A record filed
-        under one prints there and nowhere else.
+        Headings of your own, for work the built-in kinds have no name for.
       </PageHeader>
 
       <Toolbar count={counted(rows.length, "section", "sections")}>
@@ -212,13 +211,12 @@ export function SectionList({
         >
           {archived
             ? "A section archived here keeps everything filed under it."
-            : "Add one and a record can be filed under it. Patents, licences, exhibitions - whatever the built-in kinds do not cover."}
+            : "Patents, licences, exhibitions - whatever the built-in kinds do not cover."}
         </Empty>
       ) : (
         <Panel>
           <PanelHeader title="Headings of your own">
-            Archiving a section leaves every record under it alone, so nothing about a resume that
-            already printed changes.
+            Every record under it is left alone.
           </PanelHeader>
           <ul>
             {rows.map((row) => (

@@ -144,9 +144,11 @@ export function Shell({
             hides what was being browsed. */}
       {drawer ? (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close the navigation"
+          {/* Presentational: the drawer already has a close button, and a second
+              control announcing the same name is one a screen reader reads
+              twice. */}
+          <div
+            aria-hidden
             onClick={() => {
               setOpenedAt(null);
             }}

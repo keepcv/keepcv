@@ -156,8 +156,7 @@ function Nothing({ filters }: { filters: RecordFilters }) {
         </ButtonLink>
       }
     >
-      A record is a job, a degree, a project, a talk - anything you might one day want on a resume.
-      Points attach to it afterwards.
+      A job, a degree, a project, a talk. Points attach to it afterwards.
     </Empty>
   );
 }
@@ -188,8 +187,7 @@ export function RecordList({
           </ButtonLink>
         }
       >
-        The permanent record. A resume is a selection over this, so nothing filed here is ever
-        trimmed away to make one fit.
+        The permanent record. Nothing filed here is trimmed away to make a resume fit.
       </PageHeader>
 
       <Toolbar count={counted(total, "record", "records")}>

@@ -38,8 +38,7 @@ export function RecordFields({
   return (
     <Panel>
       <PanelHeader title="Fields">
-        Anything this kind of record carries that the form above has no box for. Kept as a value
-        with a name rather than folded into the title, so it stays queryable.
+        Anything the form above has no box for, kept as a value with a name.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {fields.length === 0 ? null : (

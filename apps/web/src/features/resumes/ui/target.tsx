@@ -222,8 +222,7 @@ export function TargetScreen({
         <Panel>
           <PanelBody>
             <p className="text-sm text-text-muted">
-              Paste the posting above and this resume is measured against it: which of the terms it
-              leans on you answer, and which placed points answer none of them.
+              Which of the terms the posting leans on you answer, and which points answer none.
             </p>
           </PanelBody>
         </Panel>
@@ -238,8 +237,7 @@ export function TargetScreen({
                 </span>
               }
             >
-              Ranked by how much the posting leans on each term. What the store already files work
-              under counts for more than a word said once.
+              Ranked by how much the posting leans on each term.
             </PanelHeader>
             <PanelBody className="space-y-3">
               {reading.missing.length === 0 ? null : (

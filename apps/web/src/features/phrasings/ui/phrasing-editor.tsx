@@ -328,8 +328,8 @@ export function PhrasingEditor({
   return (
     <Panel>
       <PanelHeader title={TITLES[subject]}>
-        Kept as a draft while you type and committed when you stop. Editing appends to the history
-        rather than overwriting it, so a resume you sent in March goes on saying what it said.
+        Kept as a draft while you type, committed when you stop. Editing appends rather than
+        overwriting.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {wordings.map((phrasing) => (
