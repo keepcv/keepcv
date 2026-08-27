@@ -274,6 +274,11 @@ sections with nowhere to go - rather than being a standing list of caveats
 nobody reads. It is shown before the download, not after, and nothing with a
 count of zero appears in it.
 
+`keepcv render --format jsonresume` is the same pair from the terminal, for
+piping into whatever else the user runs. There is no lint report on that
+branch: nothing was rendered to read back, so the linter has no bytes to have
+an opinion about, and the loss report is what belongs there instead.
+
 There is no `?format=jsonresume` on `/v1/export`: the native export is a
 whole-store read and belongs to the server, but a resume in somebody else's
 format is a pure function of a document the caller is already holding.

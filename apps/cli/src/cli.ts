@@ -4,7 +4,7 @@ import { AUTH_MODES, type AuthMode, SESSION_TOKEN_HEADER } from "@keepcv/api";
 import { type AuthSetting, readAuth, writePassword } from "./auth.js";
 import { backupStore, MIRROR_NAME, restoreStore } from "./mirror.js";
 import { readPiped, readSecret } from "./prompt.js";
-import { listing, renderResume, verdict } from "./render.js";
+import { costs, FORMATS, type Format, listing, renderResume, verdict } from "./render.js";
 import {
   DEFAULT_DATA_DIR,
   DEFAULT_HOST,
@@ -40,6 +40,7 @@ const USAGE = `
 
   keepcv render [resume]      write a resume to a file it can be sent as
 
+    --format <name>           ${FORMATS.join(" | ")}, default html
     --out <path>              default: the resume's own name, here
     --data-dir <path>         default ${DEFAULT_DATA_DIR}
 
@@ -181,16 +182,29 @@ async function status(dataDir: string): Promise<number> {
 
 async function render(
   dataDir: string,
-  out: string | undefined,
+  values: { out?: string | undefined; format?: string | undefined },
   named: string | undefined,
 ): Promise<number> {
-  const result = await renderResume({ dataDir, resume: named, out });
-  if ("wrote" in result) {
-    process.stdout.write(`\n  Wrote ${result.wrote}\n\n${verdict(result.report)}\n`);
-    return 0;
+  const asked = values.format ?? "html";
+  if (!FORMATS.some((format) => format === asked)) {
+    process.stderr.write(`\n  ${asked} is not a format. Choose one of: ${FORMATS.join(", ")}\n\n`);
+    return 1;
   }
-  process.stderr.write(listing(result));
-  return 1;
+
+  const result = await renderResume({
+    dataDir,
+    resume: named,
+    out: values.out,
+    format: asked as Format,
+  });
+  if (!("wrote" in result)) {
+    process.stderr.write(listing(result));
+    return 1;
+  }
+
+  const said = "report" in result ? verdict(result.report) : costs(result.loss);
+  process.stdout.write(`\n  Wrote ${result.wrote}\n\n${said}\n`);
+  return 0;
 }
 
 async function backup(dataDir: string, out: string | undefined): Promise<number> {
@@ -276,6 +290,7 @@ function readArgs(argv: string[]) {
       "proxy-from": { type: "string" },
       "proxy-user": { type: "string" },
       out: { type: "string" },
+      format: { type: "string" },
       from: { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean" },
@@ -294,7 +309,7 @@ async function perform(command: string, args: Args): Promise<number> {
   const dataDir = values["data-dir"] ?? DEFAULT_DATA_DIR;
 
   if (command === "status") return await status(dataDir);
-  if (command === "render") return await render(dataDir, values.out, positionals[1]);
+  if (command === "render") return await render(dataDir, values, positionals[1]);
   if (command === "backup") return await backup(dataDir, values.out);
   if (command === "restore") return await restore(dataDir, values.from);
   if (command === "set-password") return await setPassword(dataDir);

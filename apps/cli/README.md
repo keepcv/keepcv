@@ -144,8 +144,22 @@ it found: an email address nothing can extract, a heading no system looks for, a
 date with no year in it, or a template that moves the words around on the page.
 It is a report, not a gate - the file is already written.
 
+It also writes the same resume as [JSON Resume](https://jsonresume.org), for
+piping into whatever else you run:
+
+```sh
+npx keepcv render "Staff engineer" --format jsonresume
+```
+
+That format has a fixed set of lists and one string per highlight, so some of
+what your store holds has nowhere to go in it. It counts what that costs
+**against this resume** - three metrics, one section with nowhere to file it -
+and says so after writing the file. Anything at zero is left out, because a
+warning printed every time is one nobody reads.
+
 | Option | Default |
 |---|---|
+| `--format <name>` | `html`; `jsonresume` is the other one |
 | `--out <path>` | the resume's own name, in the current directory |
 | `--data-dir <path>` | `~/.keepcv` |
 

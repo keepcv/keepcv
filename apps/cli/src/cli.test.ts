@@ -73,6 +73,13 @@ describe("what keepcv answers before it opens anything", () => {
     expect(await keepcv("serve", "--port", "http")).toMatchObject({ code: 1 });
   });
 
+  it("refuses a format it does not write, before opening a store", async () => {
+    const said = await keepcv("render", "--format", "docx");
+    expect(said.code).toBe(1);
+    expect(said.err).toContain("docx is not a format");
+    expect(said.err).toContain("jsonresume");
+  });
+
   it("asks for the file a restore reads", async () => {
     const said = await keepcv("restore");
     expect(said.code).toBe(1);

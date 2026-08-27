@@ -337,7 +337,10 @@ nobody can write to and a file that is not a backup are all things the user did.
 `openStore` is the one place a store is opened, so a half-opened PGlite is
 closed on the way out rather than left holding the directory. `keepcv status`
 reads `overview()` - the same selector the app's store overview reads - so the
-nudges are not derived a second time for the terminal.
+nudges are not derived a second time for the terminal. `keepcv render --format
+jsonresume` is `toJsonResume` with `lossOf` printed after it, which is what the
+download panel already does: the loss is counted against this resume, so a
+format that costs nothing says nothing.
 
 **A narrowed list can be kept under a name.** `saved_filter` stores what the
 narrowing means rather than the vocabulary of the control that made it, so the
