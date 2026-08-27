@@ -1,17 +1,19 @@
 import { newUuid } from "@keepcv/core";
-import type { Store, TemplateSpec } from "@keepcv/schema";
+import type { Store, TemplateFile, TemplateSpec } from "@keepcv/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { SelectField, TextField } from "../../../components/ui/field.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
+import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
 import { counted } from "../../../lib/label.js";
 import { useCreateTemplate, useSetTemplateArchived } from "../api/use-templates.js";
+import { readDesign } from "../model/design-file.js";
 import { type TemplateRow, templateRows } from "../model/template-rows.js";
 import { TemplateThumbnail } from "./thumbnail.js";
 
@@ -20,80 +22,130 @@ function specOf(row: TemplateRow): TemplateSpec {
   return row.row?.spec ?? { settings: { ...row.template.defaultConfig }, extraCss: "" };
 }
 
-// One control rather than a copy button on every row: the thing being chosen is
-// which design to start from, and a select says that in one place.
-// `template_name_unique` covers archived rows, so the clash is named here rather
-// than left to the store to refuse.
+// One control rather than a copy button on every row and a second one for
+// loading a file: both answer "which design does this start from", so they are
+// two sources for one form. `template_name_unique` covers archived rows, so the
+// clash is named here rather than left to the store to refuse.
 function NewDesign({
   store,
   client,
   rows,
+  onDone,
 }: {
   store: Store;
   client: ApiClient;
   rows: TemplateRow[];
+  onDone: () => void;
 }) {
   const create = useCreateTemplate(client);
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const fileId = useId();
   const [name, setName] = useState("");
   const [basedOn, setBasedOn] = useState(rows[0]?.id ?? "");
-
-  if (!open) {
-    return (
-      <Button
-        tone="primary"
-        icon="add"
-        expanded={false}
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        New design
-      </Button>
-    );
-  }
+  const [loaded, setLoaded] = useState<TemplateFile | undefined>(undefined);
+  const [problem, setProblem] = useState<string | undefined>(undefined);
 
   const clash = store.templates.some((row) => row.name === name.trim());
   const from = rows.find((row) => row.id === basedOn);
+  const spec = loaded?.spec ?? (from === undefined ? undefined : specOf(from));
 
   const start = () => {
-    if (from === undefined) return;
+    if (spec === undefined) return;
     const id = newUuid();
-    create.mutate({ id, name: name.trim(), spec: specOf(from) });
-    setOpen(false);
-    setName("");
+    create.mutate({ id, name: name.trim(), spec });
+    onDone();
     void navigate({ to: "/templates/$templateId", params: { templateId: id } });
   };
 
-  // A row, not a stacked card: this replaces the control it opened from, and the
-  // page header's action slot is a narrow right-aligned strip.
+  const read = (file: File) => {
+    setProblem(undefined);
+    void file.text().then((body) => {
+      const answer = readDesign(body);
+      if ("problem" in answer) {
+        setProblem(answer.problem);
+        return;
+      }
+      setLoaded(answer.design);
+      // Only when nothing has been typed: a name the user chose outranks the
+      // one the file was saved under.
+      setName((typed) => (typed.trim() === "" ? answer.design.name : typed));
+    });
+  };
+
   return (
-    <div className="flex flex-wrap items-end justify-end gap-2">
-      <TextField label="Name" value={name} placeholder="Navy headings" onChange={setName} />
-      <SelectField
-        label="Based on"
-        options={rows.map((row) => ({ value: row.id, label: row.name }))}
-        value={basedOn}
-        onChange={setBasedOn}
-      />
-      <Button tone="primary" icon="confirm" disabled={name.trim() === "" || clash} onClick={start}>
-        Start it
-      </Button>
-      <Button
-        tone="ghost"
-        onClick={() => {
-          setOpen(false);
-        }}
-      >
-        Cancel
-      </Button>
-      {clash ? (
-        <p className="w-full text-right text-xs text-caution-text">
-          A design of yours is already called that.
-        </p>
-      ) : null}
-    </div>
+    <Panel>
+      <PanelHeader title="Start a design">
+        From one that is already here, or from a file somebody saved out. It is read in this tab and
+        never uploaded.
+      </PanelHeader>
+      <PanelBody className="max-w-xl space-y-3">
+        <TextField
+          label="Name"
+          value={name}
+          placeholder="Navy headings"
+          onChange={setName}
+          error={clash ? "A design of yours is already called that." : undefined}
+        />
+
+        {loaded === undefined ? (
+          <>
+            <SelectField
+              label="Based on"
+              options={rows.map((row) => ({ value: row.id, label: row.name }))}
+              value={basedOn}
+              onChange={setBasedOn}
+            />
+            <div className="space-y-1">
+              <label htmlFor={fileId} className="block text-xs font-medium text-text-muted">
+                Or load one from a file
+              </label>
+              <input
+                id={fileId}
+                type="file"
+                accept=".json,application/json"
+                className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file !== undefined) read(file);
+                }}
+              />
+              {problem === undefined ? null : (
+                <p className="text-xs text-critical-text">{problem}</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
+            <span>
+              Read from a file, saved as <span className="text-text">{loaded.name}</span>.
+            </span>
+            <Button
+              size="sm"
+              tone="ghost"
+              onClick={() => {
+                setLoaded(undefined);
+              }}
+            >
+              Use one from here instead
+            </Button>
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <Button
+            tone="primary"
+            icon="confirm"
+            disabled={name.trim() === "" || clash || spec === undefined}
+            onClick={start}
+          >
+            Start it
+          </Button>
+          <Button tone="ghost" onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -147,6 +199,7 @@ export function TemplateList({
   client: ApiClient;
   archived: ArchivedFilter;
 }) {
+  const [starting, setStarting] = useState(false);
   const rows = templateRows(store, archived);
   const startable = templateRows(store, "exclude");
 
@@ -155,10 +208,34 @@ export function TemplateList({
       <PageHeader
         title="Templates"
         icon="template"
-        actions={<NewDesign store={store} client={client} rows={startable} />}
+        actions={
+          starting ? null : (
+            <Button
+              tone="primary"
+              icon="add"
+              expanded={false}
+              onClick={() => {
+                setStarting(true);
+              }}
+            >
+              New design
+            </Button>
+          )
+        }
       >
         What a resume prints through. Yours are kept in the store and travel in your export.
       </PageHeader>
+
+      {starting ? (
+        <NewDesign
+          store={store}
+          client={client}
+          rows={startable}
+          onDone={() => {
+            setStarting(false);
+          }}
+        />
+      ) : null}
 
       <Toolbar count={counted(rows.length, "design", "designs")}>
         <Segmented label="Archived">

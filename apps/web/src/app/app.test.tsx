@@ -56,6 +56,15 @@ function press(name: string): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+// A file input holds a FileList rather than a value, which is why this is not
+// `type`. What follows is read asynchronously, so callers wait on the screen.
+function load(label: string, contents: unknown): void {
+  const body = JSON.stringify(contents);
+  fireEvent.change(screen.getByLabelText(label), {
+    target: { files: [new File([body], "design.json", { type: "application/json" })] },
+  });
+}
+
 // A template renders into a document of its own, so what printed is queried
 // through the frame rather than through the app around it.
 async function printed(): Promise<ReturnType<typeof within>> {
@@ -1723,6 +1732,44 @@ describe("designs of your own", () => {
     });
   });
 
+  // The file is read in the tab and the store is asked to write a design, so a
+  // design travels between two stores without either one reaching the other.
+  it("starts one from a design saved out as a file", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/templates");
+
+    await screen.findByText("Single column");
+    press("New design");
+    load("Or load one from a file", {
+      name: "Navy headings",
+      spec: { settings: { accent: "navy" }, extraCss: ".kc-name { letter-spacing: 0; }" },
+    });
+
+    // The name comes off the file, so a design that was named once stays named.
+    expect(await screen.findByLabelText<HTMLInputElement>("Name")).toHaveValue("Navy headings");
+    press("Start it");
+
+    await waitFor(() => {
+      expect(posted(server)).toHaveLength(1);
+    });
+    expect(posted(server).at(-1)).toMatchObject({
+      name: "Navy headings",
+      spec: { settings: { accent: "navy" } },
+    });
+  });
+
+  it("turns away a file that is not a design, and writes nothing", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/templates");
+
+    await screen.findByText("Single column");
+    press("New design");
+    load("Or load one from a file", { basics: { name: "Ada" } });
+
+    expect(await screen.findByText(/is not a design/)).toBeInTheDocument();
+    expect(posted(server)).toHaveLength(0);
+  });
+
   // `template_name_unique` covers archived rows, so the clash is named here
   // rather than left to the store to refuse after the form has been filled in.
   it("says so before writing when the name is already taken", async () => {
@@ -1777,6 +1824,21 @@ describe("designs of your own", () => {
     expect(await screen.findByText(/may not fetch anything/)).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 800));
     expect(patchedBodies(server)).toHaveLength(0);
+  });
+
+  // A select holding a value no option carries reads as a resume printing
+  // through some other design, and moving off it cannot be undone.
+  it("keeps offering an archived design to the resume still printing with it", async () => {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    const template = addTemplate(store, "Navy headings", {}, { archivedAt: EPOCH_ISO });
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    resume.templateId = template.id;
+    mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
+
+    const picker = await screen.findByLabelText<HTMLSelectElement>("Template");
+    expect(picker.value).toBe(template.id);
+    expect([...picker.options].map((option) => option.text)).toContain("Navy headings (archived)");
   });
 
   it("offers a design of yours to a resume, and links through to it", async () => {

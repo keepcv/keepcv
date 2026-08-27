@@ -42,7 +42,16 @@ export const templateInputSchema = templateSchema.omit({
 
 export const templatePatchSchema = templateInputSchema.omit({ id: true }).partial();
 
+// A design as a file rather than a row: no id, no timestamps and no owner,
+// because none of those mean anything in the store it lands in. Read by the
+// download and by the reader, so a file this writes is a file this accepts.
+export const templateFileSchema = z.object({
+  name: z.string().min(1),
+  spec: templateSpecSchema,
+});
+
 export type TemplateSpec = z.infer<typeof templateSpecSchema>;
+export type TemplateFile = z.infer<typeof templateFileSchema>;
 export type StoredTemplate = z.infer<typeof templateSchema>;
 export type StoredTemplateInput = z.infer<typeof templateInputSchema>;
 export type StoredTemplatePatch = z.infer<typeof templatePatchSchema>;

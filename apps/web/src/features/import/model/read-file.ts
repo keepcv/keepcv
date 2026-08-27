@@ -1,7 +1,7 @@
 import type { ReactiveResume, RenderCvFile } from "@keepcv/interop";
 import { fromJsonResume, fromLines, fromReactiveResume, fromRenderCv } from "@keepcv/interop";
 import type { Intake } from "@keepcv/schema";
-import { intakeSchema } from "@keepcv/schema";
+import { intakeSchema, templateFileSchema } from "@keepcv/schema";
 
 export class UnreadableFileError extends Error {}
 
@@ -44,6 +44,11 @@ function readerFor(named: Record<string, unknown>): (value: object) => Intake {
   if ("schemaVersion" in named) {
     throw new UnreadableFileError(
       "That is a whole-store backup. Load it from Your data instead, which puts every row back exactly as it was.",
+    );
+  }
+  if (templateFileSchema.safeParse(named).success) {
+    throw new UnreadableFileError(
+      "That is a design, not a resume. Start a design from it on Templates instead.",
     );
   }
   // Before the JSON Resume check, which `basics` alone would also answer.

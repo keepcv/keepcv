@@ -359,6 +359,16 @@ CSS then does to the layout *is* a lint finding: the linter reads the rendered
 file, so a user's `position: absolute` is reported exactly as a shipped
 template's would be.
 
+**A design travels as a file, and the file is a spec with a name on it.**
+`templateFileSchema` is `{ name, spec }` - no id, no timestamps and no owner,
+because none of those mean anything in the store it lands in. The download and
+the reader both name that schema, so a file this writes is a file this accepts,
+and the reading happens in the tab for the reason a resume's does: a design is
+small, and the store it is going into is the only thing that has to see it. It
+arrives as an ordinary create, so nothing new reaches the API, and the stylesheet
+refusals apply on the way in - a design cannot smuggle past a schema the editor
+enforces just by being written somewhere else.
+
 **A version pins the whole design, not the id.** A shipped template exists in
 every build, so naming it is enough. A template the user wrote is a row they can
 edit, so a manifest naming one would print differently the day after it was

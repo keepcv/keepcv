@@ -1139,6 +1139,21 @@ would be lying about what a resume can name. Each row carries a thumbnail that
 is **the shape of the design, not a rendering of it**: a list of ten renderings
 would be ten iframes laying out ten resumes to fill a box an inch wide.
 
+**Starting a design is one control with two sources.** Both "copy the one I am
+looking at" and "load the one somebody sent me" answer the same question - which
+design does this start from - so they are two inputs to one form rather than two
+buttons, and the name, the clash check and the create path are written once. The
+form is a bounded block below the page header rather than a row inside it: a file
+input does not fit a narrow right-aligned strip. A file that is not a design is
+turned away with the reason, and a file whose stylesheet the schema refuses is
+turned away with the refusal's own message, because a design edited by hand needs
+to be told what to take out.
+
+The archived filter has one exception on the resume's picker: a design the
+resume is already printing with stays in the list, marked, even once archived. A
+select holding a value no option carries reads as a resume using some other
+design, and moving off it is a click with no way back.
+
 The editor is the resume workspace's shape - controls on the left, the preview on
 the right, each scrolling on its own - over `FIXTURE_DOCUMENT` rather than over
 one of the user's resumes. That is the same fixture `isATemplate` runs against,

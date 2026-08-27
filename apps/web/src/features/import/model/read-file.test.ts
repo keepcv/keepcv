@@ -53,6 +53,14 @@ describe("deciding which reader a file needs", () => {
     );
   });
 
+  // A design is the other thing this product writes as JSON, and the screen
+  // that reads one is not this one.
+  it("sends a design to the screen that starts a design from it", async () => {
+    await expect(
+      readFile(json({ name: "Navy headings", spec: { settings: {}, extraCss: "" } })),
+    ).rejects.toThrow(/design, not a resume/);
+  });
+
   it("refuses a file that is no format it reads", async () => {
     await expect(readFile(file("just some words", "notes.txt"))).rejects.toThrow(
       UnreadableFileError,
