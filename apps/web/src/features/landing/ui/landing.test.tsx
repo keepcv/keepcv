@@ -9,7 +9,7 @@ describe("the landing page", () => {
     render(<Landing />);
 
     expect(screen.getByText("keepcv serve")).toBeInTheDocument();
-    expect(screen.getByText(/token in the fragment/)).toBeInTheDocument();
+    expect(screen.getByText(/token is in the fragment/)).toBeInTheDocument();
   });
 
   it("leads with the problem the store exists to solve", () => {
@@ -19,7 +19,7 @@ describe("the landing page", () => {
       /Your career history is not a resume file/,
     );
     expect(
-      screen.getByText(/every trim to fit a page is a delete they cannot undo/),
+      screen.getByText(/every trim to fit one page is a delete you cannot undo/i),
     ).toBeInTheDocument();
   });
 

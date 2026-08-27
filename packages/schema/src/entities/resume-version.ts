@@ -11,6 +11,7 @@ import { recordFieldSchema } from "./record-field.js";
 import { recordLinkSchema } from "./record-link.js";
 import { sectionKindSchema, sectionLayoutSchema } from "./resume.js";
 import { standardFields } from "./standard-fields.js";
+import { templateSpecSchema } from "./template.js";
 
 export const MANIFEST_SCHEMA_VERSION = 1;
 
@@ -76,7 +77,11 @@ export const manifestTargetSchema = z
 export const manifestTemplateSchema = z
   .object({
     id: z.string().nullable(),
+    name: z.string().nullable().default(null),
     config: z.record(z.string(), z.unknown()),
+    // The whole design, for a template the user wrote: an id alone points at a
+    // row they can edit, and editing it would rewrite what this version says.
+    spec: templateSpecSchema.nullable().default(null),
   })
   .meta({ id: "ManifestTemplate", title: "Pinned template" });
 
@@ -84,7 +89,7 @@ export const resumeManifestSchema = z
   .object({
     schemaVersion: z.number().int().positive(),
     resume: manifestTargetSchema,
-    template: manifestTemplateSchema.default({ id: null, config: {} }),
+    template: manifestTemplateSchema.default({ id: null, name: null, config: {}, spec: null }),
     profile: manifestProfileSchema,
     sections: z.array(manifestSectionSchema),
   })

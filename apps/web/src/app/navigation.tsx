@@ -195,6 +195,14 @@ export function Navigation({
           count={live(store.resumes).length}
           collapsed={collapsed}
         />
+        <NavLink
+          to="/templates"
+          search={{ archived: "exclude" }}
+          icon="template"
+          label="Templates"
+          count={live(store.templates).length}
+          collapsed={collapsed}
+        />
       </Group>
 
       <Group title="System" collapsed={collapsed}>

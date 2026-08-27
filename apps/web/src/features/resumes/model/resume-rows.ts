@@ -2,6 +2,7 @@ import { composition } from "@keepcv/core";
 import type { Resume, Store, Uuid } from "@keepcv/schema";
 import { type ArchivedFilter, matchesArchived } from "../../../lib/archived.js";
 import { formatPartialDate } from "../../../lib/partial-date.js";
+import { templateNamed } from "../../templates/model/template-rows.js";
 
 export interface ResumeRow {
   id: Uuid;
@@ -14,6 +15,7 @@ export interface ResumeRow {
   // Placed but toggled off, which is the state a selection exists to hold: a
   // resume showing three of eleven points has kept the other eight.
   hidden: number;
+  template: string | undefined;
   isArchived: boolean;
 }
 
@@ -39,6 +41,7 @@ export function toResumeRow(store: Store, resume: Resume): ResumeRow {
       sections.filter((row) => !row.section.isVisible).length +
       entries.filter((row) => !row.entry.isVisible).length +
       points.filter((row) => !row.entryPoint.isVisible).length,
+    template: templateNamed(store, resume.templateId),
     isArchived: resume.archivedAt !== null,
   };
 }

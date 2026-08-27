@@ -153,6 +153,8 @@ CRUD   /v1/saved-filters               ?subject=&archived=
 CRUD   /v1/tags                        ?archived=
 POST   /v1/tags/:id/merge              { expectedUpdatedAt, intoTagId }
 
+CRUD   /v1/templates                   ?archived=   the user's designs; the
+                                                    shipped ones are in the build
 CRUD   /v1/resumes                     ?archived=
 CRUD   /v1/resume-sections             ?resumeId=&archived=
 CRUD   /v1/resume-entries              ?resumeId=&resumeSectionId=&archived=

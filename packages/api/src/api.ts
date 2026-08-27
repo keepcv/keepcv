@@ -16,6 +16,7 @@ import { resumeRoutes } from "./routes/resumes.js";
 import { savedFilterRoutes } from "./routes/saved-filters.js";
 import { storeRoutes } from "./routes/store.js";
 import { tagRoutes } from "./routes/tags.js";
+import { templateRoutes } from "./routes/templates.js";
 import { versionRoutes } from "./routes/versions.js";
 
 export const OPENAPI_PATH = "/v1/openapi.json";
@@ -85,6 +86,7 @@ export function createApi(options: ApiOptions) {
     .route("/", organisationRoutes(options.unitOfWork))
     .route("/", customSectionRoutes(options.unitOfWork))
     .route("/", savedFilterRoutes(options.unitOfWork))
+    .route("/", templateRoutes(options.unitOfWork))
     .route("/", recordRoutes(options.unitOfWork))
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))

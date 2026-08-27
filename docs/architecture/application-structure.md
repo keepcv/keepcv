@@ -1038,7 +1038,21 @@ list already used for naming a new resume.
 **A repeated row action is a glyph, and it keeps the label that names its row.**
 `Hide` and `Remove` spelled out on every section, entry and point put two words
 of chrome beside every line of the user's own content. Each still passes `label`,
-because `Up` on its own tells a screen reader nothing about which row moved.
+because `Up` on its own tells a screen reader nothing about which row moved. The
+resume list is the same case one size up: `Start one from this` was a labelled
+button in a block of its own under every row, so a list of twelve resumes was a
+list of twelve buttons. It is a `copy` glyph on the row.
+
+**One action, one control, even when it could be offered per row.** The
+templates screen starts a new design from an existing one; the obvious shape is
+a copy button on each row, which is the mistake above before it is made. The
+thing being chosen is *which* design to start from, so it is a select inside the
+one `New design` form.
+
+**Two controls doing one thing may not share a name.** The mobile navigation
+sheet had a scrim and a close button both labelled `Close the navigation`, which
+a screen reader reads out twice and `getByRole` finds two of. The scrim is
+presentational; the labelled button is the control.
 
 Beware `aria-*` passed into a component that does not forward it: TypeScript does
 not excess-check a hyphenated JSX attribute, so `aria-expanded` on `Button`
@@ -1100,3 +1114,35 @@ The landing page is also the marketing surface, and it names the things that
 were otherwise buried a level or two inside the app: the linter, the length
 budget, reading a posting, version history, phrasing variants, and what JSON
 Resume cannot carry.
+
+### 10.8 A panel says one thing
+
+Every panel had grown a two- or three-sentence blurb explaining not just what it
+holds but why the design is the way it is, and thirty-six of them across the app
+add up to a wall the user reads past rather than through. The argument belongs in
+this directory; the panel gets the clause that tells the user what to do. So
+"Saved as you add them. A number is what a reader remembers, and removing one
+archives it, because it is what a resume printed last March" became "Saved as you
+add them. Removing one archives it." The rule is the one already applied to code
+comments: delete it, and ask what the reader does wrong.
+
+### 10.9 The templates screen
+
+A design is a row, so it gets the same shape as every other owned collection: a
+browse screen with the archived filter and the count on the toolbar, and a
+detail screen for the one being edited. Two things are particular to it.
+
+The list shows the shipped designs alongside the user's, marked `Built in` and
+carrying no archive control - they are in every build rather than in the store,
+so there is nothing to archive and nothing to edit, but a picker that hid them
+would be lying about what a resume can name. Each row carries a thumbnail that
+is **the shape of the design, not a rendering of it**: a list of ten renderings
+would be ten iframes laying out ten resumes to fill a box an inch wide.
+
+The editor is the resume workspace's shape - controls on the left, the preview on
+the right, each scrolling on its own - over `FIXTURE_DOCUMENT` rather than over
+one of the user's resumes. That is the same fixture `isATemplate` runs against,
+so what the editor shows is what the conformance suite checks. Writes are
+debounced exactly as the resume's own settings are, and a spec whose `extraCss`
+the schema would refuse is not sent at all: the message appears under the box and
+the debounce declines to fire.

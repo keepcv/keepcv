@@ -1,4 +1,4 @@
-import { CAREER_RECORD_KINDS, type Store } from "@keepcv/schema";
+import { CAREER_RECORD_KINDS, type Store, templateSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
@@ -66,12 +66,39 @@ describe("compile", () => {
     const manifest = captureManifest(store, resume.id);
     expect(manifest?.template).toEqual({
       id: "ats-single-column",
+      name: null,
       config: { pageSize: "letter" },
+      // A shipped design is in every build, so naming it is enough.
+      spec: null,
     });
 
     const doc = compile(store, resume.id, { generatedAt: AT });
     expect(doc?.meta.templateId).toBe("ats-single-column");
     expect(doc?.meta.templateConfig).toEqual({ pageSize: "letter" });
+    expect(doc?.meta.templateSpec).toBeUndefined();
+  });
+
+  // A design the user wrote is a row they can edit, so a version naming one
+  // would print differently after an edit and stop saying what was sent.
+  it("freezes a design the user wrote, rather than pointing at the row", () => {
+    const { store, resume } = aComposedStore();
+    const spec = { settings: { accent: "navy" }, extraCss: "" };
+    store.templates.push(
+      templateSchema.parse({
+        id: newUuid(),
+        name: "Navy headings",
+        spec,
+        createdAt: AT,
+        updatedAt: AT,
+        archivedAt: null,
+      }),
+    );
+    resume.templateId = store.templates[0]?.id ?? null;
+
+    const doc = compile(store, resume.id, { generatedAt: AT });
+
+    expect(doc?.meta.templateName).toBe("Navy headings");
+    expect(doc?.meta.templateSpec).toEqual(spec);
   });
 
   it("names no template when the resume chose none", () => {

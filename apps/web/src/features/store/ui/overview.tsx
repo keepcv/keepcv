@@ -157,8 +157,7 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
           </ButtonLink>
         }
       >
-        This is the permanent record, not a resume. Add everything you have done; deciding what fits
-        on one page happens later, and nothing you write here is ever trimmed away.
+        The permanent record, not a resume. What fits on one page is decided later.
       </Empty>
     );
   }

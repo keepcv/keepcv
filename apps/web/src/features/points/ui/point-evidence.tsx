@@ -70,8 +70,7 @@ export function PointEvidence({
         title="What backs it up"
         aside={<Badge tone="warning">Never leaves the store</Badge>}
       >
-        The link, the note or the file that proves this. No resume can carry it and no template can
-        reach it - it is here so you can answer the question in an interview.
+        What proves this. No resume can carry it and no template can reach it.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? null : (

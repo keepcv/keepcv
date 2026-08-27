@@ -39,6 +39,7 @@ import {
   resumeVersion,
   savedFilter,
   tag,
+  template,
 } from "../schema/index.js";
 import { owned } from "./owned-row.js";
 import { manifestHashOf } from "./resume-version.js";
@@ -122,6 +123,7 @@ export function createStoreRepository(
       resumeEntryPoints: await repositories.resumes.listEntryPoints(everything),
       resumeContactChannels: await repositories.resumes.listContactChannels(),
       savedFilters: await repositories.savedFilters.list(everything),
+      templates: await repositories.templates.list(everything),
     };
   }
 
@@ -284,6 +286,11 @@ export function createStoreRepository(
 
       await loadPoints(store, ownerId);
 
+      // Before the resumes, which name one.
+      await insertAll(
+        template,
+        store.templates.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
       await insertAll(
         resume,
         store.resumes.map((row) => ({ ...row, ...standardRow(row, ownerId) })),

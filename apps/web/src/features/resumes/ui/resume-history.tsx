@@ -221,8 +221,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
 
           {rows.length === 0 ? (
             <Empty title="Versions are what a resume said">
-              Every export saves one, and you can save one by hand. A version pins the wording, the
-              dates and the titles, so editing them later cannot rewrite what you sent.
+              Every export saves one. A version pins the wording, the dates and the titles.
             </Empty>
           ) : (
             <ol aria-label="Versions of this resume" className="space-y-1">

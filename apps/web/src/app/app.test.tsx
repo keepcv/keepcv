@@ -22,6 +22,7 @@ import {
   addSavedFilter,
   addSection,
   addTag,
+  addTemplate,
   aFilledStore,
   emptyStore,
 } from "../store.harness.js";
@@ -1398,8 +1399,9 @@ describe("a resume and its template", () => {
     });
   });
 
-  // Carrying the old keys across hands the new template fields it does not have.
-  it("switches template and leaves the settings the old one owned behind", async () => {
+  // An override is a difference from the old design's defaults, so carrying it
+  // across would mean something else against the new one.
+  it("switches template and drops the settings held against the old one", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
@@ -1413,8 +1415,20 @@ describe("a resume and its template", () => {
       expectedUpdatedAt: expect.any(String),
       patch: { templateId: "ats-left-heading", templateConfig: {} },
     });
-    expect(await screen.findByLabelText("Heading column")).toBeInTheDocument();
+  });
+
+  // What the template is belongs to the template, which is what lets its
+  // compliance notes be derived rather than claimed by hand.
+  it("offers a resume what makes it fit, and no design setting", async () => {
+    const { server, resume } = aResumeToPrint();
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+
+    await printed();
+
+    expect(await screen.findByLabelText("Body size")).toBeInTheDocument();
+    expect(screen.getByLabelText("Page margin")).toBeInTheDocument();
     expect(screen.queryByLabelText("Section headings")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Accent")).not.toBeInTheDocument();
   });
 
   // The limit is a column on the resume, not a template setting, so it survives
@@ -1667,6 +1681,119 @@ describe("a resume and its template", () => {
     expect(screen.getByText(/Babbage Ltd, Soho/)).toBeInTheDocument();
     expect(screen.getByText(/Babbage and Sons/)).toBeInTheDocument();
     expect(store.resumes[0]?.targetCompany).toBe("Babbage Ltd");
+  });
+});
+
+describe("designs of your own", () => {
+  const sent = (server: ReturnType<typeof storeServer>, method: string): unknown[] =>
+    server.calls.filter((call) => call.method === method).map((call) => call.body);
+  const posted = (server: ReturnType<typeof storeServer>) => sent(server, "POST");
+  const patchedBodies = (server: ReturnType<typeof storeServer>) => sent(server, "PATCH");
+
+  // The shipped ones are in every build rather than in the store, so a store
+  // that holds none of its own still has something for a resume to name.
+  it("lists the shipped designs beside yours", async () => {
+    const store = emptyStore();
+    addTemplate(store, "Navy headings", { settings: { accent: "navy" } });
+    mount(() => jsonOf(store), "/templates");
+
+    expect(await screen.findByText("Single column")).toBeInTheDocument();
+    expect(screen.getByText("Left headings")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Navy headings" })).toBeInTheDocument();
+    expect(screen.getAllByText("Built in")).toHaveLength(2);
+    expect(screen.getByText("3 designs")).toBeInTheDocument();
+  });
+
+  it("starts one from a design that already exists", async () => {
+    const server = storeServer(emptyStore());
+    mount(server.answer, "/templates");
+
+    await screen.findByText("Single column");
+    press("New design");
+    type("Name", "Navy headings");
+    type("Based on", "ats-left-heading");
+    press("Start it");
+
+    await waitFor(() => {
+      expect(posted(server)).toHaveLength(1);
+    });
+    expect(posted(server).at(-1)).toMatchObject({
+      name: "Navy headings",
+      spec: { settings: { headingPlace: "beside" }, extraCss: "" },
+    });
+  });
+
+  // `template_name_unique` covers archived rows, so the clash is named here
+  // rather than left to the store to refuse after the form has been filled in.
+  it("says so before writing when the name is already taken", async () => {
+    const store = emptyStore();
+    addTemplate(store, "Navy headings");
+    const server = storeServer(store);
+    mount(server.answer, "/templates");
+
+    await screen.findByText("Single column");
+    press("New design");
+    type("Name", "Navy headings");
+
+    expect(
+      await screen.findByText("A design of yours is already called that."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Start it/ })).toBeDisabled();
+  });
+
+  it("writes a design knob as it is moved, once the moving stops", async () => {
+    const store = emptyStore();
+    const template = addTemplate(store, "Navy headings");
+    const server = storeServer(store);
+    mount(server.answer, `/templates/${template.id}`);
+
+    await screen.findByRole("heading", { name: "Navy headings" });
+    type("Accent", "navy");
+    type("Accent", "forest");
+
+    await waitFor(
+      () => {
+        expect(patchedBodies(server)).toHaveLength(1);
+      },
+      { timeout: 2000 },
+    );
+    expect(patchedBodies(server).at(-1)).toEqual({
+      expectedUpdatedAt: expect.any(String),
+      patch: { spec: { settings: { accent: "forest" }, extraCss: "" } },
+    });
+  });
+
+  // A stylesheet that fetches is a resume that prints differently offline, so
+  // the refusal is the schema's rather than a lint after the fact.
+  it("refuses CSS that would fetch, and writes nothing while it is wrong", async () => {
+    const store = emptyStore();
+    const template = addTemplate(store, "Navy headings");
+    const server = storeServer(store);
+    mount(server.answer, `/templates/${template.id}`);
+
+    await screen.findByRole("heading", { name: "Navy headings" });
+    type("Extra CSS", "@import url(https://fonts.example.test/a.css);");
+
+    expect(await screen.findByText(/may not fetch anything/)).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(patchedBodies(server)).toHaveLength(0);
+  });
+
+  it("offers a design of yours to a resume, and links through to it", async () => {
+    const store = aFilledStore();
+    const resume = store.resumes[0];
+    const template = addTemplate(store, "Navy headings");
+    if (resume === undefined) throw new Error("the filled store holds a resume");
+    resume.templateId = template.id;
+    mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
+
+    const picker = await screen.findByLabelText<HTMLSelectElement>("Template");
+    expect([...picker.options].map((option) => option.text)).toContain("Navy headings");
+    expect(picker.value).toBe(template.id);
+    expect(screen.getByRole("link", { name: "Change what this design is" })).toHaveAttribute(
+      "href",
+      `/templates/${template.id}`,
+    );
   });
 });
 
@@ -2106,7 +2233,7 @@ describe("starting a resume from another", () => {
     mount(server.answer, "/resumes");
 
     await screen.findByText("Staff engineer");
-    press("Start one from this");
+    press("Start a resume from Staff engineer");
     press("Start it");
 
     await waitFor(() => {

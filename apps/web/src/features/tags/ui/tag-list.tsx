@@ -297,7 +297,7 @@ export function TagList({
       {rows.length === 0 ? (
         <Empty title={filter === "all" ? "No tags yet" : "Nothing here"} spot="noResults">
           {filter === "all"
-            ? "A tag is a word you file work under. Add one here, or type a new one straight onto a record or a point."
+            ? "A word you file work under. Add one here, or type one straight onto a record."
             : "Nothing matches that filter, which on this screen is usually good news."}
         </Empty>
       ) : (

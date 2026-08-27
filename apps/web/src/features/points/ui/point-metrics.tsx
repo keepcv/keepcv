@@ -35,8 +35,7 @@ export function PointMetrics({
   return (
     <Panel>
       <PanelHeader title="What it moved">
-        Saved as you add them. A number is what a reader remembers, and removing one archives it,
-        because it is what a resume printed last March.
+        Saved as you add them. Removing one archives it.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? null : (

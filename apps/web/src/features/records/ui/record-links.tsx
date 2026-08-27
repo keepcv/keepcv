@@ -40,8 +40,7 @@ export function RecordLinks({
   return (
     <Panel>
       <PanelHeader title="Links">
-        Where the work itself lives. Removing one archives it, because a resume printed last March
-        may have carried it.
+        Where the work itself lives. Removing one archives it.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {links.length === 0 ? null : (

@@ -210,6 +210,8 @@ export function renderManifest(
       resumeName: manifest.resume.name,
       locale,
       ...(manifest.template.id === null ? {} : { templateId: manifest.template.id }),
+      ...(manifest.template.name === null ? {} : { templateName: manifest.template.name }),
+      ...(manifest.template.spec === null ? {} : { templateSpec: manifest.template.spec }),
       ...(Object.keys(manifest.template.config).length === 0
         ? {}
         : { templateConfig: manifest.template.config }),

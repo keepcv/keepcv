@@ -1,5 +1,4 @@
-export { atsLeftHeading } from "./ats-left-heading/index.js";
-export { atsSingleColumn } from "./ats-single-column/index.js";
+export { atsLeftHeading, atsSingleColumn, BLANK_SPEC } from "./built-in.js";
 export {
   type ConfigField,
   type ConfigOf,
@@ -7,15 +6,18 @@ export {
   type ConfigValue,
   configFor,
   configOf,
-  defineTemplate,
+  defaultsOf,
   type Template,
   type TemplateConfig,
-  type TemplateDefinition,
+  withDefaults,
 } from "./contract.js";
 export { FIXTURE_DOCUMENT } from "./fixture.js";
+export { fromSpec } from "./from-spec.js";
+export { DESIGN_KNOBS, FIT_KNOBS, KNOBS } from "./knobs.js";
 export {
   DEFAULT_TEMPLATE_ID,
   resolveTemplate,
   TEMPLATES,
   templateById,
+  templateOf,
 } from "./registry.js";

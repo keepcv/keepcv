@@ -229,8 +229,7 @@ export function RecordDetail({
 
           <Panel>
             <PanelHeader title="Where it appears" icon="resume">
-              Archiving a record leaves it on every resume it sits on, so nothing about a past
-              application changes underneath you.
+              It stays on every resume it already sits on.
             </PanelHeader>
             <PanelBody>
               {placements.length === 0 ? (

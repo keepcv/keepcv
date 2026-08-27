@@ -204,8 +204,8 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
   return (
     <Panel>
       <PanelHeader title="Choose a file">
-        A PDF, a Word document, or a resume written by JSON Resume, Reactive Resume or RenderCV. It
-        is read in this tab and never uploaded; what reaches the store is what you approve below.
+        A PDF, a Word document, or a JSON Resume, Reactive Resume or RenderCV export. It is read in
+        this tab and never uploaded.
       </PanelHeader>
       <PanelBody className="space-y-2">
         {unreadable === undefined ? null : (
@@ -241,9 +241,8 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
   return (
     <PageBody>
       <PageHeader title="Bring a resume in" icon="upload">
-        Everything a file holds arrives as records and points you own, not as a resume. A PDF has no
-        structure in it, so what a reader works out from one is a guess worth checking. Nothing is
-        written until you say so.
+        Everything arrives as records and points you own, not as a resume. Nothing is written until
+        you say so.
       </PageHeader>
 
       {apply.data === undefined ? null : (

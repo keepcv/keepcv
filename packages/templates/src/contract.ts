@@ -43,14 +43,23 @@ export interface Template {
   render: (document: ResumeDocument, config: TemplateConfig) => ReactElement;
 }
 
-export type TemplateDefinition = Omit<Template, "defaultConfig">;
-
-export function defineTemplate(definition: TemplateDefinition): Template {
-  return { ...definition, defaultConfig: defaultsOf(definition.fields) };
+export function defaultsOf(fields: readonly ConfigField[]): TemplateConfig {
+  return Object.fromEntries(fields.map((field) => [field.key, field.default]));
 }
 
-function defaultsOf(fields: readonly ConfigField[]): TemplateConfig {
-  return Object.fromEntries(fields.map((field) => [field.key, field.default]));
+// A stored design moves the defaults rather than replacing the declarations, so
+// a value the knob no longer offers leaves the knob at what it does offer.
+export function withDefaults(
+  fields: readonly ConfigField[],
+  settings: Readonly<Record<string, unknown>>,
+): ConfigField[] {
+  return fields.map((field) => {
+    const value = accepted(field, settings[field.key]);
+    if (field.kind === "choice") {
+      return typeof value === "string" ? { ...field, default: value } : field;
+    }
+    return typeof value === "number" ? { ...field, default: value } : field;
+  });
 }
 
 // The keys a template reads, and the values each choice can take, derived from

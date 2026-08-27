@@ -72,13 +72,11 @@ export function SearchResults({ store, filters }: { store: Store; filters: Searc
 
       {filters.q.trim() === "" ? (
         <Empty title="Type to search" spot="noResults">
-          Records and points together, ranked by where the words landed: what a thing is called
-          beats what it is filed under.
+          Records and points together: what a thing is called beats what it is filed under.
         </Empty>
       ) : rows.length === 0 ? (
         <Empty title={`Nothing matches "${filters.q}"`} spot="noResults">
-          Every word has to land somewhere, so a second word narrows rather than widens. Archived
-          rows are excluded unless you ask for them.
+          A second word narrows rather than widens.
         </Empty>
       ) : (
         <ul className="rounded-xl border border-line bg-surface p-1 shadow-card">

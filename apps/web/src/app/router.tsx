@@ -19,6 +19,8 @@ import { SectionList } from "../features/sections/ui/section-list.js";
 import { Overview } from "../features/store/ui/overview.js";
 import { TAG_FILTERS } from "../features/tags/model/tag-rows.js";
 import { TagList } from "../features/tags/ui/tag-list.js";
+import { TemplateEditorScreen } from "../features/templates/ui/template-editor.js";
+import { TemplateList } from "../features/templates/ui/template-list.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
 import { prefetchStore, useStore } from "../lib/store-cache.js";
@@ -188,6 +190,37 @@ const sectionsRoute = createRoute({
   },
 });
 
+const templatesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/templates",
+  validateSearch: z.object({ archived: z.enum(ARCHIVED_FILTERS).default("exclude") }),
+  component: function TemplatesScreen() {
+    const { api } = templatesRoute.useRouteContext();
+    return (
+      <TemplateList
+        store={useStore(api)}
+        client={api}
+        archived={templatesRoute.useSearch().archived}
+      />
+    );
+  },
+});
+
+const templateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/templates/$templateId",
+  component: function TemplateScreen() {
+    const { api } = templateRoute.useRouteContext();
+    return (
+      <TemplateEditorScreen
+        store={useStore(api)}
+        client={api}
+        templateId={templateRoute.useParams().templateId}
+      />
+    );
+  },
+});
+
 const newPointRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/points/new",
@@ -276,6 +309,8 @@ const routeTree = rootRoute.addChildren([
   editPointRoute,
   tagsRoute,
   sectionsRoute,
+  templatesRoute,
+  templateRoute,
   resumesRoute,
   resumeRoute,
   searchRoute,

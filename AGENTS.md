@@ -139,10 +139,10 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
 `evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
 `resume_section`, `resume_entry`, `resume_entry_point`,
-`resume_contact_channel`, `saved_filter`, `resume_version`, `resume_snapshot`
-and `resume_content_ref`, and the port has twelve repositories. That is the record
-store, its vocabulary, its editor state, the composition a resume is and its
-history. `resume_version` is append-only, like `phrasing_revision`, and held
+`resume_contact_channel`, `saved_filter`, `template`, `resume_version`,
+`resume_snapshot` and `resume_content_ref`, and the port has thirteen
+repositories. That is the record store, its vocabulary, its editor state, the
+composition a resume is and its history. `resume_version` is append-only, like `phrasing_revision`, and held
 that way by the same hand-written trigger. There is no `search_document` and
 there will not be one: see below.
 
@@ -150,11 +150,11 @@ The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
 `/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
 assignment on records and points, `/v1/tags/{id}/merge`,
 `/v1/drafts/{targetKind}/{targetId}/{field}`, a resume's contact-channel
-overrides, and seventeen owned collections: `/v1/contact-channels`,
+overrides, and eighteen owned collections: `/v1/contact-channels`,
 `/v1/organisations`, `/v1/custom-sections`, `/v1/records`, `/v1/record-links`,
 `/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
 `/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/saved-filters`,
-`/v1/resumes`, `/v1/resume-sections`, `/v1/resume-entries` and
+`/v1/templates`, `/v1/resumes`, `/v1/resume-sections`, `/v1/resume-entries` and
 `/v1/resume-entry-points`.
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
 `POST /v1/resumes/{id}/derive`, the resume timeline at `/v1/resume-versions`,
@@ -162,8 +162,9 @@ It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
 `GET /v1/resume-versions/{id}/document`,
 `POST /v1/resume-versions/{id}/restore`, and `/v1/points/{id}/usage` and
 `/v1/records/{id}/usage`. There is no `/v1/backup/*`: those routes would have
-handed `createApi` a filesystem, and the mirror is the launcher's. A template is code rather
-than a row, so it has no routes: the resume carries `template_id` and
+handed `createApi` a filesystem, and the mirror is the launcher's. The shipped
+designs are in every build rather than in the store, so `/v1/templates` answers
+only the ones the user wrote; the resume carries `template_id` and
 `template_config`, and both travel in the boot payload.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
@@ -172,8 +173,9 @@ The web app is an application frame - a collapsible navigation rail grouped into
 Store, Vocabulary, Resumes and System, a command palette on its header, and a
 sheet in place of the rail below `lg` - over the store overview, the profile, the
 record list, a record's detail and its form, the point list, the tag vocabulary,
-the custom-section headings, the resume list, a resume's composition, its
-compiled preview and its history, the backup screen, and search results. All of
+the custom-section headings, the template list and a design's editor, the resume
+list, a resume's composition, its compiled preview and its history, the backup
+screen, and search results. All of
 it is fed by one `GET /v1/store` on the root route's loader, and the preview is
 `compile()` running in the browser over that same payload, handed to a template
 in an iframe of its own that reports back how many pages it came to. React,
@@ -359,9 +361,21 @@ on every keystroke; Save sends one patch carrying the whole form, so Revert can
 clear a field. The `409` comparison is shared with the record form and reduces
 the posting to a length rather than showing two pages of prose side by side.
 
-**A template is code, and the resume names it.** `@keepcv/templates` holds the
-contract, the shared fixture that decides what "is a template" means, and two
-templates. A template is handed a `ResumeDocument` and its config and
+**A template is a design, the design is data, and the user can write one.**
+`@keepcv/templates` holds the contract, the shared fixture that decides what "is
+a template" means, one renderer and one stylesheet builder. `fromSpec(id, name,
+spec)` turns a `TemplateSpec` into a `Template`; the two shipped designs are
+specs held in code and anything else is a `template` row. The knobs are one
+catalogue split in two - `FIT_KNOBS` is what a resume adjusts to fit and is the
+`fields` a template hands the preview panel, `DESIGN_KNOBS` is what the template
+*is* and `fromSpec` layers it over whatever config arrives, so a resume cannot
+move one. That is what lets `complianceNotes` be derived from the spec instead
+of written by hand. `extraCss` is appended last and the schema refuses
+`@import`, a non-`data:` `url()` and `</style` - React does not escape a `style`
+element's children - because a stylesheet that fetches is a resume that prints
+differently offline. A version pins a user's design **whole**: the row is
+editable, so `captureManifest` freezes the spec and `resolveTemplate` reads it
+ahead of the id. A template is handed a `ResumeDocument` and its config and
 returns markup plus its own stylesheet, so the preview mounts it in an iframe the
 app's CSS cannot reach, at the size it will print at. Settings are declared as
 `fields`, which is what both the validator and the settings panel read; the
@@ -779,6 +793,13 @@ Several of these look like bugs. They are not - do not "fix" them.
   is on in `tsconfig.base.json`, so `errors["url"]` is what TypeScript requires
   whenever the property comes from an index signature, and the rule's fix is
   `TS4111` every time. It sat at 32 permanent infos before it was turned off.
+- **`lint:types` runs eslint through `node --max-old-space-size=8192`.** The
+  type-aware pass holds a `Program` per project and had been peaking just under
+  Node's 4GB default; the next additive change of any size ran it out of memory,
+  and the failure reads as `Ineffective mark-compacts near heap limit` rather
+  than as a lint error. Every package still passes when linted on its own - the
+  total is what fails. It is spelled as a `node` invocation rather than a
+  `NODE_OPTIONS=` prefix because that prefix is not a command on Windows.
 - **`biome.json` takes no comments.** A `//` line does not fail loudly - Biome
   discards the whole config and falls back to its defaults, so the next
   `pnpm lint:fix` silently reformats the entire repository to tabs at 80 columns.

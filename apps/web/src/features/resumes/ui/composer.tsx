@@ -531,8 +531,7 @@ export function Composer({
 
       {detail.sections.length === 0 ? (
         <Empty title="This resume is empty">
-          Sections come first, then the records that go in them, then the points under each. Nothing
-          is copied - a resume points at the store.
+          Sections, then the records in them, then the points under each. Nothing is copied.
         </Empty>
       ) : (
         detail.sections.map((section) => (
