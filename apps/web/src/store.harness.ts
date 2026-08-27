@@ -479,11 +479,13 @@ export function addTemplate(
   store: Store,
   name: string,
   spec: Record<string, unknown> = {},
+  overrides: Record<string, unknown> = {},
 ): StoredTemplate {
   const template = templateSchema.parse({
     ...standard(),
     name,
     spec: { settings: {}, extraCss: "", ...spec },
+    ...overrides,
   });
   store.templates.push(template);
   return template;

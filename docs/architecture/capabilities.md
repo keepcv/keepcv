@@ -229,7 +229,7 @@ knobs, plus optional CSS of your own - and `fromSpec` turns a spec into a
 `Template`. `ats-single-column` and `ats-left-heading` are two specs held in
 code; anything else is a `template` row, edited on a screen of its own with a
 live preview, offered to every resume beside the shipped two, and saved out as a
-file you can keep or share. The knobs are split so a resume adjusts only what
+file another store reads back. The knobs are split so a resume adjusts only what
 makes it fit - page size, typeface, sizes, margins - and the design itself
 belongs to the template, which is what lets each one's compliance notes be
 derived rather than claimed.

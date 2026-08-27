@@ -200,7 +200,7 @@ export function DocumentPreview({
             <Group title="How it looks">
               <SelectField
                 label="Template"
-                options={pickableTemplates(store).map((option) => ({
+                options={pickableTemplates(store, stored.template.id).map((option) => ({
                   value: option.id,
                   label: option.name,
                 }))}

@@ -13,6 +13,7 @@ import type { ApiClient } from "../../../lib/api.js";
 import { counted } from "../../../lib/label.js";
 import { TemplateFrame } from "../../resumes/ui/template-frame.js";
 import { useUpdateTemplate } from "../api/use-templates.js";
+import { designFile, designFileName } from "../model/design-file.js";
 import { templateRows } from "../model/template-rows.js";
 import { Control } from "./control.js";
 
@@ -20,21 +21,10 @@ import { Control } from "./control.js";
 // carries the row's `updatedAt`, and a burst would race its own answers.
 const SETTLES_AFTER = 500;
 
-function fileNameFor(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  return `${slug === "" ? "design" : slug}.keepcv-template.json`;
-}
-
-// A design leaves as a file it can come back as: the store holds it so it
-// round-trips through the export, and this is what makes one shareable.
+// A design leaves as a file the templates screen reads back: the store holds it
+// so it round-trips through the export, and this is what makes one shareable.
 function DownloadDesign({ name, spec }: { name: string; spec: TemplateSpec }) {
-  const file = new Blob([`${JSON.stringify({ name, spec }, null, 2)}\n`], {
-    type: "application/json",
-  });
-  const href = URL.createObjectURL(file);
+  const href = URL.createObjectURL(designFile(name, spec));
 
   return (
     <Button
@@ -42,7 +32,7 @@ function DownloadDesign({ name, spec }: { name: string; spec: TemplateSpec }) {
       onClick={() => {
         const link = document.createElement("a");
         link.href = href;
-        link.download = fileNameFor(name);
+        link.download = designFileName(name);
         link.click();
         URL.revokeObjectURL(href);
       }}

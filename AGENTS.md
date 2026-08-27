@@ -383,6 +383,17 @@ resume stores only what differs from the template's defaults; and the manifest
 pins the choice, so a template swapped later cannot rewrite what a version says
 was sent.
 
+**A design travels between stores as a file.** `templateFileSchema` is `{ name,
+spec }` - no id, no timestamps, no owner - and the download and the reader both
+name it, so a file this writes is a file this accepts. Reading is in the tab,
+like a resume's, and it lands as an ordinary `POST /v1/templates`, so nothing
+new reaches the API. Starting a design is **one** control with two sources: "copy
+this one" and "load that file" answer the same question, so the name, the clash
+check and the create path are written once. A resume's picker offers no archived
+design except the one it is already printing with - a select holding a value no
+option carries reads as a resume using something else, and moving off it cannot
+be undone.
+
 **A template owns its layout and nothing else.** Escaping a mark, tagging an
 element with the `data-key` the host paginates by, and printing a field as
 `label: value` are obligations every template has, so they are in `prose.tsx`;

@@ -51,10 +51,17 @@ export function templateRows(store: Store, archived: ArchivedFilter): TemplateRo
   return archived === "only" ? mine : [...built, ...mine];
 }
 
-// What a resume may name. An archived design is offered nowhere, but a resume
-// already naming one goes on printing with it.
-export function pickableTemplates(store: Store): { id: string; name: string }[] {
-  return templateRows(store, "exclude").map(({ id, name }) => ({ id, name }));
+// What a resume may name. An archived design is offered nowhere except to the
+// resume already printing with it: a select holding a value no option carries
+// reads as a resume using some other design, and moving off it is one click
+// there is no way back from.
+export function pickableTemplates(
+  store: Store,
+  keep: string | null,
+): { id: string; name: string }[] {
+  return templateRows(store, "include")
+    .filter((row) => !row.isArchived || row.id === keep)
+    .map(({ id, name, isArchived }) => ({ id, name: isArchived ? `${name} (archived)` : name }));
 }
 
 export function templateNamed(store: Store, id: string | null): string | undefined {
