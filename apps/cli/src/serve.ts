@@ -2,9 +2,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { type AuthMode, createApi } from "@keepcv/api";
-import { openLocalStore, runAsOwner } from "@keepcv/db";
+import { runAsOwner } from "@keepcv/db";
 import { type AuthSetting, launcherAuth } from "./auth.js";
 import { mirrorPath, writeMirror } from "./mirror.js";
+import { openStore } from "./store.js";
 import { serveWebApp, webAssetsDir } from "./web-assets.js";
 
 // Under the home directory, not wherever this was run from.
@@ -45,9 +46,7 @@ export async function startServer(options: {
     );
   }
 
-  const store = openLocalStore({ dataDir: options.dataDir });
-  await store.migrate();
-  const ownerId = await store.ensureLocalOwner();
+  const { store, ownerId } = await openStore(options.dataDir);
 
   const auth = launcherAuth(setting, ownerId);
   const api = createApi({
@@ -75,11 +74,27 @@ export async function startServer(options: {
     hostname: host,
   });
 
-  const port = await new Promise<number>((resolve) => {
+  // Without the `error` arm a busy port is an unhandled event, which takes the
+  // process down with a stack trace instead of saying what is on the port.
+  const port = await new Promise<number>((resolve, reject) => {
     server.once("listening", () => {
       const address = server.address();
       resolve(typeof address === "object" && address !== null ? address.port : options.port);
     });
+    server.once("error", (reason: NodeJS.ErrnoException) => {
+      reject(
+        reason.code === "EADDRINUSE"
+          ? new Error(
+              `Something is already on ${host}:${String(options.port)}. Stop it, or serve on another port with --port.`,
+            )
+          : reason.code === "EACCES"
+            ? new Error(`Not allowed to listen on ${host}:${String(options.port)}.`)
+            : reason,
+      );
+    });
+  }).catch(async (reason: unknown) => {
+    await store.close();
+    throw reason;
   });
 
   const path = mirrorPath(options.dataDir);

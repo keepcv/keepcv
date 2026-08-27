@@ -167,6 +167,9 @@ importers:
       '@keepcv/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@keepcv/interop':
+        specifier: workspace:*
+        version: link:../../packages/interop
       '@keepcv/render':
         specifier: workspace:*
         version: link:../../packages/render

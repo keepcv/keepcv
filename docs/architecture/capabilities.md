@@ -274,6 +274,11 @@ sections with nowhere to go - rather than being a standing list of caveats
 nobody reads. It is shown before the download, not after, and nothing with a
 count of zero appears in it.
 
+`keepcv render --format jsonresume` is the same pair from the terminal, for
+piping into whatever else the user runs. There is no lint report on that
+branch: nothing was rendered to read back, so the linter has no bytes to have
+an opinion about, and the loss report is what belongs there instead.
+
 There is no `?format=jsonresume` on `/v1/export`: the native export is a
 whole-store read and belongs to the server, but a resume in somebody else's
 format is a pure function of a document the caller is already holding.
@@ -285,6 +290,18 @@ data directory as it starts, on a timer and as it stops; `keepcv backup` and
 one through `/v1/export` and reads one back through `/v1/import`. There is no
 `/v1/backup/*`, because those routes would have handed `createApi` a filesystem
 (application-structure.md #5.9).
+
+`keepcv status` is the read-only half of the same job: what the store holds,
+where the backup is and how old it is, which sign-in mode will work, and the
+`unfinished` nudges `overview()` already answers. It is a caller for a selector
+that runs in the browser and on disk alike, so nothing is derived twice.
+
+**Every command answers an exit code and a sentence, never a stack trace.**
+`run(argv)` in `apps/cli/src/cli.ts` is total: an unknown flag, a busy port, a
+data directory nobody can write to and a file that is not a backup are all
+things the user did, and a Node stack trace tells them nothing about any of
+them. `index.ts` is a bin shim over it, which is also what makes the dispatch
+testable at all.
 
 What remains is **DOCX, LaTeX and Typst as things a resume leaves as**. Reading a
 DOCX is built and writing one is not, which is the harder half: the reader takes

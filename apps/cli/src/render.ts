@@ -2,14 +2,20 @@ import { writeFile } from "node:fs/promises";
 import type { LintReport } from "@keepcv/ats-lint";
 import { lint } from "@keepcv/ats-lint";
 import { compile } from "@keepcv/core";
-import { openLocalStore, runAsOwner } from "@keepcv/db";
+import type { Loss } from "@keepcv/interop";
+import { lossOf, toJsonResume } from "@keepcv/interop";
 import { fileNameFor, renderHtml } from "@keepcv/render";
 import type { Resume, Store } from "@keepcv/schema";
+import { withStore } from "./store.js";
+
+export const FORMATS = ["html", "jsonresume"] as const;
+export type Format = (typeof FORMATS)[number];
 
 export interface RenderRequest {
   dataDir: string;
   resume: string | undefined;
   out: string | undefined;
+  format?: Format;
 }
 
 export interface Chooser {
@@ -17,7 +23,10 @@ export interface Chooser {
   because: "none named" | "no match" | "ambiguous";
 }
 
-export type RenderResult = { wrote: string; report: LintReport } | Chooser;
+export type RenderResult =
+  | { wrote: string; report: LintReport }
+  | { wrote: string; loss: Loss[] }
+  | Chooser;
 
 const live = (resumes: readonly Resume[]): Resume[] =>
   resumes.filter((resume) => resume.archivedAt === null);
@@ -36,34 +45,31 @@ function matching(store: Store, asked: string): Resume[] {
 }
 
 export async function renderResume(request: RenderRequest): Promise<RenderResult> {
-  const store = openLocalStore({ dataDir: request.dataDir });
-  try {
-    await store.migrate();
-    const ownerId = await store.ensureLocalOwner();
-    const held = await runAsOwner(ownerId, () =>
-      store.unitOfWork.run(async (repositories) => await repositories.store.readCurrent()),
-    );
+  const held = await withStore(request.dataDir, async (r) => await r.store.readCurrent());
 
-    if (request.resume === undefined) {
-      return { choose: live(held.resumes), because: "none named" };
-    }
-
-    const found = matching(held, request.resume);
-    const only = found[0];
-    if (only === undefined) return { choose: live(held.resumes), because: "no match" };
-    if (found.length > 1) return { choose: found, because: "ambiguous" };
-
-    const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
-    // Only the resume being absent answers undefined, and it came from this store.
-    if (document === undefined) throw new Error(`${only.name} did not compile`);
-
-    const html = renderHtml(document);
-    const path = request.out ?? fileNameFor(document, "html");
-    await writeFile(path, html, "utf8");
-    return { wrote: path, report: lint({ document, html }) };
-  } finally {
-    await store.close();
+  if (request.resume === undefined) {
+    return { choose: live(held.resumes), because: "none named" };
   }
+
+  const found = matching(held, request.resume);
+  const only = found[0];
+  if (only === undefined) return { choose: live(held.resumes), because: "no match" };
+  if (found.length > 1) return { choose: found, because: "ambiguous" };
+
+  const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
+  // Only the resume being absent answers undefined, and it came from this store.
+  if (document === undefined) throw new Error(`${only.name} did not compile`);
+
+  if (request.format === "jsonresume") {
+    const path = request.out ?? fileNameFor(document, "json");
+    await writeFile(path, `${JSON.stringify(toJsonResume(document), null, 2)}\n`, "utf8");
+    return { wrote: path, loss: lossOf(document) };
+  }
+
+  const html = renderHtml(document);
+  const path = request.out ?? fileNameFor(document, "html");
+  await writeFile(path, html, "utf8");
+  return { wrote: path, report: lint({ document, html }) };
 }
 
 const TIER: Record<LintReport["tier"], string> = {
@@ -78,6 +84,15 @@ export function verdict(report: LintReport): string {
       `    ${finding.severity === "blocker" ? "!" : "-"} ${finding.where}: ${finding.detail}`,
   );
   return `  ${TIER[report.tier]}\n${findings.join("\n")}${findings.length === 0 ? "" : "\n"}`;
+}
+
+// Counted against this resume rather than stated as a standing disclaimer: a
+// warning that appears every time is one nobody reads.
+export function costs(loss: readonly Loss[]): string {
+  if (loss.length === 0) return "  Everything in this resume has somewhere to go in that format.\n";
+
+  const lines = loss.map((one) => `    - ${one.what} (${String(one.count)}): ${one.detail}`);
+  return `  ${String(loss.length)} ${loss.length === 1 ? "thing does" : "things do"} not fit that format:\n${lines.join("\n")}\n`;
 }
 
 const OPENING: Record<Chooser["because"], string> = {

@@ -5,8 +5,8 @@ data store that compiles into resumes: the store holds everything permanently,
 and a resume is a selection over it.
 
 > **Status: early development.** There is no release yet. It serves the HTTP API
-> and the web app, writes a resume out as a file, and keeps a readable backup
-> of the whole store beside it.
+> and the web app, writes a resume out as a file, reports on what the store
+> holds, and keeps a readable backup of the whole store beside it.
 
 ## Usage
 
@@ -50,6 +50,41 @@ The contract is at `/v1/openapi.json`, which needs no token.
 | `--host <address>` | `127.0.0.1` |
 | `--data-dir <path>` | `~/.keepcv` |
 | `--auth <mode>` | `token` |
+
+`keepcv --help` lists every command, and `keepcv --version` says what is
+installed.
+
+## Looking at the store without opening it
+
+```sh
+npx keepcv status
+```
+
+It says what the store holds, where the backup is and how old it is, which of
+the three sign-in modes will actually work, and anything the store can see is
+unfinished - a role with no end date, a point carrying no metric, a
+certification about to expire:
+
+```
+  Store
+    /home/ada/.keepcv
+    41 records, 118 points, 3 resumes
+    6 archived, 1 design of your own
+
+  Backup
+    /home/ada/.keepcv/store.json
+    212 kB, written 4 minutes ago
+
+  Sign-in
+    A password is set in /home/ada/.keepcv/auth.json, so --auth password works.
+
+  Worth a look
+    2 records with no end date
+    Kubernetes Administrator expires 2026-11-02
+```
+
+Like every command here it opens the store, runs any pending migrations and
+closes it again. It writes nothing else.
 
 ## Reaching it from somewhere else
 
@@ -109,8 +144,22 @@ it found: an email address nothing can extract, a heading no system looks for, a
 date with no year in it, or a template that moves the words around on the page.
 It is a report, not a gate - the file is already written.
 
+It also writes the same resume as [JSON Resume](https://jsonresume.org), for
+piping into whatever else you run:
+
+```sh
+npx keepcv render "Staff engineer" --format jsonresume
+```
+
+That format has a fixed set of lists and one string per highlight, so some of
+what your store holds has nowhere to go in it. It counts what that costs
+**against this resume** - three metrics, one section with nowhere to file it -
+and says so after writing the file. Anything at zero is left out, because a
+warning printed every time is one nobody reads.
+
 | Option | Default |
 |---|---|
+| `--format <name>` | `html`; `jsonresume` is the other one |
 | `--out <path>` | the resume's own name, in the current directory |
 | `--data-dir <path>` | `~/.keepcv` |
 
@@ -132,7 +181,9 @@ npx keepcv restore --from my-store.json --data-dir ./fresh
 
 A restore only loads into a store nothing has been written to yet. It never
 merges two career histories: that needs a review step in front of it, which is
-what importing another tool's format will be for.
+what the import screen in the app is for. It says which of three things went
+wrong rather than throwing - no file there, not a KeepCV backup, or a store that
+already holds something.
 
 | Option | Default |
 |---|---|

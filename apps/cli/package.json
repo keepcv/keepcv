@@ -42,6 +42,7 @@
     "@keepcv/ats-lint": "workspace:*",
     "@keepcv/core": "workspace:*",
     "@keepcv/db": "workspace:*",
+    "@keepcv/interop": "workspace:*",
     "@keepcv/render": "workspace:*",
     "@keepcv/schema": "workspace:*",
     "@keepcv/web": "workspace:*",
