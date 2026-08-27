@@ -2,54 +2,16 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SESSION_TOKEN_HEADER } from "@keepcv/api";
-import { newUuid } from "@keepcv/core";
 import { describe, expect, it } from "vitest";
 import { backupStore, MIRROR_NAME, mirrorStatus, restoreStore } from "./mirror.js";
 import { startServer } from "./serve.js";
-
-// Every one of these boots a real PGlite store on disk, which is a WebAssembly
-// start plus a full migration run.
-const BOOTS_REAL_STORES = 180_000;
-
-async function aStoreNamed(fullName: string): Promise<string> {
-  const dataDir = await mkdtemp(join(tmpdir(), "keepcv-mirror-"));
-  const running = await startServer({ port: 0, dataDir });
-  const call = async (path: string, method: string, body?: unknown) => {
-    const response = await fetch(`http://127.0.0.1:${running.port}${path}`, {
-      method,
-      headers: { [SESSION_TOKEN_HEADER]: running.token, "content-type": "application/json" },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    if (!response.ok) throw new Error(`${method} ${path} answered ${String(response.status)}`);
-    return (await response.json()) as { updatedAt: string };
-  };
-
-  try {
-    const profile = await call("/v1/profile", "GET");
-    await call("/v1/profile", "PATCH", {
-      patch: { fullName },
-      expectedUpdatedAt: profile.updatedAt,
-    });
-    await call("/v1/resumes", "POST", {
-      id: newUuid(),
-      name: "Staff engineer, 2026",
-      targetCompany: null,
-      targetRole: null,
-      targetUrl: null,
-      targetJdText: null,
-      appliedOn: null,
-    });
-  } finally {
-    await running.stop();
-  }
-  return dataDir;
-}
+import { aStore, BOOTS_REAL_STORES } from "./store.harness.js";
 
 describe("the mirror the launcher keeps", () => {
   it(
     "writes a readable copy beside the store as the launcher starts and stops",
     async () => {
-      const dataDir = await aStoreNamed("Ada Lovelace");
+      const dataDir = await aStore("Ada Lovelace");
       try {
         const status = await mirrorStatus(dataDir);
         expect(status?.path).toBe(join(dataDir, MIRROR_NAME));
@@ -85,7 +47,7 @@ describe("keepcv backup and restore", () => {
   it(
     "round-trips a store through one file",
     async () => {
-      const source = await aStoreNamed("Ada Lovelace");
+      const source = await aStore("Ada Lovelace");
       const into = await mkdtemp(join(tmpdir(), "keepcv-into-"));
       const file = join(source, "backup.json");
 
@@ -119,8 +81,8 @@ describe("keepcv backup and restore", () => {
   it(
     "refuses a store that already holds something",
     async () => {
-      const source = await aStoreNamed("Ada Lovelace");
-      const other = await aStoreNamed("Charles Babbage");
+      const source = await aStore("Ada Lovelace");
+      const other = await aStore("Charles Babbage");
       const file = join(source, "backup.json");
 
       try {
@@ -140,7 +102,7 @@ describe("keepcv backup and restore", () => {
       const dataDir = await mkdtemp(join(tmpdir(), "keepcv-missing-"));
       try {
         expect(await restoreStore(dataDir, join(dataDir, "nothing.json"))).toEqual({
-          refused: "unreadable",
+          refused: "missing",
         });
       } finally {
         await rm(dataDir, { recursive: true, force: true });
@@ -154,7 +116,7 @@ describe("keepcv backup and restore", () => {
   it(
     "leaves no partial file behind and skips a write that would change nothing",
     async () => {
-      const dataDir = await aStoreNamed("Ada Lovelace");
+      const dataDir = await aStore("Ada Lovelace");
       const file = join(dataDir, "backup.json");
 
       try {
@@ -162,11 +124,11 @@ describe("keepcv backup and restore", () => {
         expect(await backupStore(dataDir, file)).toMatchObject({ written: false });
         await expect(readFile(`${file}.writing`, "utf8")).rejects.toThrow();
 
-        // A file that is not a KeepCV document is refused by the schema rather
-        // than half-loaded.
+        // A file that is not a KeepCV document is refused before a store is
+        // opened, rather than half-loaded or thrown out of as a schema error.
         await writeFile(file, '{"schemaVersion":1,"store":"not a store"}', "utf8");
         const into = await mkdtemp(join(tmpdir(), "keepcv-bad-"));
-        await expect(restoreStore(into, file)).rejects.toThrow();
+        expect(await restoreStore(into, file)).toEqual({ refused: "not a backup" });
         await rm(into, { recursive: true, force: true });
       } finally {
         await rm(dataDir, { recursive: true, force: true });

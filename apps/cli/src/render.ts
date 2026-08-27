@@ -2,9 +2,9 @@ import { writeFile } from "node:fs/promises";
 import type { LintReport } from "@keepcv/ats-lint";
 import { lint } from "@keepcv/ats-lint";
 import { compile } from "@keepcv/core";
-import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { fileNameFor, renderHtml } from "@keepcv/render";
 import type { Resume, Store } from "@keepcv/schema";
+import { withStore } from "./store.js";
 
 export interface RenderRequest {
   dataDir: string;
@@ -36,34 +36,25 @@ function matching(store: Store, asked: string): Resume[] {
 }
 
 export async function renderResume(request: RenderRequest): Promise<RenderResult> {
-  const store = openLocalStore({ dataDir: request.dataDir });
-  try {
-    await store.migrate();
-    const ownerId = await store.ensureLocalOwner();
-    const held = await runAsOwner(ownerId, () =>
-      store.unitOfWork.run(async (repositories) => await repositories.store.readCurrent()),
-    );
+  const held = await withStore(request.dataDir, async (r) => await r.store.readCurrent());
 
-    if (request.resume === undefined) {
-      return { choose: live(held.resumes), because: "none named" };
-    }
-
-    const found = matching(held, request.resume);
-    const only = found[0];
-    if (only === undefined) return { choose: live(held.resumes), because: "no match" };
-    if (found.length > 1) return { choose: found, because: "ambiguous" };
-
-    const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
-    // Only the resume being absent answers undefined, and it came from this store.
-    if (document === undefined) throw new Error(`${only.name} did not compile`);
-
-    const html = renderHtml(document);
-    const path = request.out ?? fileNameFor(document, "html");
-    await writeFile(path, html, "utf8");
-    return { wrote: path, report: lint({ document, html }) };
-  } finally {
-    await store.close();
+  if (request.resume === undefined) {
+    return { choose: live(held.resumes), because: "none named" };
   }
+
+  const found = matching(held, request.resume);
+  const only = found[0];
+  if (only === undefined) return { choose: live(held.resumes), because: "no match" };
+  if (found.length > 1) return { choose: found, because: "ambiguous" };
+
+  const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
+  // Only the resume being absent answers undefined, and it came from this store.
+  if (document === undefined) throw new Error(`${only.name} did not compile`);
+
+  const html = renderHtml(document);
+  const path = request.out ?? fileNameFor(document, "html");
+  await writeFile(path, html, "utf8");
+  return { wrote: path, report: lint({ document, html }) };
 }
 
 const TIER: Record<LintReport["tier"], string> = {

@@ -124,8 +124,9 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 `packages/schema`, `packages/core`, `packages/db`, `packages/api`,
 `packages/templates`, `packages/render`, `packages/ats-lint` and
-`packages/interop` exist, `apps/cli` is the `keepcv` launcher and `render`
-command and `apps/web` is the browser app. Every package the specs name is now
+`packages/interop` exist, `apps/cli` is the `keepcv` launcher and its `render`,
+`status`, `backup`, `restore` and `set-password` commands, and `apps/web` is the
+browser app. Every package the specs name is now
 scaffolded. Create a new one only when its capability is built, and add it to
 the root `tsconfig.json` references then - an empty package is noise, and a
 sub-feature is either not started or complete.
@@ -326,7 +327,17 @@ are filed as what they are with only the heading reported lost.
 `keepcv serve` writes it beside the data directory on start, on a timer and on
 stop, whole-then-renamed and skipped when nothing changed; `keepcv backup` and
 `keepcv restore` do the same on demand; the app reaches it through `/v1/export`
-and `/v1/import`. A restore only loads into a store nothing has been written to.
+and `/v1/import`. A restore only loads into a store nothing has been written to,
+and says which of three things stopped it rather than throwing.
+
+**Every command answers an exit code and a sentence, never a stack trace.**
+`run(argv)` in `cli.ts` is total and `index.ts` is a bin shim over it, which is
+what makes the dispatch testable; an unknown flag, a busy port, a data directory
+nobody can write to and a file that is not a backup are all things the user did.
+`openStore` is the one place a store is opened, so a half-opened PGlite is
+closed on the way out rather than left holding the directory. `keepcv status`
+reads `overview()` - the same selector the app's store overview reads - so the
+nudges are not derived a second time for the terminal.
 
 **A narrowed list can be kept under a name.** `saved_filter` stores what the
 narrowing means rather than the vocabulary of the control that made it, so the

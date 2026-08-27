@@ -286,6 +286,18 @@ one through `/v1/export` and reads one back through `/v1/import`. There is no
 `/v1/backup/*`, because those routes would have handed `createApi` a filesystem
 (application-structure.md #5.9).
 
+`keepcv status` is the read-only half of the same job: what the store holds,
+where the backup is and how old it is, which sign-in mode will work, and the
+`unfinished` nudges `overview()` already answers. It is a caller for a selector
+that runs in the browser and on disk alike, so nothing is derived twice.
+
+**Every command answers an exit code and a sentence, never a stack trace.**
+`run(argv)` in `apps/cli/src/cli.ts` is total: an unknown flag, a busy port, a
+data directory nobody can write to and a file that is not a backup are all
+things the user did, and a Node stack trace tells them nothing about any of
+them. `index.ts` is a bin shim over it, which is also what makes the dispatch
+testable at all.
+
 What remains is **DOCX, LaTeX and Typst as things a resume leaves as**. Reading a
 DOCX is built and writing one is not, which is the harder half: the reader takes
 whatever a file happens to look like, and a writer has to decide what this

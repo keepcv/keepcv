@@ -1,9 +1,9 @@
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { StoreNotEmptyError } from "@keepcv/core";
-import { openLocalStore, runAsOwner } from "@keepcv/db";
 import type { Archive, ExportDocument } from "@keepcv/schema";
 import { CURRENT_SCHEMA_VERSION, migrateDocument, timestampSchema } from "@keepcv/schema";
+import { withStore } from "./store.js";
 
 // Beside the data directory rather than inside it: a plain-text copy of the
 // career store is the thing to reach for when PGlite's own directory is what
@@ -71,52 +71,40 @@ export async function mirrorStatus(dataDir: string): Promise<MirrorStatus | unde
   return { path, bytes: found.size, writtenAt: found.mtime.toISOString() };
 }
 
-async function withStore<T>(dataDir: string, work: (archive: Archive) => Promise<T>): Promise<T> {
-  const store = openLocalStore({ dataDir });
+export async function backupStore(dataDir: string, out: string | undefined): Promise<Mirrored> {
+  const archive = await withStore(dataDir, async (r) => await r.store.read());
+  return await writeMirror(out ?? mirrorPath(dataDir), archive);
+}
+
+// Told apart because they need different things done about them: find the file,
+// point at a KeepCV backup, or point at a store nothing has written to.
+export type RestoreRefusal = "missing" | "not a backup" | "not empty";
+export type RestoreResult = { loaded: string } | { refused: RestoreRefusal };
+
+function backupIn(body: string): ExportDocument | undefined {
   try {
-    await store.migrate();
-    const ownerId = await store.ensureLocalOwner();
-    return await runAsOwner(ownerId, async () => {
-      const archive = await store.unitOfWork.run(async (r) => await r.store.read());
-      return await work(archive);
-    });
-  } finally {
-    await store.close();
+    return migrateDocument(JSON.parse(body));
+  } catch {
+    return undefined;
   }
 }
-
-export async function backupStore(dataDir: string, out: string | undefined): Promise<Mirrored> {
-  return await withStore(
-    dataDir,
-    async (archive) => await writeMirror(out ?? mirrorPath(dataDir), archive),
-  );
-}
-
-export type RestoreResult = { loaded: string } | { refused: "not empty" | "unreadable" };
 
 // Into an empty store only. Merging two career histories needs a review step in
 // front of it, which is what the lossy-format import flow is for.
 export async function restoreStore(dataDir: string, from: string): Promise<RestoreResult> {
   const body = await readFile(from, "utf8").catch(() => undefined);
-  if (body === undefined) return { refused: "unreadable" };
+  if (body === undefined) return { refused: "missing" };
 
-  const parsed: unknown = JSON.parse(body);
-  const document = migrateDocument(parsed);
+  const document = backupIn(body);
+  if (document === undefined) return { refused: "not a backup" };
 
-  const store = openLocalStore({ dataDir });
   try {
-    await store.migrate();
-    const ownerId = await store.ensureLocalOwner();
-    await runAsOwner(ownerId, async () => {
-      await store.unitOfWork.run(async (r) => {
-        await r.store.load(document.store);
-      });
+    await withStore(dataDir, async (r) => {
+      await r.store.load(document.store);
     });
     return { loaded: from };
   } catch (error) {
     if (error instanceof StoreNotEmptyError) return { refused: "not empty" };
     throw error;
-  } finally {
-    await store.close();
   }
 }
