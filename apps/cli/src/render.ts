@@ -4,11 +4,11 @@ import { lint } from "@keepcv/ats-lint";
 import { compile } from "@keepcv/core";
 import type { Loss } from "@keepcv/interop";
 import { lossOf, toJsonResume } from "@keepcv/interop";
-import { fileNameFor, renderHtml } from "@keepcv/render";
+import { fileNameFor, renderHtml, renderSite, SITE_FILE_NAME } from "@keepcv/render";
 import type { Resume, Store } from "@keepcv/schema";
 import { withStore } from "./store.js";
 
-export const FORMATS = ["html", "jsonresume"] as const;
+export const FORMATS = ["html", "site", "jsonresume"] as const;
 export type Format = (typeof FORMATS)[number];
 
 export interface RenderRequest {
@@ -26,6 +26,7 @@ export interface Chooser {
 export type RenderResult =
   | { wrote: string; report: LintReport }
   | { wrote: string; loss: Loss[] }
+  | { wrote: string; page: true }
   | Chooser;
 
 const live = (resumes: readonly Resume[]): Resume[] =>
@@ -59,6 +60,14 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
   const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
   // Only the resume being absent answers undefined, and it came from this store.
   if (document === undefined) throw new Error(`${only.name} did not compile`);
+
+  // No lint report: the linter is about what a machine reading a resume gets
+  // out of it, and nothing here is going to a machine that reads resumes.
+  if (request.format === "site") {
+    const path = request.out ?? SITE_FILE_NAME;
+    await writeFile(path, renderSite(document), "utf8");
+    return { wrote: path, page: true };
+  }
 
   if (request.format === "jsonresume") {
     const path = request.out ?? fileNameFor(document, "json");

@@ -481,7 +481,37 @@ different table that already exists.
 
 ### Portfolio site
 
-A second renderer over `ResumeDocument`, not a second product.
+Built, and it is exactly what it says: a second renderer over `ResumeDocument`,
+not a second product. `renderSite(document)` in `@keepcv/render` answers one
+self-contained HTML file - system fonts, a light and a dark scheme, a jump list
+between sections, one card per entry - downloaded from the preview screen or
+written by `keepcv render --format site`. It sits beside `renderHtml` for the
+reason that one is a function rather than a route: the caller already holds the
+document.
+
+**It is not a template.** A template is configured because a resume has to fit a
+page, and every knob in the catalogue is about paper - size, margin, page
+breaks, headings in a column. A page has no page to fit, so the site has one
+stylesheet and no settings at all. What it does share is `prose.tsx`: escaping a
+mark, keying an element and printing a field as `label: value` are obligations
+every renderer over a document has, not just a print one, so those are exported
+rather than written twice.
+
+**What a stranger sees is decided in the composer, not here.** The page prints
+the contact details the resume prints, and per-resume contact visibility already
+exists; a second switch would be a second place to get it wrong. Evidence cannot
+reach it for the reason it cannot reach a resume - `ResumeDocument` has no field
+it could travel in - and the test asserts the page prints no element the resume
+would not have. Tags are not printed either: no template prints them, and they
+are the words the store files work under rather than words anybody chose to
+publish.
+
+**It is named `index.html`.** That is what every static host looks for, and it is
+what keeps the page from overwriting the resume when both are written into one
+directory.
+
+**Non-goals:** no hosting, no deploy step, no domain, no analytics, no second
+page. This produces a file; where it goes is the user's business.
 
 ---
 

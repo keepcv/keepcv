@@ -157,10 +157,26 @@ what your store holds has nowhere to go in it. It counts what that costs
 and says so after writing the file. Anything at zero is left out, because a
 warning printed every time is one nobody reads.
 
+It also writes the same selection as a page to put online:
+
+```sh
+npx keepcv render "Staff engineer" --format site
+```
+
+One self-contained HTML file - a header, one card per entry, a jump list between
+sections, and a dark scheme if the reader's machine asks for one. It fetches
+nothing, like the resume, and it is called `index.html`, which is what a static
+host looks for and what stops it overwriting the resume beside it. There is no
+lint report on that branch: the linter is about what a machine reading a resume
+gets out of it, and nothing here is going to one.
+
+It carries the contact details this resume carries. What a stranger sees is
+decided when the resume is composed.
+
 | Option | Default |
 |---|---|
-| `--format <name>` | `html`; `jsonresume` is the other one |
-| `--out <path>` | the resume's own name, in the current directory |
+| `--format <name>` | `html`; `site` and `jsonresume` are the others |
+| `--out <path>` | the resume's own name, or `index.html` for a page |
 | `--data-dir <path>` | `~/.keepcv` |
 
 ## Backing it up

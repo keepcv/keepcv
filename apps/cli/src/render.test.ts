@@ -97,6 +97,37 @@ describe("keepcv render", () => {
     BOOTS_REAL_STORES,
   );
 
+  it(
+    "writes the same resume as a page to put online",
+    async () => {
+      const dataDir = await aStore("Ada Lovelace", { resumes: ["Staff engineer, 2026"] });
+      const here = process.cwd();
+      process.chdir(dataDir);
+
+      try {
+        const result = await renderResume({
+          dataDir,
+          resume: "staff",
+          out: undefined,
+          format: "site",
+        });
+        // What every static host looks for, and not the name the resume takes.
+        expect(result).toMatchObject({ wrote: "index.html", page: true });
+
+        const html = await readFile(join(dataDir, "index.html"), "utf8");
+        expect(html.startsWith("<!doctype html>")).toBe(true);
+        expect(html).toContain("Ada Lovelace");
+        expect(html).toContain("prefers-color-scheme");
+        // Nothing to fetch, which is the point of a file someone uploads.
+        expect(html).not.toMatch(/<link\b|<script\b|@import/i);
+      } finally {
+        process.chdir(here);
+        await rm(dataDir, { recursive: true, force: true });
+      }
+    },
+    BOOTS_REAL_STORES,
+  );
+
   it("says which resumes there are to choose from", () => {
     const choose = [{ name: "Staff engineer" }, { name: "Platform lead" }];
     const printed = listing({ choose, because: "ambiguous" });
