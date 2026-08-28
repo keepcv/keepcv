@@ -764,8 +764,10 @@ length budget is a warning rather than a gate.
 `lint({ document, html })` in `@keepcv/ats-lint` answers a `LintReport`: a list
 of findings and a tier derived from them. It takes both because half the checks
 are about what the resume says - a missing email address, a heading nothing will
-file, a date with no year in it - and half are about what the template did with
-it - columns, floats, coordinates, images, words that exist only in a stylesheet.
+file, a date with no year in it, a job with no dates at all - and half are about
+what the template did with it - columns, floats, coordinates, images, words that
+exist only in a stylesheet, words in the file that are not on the page, and words
+put in a page margin.
 
 **It takes the file rather than producing one.** The caller has already rendered
 by the time it wants a verdict, and taking the bytes means the thing being linted
@@ -787,6 +789,13 @@ is no claim of compatibility with any named commercial system anywhere in the
 product, and the panel says as much beside the findings. A template's own
 `complianceNotes` sit in a separate panel and are observations about the
 template, not a verdict on the resume.
+
+**Hidden text is the one output rule that is not about layout.** `display: none`
+in a resume file is words a reader extracts and nobody printed, and the reason it
+is a blocker rather than a warning is what happens next: a reader that compares
+the two treats the difference as deliberate, and the resume is binned rather than
+ranked. The rule names the construct, because the user who has to fix it wrote
+the design.
 
 Dates are checked on record fields and not on an entry's period: a period's text
 is formatted by `renderManifest` and always carries its year, and a field is

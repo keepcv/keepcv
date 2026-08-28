@@ -419,11 +419,19 @@ it could not place.
 
 ### ATS linter
 
-Built, as `lint({ document, html })` in `@keepcv/ats-lint`. Five rules over the
+Built, as `lint({ document, html })` in `@keepcv/ats-lint`. Seven rules over the
 compiled document and the file the template wrote: contact details a reader can
 extract, section headings a system is built to look for, dates that carry a year
-and read one way, reading order that survives being pulled off a printed page,
-and text that is text rather than a picture. The preview screen shows the report
+and read one way, a history a reader can build a timeline out of, reading order
+that survives being pulled off a printed page, text that is text rather than a
+picture, words that are in the file and not on the page, and words put in the
+page margin.
+
+**Hidden text is a blocker and says why.** Whatever `display: none` was put there
+for, a reader that compares the file with the page finds words nobody printed,
+and that reads as stuffing rather than as a mistake - which is how a resume gets
+binned rather than ranked. The rule names the construct so the user can find it
+in a design they wrote. The preview screen shows the report
 beside the download, and `keepcv render` prints it after writing the file.
 
 The tier is derived from the findings and asserted nowhere, and the panel says
@@ -435,7 +443,7 @@ linter is also how a user compares templates on something other than looks
 There is no `/v1/lint`: the caller holds the document and the file already, for
 the same reason search and `composition` are selectors rather than routes.
 
-What remains is more rules as real postings turn up cases these five miss.
+What remains is more rules as real postings turn up cases these seven miss.
 
 ### Role profiles
 

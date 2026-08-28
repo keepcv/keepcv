@@ -463,8 +463,12 @@ the printer is right, which is why the length budget warns rather than gates.
 **The linter reads the file, and the tier is derived rather than claimed.**
 `lint({ document, html })` in `@keepcv/ats-lint` takes both, because half the
 rules are about what the resume says - no email address, a heading nothing files,
-a date with no year - and half are about what the template did with it - columns,
-floats, coordinates, images, words that live only in a stylesheet. Taking the
+a date with no year, a job with no dates at all - and half are about what the
+template did with it - columns, floats, coordinates, images, words that live only
+in a stylesheet, words in the file that are not on the page, and words in a page
+margin. Hidden text is a blocker rather than a warning because of what happens
+next: a reader comparing the file with the page treats the difference as
+deliberate, and bins the resume rather than ranking it. Taking the
 rendered bytes rather than producing them means the thing linted is the thing
 sent, and it keeps the package free of React and of `@keepcv/render`. There is no
 `/v1/lint`: the caller holds both inputs, which is the argument that keeps

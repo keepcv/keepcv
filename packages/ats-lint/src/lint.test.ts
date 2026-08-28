@@ -190,6 +190,37 @@ describe("linting a resume the way a machine reads it", () => {
     });
   });
 
+  describe("a history with no dates in it", () => {
+    const undated = (kind: string): ResumeDocument => {
+      const [section, ...others] = RESUME.sections;
+      const entry = section?.entries[0];
+      if (section === undefined || entry === undefined) throw new Error("the fixture holds one");
+      const { period, ...withoutPeriod } = entry;
+      return {
+        ...RESUME,
+        sections: [{ ...section, kind, entries: [withoutPeriod] }, ...others],
+      } as ResumeDocument;
+    };
+
+    it("names an experience entry nothing says the dates of", () => {
+      const report = linted(undated("experience"));
+
+      expect(rules(report.findings)).toContain("undated-history");
+      expect(report.tier).toBe("readable");
+    });
+
+    // A project has no dates to be missing, and a certification carries its own
+    // field; only the two a reader builds a timeline out of are read here.
+    it("leaves the sections a reader does not date alone", () => {
+      expect(rules(linted(undated("project")).findings)).not.toContain("undated-history");
+      expect(rules(linted(undated("skill")).findings)).not.toContain("undated-history");
+    });
+
+    it("accepts an entry that says when it started", () => {
+      expect(rules(linted(RESUME).findings)).not.toContain("undated-history");
+    });
+  });
+
   describe("what the template did with it", () => {
     const outputOf = (html: string) => linted(RESUME, `${CLEAN_HTML}${html}`);
 
@@ -227,6 +258,39 @@ describe("linting a resume the way a machine reads it", () => {
     it("leaves a bullet and a separator alone but names a generated word", () => {
       expect(outputOf('<style>.a::before { content: "* " }</style>').findings).toEqual([]);
       expect(outputOf('<style>.a::before { content: "Present" }</style>').tier).toBe("readable");
+    });
+
+    // Words in the file and not on the page are how a resume gets binned rather
+    // than ranked, whatever they were put there for.
+    it("refuses text that is in the file and not on the page", () => {
+      for (const hidden of [
+        ".a { display: none }",
+        ".a { visibility: hidden }",
+        ".a { opacity: 0 }",
+        ".a { font-size: 0 }",
+        ".a { font-size: 0pt }",
+      ]) {
+        const report = outputOf(`<style>${hidden}</style>`);
+        expect(rules(report.findings), hidden).toEqual(["hidden-text"]);
+        expect(report.tier, hidden).toBe("at-risk");
+      }
+    });
+
+    it("leaves a real opacity and a real size alone", () => {
+      expect(outputOf("<style>.a { opacity: 0.85 }</style>").findings).toEqual([]);
+      expect(outputOf("<style>.a { font-size: 0.9em }</style>").findings).toEqual([]);
+    });
+
+    // The generated-word rule fires on the same declaration and is also right:
+    // a running header is furniture, and its text is only in the stylesheet.
+    it("warns about words put in the page margin", () => {
+      const margin = outputOf("<style>@page { @top-center { content: 'Ada' } }</style>");
+      expect(rules(margin.findings)).toEqual(["text-as-image", "page-furniture"]);
+      expect(margin.tier).toBe("readable");
+
+      expect(rules(outputOf("<style>.a { position: running(head) }</style>").findings)).toEqual([
+        "page-furniture",
+      ]);
     });
   });
 

@@ -4,8 +4,11 @@ export const LINT_RULES = [
   "contact-extractable",
   "section-headings",
   "date-format",
+  "undated-history",
   "reading-order",
   "text-as-image",
+  "hidden-text",
+  "page-furniture",
 ] as const;
 
 export type LintRuleId = (typeof LINT_RULES)[number];
