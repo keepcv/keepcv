@@ -95,10 +95,15 @@ function wordingsOf(store: Store, phrasingSetId: Uuid | null, pinned: Uuid): Cho
   if (phrasingSetId === null) return [];
   return phrasingsOfSet(store, phrasingSetId)
     .filter((phrasing) => phrasing.archivedAt === null || phrasing.id === pinned)
-    .map((phrasing) => ({
-      id: phrasing.id,
-      label: phrasing.label ?? textOfPhrasing(store, phrasing) ?? phrasing.variant,
-    }));
+    .map((phrasing) => {
+      const text = textOfPhrasing(store, phrasing);
+      return {
+        id: phrasing.id,
+        // A wording nobody has typed into yet has text, and it is the empty
+        // string, which named an option the picker drew blank.
+        label: phrasing.label ?? (text === "" ? phrasing.variant : text),
+      };
+    });
 }
 
 function contactsOf(store: Store, resumeId: Uuid): ContactRow[] {

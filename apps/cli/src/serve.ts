@@ -69,7 +69,7 @@ export async function startServer(options: {
   };
 
   const server = serve({
-    fetch: (request, env) => handle(request, env.incoming.socket?.remoteAddress),
+    fetch: (request, env) => handle(request, env.incoming.socket.remoteAddress),
     port: options.port,
     hostname: host,
   });
