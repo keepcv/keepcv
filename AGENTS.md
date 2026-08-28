@@ -460,6 +460,19 @@ declines to do. No headless browser and no PDF library: either would be a second
 layout engine to keep in step with the first. Where it and `paginate` disagree
 the printer is right, which is why the length budget warns rather than gates.
 
+**The same selection also leaves as a page.** `renderSite(document)` in
+`@keepcv/render` is the second renderer over `ResumeDocument` the product was
+always going to have: one self-contained HTML file, system fonts, a light and a
+dark scheme, a jump list between sections and one card per entry. It is not a
+template and takes no configuration - every knob in the catalogue is about
+fitting paper, and a page has no page to fit - but it shares `prose.tsx`, because
+escaping a mark, keying an element and printing a field as `label: value` are
+obligations every renderer over a document has. It carries the contact details
+this resume carries, so what a stranger sees is decided in the composer rather
+than by a second switch, and it is named `index.html`, which is what a static
+host looks for and what stops it overwriting the resume beside it. There is no
+hosting here: this produces a file.
+
 **The linter reads the file, and the tier is derived rather than claimed.**
 `lint({ document, html })` in `@keepcv/ats-lint` takes both, because half the
 rules are about what the resume says - no email address, a heading nothing files,

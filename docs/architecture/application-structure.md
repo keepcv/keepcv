@@ -759,6 +759,35 @@ first warns while the resume is being composed; the second is what actually
 produces the file. Where they disagree the printer is right, which is why the
 length budget is a warning rather than a gate.
 
+### 7.1.1 The same selection as a page
+
+`renderSite(document)` in `@keepcv/render` answers one self-contained HTML page
+over the same document: a header, one card per entry, a jump list between
+sections, system fonts, and a light and a dark scheme. It is the second renderer
+the product was always going to have, and it is a function beside `renderHtml`
+for the reason that one is a function - the caller already holds the document,
+and both the tab and `keepcv render --format site` call the same one.
+
+**It is not a template, and it takes no configuration.** Every knob in the
+catalogue is about paper - page size, margin, where a heading sits so a column
+still reads in order - and a page has no page to fit. It shares `prose.tsx`
+instead: escaping a mark, keying an element and printing a field as
+`label: value` are obligations every renderer over a document has, not just a
+print one.
+
+**What a stranger sees is decided in the composer.** The page carries the contact
+details this resume carries, and per-resume contact visibility is where that is
+already chosen (`data-model.md` #4); a switch here would be a second place to get
+it wrong. Evidence cannot reach the page for the reason it cannot reach a resume,
+and the suite asserts the page prints no element the resume would not have and
+adds no address the document did not carry. Tags are not printed either: they are
+the words the store files work under, not words anybody chose to publish.
+
+**It is named `index.html`**, which is what every static host looks for and what
+stops it overwriting the resume when both are written into one directory. Where
+the file then goes is the user's business: there is no hosting here, no deploy
+step and no domain.
+
 ### 7.2 Reading it back the way a machine would
 
 `lint({ document, html })` in `@keepcv/ats-lint` answers a `LintReport`: a list

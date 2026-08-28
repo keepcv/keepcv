@@ -4,7 +4,16 @@ import { AUTH_MODES, type AuthMode, SESSION_TOKEN_HEADER } from "@keepcv/api";
 import { type AuthSetting, readAuth, writePassword } from "./auth.js";
 import { backupStore, MIRROR_NAME, restoreStore } from "./mirror.js";
 import { readPiped, readSecret } from "./prompt.js";
-import { costs, FORMATS, type Format, listing, renderResume, verdict } from "./render.js";
+import {
+  type Chooser,
+  costs,
+  FORMATS,
+  type Format,
+  listing,
+  type RenderResult,
+  renderResume,
+  verdict,
+} from "./render.js";
 import {
   DEFAULT_DATA_DIR,
   DEFAULT_HOST,
@@ -202,9 +211,17 @@ async function render(
     return 1;
   }
 
-  const said = "report" in result ? verdict(result.report) : costs(result.loss);
-  process.stdout.write(`\n  Wrote ${result.wrote}\n\n${said}\n`);
+  process.stdout.write(`\n  Wrote ${result.wrote}\n\n${aboutIt(result)}\n`);
   return 0;
+}
+
+// Each format is told something different, because each costs something
+// different: a resume gets the findings, somebody else's format gets what it
+// dropped, and a page gets what it is for.
+function aboutIt(result: Exclude<RenderResult, Chooser>): string {
+  if ("report" in result) return verdict(result.report);
+  if ("loss" in result) return costs(result.loss);
+  return "  One page, carrying its own styling and fetching nothing. Put it anywhere.\n";
 }
 
 async function backup(dataDir: string, out: string | undefined): Promise<number> {

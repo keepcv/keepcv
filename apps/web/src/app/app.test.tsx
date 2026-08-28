@@ -1521,6 +1521,43 @@ describe("a resume and its template", () => {
     expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
   });
 
+  it("writes the same selection as a page to put online", async () => {
+    const { store, server, resume } = aResumeToPrint();
+    const point = store.points[0];
+    if (point === undefined) throw new Error("the filled store holds a point");
+    addEvidence(store, point.id, { value: "https://private.test/salary-review" });
+
+    const written: Blob[] = [];
+    const names: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob: Blob | MediaSource) => {
+      written.push(blob as Blob);
+      return "blob:written";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+    await printed();
+    press("Download personal page");
+
+    // What every static host looks for, and not the name the resume takes.
+    expect(names).toEqual(["index.html"]);
+    const file = written[0];
+    if (file === undefined) throw new Error("the download wrote a file");
+
+    const html = await file.text();
+    expect(html).toContain("Cut p95 latency from 800ms to 120ms");
+    expect(html).toContain("prefers-color-scheme");
+    // The page is the output that goes somewhere public, and it is the same
+    // document, so evidence cannot reach it any more than it reaches a resume.
+    expect(html).not.toContain("private.test");
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+
   it("writes it as JSON Resume, and says first what will not fit", async () => {
     const { store, server, resume } = aResumeToPrint();
     const point = store.points[0];
