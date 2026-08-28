@@ -948,6 +948,26 @@ describe("a resume", () => {
     expect(screen.getByLabelText("Wording for Angled for this application")).toHaveValue(angled.id);
   });
 
+  // A wording nobody has typed into yet has text, and it is the empty string, so
+  // the picker drew an option with nothing in it and no way to tell them apart.
+  it("names an empty wording by what it is for", async () => {
+    const store = emptyStore();
+    const record = addRecord(store, { kind: "experience", title: "Engine lead" });
+    const point = addPoint(store, "Canonical wording", { recordId: record.id });
+    addPhrasing(store, point.phrasingSetId, "", { variant: "short", sortKey: "a1" });
+    const resume = addResume(store, { name: "Angled" });
+    const entry = addEntry(store, addSection(store, resume.id), record.id);
+    addEntryPoint(store, entry, point);
+
+    mount(() => jsonOf(store), `/resumes/${resume.id}`);
+
+    const picker = await screen.findByLabelText("Wording for Canonical wording");
+    expect([...picker.querySelectorAll("option")].map((option) => option.textContent)).toEqual([
+      "Canonical wording",
+      "short",
+    ]);
+  });
+
   // Silently losing a section is the destructive behaviour the product exists
   // to eliminate, so the preview names the gap.
   it("says an empty section prints nothing rather than dropping the heading", async () => {

@@ -91,7 +91,9 @@ export interface RenderCvCv {
   photo?: string;
   social_networks?: RenderCvSocialNetwork[];
   custom_connections?: RenderCvCustomConnection[];
-  sections?: Record<string, RenderCvEntry[]>;
+  // Nullable because this interface is a cast over parsed YAML rather than a
+  // schema, and `Experience:` with nothing under it parses as null.
+  sections?: Record<string, RenderCvEntry[] | null>;
 }
 
 // `design`, `locale` and `settings` are how the file is rendered rather than

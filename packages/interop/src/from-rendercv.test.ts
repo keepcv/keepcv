@@ -16,6 +16,17 @@ describe("reading RenderCV", () => {
     expect(intake.records).toEqual([]);
   });
 
+  // `Experience:` with nothing under it is a heading somebody has not filled in
+  // yet, and YAML parses it as null. The interface is a cast over what `parse`
+  // answered rather than a schema, so this is a shape a real file has.
+  it("reads a file whose section heading has nothing under it", () => {
+    const intake = read({
+      cv: { sections: { Experience: null, Projects: [{ name: "Difference Engine" }] } },
+    });
+
+    expect(intake.records.map((record) => record.title)).toEqual(["Difference Engine"]);
+  });
+
   it("takes every value out of a header field that holds a list of them", () => {
     const intake = read({
       cv: {

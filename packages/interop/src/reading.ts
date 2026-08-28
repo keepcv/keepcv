@@ -20,7 +20,7 @@ export class Organisations {
 
   seen(name: string | undefined | null, kind: OrganisationKind): string | null {
     const trimmed = name?.trim();
-    if (trimmed === undefined || trimmed === null || trimmed === "") return null;
+    if (trimmed === undefined || trimmed === "") return null;
     const key = fold(trimmed);
     if (!this.byName.has(key)) {
       this.byName.set(key, { name: trimmed, kind, website: null, location: null });
@@ -44,7 +44,7 @@ export class Notes {
 
   date(value: string | undefined | null, about: string): PartialDate | null {
     const trimmed = value?.trim();
-    if (trimmed === undefined || trimmed === null || trimmed === "") return null;
+    if (trimmed === undefined || trimmed === "") return null;
     const parsed = partialDateSchema.safeParse(trimmed);
     if (parsed.success) return parsed.data;
     this.add(`"${trimmed}" on ${about} is not a year, month or day, so that date is empty.`);
@@ -80,7 +80,7 @@ export function channelOfNetwork(network: string | null, value: string): IntakeC
 
 export const text = (value: string | undefined | null): string | null => {
   const trimmed = value?.trim();
-  return trimmed === undefined || trimmed === null || trimmed === "" ? null : trimmed;
+  return trimmed === undefined || trimmed === "" ? null : trimmed;
 };
 
 export const pointsOf = (highlights: readonly string[] | undefined | null): IntakePoint[] =>
