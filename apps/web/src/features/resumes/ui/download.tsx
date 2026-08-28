@@ -1,5 +1,5 @@
 import { lossOf, toJsonResume } from "@keepcv/interop";
-import { fileNameFor, renderHtml } from "@keepcv/render";
+import { fileNameFor, renderHtml, renderSite, SITE_FILE_NAME } from "@keepcv/render";
 import type { ResumeDocument } from "@keepcv/schema";
 import { useMemo } from "react";
 import { Button } from "../../../components/ui/button.js";
@@ -55,6 +55,22 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
       <p className="text-xs leading-relaxed text-text-subtle">
         One file, carrying its own styling and fetching nothing. Evidence never travels in it.
       </p>
+
+      <div className="space-y-2 border-t border-line pt-2">
+        <Button
+          className="w-full"
+          onClick={() => {
+            saveFile(SITE_FILE_NAME, HTML, renderSite(document));
+          }}
+        >
+          Download personal page
+        </Button>
+        <p className="text-xs leading-relaxed text-text-subtle">
+          The same selection as a page to put online, named {SITE_FILE_NAME} because that is what a
+          host looks for. It carries the contact details this resume carries, so the composer is
+          where you decide what a stranger sees.
+        </p>
+      </div>
 
       <div className="space-y-2 border-t border-line pt-2">
         <Button
