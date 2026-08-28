@@ -14,6 +14,7 @@ import { RecordForm } from "../features/records/ui/record-form.js";
 import { RecordList } from "../features/records/ui/record-list.js";
 import { RESUME_VIEWS, ResumeDetailScreen } from "../features/resumes/ui/resume-detail.js";
 import { ResumeList } from "../features/resumes/ui/resume-list.js";
+import { RoleProfileList } from "../features/role-profiles/ui/role-profile-list.js";
 import { SearchResults } from "../features/search/ui/search-results.js";
 import { SectionList } from "../features/sections/ui/section-list.js";
 import { Overview } from "../features/store/ui/overview.js";
@@ -190,6 +191,22 @@ const sectionsRoute = createRoute({
   },
 });
 
+const roleProfilesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/role-profiles",
+  validateSearch: z.object({ archived: z.boolean().default(false) }),
+  component: function RoleProfilesScreen() {
+    const { api } = roleProfilesRoute.useRouteContext();
+    return (
+      <RoleProfileList
+        store={useStore(api)}
+        client={api}
+        archived={roleProfilesRoute.useSearch().archived}
+      />
+    );
+  },
+});
+
 const templatesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/templates",
@@ -309,6 +326,7 @@ const routeTree = rootRoute.addChildren([
   editPointRoute,
   tagsRoute,
   sectionsRoute,
+  roleProfilesRoute,
   templatesRoute,
   templateRoute,
   resumesRoute,

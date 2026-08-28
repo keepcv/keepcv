@@ -24,6 +24,8 @@ import {
   resumeEntrySchema,
   resumeSchema,
   resumeSectionSchema,
+  roleProfileSchema,
+  roleProfileTagSchema,
   storeSchema,
   tagSchema,
 } from "@keepcv/schema";
@@ -77,6 +79,8 @@ export function emptyStore(): Store {
     resumeEntryPoints: [],
     resumeContactChannels: [],
     savedFilters: [],
+    roleProfiles: [],
+    roleProfileTags: [],
     templates: [],
   });
 }
@@ -361,4 +365,20 @@ export function aField(
   });
   store.recordFields.push(field);
   return field;
+}
+
+export function aRoleProfile(
+  store: Store,
+  name: string,
+  tags: readonly Tag[],
+  overrides: Record<string, unknown> = {},
+) {
+  const profile = roleProfileSchema.parse({ ...standard(), name, sortKey: "a0", ...overrides });
+  store.roleProfiles.push(profile);
+  for (const tag of tags) {
+    store.roleProfileTags.push(
+      roleProfileTagSchema.parse({ roleProfileId: profile.id, tagId: tag.id }),
+    );
+  }
+  return profile;
 }

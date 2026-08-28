@@ -184,6 +184,14 @@ export function Navigation({
           count={live(store.customSections).length}
           collapsed={collapsed}
         />
+        <NavLink
+          to="/role-profiles"
+          search={{ archived: false }}
+          icon="roleProfile"
+          label="Role profiles"
+          count={live(store.roleProfiles).length}
+          collapsed={collapsed}
+        />
       </Group>
 
       <Group title="Resumes" collapsed={collapsed}>

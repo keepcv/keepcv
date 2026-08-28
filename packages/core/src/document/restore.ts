@@ -7,13 +7,10 @@ import type {
   RestoreOmission,
   Resume,
   ResumeContactChannel,
-  ResumeEntryInput,
   ResumeEntryPatch,
-  ResumeEntryPointInput,
   ResumeEntryPointPatch,
   ResumeManifest,
   ResumePatch,
-  ResumeSectionInput,
   ResumeSectionPatch,
   SectionKind,
   SortKey,
@@ -22,25 +19,11 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { newUuid } from "../identity/uuid.js";
-import { generateKeyBetween } from "../ordering/sort-key.js";
 import { DEFAULT_SECTION_LAYOUT, live, sectionHeading } from "../store/selectors.js";
+import { above, type CompositionPlan, change, emptyPlan, type PlanChange, sparse } from "./plan.js";
 
-export interface RestoreChange<Patch> {
-  id: Uuid;
-  patch: Patch;
-  expectedUpdatedAt: Timestamp;
-  unarchive: boolean;
-}
-
-export interface RestorePlan {
-  resumeId: Uuid;
-  resume: RestoreChange<ResumePatch> | null;
-  addSections: ResumeSectionInput[];
-  sections: RestoreChange<ResumeSectionPatch>[];
-  addEntries: ResumeEntryInput[];
-  entries: RestoreChange<ResumeEntryPatch>[];
-  addEntryPoints: ResumeEntryPointInput[];
-  entryPoints: RestoreChange<ResumeEntryPointPatch>[];
+export interface RestorePlan extends CompositionPlan {
+  resume: PlanChange<ResumePatch> | null;
   contacts: ResumeContactChannel[];
   revertedContacts: Uuid[];
   omissions: RestoreOmission[];
@@ -57,18 +40,6 @@ interface Existing {
 interface Placed<Source> {
   source: Source;
   id: Uuid;
-}
-
-// Fresh keys above everything the scope already holds: reassigning inside the
-// range in use collides with a key still on a row, and none of the sort-key
-// unique indexes is deferrable.
-function above(taken: readonly string[]): () => SortKey {
-  let last: string | null = [...taken].sort().at(-1) ?? null;
-  return () => {
-    const next = generateKeyBetween(last, null);
-    last = next;
-    return next;
-  };
 }
 
 // Keys are left where they are when the rows already sit in the order the
@@ -88,24 +59,6 @@ function ordered<Slot extends { found: Existing | undefined }>(
     ...slot,
     sortKey: settled && slot.found !== undefined ? slot.found.sortKey : next(),
   }));
-}
-
-// Only what differs, so a restore that agrees with a row does not bump a
-// concurrency token no edit was in conflict with. `undefined` means the
-// manifest says nothing about the field; `null` clears it.
-function sparse<Patch extends object>(wanted: Patch, row: object): Patch {
-  const patch = {} as Record<string, unknown>;
-  const current = row as Record<string, unknown>;
-  for (const [key, value] of Object.entries(wanted)) {
-    if (value !== undefined && current[key] !== value) patch[key] = value;
-  }
-  return patch as Patch;
-}
-
-function change<Patch extends object>(row: Existing, patch: Patch): RestoreChange<Patch>[] {
-  const unarchive = row.archivedAt !== null;
-  if (!unarchive && Object.keys(patch).length === 0) return [];
-  return [{ id: row.id, patch, expectedUpdatedAt: row.updatedAt, unarchive }];
 }
 
 // Toggled off rather than archived: what a resume prints is `is_visible`, and
@@ -359,17 +312,11 @@ export function restorePlan(
 
   const target = targetPatch(resume, manifest.resume);
   const plan: RestorePlan = {
-    resumeId,
+    ...emptyPlan(resumeId),
     resume:
       target === null
         ? null
         : { id: resume.id, patch: target, expectedUpdatedAt: resume.updatedAt, unarchive: false },
-    addSections: [],
-    sections: [],
-    addEntries: [],
-    entries: [],
-    addEntryPoints: [],
-    entryPoints: [],
     contacts: [],
     revertedContacts: [],
     omissions: [],

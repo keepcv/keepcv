@@ -19,6 +19,7 @@ import {
   addRecordField,
   addResume,
   addRevision,
+  addRoleProfile,
   addSavedFilter,
   addSection,
   addTag,
@@ -2628,5 +2629,94 @@ describe("bringing in a file with no structure in it", () => {
 
     expect(await screen.findByText(/worked out from the layout/)).toBeInTheDocument();
     expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
+  });
+});
+
+describe("role profiles", () => {
+  it("names a profile and adds a word to it in one motion", async () => {
+    const store = aFilledStore();
+    const server = storeServer(store);
+    mount(server.answer, "/role-profiles?archived=false");
+
+    await screen.findByLabelText("New role profile");
+    type("New role profile", "Backend");
+    press("Add");
+
+    await waitFor(() => {
+      expect(store.roleProfiles).toHaveLength(1);
+    });
+
+    type("Add a word to Backend", "Go");
+    press("Add to Backend");
+
+    // The word was not in the vocabulary, so it is created and added at once.
+    await waitFor(() => {
+      expect(store.roleProfileTags).toHaveLength(1);
+    });
+    expect(store.tags.map((tag) => tag.label)).toContain("Go");
+  });
+
+  it("says what each profile reaches before anything is applied", async () => {
+    const store = aFilledStore();
+    const backend = addTag(store, "Backend");
+    const role = store.records[0];
+    if (role === undefined) throw new Error("the fixture holds a record");
+    store.recordTags.push({ tagId: backend.id, recordId: role.id });
+    addRoleProfile(store, "Backend", [backend]);
+
+    mount(storeServer(store).answer, "/role-profiles?archived=false");
+
+    // The whole of a tagged record: its two points come with it.
+    expect(await screen.findByText("1 record, 2 points")).toBeInTheDocument();
+  });
+
+  it("places what a profile selects on a resume, and says what it placed", async () => {
+    const store = aFilledStore();
+    const backend = addTag(store, "Backend");
+    const engine = store.records.find((row) => row.title === "Difference Engine");
+    const resume = store.resumes[0];
+    if (engine === undefined || resume === undefined) throw new Error("the fixture holds both");
+    store.recordTags.push({ tagId: backend.id, recordId: engine.id });
+    const profile = addRoleProfile(store, "Backend", [backend]);
+
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}?view=composition`);
+
+    await screen.findByLabelText("Role profile to apply");
+    type("Role profile to apply", profile.id);
+    press("Apply");
+
+    // The project section already holds that record, so the profile finds
+    // nothing to add and says so rather than writing a second row.
+    expect(await screen.findByText(/already on this resume/)).toBeInTheDocument();
+    expect(store.resumeEntries.filter((row) => row.recordId === engine.id)).toHaveLength(1);
+  });
+
+  it("puts back what a resume had taken off rather than adding a second row", async () => {
+    const store = aFilledStore();
+    const backend = addTag(store, "Backend");
+    const engine = store.records.find((row) => row.title === "Difference Engine");
+    const resume = store.resumes[0];
+    if (engine === undefined || resume === undefined) throw new Error("the fixture holds both");
+    const placed = store.resumeEntries.findIndex((row) => row.recordId === engine.id);
+    const entry = store.resumeEntries[placed];
+    if (entry === undefined) throw new Error("the fixture places it");
+    entry.isVisible = false;
+
+    store.recordTags.push({ tagId: backend.id, recordId: engine.id });
+    const profile = addRoleProfile(store, "Backend", [backend]);
+
+    const server = storeServer(store);
+    mount(server.answer, `/resumes/${resume.id}?view=composition`);
+
+    await screen.findByLabelText("Role profile to apply");
+    type("Role profile to apply", profile.id);
+    press("Apply");
+
+    // Re-read: the stub replaces the row rather than mutating the one held.
+    await waitFor(() => {
+      expect(store.resumeEntries[placed]?.isVisible).toBe(true);
+    });
+    expect(store.resumeEntries.filter((row) => row.recordId === engine.id)).toHaveLength(1);
   });
 });

@@ -17,6 +17,7 @@ import type {
   ResumeEntryPointInput,
   ResumeInput,
   ResumeSectionInput,
+  RoleProfileInput,
   SavedFilterInput,
   TagInput,
   Uuid,
@@ -394,6 +395,10 @@ export function eachDriver(suite: (driver: Driver) => void): void {
       store: () => store,
     });
   });
+}
+
+export function roleProfileInput(name: string, overrides: Record<string, unknown> = {}) {
+  return { id: newUuid(), name, sortKey: "a0", ...overrides } as RoleProfileInput;
 }
 
 export function savedFilterInput(name: string, overrides: Record<string, unknown> = {}) {

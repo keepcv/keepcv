@@ -140,8 +140,9 @@ The database holds `owner`, `profile`, `contact_channel`, `organisation`,
 `phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
 `evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
 `resume_section`, `resume_entry`, `resume_entry_point`,
-`resume_contact_channel`, `saved_filter`, `template`, `resume_version`,
-`resume_snapshot` and `resume_content_ref`, and the port has thirteen
+`resume_contact_channel`, `saved_filter`, `role_profile`, `role_profile_tag`,
+`template`, `resume_version`,
+`resume_snapshot` and `resume_content_ref`, and the port has fourteen
 repositories. That is the record store, its vocabulary, its editor state, the
 composition a resume is and its history. `resume_version` is append-only, like `phrasing_revision`, and held
 that way by the same hand-written trigger. There is no `search_document` and
@@ -155,8 +156,8 @@ overrides, and eighteen owned collections: `/v1/contact-channels`,
 `/v1/organisations`, `/v1/custom-sections`, `/v1/records`, `/v1/record-links`,
 `/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
 `/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/saved-filters`,
-`/v1/templates`, `/v1/resumes`, `/v1/resume-sections`, `/v1/resume-entries` and
-`/v1/resume-entry-points`.
+`/v1/role-profiles`, `/v1/templates`, `/v1/resumes`, `/v1/resume-sections`,
+`/v1/resume-entries` and `/v1/resume-entry-points`.
 It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
 `POST /v1/resumes/{id}/derive`, the resume timeline at `/v1/resume-versions`,
 `/v1/resume-snapshots`, `POST /v1/intake`, `GET /v1/resume-versions/diff`,
@@ -174,7 +175,8 @@ The web app is an application frame - a collapsible navigation rail grouped into
 Store, Vocabulary, Resumes and System, a command palette on its header, and a
 sheet in place of the rail below `lg` - over the store overview, the profile, the
 record list, a record's detail and its form, the point list, the tag vocabulary,
-the custom-section headings, the template list and a design's editor, the resume
+the custom-section headings, the role profiles, the template list and a design's
+editor, the resume
 list, a resume's composition, its compiled preview and its history, the backup
 screen, and search results. All of
 it is fed by one `GET /v1/store` on the root route's loader, and the preview is
@@ -358,6 +360,19 @@ named again - the same shape as placing something on a resume, and the reason
 the add control is one control. A custom section is a screen of its own, because
 until one exists the record form's section picker is empty and `custom_entry` is
 hidden, which made a whole record kind unreachable.
+
+**A role profile is a rule over the vocabulary, and applying one only adds.** A
+profile is a name and a set of tags; something is selected if it carries one of
+the words, and a record's words reach the points under it, so a record tagged
+"Backend" comes whole and one that is not brings only the points that are.
+`roleProfileMatch(store, id)` in `@keepcv/core` answers what it reaches - the
+same selector the profiles screen and the resume's picker both read - and
+`roleProfilePlan` answers the writes. Applying places what the words select and
+takes nothing off, so a curated resume cannot be undone by a click and applying
+one twice writes nothing the second time; every write is a create or a put-back,
+because each uniqueness index on the composition covers archived rows.
+`CompositionPlan` is the shape a restore and a profile both answer, and
+`applyCompositionPlan` is the one place unarchive-then-patch is written.
 
 **A tag is created from wherever the word is being used.** The picker on a record
 and on a point takes a label, not an id: `tagForLabel(store, label)` in

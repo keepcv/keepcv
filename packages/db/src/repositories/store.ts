@@ -37,6 +37,8 @@ import {
   resumeSection,
   resumeSnapshot,
   resumeVersion,
+  roleProfile,
+  roleProfileTag,
   savedFilter,
   tag,
   template,
@@ -123,6 +125,8 @@ export function createStoreRepository(
       resumeEntryPoints: await repositories.resumes.listEntryPoints(everything),
       resumeContactChannels: await repositories.resumes.listContactChannels(),
       savedFilters: await repositories.savedFilters.list(everything),
+      roleProfiles: await repositories.roleProfiles.list(everything),
+      roleProfileTags: await repositories.roleProfiles.listTags(),
       templates: await repositories.templates.list(everything),
     };
   }
@@ -278,10 +282,18 @@ export function createStoreRepository(
         recordTag,
         store.recordTags.map((row) => ({ ...row, ownerId })),
       );
-      // After the tags, which is the only table one references.
+      // After the tags, which is the only table either references.
       await insertAll(
         savedFilter,
         store.savedFilters.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        roleProfile,
+        store.roleProfiles.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
+      await insertAll(
+        roleProfileTag,
+        store.roleProfileTags.map((row) => ({ ...row, ownerId })),
       );
 
       await loadPoints(store, ownerId);

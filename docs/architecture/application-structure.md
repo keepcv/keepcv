@@ -413,6 +413,26 @@ put a hidden word on a live row, so the picker refuses and says where to put it
 back - the alternative, restoring it silently, is a write the user did not ask
 for.
 
+### 5.5.1 Role profiles
+
+A rule over the vocabulary rather than a screen about resumes, which is why it
+sits beside the tags in the rail. Each row names the profile, what it currently
+reaches - "4 records, 17 points" - and the words it selects by; a word is added
+by typing it, so the picker is the same one control the record screen's is
+(#5.5) and a label nobody has used yet becomes a tag and joins the rule at once.
+
+**What each one reaches is shown before anything is applied.** The count comes
+from `roleProfileMatch(store, roleProfileId)`, the selector the resume's picker
+reads, so a profile cannot promise one thing on this screen and do another on
+that one. A profile with no words in it says so rather than reading as one that
+happens to select nothing.
+
+**Applying happens on the composition, where the effect lands** - not here, and
+not on the preview tab beside the things it would change (#7). It is a select and
+a button under the composition, and it reports what it placed. Nothing is taken
+off, so there is no confirmation and nothing to undo: the composer's own controls
+already remove what should not have come.
+
 ### 5.6 Resume composer
 
 Three panes: the store with in/out toggles; the resume structure,

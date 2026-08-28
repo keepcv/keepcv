@@ -153,6 +153,12 @@ CRUD   /v1/saved-filters               ?subject=&archived=
 CRUD   /v1/tags                        ?archived=
 POST   /v1/tags/:id/merge              { expectedUpdatedAt, intoTagId }
 
+CRUD   /v1/role-profiles               ?archived=
+GET    /v1/role-profiles/:id/tags      the words it selects by
+PUT    /v1/role-profiles/:id/tags/:tagId    idempotent
+DELETE /v1/role-profiles/:id/tags/:tagId
+POST   /v1/role-profiles/:id/apply     { resumeId } - places what it selects
+
 CRUD   /v1/templates                   ?archived=   the user's designs; the
                                                     shipped ones are in the build
 CRUD   /v1/resumes                     ?archived=
@@ -193,6 +199,14 @@ Notes on the non-obvious ones:
   it wants a verdict. A route would ship the whole resume to the machine it came
   from and answer with a list the caller could have computed. See
   `application-structure.md` #7.2.
+- **Applying a role profile is a route, and the plan is made server-side.**
+  `roleProfilePlan(store, resumeId, roleProfileId)` in `@keepcv/core` answers the
+  composition writes and the route applies them in one transaction, exactly as
+  `/v1/intake` and `/v1/resumes/:id/derive` do: a client-computed list of rows to
+  write is a client deciding what the store contains. It answers what it placed
+  rather than the resume, because it is additive - it never takes anything off,
+  so applying one twice writes nothing the second time and there is no removal to
+  report.
 - **There is no `/v1/backup/*`.** It used to list three: `status`, `now` and
   `restore`. All three would have handed `createApi` a filesystem, which is the
   one thing it is built not to have - it takes the port, an owner scope and an
