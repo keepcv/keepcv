@@ -108,24 +108,33 @@ const A_RESUME: Drawn[] = [
   { text: "2014 - 2017", size: 10, font: "F1", x: 72, y: 550 },
 ];
 
-describe("pulling lines out of a PDF", () => {
-  it("reads one line per printed line, in the order they were set", async () => {
-    const lines = await pdfLines(aPdf(A_RESUME));
+// The first call in the file boots the PDF engine, which is comfortably past the
+// default per-test budget when every package's suite runs at once. It timed out
+// under `pnpm check` and passed on its own, which reads as a broken test.
+const BOOTS_THE_PDF_ENGINE = 30_000;
 
-    expect(lines.map((line) => line.text)).toEqual([
-      "Ada Lovelace",
-      "ada@example.org | +44 20 7946 0000",
-      "EXPERIENCE",
-      "Senior Engineer, Analytical Engines",
-      "Jan 2020 - Present",
-      "- Cut batch runtime by 40%.",
-      "- Led a team of four through the migration off punch cards.",
-      "- Wrote the scheduler the reporting pipeline still runs on.",
-      "EDUCATION",
-      "BSc Mathematics, University of London",
-      "2014 - 2017",
-    ]);
-  });
+describe("pulling lines out of a PDF", () => {
+  it(
+    "reads one line per printed line, in the order they were set",
+    async () => {
+      const lines = await pdfLines(aPdf(A_RESUME));
+
+      expect(lines.map((line) => line.text)).toEqual([
+        "Ada Lovelace",
+        "ada@example.org | +44 20 7946 0000",
+        "EXPERIENCE",
+        "Senior Engineer, Analytical Engines",
+        "Jan 2020 - Present",
+        "- Cut batch runtime by 40%.",
+        "- Led a team of four through the migration off punch cards.",
+        "- Wrote the scheduler the reporting pipeline still runs on.",
+        "EDUCATION",
+        "BSc Mathematics, University of London",
+        "2014 - 2017",
+      ]);
+    },
+    BOOTS_THE_PDF_ENGINE,
+  );
 
   it("reads a compressed content stream, which is what a real template writes", async () => {
     const lines = await pdfLines(aPdf(A_RESUME, true));

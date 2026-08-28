@@ -439,8 +439,37 @@ What remains is more rules as real postings turn up cases these five miss.
 
 ### Role profiles
 
-Tag-rule definition; applying a profile to pre-select a record set; profile
-management.
+Built. A `role_profile` is a name and a set of words from the tag vocabulary,
+which is what a controlled vocabulary was for: rename and merge keep the rule
+meaningful without a migration. Naming one, renaming it, ordering it, archiving
+it and putting it back are a screen of its own, and a word is added by typing it,
+so a label nobody has used yet becomes a tag and joins the rule in one motion -
+the same one control the picker on a record is.
+
+**One rule, stated once: something is selected if it carries one of the words,
+and a record's words reach the points under it.** A record tagged "Backend" is a
+job that was backend work, so all of it comes; a record that is not brings only
+the points that are. `roleProfileMatch(store, roleProfileId)` in `@keepcv/core`
+answers that over the boot payload, like `search` and `composition` beside it, so
+the count on the profiles screen and the count in the resume's picker cannot
+disagree.
+
+**Applying one is additive, and that is the whole design.** It places what the
+words select and takes nothing off, so a profile applied to a resume somebody
+curated cannot undo the curation; every write is a create or a put-back, because
+each uniqueness index on the composition covers archived rows; and applying one
+twice writes nothing the second time. `roleProfilePlan` answers the writes and
+`POST /v1/role-profiles/{id}/apply` re-plans server-side and applies them in one
+transaction, for the reason an intake and a derive do.
+
+**A plan is one shape, and one applier writes it.** `CompositionPlan` is what a
+restore and a role profile both answer, so `applyCompositionPlan` in the API is
+written once and the awkward part - unarchive, then patch, in dependency order -
+has one implementation rather than two that drift.
+
+**Non-goals:** no rule beyond the words - no "and not", no kind filter, no
+scoring. A profile that needs a query language is a saved filter, and that is a
+different table that already exists.
 
 ### Portfolio site
 

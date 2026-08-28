@@ -7,7 +7,10 @@ import {
   importPlan,
   type JsonValue,
   newUuid,
+  type PlanChange,
   renderManifest,
+  roleProfileAdds,
+  roleProfilePlan,
   tagSlug,
 } from "@keepcv/core";
 import type { ResumeSnapshot, ResumeVersion, Store, Uuid, VersionTrigger } from "@keepcv/schema";
@@ -37,6 +40,8 @@ import {
   resumeSnapshotSchema,
   resumeVersionSchema,
   richTextSchema,
+  roleProfileSchema,
+  roleProfileTagSchema,
   savedFilterSchema,
   tagSchema,
 } from "@keepcv/schema";
@@ -67,41 +72,37 @@ function revisionOf(phrasingId: string, body: unknown, at: string) {
   });
 }
 
-// Points and phrasings are not here: creating either writes a revision too.
-function createRow(store: Store, path: string, body: unknown, at: string): Response | undefined {
-  const row = stamp(body, at);
-  if (path === "/v1/organisations") {
-    store.organisations.push(organisationSchema.parse(row));
-  } else if (path === "/v1/contact-channels") {
-    store.contactChannels.push(contactChannelSchema.parse(row));
-  } else if (path === "/v1/records") {
-    store.records.push(careerRecordSchema.parse(row));
-  } else if (path === "/v1/resumes") {
-    store.resumes.push(resumeSchema.parse(row));
-  } else if (path === "/v1/metrics") {
-    store.metrics.push(metricSchema.parse(row));
-  } else if (path === "/v1/resume-sections") {
-    store.resumeSections.push(resumeSectionSchema.parse(row));
-  } else if (path === "/v1/resume-entries") {
-    store.resumeEntries.push(resumeEntrySchema.parse(row));
-  } else if (path === "/v1/resume-entry-points") {
-    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row));
-  } else if (path === "/v1/evidence") {
-    store.evidence.push(evidenceSchema.parse(row));
-  } else if (path === "/v1/record-links") {
-    store.recordLinks.push(recordLinkSchema.parse(row));
-  } else if (path === "/v1/record-fields") {
-    store.recordFields.push(recordFieldSchema.parse(row));
-  } else if (path === "/v1/custom-sections") {
-    store.customSections.push(customSectionSchema.parse(row));
-  } else if (path === "/v1/saved-filters") {
-    store.savedFilters.push(savedFilterSchema.parse(row));
-  } else if (path === "/v1/tags") {
-    const { label } = body as { label: string };
+// Points and phrasings are not here: creating either writes a revision too. A
+// tag is, because the slug it derives is the only thing this stub adds.
+const CREATABLE: Record<string, (store: Store, row: object) => void> = {
+  "/v1/organisations": (store, row) => store.organisations.push(organisationSchema.parse(row)),
+  "/v1/contact-channels": (store, row) =>
+    store.contactChannels.push(contactChannelSchema.parse(row)),
+  "/v1/records": (store, row) => store.records.push(careerRecordSchema.parse(row)),
+  "/v1/resumes": (store, row) => store.resumes.push(resumeSchema.parse(row)),
+  "/v1/metrics": (store, row) => store.metrics.push(metricSchema.parse(row)),
+  "/v1/resume-sections": (store, row) => store.resumeSections.push(resumeSectionSchema.parse(row)),
+  "/v1/resume-entries": (store, row) => store.resumeEntries.push(resumeEntrySchema.parse(row)),
+  "/v1/resume-entry-points": (store, row) =>
+    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(row)),
+  "/v1/evidence": (store, row) => store.evidence.push(evidenceSchema.parse(row)),
+  "/v1/record-links": (store, row) => store.recordLinks.push(recordLinkSchema.parse(row)),
+  "/v1/record-fields": (store, row) => store.recordFields.push(recordFieldSchema.parse(row)),
+  "/v1/custom-sections": (store, row) => store.customSections.push(customSectionSchema.parse(row)),
+  "/v1/saved-filters": (store, row) => store.savedFilters.push(savedFilterSchema.parse(row)),
+  "/v1/role-profiles": (store, row) => store.roleProfiles.push(roleProfileSchema.parse(row)),
+  "/v1/tags": (store, row) => {
+    const { label } = row as { label: string };
     store.tags.push(tagSchema.parse({ ...row, slug: tagSlug(label) }));
-  } else {
-    return undefined;
-  }
+  },
+};
+
+function createRow(store: Store, path: string, body: unknown, at: string): Response | undefined {
+  const create = CREATABLE[path];
+  if (create === undefined) return undefined;
+
+  const row = stamp(body, at);
+  create(store, row);
   return jsonOf(row, 201);
 }
 
@@ -198,6 +199,31 @@ function amendIn<T extends { id: string }>(
   return jsonOf(row);
 }
 
+// A plan's changes, applied where the route would: the row is put back and made
+// visible in one write, which is what `applyChange` does server-side.
+function amendAll<T extends { id: string }>(
+  rows: T[],
+  changes: readonly PlanChange<object>[],
+  at: string,
+  parse: (value: unknown) => T,
+): void {
+  for (const change of changes) {
+    const index = rows.findIndex((row) => row.id === change.id);
+    const found = rows[index];
+    if (found === undefined) continue;
+    rows.splice(
+      index,
+      1,
+      parse({
+        ...found,
+        ...(change.unarchive ? { archivedAt: null } : {}),
+        ...change.patch,
+        updatedAt: at,
+      }),
+    );
+  }
+}
+
 interface Amendable {
   rows: { id: string }[];
   parse: (value: unknown) => { id: string };
@@ -238,6 +264,10 @@ const AMENDABLE: Record<string, (store: Store) => Amendable> = {
   "saved-filters": (store) => ({
     rows: store.savedFilters,
     parse: (v) => savedFilterSchema.parse(v),
+  }),
+  "role-profiles": (store) => ({
+    rows: store.roleProfiles,
+    parse: (v) => roleProfileSchema.parse(v),
   }),
   "contact-channels": (store) => ({
     rows: store.contactChannels,
@@ -313,6 +343,8 @@ const DRAFT = /^\/v1\/drafts\/([^/]+)\/([^/]+)\/([^/]+)$/;
 const RECORD_TAG = /^\/v1\/records\/([^/]+)\/tags\/([^/]+)$/;
 const POINT_TAG = /^\/v1\/points\/([^/]+)\/tags\/([^/]+)$/;
 const MERGE = /^\/v1\/tags\/([^/]+)\/merge$/;
+const PROFILE_TAG = /^\/v1\/role-profiles\/([^/]+)\/tags\/([^/]+)$/;
+const APPLY_PROFILE = /^\/v1\/role-profiles\/([^/]+)\/apply$/;
 const REVISIONS = /^\/v1\/phrasings\/([^/]+)\/revisions$/;
 const RESTORE = /^\/v1\/resume-versions\/([^/]+)\/restore$/;
 const DERIVE = /^\/v1\/resumes\/([^/]+)\/derive$/;
@@ -571,7 +603,43 @@ function onTagAssignment(store: Store, call: Call): Response | undefined {
     );
   }
 
+  const onProfile = PROFILE_TAG.exec(call.path);
+  if (onProfile !== null) {
+    return onAssignment(
+      store.roleProfileTags,
+      roleProfileTagSchema.parse({ roleProfileId: onProfile[1], tagId: onProfile[2] }),
+      call.method,
+      (row) => row.roleProfileId,
+    );
+  }
+
   return undefined;
+}
+
+// The planner the route runs, for the reason deriving and importing run theirs:
+// a screen test must not pass against a plan the server would not have made.
+function onApplyProfile(store: Store, from: RegExpExecArray, call: Call, at: string): Response {
+  const plan = roleProfilePlan(
+    store,
+    (call.body as { resumeId: Uuid }).resumeId,
+    (from[1] ?? "") as Uuid,
+  );
+  if (plan === undefined) return jsonOf({ status: 404 }, 404);
+
+  for (const row of plan.addSections) {
+    store.resumeSections.push(resumeSectionSchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.addEntries) {
+    store.resumeEntries.push(resumeEntrySchema.parse(stamp(row, at)));
+  }
+  for (const row of plan.addEntryPoints) {
+    store.resumeEntryPoints.push(resumeEntryPointSchema.parse(stamp(row, at)));
+  }
+  amendAll(store.resumeSections, plan.sections, at, (v) => resumeSectionSchema.parse(v));
+  amendAll(store.resumeEntries, plan.entries, at, (v) => resumeEntrySchema.parse(v));
+  amendAll(store.resumeEntryPoints, plan.entryPoints, at, (v) => resumeEntryPointSchema.parse(v));
+
+  return jsonOf(roleProfileAdds(plan), 201);
 }
 
 // The planner the route runs, so a screen test cannot pass against a plan the
@@ -608,6 +676,8 @@ function onPattern(store: Store, archive: Archive, call: Call, at: string): Resp
 
   const deriving = DERIVE.exec(call.path);
   if (deriving !== null) return onDerive(store, deriving, call, at);
+  const applying = APPLY_PROFILE.exec(call.path);
+  if (applying !== null) return onApplyProfile(store, applying, call, at);
 
   if (call.path === "/v1/import") return onImport(store, call);
   if (call.path === "/v1/intake") return onIntake(store, call);

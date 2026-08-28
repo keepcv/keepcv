@@ -799,7 +799,8 @@ point_tag (
 ```
 
 A controlled vocabulary rather than free strings, so rename and merge are
-single operations and role profiles can be rules over a stable set. Two
+single operations and a role profile can be a rule over a stable set (#8.1.1).
+Two
 explicit join tables rather than one polymorphic table, so both sides keep
 referential integrity.
 
@@ -900,6 +901,44 @@ it, and nothing deletes a tag anyway.
 Archiving a tag does not archive the filters naming it. The tag is still there
 and the vocabulary screen is where it comes back; a filter that quietly vanished
 because a word was put aside would be a delete nobody asked for.
+
+### 8.1.1 `role_profile` - the words a kind of role is hired for
+
+```sql
+role_profile (
+  ...standard,
+  name     text not null,
+  sort_key text not null
+)
+create unique index on role_profile (owner_id, sort_key);
+
+role_profile_tag (
+  owner_id        uuid not null references owner(id) on delete cascade,
+  role_profile_id uuid not null,
+  tag_id          uuid not null,
+  primary key (owner_id, role_profile_id, tag_id),
+  foreign key (owner_id, role_profile_id) references role_profile (owner_id, id) on delete cascade,
+  foreign key (owner_id, tag_id)          references tag          (owner_id, id) on delete cascade
+)
+```
+
+A named rule over the vocabulary, and the reason the vocabulary is controlled
+rather than free strings (#8). The pair is the whole row, like `record_tag`, so
+taking a word out of a profile deletes rather than archives and destroys nothing
+the user wrote.
+
+**It is a rule, not a tag on the profile.** "This profile selects work filed
+under Go" is a different claim from "this profile is a Go thing", and the second
+is not a thing the store has any use for.
+
+**Archiving a tag does not touch a profile naming it**, for the reason it does
+not touch a saved filter: the tag is still there and the vocabulary screen is
+where it comes back. The profile simply selects nothing under that word until it
+does.
+
+**What it selects is a selector, not a column.** `roleProfileMatch(store, id)`
+in `@keepcv/core` answers it over the boot payload, exactly as `search` does, so
+there is nothing derived to keep in step.
 
 ### 8.2 `template` - a design of the user's own
 

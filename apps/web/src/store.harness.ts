@@ -17,12 +17,15 @@ import {
   type Resume,
   type ResumeEntry,
   type ResumeSection,
+  type RoleProfile,
   recordFieldSchema,
   recordLinkSchema,
   resumeEntryPointSchema,
   resumeEntrySchema,
   resumeSchema,
   resumeSectionSchema,
+  roleProfileSchema,
+  roleProfileTagSchema,
   type Store,
   type StoredTemplate,
   savedFilterSchema,
@@ -74,6 +77,8 @@ export function emptyStore(): Store {
     resumeEntryPoints: [],
     resumeContactChannels: [],
     savedFilters: [],
+    roleProfiles: [],
+    roleProfileTags: [],
     templates: [],
   });
 }
@@ -489,4 +494,20 @@ export function addTemplate(
   });
   store.templates.push(template);
   return template;
+}
+
+export function addRoleProfile(
+  store: Store,
+  name: string,
+  tags: readonly Tag[],
+  overrides: Record<string, unknown> = {},
+): RoleProfile {
+  const profile = roleProfileSchema.parse({ ...standard(), name, sortKey: "a0", ...overrides });
+  store.roleProfiles.push(profile);
+  for (const tag of tags) {
+    store.roleProfileTags.push(
+      roleProfileTagSchema.parse({ roleProfileId: profile.id, tagId: tag.id }),
+    );
+  }
+  return profile;
 }

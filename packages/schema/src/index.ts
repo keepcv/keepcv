@@ -306,6 +306,18 @@ export {
   versionTriggerSchema,
 } from "./entities/resume-version.js";
 export {
+  type RoleProfile,
+  type RoleProfileApplication,
+  type RoleProfileInput,
+  type RoleProfilePatch,
+  type RoleProfileTag,
+  roleProfileApplicationSchema,
+  roleProfileInputSchema,
+  roleProfilePatchSchema,
+  roleProfileSchema,
+  roleProfileTagSchema,
+} from "./entities/role-profile.js";
+export {
   ARCHIVED_SCOPES,
   type ArchivedScope,
   archivedScopeSchema,

@@ -26,6 +26,7 @@ import {
   type Run,
   recordInput,
   resumeInput,
+  roleProfileInput,
   savedFilterInput,
   sectionInput,
   tagInput,
@@ -186,6 +187,13 @@ async function fill(run: Run): Promise<void> {
     );
     await r.savedFilters.archive(droppedFilter.id, droppedFilter.updatedAt);
 
+    const backend = await r.roleProfiles.create(roleProfileInput("Backend"));
+    await r.roleProfiles.addTag(backend.id, react.id);
+    const droppedProfile = await r.roleProfiles.create(
+      roleProfileInput("One I stopped using", { sortKey: "a1" }),
+    );
+    await r.roleProfiles.archive(droppedProfile.id, droppedProfile.updatedAt);
+
     const navy = await r.templates.create({
       id: newUuid(),
       name: "Navy headings",
@@ -316,14 +324,22 @@ function reversed(store: Archive): Archive {
     resumeEntryPoints: [...store.resumeEntryPoints].reverse(),
     resumeContactChannels: [...store.resumeContactChannels].reverse(),
     savedFilters: [...store.savedFilters].reverse(),
+    roleProfiles: [...store.roleProfiles].reverse(),
+    roleProfileTags: [...store.roleProfileTags].reverse(),
     templates: [...store.templates].reverse(),
     resumeVersions: [...store.resumeVersions].reverse(),
     resumeSnapshots: [...store.resumeSnapshots].reverse(),
   };
 }
 
+// Every test here fills a whole store, reads it back through the file format and
+// loads it into a second owner. That is past the default per-test budget when
+// every package's suite runs at once: it timed out under `pnpm check` and passed
+// on its own, which reads as a broken test.
+const FILLS_A_WHOLE_STORE = 30_000;
+
 eachDriver(({ run, otherOwner }) => {
-  describe("export and import", () => {
+  describe("export and import", { timeout: FILLS_A_WHOLE_STORE }, () => {
     // Through the file format, so anything surviving in memory but not on disk
     // fails here.
     it("restores a whole store into an empty one, unchanged", async () => {
@@ -363,6 +379,7 @@ eachDriver(({ run, otherOwner }) => {
         "pointRecordLinks",
         "recordTags",
         "pointTags",
+        "roleProfileTags",
         "drafts",
         "resumeContactChannels",
       ];

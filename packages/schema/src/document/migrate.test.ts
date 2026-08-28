@@ -40,6 +40,8 @@ const current = {
     resumeEntryPoints: [],
     resumeContactChannels: [],
     savedFilters: [],
+    roleProfiles: [],
+    roleProfileTags: [],
     templates: [],
     resumeVersions: [],
     resumeSnapshots: [],

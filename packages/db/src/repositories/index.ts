@@ -9,6 +9,7 @@ import { createPointRepository } from "./point.js";
 import { createProfileRepository } from "./profile.js";
 import { createResumeRepository } from "./resume.js";
 import { createResumeVersionRepository } from "./resume-version.js";
+import { createRoleProfileRepository } from "./role-profile.js";
 import { createSavedFilterRepository } from "./saved-filter.js";
 import { createStoreRepository } from "./store.js";
 import { createTagRepository } from "./tag.js";
@@ -21,6 +22,7 @@ export function createRepositories(db: Database): Repositories {
     organisations: createOrganisationRepository(db),
     customSections: createCustomSectionRepository(db),
     savedFilters: createSavedFilterRepository(db),
+    roleProfiles: createRoleProfileRepository(db),
     templates: createTemplateRepository(db),
     records: createCareerRecordRepository(db),
     points: createPointRepository(db, phrasings),

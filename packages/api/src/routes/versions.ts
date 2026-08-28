@@ -5,7 +5,6 @@ import {
   manifestRefs,
   NotFoundError,
   type Repositories,
-  type RestoreChange,
   type RestorePlan,
   renderManifest,
   restorePlan,
@@ -21,7 +20,6 @@ import {
   resumeSnapshotPatchSchema,
   resumeSnapshotSchema,
   resumeVersionSchema,
-  type Timestamp,
   type Uuid,
   uuidSchema,
   versionRefSchema,
@@ -31,6 +29,7 @@ import { z } from "zod";
 import { mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
+import { applyCompositionPlan } from "./composition-plan.js";
 
 const versionsPath = "/v1/resume-versions";
 const noVersion = problemResponse("no resume version of this owner has that id");
@@ -187,51 +186,13 @@ async function revisionsFor(
   return await repositories.phrasings.listRevisions({ ids });
 }
 
-async function applyChange<Row extends { updatedAt: Timestamp }, Patch extends object>(
-  change: RestoreChange<Patch>,
-  unarchive: (id: Uuid, token: Timestamp) => Promise<Row>,
-  update: (id: Uuid, patch: Patch, token: Timestamp) => Promise<Row>,
-): Promise<void> {
-  const token = change.unarchive
-    ? (await unarchive(change.id, change.expectedUpdatedAt)).updatedAt
-    : change.expectedUpdatedAt;
-  if (Object.keys(change.patch).length > 0) await update(change.id, change.patch, token);
-}
-
-// In order: a section exists before an entry names it, and an entry before the
-// points under it.
 async function applyPlan(repositories: Repositories, plan: RestorePlan): Promise<void> {
   const resumes = repositories.resumes;
   if (plan.resume !== null) {
     await resumes.update(plan.resume.id, plan.resume.patch, plan.resume.expectedUpdatedAt);
   }
 
-  for (const input of plan.addSections) await resumes.addSection(input);
-  for (const change of plan.sections) {
-    await applyChange(
-      change,
-      async (id, token) => await resumes.restoreSection(id, token),
-      async (id, patch, token) => await resumes.updateSection(id, patch, token),
-    );
-  }
-
-  for (const input of plan.addEntries) await resumes.addEntry(input);
-  for (const change of plan.entries) {
-    await applyChange(
-      change,
-      async (id, token) => await resumes.restoreEntry(id, token),
-      async (id, patch, token) => await resumes.updateEntry(id, patch, token),
-    );
-  }
-
-  for (const input of plan.addEntryPoints) await resumes.addEntryPoint(input);
-  for (const change of plan.entryPoints) {
-    await applyChange(
-      change,
-      async (id, token) => await resumes.restoreEntryPoint(id, token),
-      async (id, patch, token) => await resumes.updateEntryPoint(id, patch, token),
-    );
-  }
+  await applyCompositionPlan(repositories, plan);
 
   for (const row of plan.contacts) {
     await resumes.setContactChannel(row.resumeId, row.contactChannelId, row.isVisible);

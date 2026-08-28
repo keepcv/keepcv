@@ -95,6 +95,11 @@ const COLLECTIONS: readonly {
     }),
     patch: { name: "Renamed" },
   },
+  {
+    path: "/v1/role-profiles",
+    body: () => ({ id: newUuid(), name: "Backend", sortKey: "a0" }),
+    patch: { name: "Renamed" },
+  },
 ];
 
 async function createdId(response: Response): Promise<string> {

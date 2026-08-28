@@ -15,6 +15,7 @@ import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
+import { ApplyRoleProfile } from "../../role-profiles/ui/apply-role-profile.js";
 import {
   type Placed,
   useAddComposed,
@@ -571,6 +572,8 @@ export function Composer({
           />
         </PanelBody>
       </Panel>
+
+      <ApplyRoleProfile store={store} client={client} resumeId={resumeId} />
 
       <Contacts resumeId={resumeId} contacts={detail.contacts} client={client} />
     </div>

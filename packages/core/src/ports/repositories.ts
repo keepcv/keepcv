@@ -65,6 +65,10 @@ import type {
   ResumeVersion,
   ResumeVersionInput,
   RichText,
+  RoleProfile,
+  RoleProfileInput,
+  RoleProfilePatch,
+  RoleProfileTag,
   SavedFilter,
   SavedFilterInput,
   SavedFilterPatch,
@@ -190,6 +194,23 @@ export interface SavedFilterRepository {
   update(id: Uuid, patch: SavedFilterPatch, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
   archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
   restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<SavedFilter>;
+}
+
+export interface RoleProfileRepository {
+  list(options?: { includeArchived?: boolean | undefined }): Promise<RoleProfile[]>;
+  get(id: Uuid): Promise<RoleProfile>;
+  create(input: RoleProfileInput): Promise<RoleProfile>;
+  update(id: Uuid, patch: RoleProfilePatch, expectedUpdatedAt: Timestamp): Promise<RoleProfile>;
+  archive(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RoleProfile>;
+  restore(id: Uuid, expectedUpdatedAt: Timestamp): Promise<RoleProfile>;
+
+  // No token and no archive: the pair is the whole row.
+  listTags(options?: {
+    roleProfileId?: Uuid | undefined;
+    tagId?: Uuid | undefined;
+  }): Promise<RoleProfileTag[]>;
+  addTag(roleProfileId: Uuid, tagId: Uuid): Promise<RoleProfileTag>;
+  removeTag(roleProfileId: Uuid, tagId: Uuid): Promise<void>;
 }
 
 export interface TemplateRepository {
@@ -499,6 +520,7 @@ export interface Repositories {
   organisations: OrganisationRepository;
   customSections: CustomSectionRepository;
   savedFilters: SavedFilterRepository;
+  roleProfiles: RoleProfileRepository;
   templates: TemplateRepository;
   records: CareerRecordRepository;
   points: PointRepository;

@@ -11,9 +11,10 @@ export {
   type Pagination,
   paginate,
 } from "./document/pagination.js";
+export type { CompositionPlan, PlanChange } from "./document/plan.js";
 export { PRESENTED_KINDS, type Presented, present } from "./document/presenters.js";
 export { type CompileOptions, renderManifest } from "./document/render.js";
-export { type RestoreChange, type RestorePlan, restorePlan } from "./document/restore.js";
+export { type RestorePlan, restorePlan } from "./document/restore.js";
 // This package must import no I/O of any kind - it runs unchanged in Node and
 // in the browser, and CI enforces it.
 
@@ -49,6 +50,7 @@ export {
   type Repositories,
   type ResumeRepository,
   type ResumeVersionRepository,
+  type RoleProfileRepository,
   type SavedFilterRepository,
   StoreNotEmptyError,
   type StoreRepository,
@@ -82,6 +84,12 @@ export {
   placeableSections,
   sectionFor,
 } from "./store/placement.js";
+export {
+  type ProfileMatch,
+  roleProfileAdds,
+  roleProfileMatch,
+  roleProfilePlan,
+} from "./store/role-profile.js";
 export { type SearchHit, type SearchSubject, search } from "./store/search.js";
 export {
   archived,
