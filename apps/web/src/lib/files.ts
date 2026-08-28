@@ -1,6 +1,10 @@
 // Written from what this tab already holds. The document was compiled here, so
 // taking the resume away asks the store nothing.
-export function saveFile(name: string, type: string, content: string): void {
+export function saveFile(
+  name: string,
+  type: string,
+  content: string | Uint8Array<ArrayBuffer>,
+): void {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement("a");
   link.href = url;

@@ -1,3 +1,4 @@
+export { type BlockRole, type ResumeBlock, toBlocks } from "./blocks.js";
 export { type ReadPeriod, readDate, readPeriod } from "./dates.js";
 export { fromJsonResume } from "./from-json-resume.js";
 export { fromLines } from "./from-lines.js";
@@ -24,7 +25,7 @@ export {
   type JsonResumeWork,
 } from "./json-resume.js";
 export { type DocumentLine, looksLikeHeading, looksListed, withoutBullet } from "./lines.js";
-export { type Loss, lossOf } from "./loss.js";
+export { EXPORT_TARGETS, type ExportTarget, type Loss, lossOf } from "./loss.js";
 export type {
   ReactiveResume,
   ReactiveResumeAward,
@@ -67,3 +68,5 @@ export type {
   RenderCvSocialNetwork,
 } from "./rendercv.js";
 export { toJsonResume } from "./to-json-resume.js";
+export { escapeLatex, toLatex } from "./to-latex.js";
+export { toTypst } from "./to-typst.js";

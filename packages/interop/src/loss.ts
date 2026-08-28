@@ -6,6 +6,11 @@ export interface Loss {
   detail: string;
 }
 
+// Every format a resume leaves as that is not this product's own. HTML is not
+// one of them: that file is the resume, so there is nothing to count it against.
+export const EXPORT_TARGETS = ["jsonresume", "latex", "typst", "docx"] as const;
+export type ExportTarget = (typeof EXPORT_TARGETS)[number];
+
 const entriesOf = (document: ResumeDocument): DocumentEntry[] =>
   document.sections.flatMap((section) => section.entries);
 
@@ -39,7 +44,33 @@ const RENAMED_TO: Record<string, string> = {
   project: "projects",
 };
 
-export function lossOf(document: ResumeDocument): Loss[] {
+// Counted against what the resume prints rather than against what the format
+// could hold: these three carry every mark, every metric and every field, and
+// what they do not carry is the design, because the file lays itself out.
+const NAMED_BY: Record<string, string> = {
+  inline: "run together on one line",
+  grouped: "stacked under one employer",
+};
+
+function typesetLoss(document: ResumeDocument): Loss[] {
+  const laidOut = document.sections.filter((section) => section.layout !== "entries");
+  const kinds = [...new Set(laidOut.map((section) => NAMED_BY[section.layout] ?? section.layout))];
+
+  return [
+    {
+      what: "The design you chose",
+      count: document.meta.templateId === undefined ? 0 : 1,
+      detail: `${document.meta.templateName ?? "The template"} is not carried: the file sets itself, and editing it is the point of asking for one.`,
+    },
+    {
+      what: "Section layouts",
+      count: laidOut.length,
+      detail: `${kinds.join(" and ")} - every section is written as a list of entries, so that hint is not applied.`,
+    },
+  ].filter((loss) => loss.count > 0);
+}
+
+function jsonResumeLoss(document: ResumeDocument): Loss[] {
   const entries = entriesOf(document);
   const dropped = document.sections.filter((section) => !KEPT_KINDS.has(section.kind));
   const renamed = document.sections.filter((section) => {
@@ -109,4 +140,8 @@ export function lossOf(document: ResumeDocument): Loss[] {
   ];
 
   return found.filter((loss) => loss.count > 0);
+}
+
+export function lossOf(document: ResumeDocument, target: ExportTarget): Loss[] {
+  return target === "jsonresume" ? jsonResumeLoss(document) : typesetLoss(document);
 }

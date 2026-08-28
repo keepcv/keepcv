@@ -266,22 +266,53 @@ browser's printing engine, because the stylesheet already states `@page` and the
 break rules - there is no PDF writer and no headless browser
 (application-structure.md #7.1).
 
-JSON Resume is built too, as `toJsonResume(document)` in `@keepcv/interop`,
-with `lossOf(document)` beside it. The adapter reads a `ResumeDocument` rather
-than the store, because that format describes a resume and not a career history,
-and the loss report is counted **against this resume** - three metrics, two
-sections with nowhere to go - rather than being a standing list of caveats
-nobody reads. It is shown before the download, not after, and nothing with a
-count of zero appears in it.
+Four of somebody else's formats are built - JSON Resume, a Word document,
+LaTeX and Typst - as `toJsonResume`, `toDocx`, `toLatex` and `toTypst` in
+`@keepcv/interop`, with `lossOf(document, target)` beside them. Each reads a
+`ResumeDocument` rather than the store, because those formats describe a resume
+and not a career history.
 
-`keepcv render --format jsonresume` is the same pair from the terminal, for
-piping into whatever else the user runs. There is no lint report on that
-branch: nothing was rendered to read back, so the linter has no bytes to have
-an opinion about, and the loss report is what belongs there instead.
+**The three that lay themselves out share a seam.** `toBlocks(document)` answers
+a flat `ResumeBlock[]` - a role, some rich text, and the period an entry head
+sets aside - and each writer only decides what its format calls a heading, a
+bullet and a bold run. That is the mirror of the reading side, where an
+extractor answers `DocumentLine[]` and `fromLines` does the reasoning: the thing
+that knows a format knows only the format, and what a resume is made of is
+worked out once. A fourth writer adds a file, not a second understanding of a
+resume.
 
-There is no `?format=jsonresume` on `/v1/export`: the native export is a
-whole-store read and belongs to the server, but a resume in somebody else's
-format is a pure function of a document the caller is already holding.
+**A Word document is written the way it is read.** `toDocx` sets sections as
+`Heading1`, entry heads as `Heading2` and points with `numPr`, which is exactly
+what `docxLines` keys on, so a file this writes reads back as the resume it was
+written from. That round trip is the end-to-end check on a format with no
+compiler to hand, and it is the reason the style choices are not free.
+
+**A LaTeX or Typst file has to compile on a machine that has nothing
+installed.** The LaTeX preamble loads only packages a full TeX installation
+already has, and defines every command its body uses, so the body is a sequence
+of one-line calls and the look is changed in one place. Typst is emitted as
+markup where the text holds nothing the parser reads, and as a string literal
+where it does - `//` inside an address opens a comment and takes the rest of the
+line with it, so a run carrying one is quoted rather than escaped character by
+character.
+
+The loss report is counted **against this resume** - three metrics, two sections
+with nowhere to go - rather than being a standing list of caveats nobody reads.
+It is shown before the download, not after, and nothing with a count of zero
+appears in it. For the three that set themselves, what is lost is the design and
+the section layouts, and nothing else: they carry every mark, every metric and
+every field the resume holds.
+
+`keepcv render --format` writes any of them from the terminal. There is no lint
+report on those branches: nothing was rendered to read back, so the linter has
+no bytes to have an opinion about, and the loss report is what belongs there
+instead.
+
+There is no `?format=` on `/v1/export`: the native export is a whole-store read
+and belongs to the server, but a resume in somebody else's format is a pure
+function of a document the caller is already holding. The Word writer is behind
+`@keepcv/interop/files` with the readers that need a parser, and the app fetches
+it when the format is chosen rather than when the panel opens.
 
 Full-store backup and restore is built too, and it is the launcher's rather than
 the API's. `keepcv serve` writes a readable copy of the whole store beside the
@@ -303,10 +334,11 @@ things the user did, and a Node stack trace tells them nothing about any of
 them. `index.ts` is a bin shim over it, which is also what makes the dispatch
 testable at all.
 
-What remains is **DOCX, LaTeX and Typst as things a resume leaves as**. Reading a
-DOCX is built and writing one is not, which is the harder half: the reader takes
-whatever a file happens to look like, and a writer has to decide what this
-product's output looks like in a format with no page model of its own.
+DOCX, LaTeX and Typst are built as things a resume leaves as, and they are
+covered under the export capability above rather than here: the writer is the
+harder half of each, because a reader takes whatever a file happens to look like
+and a writer has to decide what this product's output *is* in a format with no
+page model of its own.
 
 ### Versions and snapshots
 

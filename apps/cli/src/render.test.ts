@@ -128,6 +128,41 @@ describe("keepcv render", () => {
     BOOTS_REAL_STORES,
   );
 
+  // Named rather than given an `--out`, so the default filename is the thing
+  // under test: passing one is what hid a wrong default here before.
+  it(
+    "writes a typesetting source and a Word document, named after the resume",
+    async () => {
+      const dataDir = await aStore("Ada Lovelace", { resumes: ["Staff engineer, 2026"] });
+      const cwd = process.cwd();
+      const stem = "ada-lovelace-staff-engineer-2026";
+
+      try {
+        process.chdir(dataDir);
+        for (const [format, extension] of [
+          ["latex", "tex"],
+          ["typst", "typ"],
+          ["docx", "docx"],
+        ] as const) {
+          const result = await renderResume({ dataDir, resume: "staff", out: undefined, format });
+          expect(result).toMatchObject({ wrote: `${stem}.${extension}` });
+        }
+
+        // Written as bytes rather than as text: a zip put through a UTF-8
+        // encoder is a file nothing opens.
+        const bytes = await readFile(join(dataDir, `${stem}.docx`));
+        expect([...bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+
+        expect(await readFile(join(dataDir, `${stem}.tex`), "utf8")).toContain("\\begin{document}");
+        expect(await readFile(join(dataDir, `${stem}.typ`), "utf8")).toContain("#set page(");
+      } finally {
+        process.chdir(cwd);
+        await rm(dataDir, { recursive: true, force: true });
+      }
+    },
+    BOOTS_REAL_STORES,
+  );
+
   it("says which resumes there are to choose from", () => {
     const choose = [{ name: "Staff engineer" }, { name: "Platform lead" }];
     const printed = listing({ choose, because: "ambiguous" });
