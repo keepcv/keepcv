@@ -94,7 +94,56 @@ const TEXT_AS_IMAGE: readonly Pattern[] = [
   },
 ];
 
+// Text in the file and not on the page. Whatever it was meant to do, it reads as
+// keyword stuffing to anyone who compares the two, and that is how a resume gets
+// binned rather than ranked.
+const HIDDEN_TEXT: readonly Pattern[] = [
+  {
+    pattern: /display\s*:\s*none/,
+    severity: "blocker",
+    where: "Text that is in the file and not on the page",
+    detail: `A reader that extracts text finds words nobody printed, which reads as stuffing rather than as a mistake. ${SWITCH_TEMPLATES}`,
+  },
+  {
+    pattern: /visibility\s*:\s*hidden/,
+    severity: "blocker",
+    where: "Text that is in the file and not on the page",
+    detail: `A reader that extracts text finds words nobody printed, which reads as stuffing rather than as a mistake. ${SWITCH_TEMPLATES}`,
+  },
+  {
+    pattern: /opacity\s*:\s*0(?:\.0+)?(?![.0-9])/,
+    severity: "blocker",
+    where: "Text painted invisibly",
+    detail: `Words that print in nothing are still in the file, and a reader that compares the two treats the difference as deliberate. ${SWITCH_TEMPLATES}`,
+  },
+  {
+    pattern: /font-size\s*:\s*0(?:\.0+)?(?:p[txc]|e[mx]|rem|%|in|cm|mm)?(?![.0-9])/,
+    severity: "blocker",
+    where: "Text set at no size",
+    detail: `Words that print at nothing are still in the file, and a reader that compares the two treats the difference as deliberate. ${SWITCH_TEMPLATES}`,
+  },
+];
+
+// A margin box is page furniture rather than content: it is where a printer puts
+// a page number, and it is the first thing dropped when a page is read as text.
+const PAGE_FURNITURE: readonly Pattern[] = [
+  {
+    pattern: /@(?:top|bottom)-(?:left|center|centre|right)/,
+    severity: "warning",
+    where: "Words in the page margin",
+    detail: `Anything in a running header or footer is furniture to a reader, and is dropped with the page number. ${SWITCH_TEMPLATES}`,
+  },
+  {
+    pattern: /position\s*:\s*running\(/,
+    severity: "warning",
+    where: "Words moved into the page margin",
+    detail: `An element moved into a margin box leaves the text flow, so it comes back somewhere else or not at all. ${SWITCH_TEMPLATES}`,
+  },
+];
+
 export const OUTPUT_RULES: readonly LintRule[] = [
   { id: "reading-order", check: ({ html }) => scan(html, READING_ORDER) },
   { id: "text-as-image", check: ({ html }) => scan(html, TEXT_AS_IMAGE) },
+  { id: "hidden-text", check: ({ html }) => scan(html, HIDDEN_TEXT) },
+  { id: "page-furniture", check: ({ html }) => scan(html, PAGE_FURNITURE) },
 ];

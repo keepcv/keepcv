@@ -213,8 +213,32 @@ const dateFormat: LintRule = {
   check: ({ document }) => dateFields(document),
 };
 
+// The two a reader builds a timeline out of. A project or a skill has no dates
+// to be missing, and a certification carries its own field.
+const DATED_KINDS = new Set(["experience", "education"]);
+
+// A period with no start is one the manifest resolved to a display string alone,
+// which is what a reader gets: something to print and nothing to sort by.
+const undatedHistory: LintRule = {
+  id: "undated-history",
+  check: ({ document }) =>
+    document.sections
+      .filter((section) => DATED_KINDS.has(section.kind))
+      .flatMap((section) =>
+        section.entries
+          .filter((entry) => entry.period?.start === undefined)
+          .map((entry) => ({
+            severity: "warning" as const,
+            where: entry.title ?? section.heading,
+            detail:
+              "Nothing here says when it was, so a reader that builds a history out of dates has nowhere to put it.",
+          })),
+      ),
+};
+
 export const DOCUMENT_RULES: readonly LintRule[] = [
   contactExtractable,
   sectionHeadings,
   dateFormat,
+  undatedHistory,
 ];
