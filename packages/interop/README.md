@@ -4,11 +4,26 @@ Adapters between KeepCV and the resume formats other tools speak. Every one of
 them loses something, and saying what is the job.
 
 ```ts
-import { lossOf, toJsonResume } from "@keepcv/interop";
+import { lossOf, toJsonResume, toLatex, toTypst } from "@keepcv/interop";
+import { toDocx } from "@keepcv/interop/files";
 
-const resume = toJsonResume(document);  // JSON Resume v1.0.0
-const losses = lossOf(document);        // [{ what, count, detail }]
+const resume = toJsonResume(document);        // JSON Resume v1.0.0
+const tex = toLatex(document);                // a .tex that stands on its own
+const typ = toTypst(document);                // a .typ that stands on its own
+const docx = toDocx(document);                // bytes, a .docx
+const losses = lossOf(document, "latex");     // [{ what, count, detail }]
 ```
+
+The last three go through one seam. `toBlocks(document)` answers a flat
+`ResumeBlock[]` - a role, some rich text, and the period an entry head sets
+aside - and each writer only decides what its format calls a heading, a bullet
+and a bold run. It is the mirror of `DocumentLine[]` on the reading side, so
+adding a fourth writer adds a file rather than a second idea of what a resume is.
+
+The Word document is written the way `docxLines` reads one - `Heading1` for
+sections, `Heading2` for entry heads, `numPr` for points - so what this writes,
+this reads back. Nothing here compiles a `.tex` or a `.typ`; both are source for
+whatever toolchain the caller already has.
 
 Reading goes the other way, into an `Intake` - what a file said, before anything
 decides what to do about it:

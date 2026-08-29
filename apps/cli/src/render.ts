@@ -2,14 +2,30 @@ import { writeFile } from "node:fs/promises";
 import type { LintReport } from "@keepcv/ats-lint";
 import { lint } from "@keepcv/ats-lint";
 import { compile } from "@keepcv/core";
-import type { Loss } from "@keepcv/interop";
-import { lossOf, toJsonResume } from "@keepcv/interop";
+import type { ExportTarget, Loss } from "@keepcv/interop";
+import { lossOf, toJsonResume, toLatex, toTypst } from "@keepcv/interop";
+import { toDocx } from "@keepcv/interop/files";
 import { fileNameFor, renderHtml, renderSite, SITE_FILE_NAME } from "@keepcv/render";
-import type { Resume, Store } from "@keepcv/schema";
+import type { Resume, ResumeDocument, Store } from "@keepcv/schema";
 import { withStore } from "./store.js";
 
-export const FORMATS = ["html", "site", "jsonresume"] as const;
+export const FORMATS = ["html", "site", "jsonresume", "docx", "latex", "typst"] as const;
 export type Format = (typeof FORMATS)[number];
+
+// What each one is called on disk and how it is written. A Word document is
+// bytes and the other three are text, which is the only difference here.
+const WRITERS: Record<
+  ExportTarget,
+  { extension: string; write: (document: ResumeDocument) => string | Uint8Array }
+> = {
+  jsonresume: {
+    extension: "json",
+    write: (document) => `${JSON.stringify(toJsonResume(document), null, 2)}\n`,
+  },
+  docx: { extension: "docx", write: toDocx },
+  latex: { extension: "tex", write: toLatex },
+  typst: { extension: "typ", write: toTypst },
+};
 
 export interface RenderRequest {
   dataDir: string;
@@ -45,6 +61,9 @@ function matching(store: Store, asked: string): Resume[] {
   return live(store.resumes).filter((resume) => resume.name.toLowerCase().includes(needle));
 }
 
+const targetOf = (format: Format | undefined): ExportTarget | undefined =>
+  format === undefined || format === "html" || format === "site" ? undefined : format;
+
 export async function renderResume(request: RenderRequest): Promise<RenderResult> {
   const held = await withStore(request.dataDir, async (r) => await r.store.readCurrent());
 
@@ -69,10 +88,12 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
     return { wrote: path, page: true };
   }
 
-  if (request.format === "jsonresume") {
-    const path = request.out ?? fileNameFor(document, "json");
-    await writeFile(path, `${JSON.stringify(toJsonResume(document), null, 2)}\n`, "utf8");
-    return { wrote: path, loss: lossOf(document) };
+  const target = targetOf(request.format);
+  if (target !== undefined) {
+    const writer = WRITERS[target];
+    const path = request.out ?? fileNameFor(document, writer.extension);
+    await writeFile(path, writer.write(document));
+    return { wrote: path, loss: lossOf(document, target) };
   }
 
   const html = renderHtml(document);

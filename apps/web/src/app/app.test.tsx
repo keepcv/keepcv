@@ -1585,7 +1585,9 @@ describe("a resume and its template", () => {
 
     press("Download JSON Resume");
 
-    expect(names).toEqual(["ada-lovelace-staff-engineer-2026.json"]);
+    await waitFor(() => {
+      expect(names).toEqual(["ada-lovelace-staff-engineer-2026.json"]);
+    });
     const file = written[0];
     if (file === undefined) throw new Error("the download wrote a file");
 
@@ -1596,6 +1598,50 @@ describe("a resume and its template", () => {
     expect(parsed.basics.name).toBe("Ada Lovelace");
     expect(parsed.work[0]?.highlights).toContain("Cut p95 latency from 800ms to 120ms");
     expect(await file.text()).not.toContain("private.test");
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+
+  // One control for four formats, and the loss list tracks it: a panel that
+  // named a cost for the format the user is not downloading is worse than none.
+  it("writes it in a typesetting format, and re-counts the cost when the format changes", async () => {
+    const { server, resume } = aResumeToPrint();
+
+    const written: Blob[] = [];
+    const names: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob: Blob | MediaSource) => {
+      written.push(blob as Blob);
+      return "blob:written";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+
+    mount(server.answer, `/resumes/${resume.id}?view=preview`);
+    await printed();
+
+    // JSON Resume drops metrics and a custom section; a Typst file this resume
+    // fits entirely, and saying so is the point of counting per format.
+    expect(screen.getByText(/not fit that format/)).toBeInTheDocument();
+    type("Somebody else's format", "typst");
+    expect(screen.getByText("Everything in this resume fits that format.")).toBeInTheDocument();
+
+    press("Download Typst source");
+
+    // Awaited: a Word document needs the zip writer fetched first, so writing
+    // any of these settles a promise rather than happening under the click.
+    await waitFor(() => {
+      expect(names).toEqual(["ada-lovelace-staff-engineer-2026.typ"]);
+    });
+    const file = written[0];
+    if (file === undefined) throw new Error("the download wrote a file");
+
+    const source = await file.text();
+    expect(source.startsWith("#set page(")).toBe(true);
+    expect(source).toContain("Cut p95 latency from 800ms to 120ms");
+    expect(source).not.toContain("private.test");
     expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
   });
 

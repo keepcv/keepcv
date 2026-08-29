@@ -74,9 +74,9 @@ describe("what keepcv answers before it opens anything", () => {
   });
 
   it("refuses a format it does not write, before opening a store", async () => {
-    const said = await keepcv("render", "--format", "docx");
+    const said = await keepcv("render", "--format", "rtf");
     expect(said.code).toBe(1);
-    expect(said.err).toContain("docx is not a format");
+    expect(said.err).toContain("rtf is not a format");
     expect(said.err).toContain("jsonresume");
   });
 

@@ -173,9 +173,29 @@ gets out of it, and nothing here is going to one.
 It carries the contact details this resume carries. What a stranger sees is
 decided when the resume is composed.
 
+And it writes the same resume as a Word document, or as LaTeX or Typst source:
+
+```sh
+npx keepcv render "Staff engineer" --format docx
+npx keepcv render "Staff engineer" --format latex
+npx keepcv render "Staff engineer" --format typst
+```
+
+These are for handing on to someone who wants to edit the thing themselves - a
+recruiter who asks for a `.docx`, or your own typesetting once you want the page
+to look like something this does not offer. The `.tex` loads only packages a
+full TeX installation already has, and both it and the `.typ` define their look
+at the top, so changing it is one place rather than every line.
+
+What they cost is the design: the file sets itself, so the template you chose
+and any section laid out as something other than a plain list are not carried.
+Everything else is - every mark, every metric, every field. Nothing in this
+tree compiles a `.tex` or a `.typ`, so building one is on you and your own
+toolchain.
+
 | Option | Default |
 |---|---|
-| `--format <name>` | `html`; `site` and `jsonresume` are the others |
+| `--format <name>` | `html`; `site`, `jsonresume`, `docx`, `latex` and `typst` are the others |
 | `--out <path>` | the resume's own name, or `index.html` for a page |
 | `--data-dir <path>` | `~/.keepcv` |
 

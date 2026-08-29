@@ -1,16 +1,60 @@
-import { lossOf, toJsonResume } from "@keepcv/interop";
+import type { ExportTarget } from "@keepcv/interop";
+import { lossOf, toJsonResume, toLatex, toTypst } from "@keepcv/interop";
 import { fileNameFor, renderHtml, renderSite, SITE_FILE_NAME } from "@keepcv/render";
 import type { ResumeDocument } from "@keepcv/schema";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../../../components/ui/button.js";
+import { SelectField } from "../../../components/ui/field.js";
 import { printFile, saveFile } from "../../../lib/files.js";
 
 const HTML = "text/html;charset=utf-8";
-const JSON_TYPE = "application/json;charset=utf-8";
 
-function Loses({ document }: { document: ResumeDocument }) {
-  const losses = useMemo(() => lossOf(document), [document]);
-  if (losses.length === 0) return null;
+interface Target {
+  label: string;
+  extension: string;
+  type: string;
+  write: (document: ResumeDocument) => Promise<string | Uint8Array<ArrayBuffer>>;
+}
+
+// A Word document is the only one of these that needs a zip writer, so it is
+// fetched when it is chosen rather than by everyone who opens this panel.
+const TARGETS: Record<ExportTarget, Target> = {
+  jsonresume: {
+    label: "JSON Resume",
+    extension: "json",
+    type: "application/json;charset=utf-8",
+    write: (document) => Promise.resolve(`${JSON.stringify(toJsonResume(document), null, 2)}\n`),
+  },
+  docx: {
+    label: "Word document",
+    extension: "docx",
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    write: async (document) => {
+      const { toDocx } = await import("@keepcv/interop/files");
+      return toDocx(document);
+    },
+  },
+  latex: {
+    label: "LaTeX source",
+    extension: "tex",
+    type: "application/x-tex;charset=utf-8",
+    write: (document) => Promise.resolve(toLatex(document)),
+  },
+  typst: {
+    label: "Typst source",
+    extension: "typ",
+    type: "text/plain;charset=utf-8",
+    write: (document) => Promise.resolve(toTypst(document)),
+  },
+};
+
+const ORDER: ExportTarget[] = ["jsonresume", "docx", "latex", "typst"];
+
+function Loses({ document, target }: { document: ResumeDocument; target: ExportTarget }) {
+  const losses = useMemo(() => lossOf(document, target), [document, target]);
+  if (losses.length === 0) {
+    return <p className="text-xs text-text-subtle">Everything in this resume fits that format.</p>;
+  }
 
   return (
     <details className="text-xs text-text-subtle">
@@ -33,6 +77,9 @@ function Loses({ document }: { document: ResumeDocument }) {
 
 // The heading and the box come from the group this sits in.
 export function DownloadResume({ document }: { document: ResumeDocument }) {
+  const [target, setTarget] = useState<ExportTarget>("jsonresume");
+  const chosen = TARGETS[target];
+
   return (
     <div className="space-y-2">
       <Button
@@ -73,19 +120,26 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
       </div>
 
       <div className="space-y-2 border-t border-line pt-2">
+        <SelectField
+          label="Somebody else's format"
+          value={target}
+          onChange={(value) => {
+            const found = ORDER.find((one) => one === value);
+            if (found !== undefined) setTarget(found);
+          }}
+          options={ORDER.map((one) => ({ value: one, label: TARGETS[one].label }))}
+        />
         <Button
           className="w-full"
           onClick={() => {
-            saveFile(
-              fileNameFor(document, "json"),
-              JSON_TYPE,
-              `${JSON.stringify(toJsonResume(document), null, 2)}\n`,
-            );
+            void chosen.write(document).then((content) => {
+              saveFile(fileNameFor(document, chosen.extension), chosen.type, content);
+            });
           }}
         >
-          Download JSON Resume
+          Download {chosen.label}
         </Button>
-        <Loses document={document} />
+        <Loses document={document} target={target} />
       </div>
     </div>
   );

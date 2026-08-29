@@ -339,10 +339,9 @@ nobody can write to and a file that is not a backup are all things the user did.
 `openStore` is the one place a store is opened, so a half-opened PGlite is
 closed on the way out rather than left holding the directory. `keepcv status`
 reads `overview()` - the same selector the app's store overview reads - so the
-nudges are not derived a second time for the terminal. `keepcv render --format
-jsonresume` is `toJsonResume` with `lossOf` printed after it, which is what the
-download panel already does: the loss is counted against this resume, so a
-format that costs nothing says nothing.
+nudges are not derived a second time for the terminal. `keepcv render --format` writes any of the five
+files the download panel writes, with `lossOf` printed after it: the loss is
+counted against this resume, so a format that costs nothing says nothing.
 
 **A narrowed list can be kept under a name.** `saved_filter` stores what the
 narrowing means rather than the vocabulary of the control that made it, so the
@@ -492,16 +491,40 @@ the file any shipped template writes would fire on every resume this product
 produces; the test covers the registry, so adding a template adds a case.
 
 **A resume also leaves in somebody else's format, and says what it costs.**
-`toJsonResume(document)` in `@keepcv/interop` reads a `ResumeDocument` rather
-than the store, because JSON Resume describes a resume and a store is a career
-history. It maps only what that format has a list for and drops the rest rather
-than forcing a talk into `projects`; dates go as the partial dates the record
-holds, never `period.display`. `lossOf(document)` counts the loss **against this
-resume** - three metrics, one section with nowhere to go - and anything at zero
-is not in the list, because a standing disclaimer is one nobody reads. It is
-shown before the download. There is no `?format=jsonresume` on `/v1/export`:
-that route is a whole-store read and this is a function of a document the caller
-already holds.
+`toJsonResume`, `toDocx`, `toLatex` and `toTypst` in `@keepcv/interop` read a
+`ResumeDocument` rather than the store, because those formats describe a resume
+and a store is a career history. JSON Resume maps only what that format has a
+list for and drops the rest rather than forcing a talk into `projects`; dates go
+as the partial dates the record holds, never `period.display`. `lossOf(document,
+target)` counts the loss **against this resume** - three metrics, one section
+with nowhere to go - and anything at zero is not in the list, because a standing
+disclaimer is one nobody reads. It is shown before the download. There is no
+`?format=` on `/v1/export`: that route is a whole-store read and this is a
+function of a document the caller already holds.
+
+**The three that lay themselves out go through one seam.** `toBlocks(document)`
+answers `ResumeBlock[]` - a role, rich text, and the period an entry head sets
+aside - and each writer decides only what its format calls a heading, a bullet
+and a bold run. That is the mirror of `DocumentLine[]` on the reading side, and
+it is why a fourth writer is a file rather than a second reading of what a
+resume is. Tags are not written, for the reason no template prints them.
+
+**The Word document is written the way `docxLines` reads one**: `Heading1` for
+sections, `Heading2` for entry heads, `numPr` for points. A file this writes
+reads back as the resume it came from, and that round trip is the only
+end-to-end check available on a format with no compiler to hand - which is why
+those style choices are not interchangeable with equally pretty ones. It lives
+behind `@keepcv/interop/files` with the readers that need a parser, and the app
+imports it when the format is chosen. The zip is stamped with a fixed date, or
+two files built from one document would differ.
+
+**A `.tex` and a `.typ` have to build on a machine with nothing installed.** The
+LaTeX preamble loads only what a full TeX installation already has and defines
+every command the body uses, so the body is one call per line. Typst text is
+emitted as markup when it holds nothing the parser reads and as a string literal
+when it does: `//` in an address opens a comment and swallows the closing
+brackets after it, so a run carrying one is quoted whole rather than escaped
+character by character. Neither file is compiled by anything in this tree.
 
 **A composition write settles by merging its answer instead of re-reading.** A
 toggle, a move, a placement or a wording choice writes one row and the response

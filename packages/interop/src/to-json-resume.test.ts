@@ -85,7 +85,7 @@ describe("writing a resume as JSON Resume", () => {
 });
 
 describe("what does not survive the trip", () => {
-  const losses = lossOf(FIXTURE_DOCUMENT);
+  const losses = lossOf(FIXTURE_DOCUMENT, "jsonresume");
   const named = (what: string) => losses.find((loss) => loss.what === what);
 
   // The fixture's custom section is exactly the case the format cannot hold.
@@ -107,12 +107,15 @@ describe("what does not survive the trip", () => {
   it("says nothing about what this resume does not have", () => {
     expect(losses.every((loss) => loss.count > 0)).toBe(true);
 
-    const empty = lossOf({
-      ...FIXTURE_DOCUMENT,
-      header: { fullName: "Ada Lovelace", contacts: [] },
-      sections: [],
-      meta: { ...FIXTURE_DOCUMENT.meta, templateId: undefined },
-    });
+    const empty = lossOf(
+      {
+        ...FIXTURE_DOCUMENT,
+        header: { fullName: "Ada Lovelace", contacts: [] },
+        sections: [],
+        meta: { ...FIXTURE_DOCUMENT.meta, templateId: undefined },
+      },
+      "jsonresume",
+    );
     expect(empty).toEqual([]);
   });
 
@@ -121,7 +124,7 @@ describe("what does not survive the trip", () => {
       ...FIXTURE_DOCUMENT,
       sections: FIXTURE_DOCUMENT.sections.map((section) => ({ ...section, heading: "Work" })),
     };
-    const loss = lossOf(asWritten).find((row) => row.what === "Headings you chose");
+    const loss = lossOf(asWritten, "jsonresume").find((row) => row.what === "Headings you chose");
 
     // Only the experience section is called "work" over there, and a custom
     // section has no list to be renamed into in the first place.
