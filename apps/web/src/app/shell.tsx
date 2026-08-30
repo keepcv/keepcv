@@ -18,14 +18,20 @@ function isMac(): boolean {
 
 function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
+    // `min-w-0` and `truncate`, because at 390 the brand and the two buttons
+    // beside this left it about fifty pixels wide and "Search or jump to..."
+    // wrapped to four lines out through the bottom of an `h-8` control. The
+    // shortcut goes at the same width: there is no `ctrl` on a phone.
     <button
       type="button"
       onClick={onOpen}
-      className="flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line bg-surface-sunken px-2.5 text-sm text-text-subtle transition-colors hover:border-line-strong hover:text-text-muted"
+      className="flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line bg-surface-sunken px-2.5 text-sm text-text-subtle transition-colors hover:border-line-strong hover:text-text-muted"
     >
       <Icon name="search" size="sm" />
-      <span className="flex-1 text-left">Search or jump to...</span>
-      <Kbd>{isMac() ? "cmd K" : "ctrl K"}</Kbd>
+      <span className="min-w-0 flex-1 truncate text-left">Search or jump to...</span>
+      <span className="hidden sm:block">
+        <Kbd>{isMac() ? "cmd K" : "ctrl K"}</Kbd>
+      </span>
     </button>
   );
 }

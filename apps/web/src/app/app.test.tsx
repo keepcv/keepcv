@@ -719,6 +719,7 @@ describe("writing a point", () => {
     mount(server.answer, `/points/${point.id}/edit`);
 
     expect(await screen.findByRole("heading", { name: "Point" })).toBeInTheDocument();
+    press("Add a metric");
     type("Label", "p95 latency");
     type("Value", "120");
     type("Unit", "ms");
@@ -2091,7 +2092,10 @@ describe("what backs a point up", () => {
     const server = storeServer(store);
     mount(server.answer, `/points/${point.id}/edit`);
 
-    await screen.findByLabelText("Kind");
+    // Twice: the first press opens the form, the second submits it. Only one
+    // button of that name is on the screen at a time.
+    await screen.findByRole("button", { name: "Add evidence" });
+    press("Add evidence");
     type("Link", "https://reviews.test/q3");
     type("Why it matters", "named as the reason it landed");
     press("Add evidence");
@@ -2134,7 +2138,7 @@ describe("what backs a point up", () => {
     mount(server.answer, `/points/${point.id}/edit`);
 
     expect(await screen.findByText("Told me in the Q3 review")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "remove" }));
+    press("Remove Told me in the Q3 review");
 
     // Off the screen and still in the store: the row is archived, not deleted,
     // and an archived one must not keep rendering.

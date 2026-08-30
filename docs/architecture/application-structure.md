@@ -1102,6 +1102,14 @@ is the shape the templates screen already had. **Every browse screen creates the
 same way**, and the two-panel stack - a form panel, then a list panel titled with
 a second description - collapses to one list.
 
+The point editor had it twice over, in the screen this document calls the
+highest-risk interface: a metric's four inputs and a piece of evidence's three
+both sat open under every point with `Add metric` and `Add evidence` underneath
+them, so two of the five panels on the screen read backwards. Both are behind the
+control that names them. **The reveal and the confirm may share a name** -
+`Add evidence` opens the block and submits it - because only one of the two is
+on the screen at a time.
+
 **A repeated row action is a glyph, and it keeps the label that names its row.**
 `Hide` and `Remove` spelled out on every section, entry and point put two words
 of chrome beside every line of the user's own content. Each still passes `label`,
@@ -1122,6 +1130,12 @@ control - which halves again from there - that the two do not read alike.
 out flat, so a point sat at the same left edge as the entry it belongs to and
 font weight was the only thing separating three levels. Points are indented
 behind a rule under their entry.
+
+**Taking a thing off is part of the chip, and it is a glyph.** Three screens had
+built a removable chip by hand and all three spelled the affordance as a literal
+`x`, which is a letter standing where every other control in the app carries a
+glyph; the point editor spelled it as the word `remove` twice more, on the same
+screen as a chip that did not. `Badge` takes `onRemove`.
 
 **A separator character may not be one the content also uses.** A record's
 metadata line joined organisation, subtitle and period with `" - "` and printed
