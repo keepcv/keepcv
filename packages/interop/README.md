@@ -23,7 +23,18 @@ adding a fourth writer adds a file rather than a second idea of what a resume is
 The Word document is written the way `docxLines` reads one - `Heading1` for
 sections, `Heading2` for entry heads, `numPr` for points - so what this writes,
 this reads back. Nothing here compiles a `.tex` or a `.typ`; both are source for
-whatever toolchain the caller already has.
+whatever toolchain the caller already has, and the tests assert the shape of the
+file rather than that it builds.
+
+That leaves one thing a test here cannot see: whether the words survive being
+typeset. They did not. Compiled by hand against pdfTeX and Typst, the `.typ`
+was clean, and the `.tex` printed correctly but *extracted* wrong - `T1` alone
+selects the EC bitmap fonts, which carry no glyph names a reader can map back,
+so "Staff engineer" came out of the PDF as "Sta engineer" with the ligature
+simply gone. Loading `lmodern` before `fontenc` fixes it. That is the failure
+`@keepcv/ats-lint` exists to catch, arriving in a format it never sees, so the
+preamble is now the load-bearing part of `toLatex` and the test asserts the
+family and its position rather than only the package list.
 
 Reading goes the other way, into an `Intake` - what a file said, before anything
 decides what to do about it:

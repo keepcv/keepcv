@@ -39,7 +39,12 @@ function runs(nodes: RichText): string {
 // one-line calls and a reader who wants a different look edits the preamble.
 // Nothing outside a full TeX Live installation's base is loaded: a file that
 // needs a package the reader has to install is one that does not compile.
+// `lmodern` before `fontenc`, or T1 selects the EC bitmap fonts, which carry no
+// glyph names a reader can map back: the PDF prints "Staff engineer" and
+// extracts as "Sta engineer", the ff and fi silently gone. Latin Modern is on
+// any full installation, so this costs the body nothing.
 const PREAMBLE = `\\documentclass[11pt,a4paper]{article}
+\\usepackage{lmodern}
 \\usepackage[T1]{fontenc}
 \\usepackage[utf8]{inputenc}
 \\usepackage[margin=18mm]{geometry}
