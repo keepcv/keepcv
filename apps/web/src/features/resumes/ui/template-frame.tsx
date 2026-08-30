@@ -65,10 +65,8 @@ function keysUnder(element: Element): string[] {
   });
 }
 
-// The document as a column of blocks the printer would fragment. An element the
-// stylesheet marks `break-inside: avoid` is taken whole; anything else with
-// block-level children is descended into, so a section breaks between its
-// entries rather than moving in one piece.
+// An element marked `break-inside: avoid` is taken whole; anything else with
+// block-level children is descended into, so a section breaks between entries.
 function blocksIn(element: Element, counter: { next: number }): FlowBlock[] {
   const style = getComputedStyle(element);
   const atomic = style.breakInside === "avoid";
@@ -136,10 +134,8 @@ function same(a: Pagination, b: Pagination): boolean {
   );
 }
 
-// A template's own document, not a corner of the app's. Its stylesheet carries
-// `@page` and physical units, so it needs a page to be a page rather than one
-// more block inside a layout that already has fonts, resets and a colour
-// scheme. Fitting that on a screen is scaling, not restyling.
+// A template's stylesheet carries `@page` and physical units, so it needs a
+// document of its own rather than a block inside one that already has resets.
 export function TemplateFrame({
   title,
   styles,

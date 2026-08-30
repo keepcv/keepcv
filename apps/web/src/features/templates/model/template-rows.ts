@@ -51,10 +51,8 @@ export function templateRows(store: Store, archived: ArchivedFilter): TemplateRo
   return archived === "only" ? mine : [...built, ...mine];
 }
 
-// What a resume may name. An archived design is offered nowhere except to the
-// resume already printing with it: a select holding a value no option carries
-// reads as a resume using some other design, and moving off it is one click
-// there is no way back from.
+// An archived design is offered only to the resume already printing with it: a
+// select holding a value no option carries reads as some other design entirely.
 export function pickableTemplates(
   store: Store,
   keep: string | null,

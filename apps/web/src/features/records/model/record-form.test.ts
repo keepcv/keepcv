@@ -86,7 +86,8 @@ describe("the record form", () => {
     expect(known.submission.record.organisationId).toBe(store.organisations[0]?.id);
   });
 
-  // Sending either would clear a summary or reorder a list the form never showed.
+  // Sending either would clear a summary or reorder a list the form never
+  // showed.
   it("patches without touching the summary or the ordering", () => {
     const store = emptyStore();
     const built = buildPatch(store, { ...blankValues("project"), title: "Difference Engine" });

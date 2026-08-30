@@ -119,8 +119,8 @@ describe("contact channels", () => {
     expect(contactChannelSchema.parse((await problemOf(stale)).current).label).toBe("Work");
   });
 
-  // Archived is a filter, never a hiding place: the row stays readable by id and
-  // a toggle brings it back into the list.
+  // Archived is a filter, never a hiding place: the row stays readable by id
+  // and a toggle brings it back into the list.
   it("archives, keeps the row reachable, and restores", async () => {
     const created = await addChannel("a0", "ada@example.com");
 

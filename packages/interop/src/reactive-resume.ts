@@ -1,7 +1,6 @@
-// Reactive Resume's export, written out rather than generated. Every field is
-// optional here even though the schema requires most of them: a file on disk was
-// written by whichever version the user had, and a reader that throws on a
-// missing key reads nothing rather than most of it.
+// Every field is optional though the schema requires most: a file was written
+// by whichever version the user had, and throwing on one key reads nothing at
+// all.
 export interface ReactiveResumeUrl {
   url?: string;
   label?: string;

@@ -52,7 +52,8 @@ describe("the web app handler", () => {
   });
 
   // Normalising the path and confirming it is under the root each cover the
-  // other, so removing either alone leaves this passing. Removing both does not.
+  // other, so removing either alone leaves this passing. Removing both does
+  // not.
   it("refuses to escape the root, however the path is written", async () => {
     for (const path of [
       "/../secrets.txt",

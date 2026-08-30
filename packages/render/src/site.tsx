@@ -114,10 +114,8 @@ function Page({ document }: { document: ResumeDocument }): ReactNode {
   );
 }
 
-// The second renderer over `ResumeDocument`, not a second product: one page,
-// carrying its own styling and fetching nothing, over the selection the resume
-// already is. Which contact details it prints is the resume's decision, made in
-// the composer, so there is no knob for it here.
+// Which contact details it prints is the resume's decision, made in the
+// composer, so there is no knob for it here.
 export function renderSite(document: ResumeDocument): string {
   const markup = renderToStaticMarkup(
     <html lang={document.meta.locale}>

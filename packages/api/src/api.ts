@@ -51,7 +51,8 @@ export function createApi(options: ApiOptions) {
     if (ownerId === undefined) {
       throw new UnauthorizedError();
     }
-    // Entered once per request, so every call underneath is scoped by construction.
+    // Entered once per request, so every call underneath is scoped by
+    // construction.
     await runAsOwner(ownerId, async () => {
       await next();
     });

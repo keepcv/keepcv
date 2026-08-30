@@ -8,8 +8,8 @@ const LABELS: Record<ThemeChoice, string> = {
   dark: "Dark",
 };
 
-// The state is the shell's, not this component's: the rail and the narrow header
-// each render one, and two hooks would let the two disagree.
+// The state is the shell's, not this component's: the rail and the narrow
+// header each render one, and two hooks would let the two disagree.
 export function ThemeToggle({
   choice,
   choose,

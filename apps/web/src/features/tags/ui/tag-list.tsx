@@ -92,8 +92,8 @@ function Rename({
   );
 }
 
-// A merge is destructive to one name and to nothing else, so the target is named
-// in the confirmation rather than chosen and applied in one click.
+// A merge is destructive to one name and to nothing else, so the target is
+// named in the confirmation rather than chosen and applied in one click.
 function Merge({
   row,
   rows,

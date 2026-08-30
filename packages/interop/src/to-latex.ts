@@ -35,14 +35,9 @@ function runs(nodes: RichText): string {
     .join("");
 }
 
-// Every command the body uses is defined here, so the body is a sequence of
-// one-line calls and a reader who wants a different look edits the preamble.
-// Nothing outside a full TeX Live installation's base is loaded: a file that
-// needs a package the reader has to install is one that does not compile.
-// `lmodern` before `fontenc`, or T1 selects the EC bitmap fonts, which carry no
-// glyph names a reader can map back: the PDF prints "Staff engineer" and
-// extracts as "Sta engineer", the ff and fi silently gone. Latin Modern is on
-// any full installation, so this costs the body nothing.
+// Nothing outside a base TeX Live installation: a package the reader has to
+// install is a file that does not compile. `lmodern` before `fontenc`, or T1
+// picks the EC bitmaps, whose PDF prints "Staff engineer" and extracts "Sta".
 const PREAMBLE = `\\documentclass[11pt,a4paper]{article}
 \\usepackage{lmodern}
 \\usepackage[T1]{fontenc}

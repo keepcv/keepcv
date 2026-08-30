@@ -143,7 +143,8 @@ describe("keepcv serve --auth password", () => {
         const profile = await fetch(url("/v1/profile"), { headers: { cookie: session } });
         expect(profileSchema.parse(await profile.json()).fullName).toBeNull();
 
-        // The cookie is HttpOnly, so only the launcher can say it is still good.
+        // The cookie is HttpOnly, so only the launcher can say it is still
+        // good.
         const back = await fetch(url("/auth/mode"), { headers: { cookie: session } });
         expect(await back.json()).toEqual({ mode: "password", signedIn: true });
 

@@ -96,8 +96,8 @@ export function createRoleProfileRepository(db: Database): RoleProfileRepository
       return rows.map((row) => roleProfileTagSchema.parse(row));
     },
 
-    // Idempotent: the pair is the whole row. A tag that does not exist fails the
-    // foreign key, which the API answers as 422.
+    // Idempotent: the pair is the whole row. A tag that does not exist fails
+    // the foreign key, which the API answers as 422.
     async addTag(roleProfileId, tagId) {
       await requireOwned<RoleProfileRow>(db, roleProfile, "roleProfile", roleProfileId);
       await db

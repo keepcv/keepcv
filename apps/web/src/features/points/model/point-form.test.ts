@@ -62,8 +62,8 @@ describe("the point form", () => {
     );
   });
 
-  // An unmeasured baseline is "no baseline", not a refusal: most points have one
-  // number, not two.
+  // An unmeasured baseline is "no baseline", not a refusal: most points have
+  // one number, not two.
   it("takes a metric with no baseline and no unit", () => {
     const store = emptyStore();
     const point = addPoint(store, "Cut p95 latency");

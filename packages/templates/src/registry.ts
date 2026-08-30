@@ -15,11 +15,9 @@ export function templateOf(row: StoredTemplate): Template {
   return fromSpec(row.id, row.name, row.spec);
 }
 
-// A document names the template it was composed for, and carries the whole
-// design when that template is one the user wrote - editing the row later must
-// not change what an already-captured version says it printed. An id this build
-// does not have falls back rather than refusing to render, because a resume that
-// will not print is the one thing this product may not produce.
+// The captured spec wins, or editing the row would rewrite what a version says
+// it printed. An unknown id falls back rather than refusing: a resume that will
+// not print is the one thing this product may not produce.
 export function resolveTemplate(document: ResumeDocument): {
   template: Template;
   config: TemplateConfig;

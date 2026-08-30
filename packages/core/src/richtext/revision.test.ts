@@ -14,7 +14,8 @@ describe("deriveRevision", () => {
   });
 
   // I3 rests on this: two bodies that render the same text must reach the same
-  // hash, or retyping a word and undoing it appends a revision that says nothing.
+  // hash, or retyping a word and undoing it appends a revision that says
+  // nothing.
   it("gives two spellings of one body the same hash", () => {
     const split: RichText = [
       { t: "b", c: [{ t: "text", v: "Shipped" }] },
@@ -30,8 +31,8 @@ describe("deriveRevision", () => {
     expect(a.contentHash).not.toBe(b.contentHash);
   });
 
-  // Formatting is part of the text, even though the plain-text projection cannot
-  // see it: bolding a word is an edit worth keeping.
+  // Formatting is part of the text, even though the plain-text projection
+  // cannot see it: bolding a word is an edit worth keeping.
   it("distinguishes bodies that share a plain-text projection", () => {
     const plain = deriveRevision([{ t: "text", v: "Shipped" }]);
     const bold = deriveRevision([{ t: "b", c: [{ t: "text", v: "Shipped" }] }]);

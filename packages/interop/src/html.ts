@@ -67,10 +67,9 @@ function take(reading: Reading, token: string): void {
   if (/^<br\b/i.test(token)) reading.held += " ";
 }
 
-// The rich text a resume editor writes: paragraphs become the summary and list
-// items become points, which is the same split a format with `highlights` makes
-// explicit. Written out rather than parsed with a DOM, because this package
-// runs where there is no document.
+// Paragraphs become the summary and list items become points. Written out
+// rather than parsed with a DOM, because this package runs where there is no
+// document.
 export function readHtml(html: string): ReadHtml {
   const reading: Reading = { paragraphs: [], points: [], held: "", listed: 0 };
 

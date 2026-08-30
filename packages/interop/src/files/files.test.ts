@@ -108,9 +108,9 @@ const A_RESUME: Drawn[] = [
   { text: "2014 - 2017", size: 10, font: "F1", x: 72, y: 550 },
 ];
 
-// The first call in the file boots the PDF engine, which is comfortably past the
-// default per-test budget when every package's suite runs at once. It timed out
-// under `pnpm check` and passed on its own, which reads as a broken test.
+// The first call in the file boots the PDF engine, which is comfortably past
+// the default per-test budget when every package's suite runs at once. It timed
+// out under `pnpm check` and passed on its own, which reads as a broken test.
 const BOOTS_THE_PDF_ENGINE = 30_000;
 
 describe("pulling lines out of a PDF", () => {
@@ -165,10 +165,8 @@ describe("pulling lines out of a PDF", () => {
     expect(lines.find((line) => line.text.includes("Cut batch"))?.listed).toBe(true);
   });
 
-  // Read top-to-bottom a two-column resume interleaves two unrelated sections,
-  // which is the failure that makes every entry in both of them wrong. The
-  // columns are staggered because two independent columns do not share
-  // baselines; something that does share one is a right-aligned date.
+  // Read top-to-bottom a two-column resume interleaves two sections. Staggered
+  // because independent columns share no baseline; a right-aligned date does.
   it("reads a two-column layout one column at a time", async () => {
     const lines = await pdfLines(
       aPdf([

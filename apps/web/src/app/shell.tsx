@@ -18,10 +18,8 @@ function isMac(): boolean {
 
 function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
-    // `min-w-0` and `truncate`, because at 390 the brand and the two buttons
-    // beside this left it about fifty pixels wide and "Search or jump to..."
-    // wrapped to four lines out through the bottom of an `h-8` control. The
-    // shortcut goes at the same width: there is no `ctrl` on a phone.
+    // At 390 this was about fifty pixels wide and "Search or jump to..."
+    // wrapped to four lines out through the bottom of an `h-8` control.
     <button
       type="button"
       onClick={onOpen}
@@ -64,7 +62,8 @@ export function Shell({
         setPalette(true);
         return;
       }
-      // `/` is the older habit and still works, but not while typing into a field.
+      // `/` is the older habit and still works, but not while typing into a
+      // field.
       if (event.key === "/" && !typing) {
         event.preventDefault();
         setPalette(true);

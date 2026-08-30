@@ -88,8 +88,8 @@ export function buildField(store: Store, recordId: Uuid, values: RecordFieldForm
   const rows = store.recordFields.filter((row) => row.recordId === recordId);
   const held = rows.find((row) => row.key === key);
 
-  // `record_field_key_unique` covers archived rows, so a field removed and named
-  // again is the same field put back rather than a second one.
+  // `record_field_key_unique` covers archived rows, so a field removed and
+  // named again is the same field put back rather than a second one.
   if (held !== undefined) {
     if (held.archivedAt === null) return { errors: { label: "this record already carries that" } };
     return { restore: held, patch: { label, value, valueKind: values.valueKind } };

@@ -892,10 +892,8 @@ describe("a resume", () => {
     expect(answer).toHaveBeenCalledTimes(1);
   });
 
-  // The preview compiles in the browser from the cached store, which is the
-  // whole reason `@keepcv/core` does no I/O.
-  // Composition and preview are one workspace: a preview reached by leaving the
-  // screen that changes it is a preview nobody watches while composing.
+  // The preview compiles in the browser from the cached store, beside the
+  // composition, and makes no request of its own.
   it("shows the composition and what it compiles to at the same time", async () => {
     const store = aFilledStore();
     const resumeId = store.resumes[0]?.id ?? "";
@@ -951,8 +949,9 @@ describe("a resume", () => {
     expect(screen.getByLabelText("Wording for Angled for this application")).toHaveValue(angled.id);
   });
 
-  // A wording nobody has typed into yet has text, and it is the empty string, so
-  // the picker drew an option with nothing in it and no way to tell them apart.
+  // A wording nobody has typed into yet has text, and it is the empty string,
+  // so the picker drew an option with nothing in it and no way to tell them
+  // apart.
   it("names an empty wording by what it is for", async () => {
     const store = emptyStore();
     const record = addRecord(store, { kind: "experience", title: "Engine lead" });

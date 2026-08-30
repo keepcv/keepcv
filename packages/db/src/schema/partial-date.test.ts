@@ -25,7 +25,8 @@ const values = [
   "2019-03-01T00:00:00Z",
   " 2019",
   // Postgres anchors `$` at the end of the string; JavaScript also matches
-  // before a trailing newline, which is why the Zod pattern carries a lookahead.
+  // before a trailing newline, which is why the Zod pattern carries a
+  // lookahead.
   "2019\n",
 ];
 

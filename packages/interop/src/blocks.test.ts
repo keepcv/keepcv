@@ -66,10 +66,8 @@ describe("laying a document out as blocks", () => {
     expect(targets).toContain("https://github.com/ada");
   });
 
-  // Tags are the words the store files work under, not words the user chose to
-  // send, and no template prints them either. Compared against a document with
-  // the tags taken off rather than searched for by word: one of the fixture's
-  // tags is also a word in a heading, so looking for it finds the heading.
+  // Compared against a document with the tags taken off rather than searched by
+  // word: one fixture tag is also a word in a heading, so a search finds that.
   it("writes no tag", () => {
     const tags = FIXTURE_DOCUMENT.sections
       .flatMap((section) => section.entries)

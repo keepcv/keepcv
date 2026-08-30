@@ -4,7 +4,8 @@ import type { LintIssue, LintRule } from "./report.js";
 const digitsOf = (text: string): string => text.replaceAll(/\D+/g, "");
 
 // What has to survive into the visible text. A parser reads the words on the
-// page, so an address that exists only in an `href` is an address it never sees.
+// page, so an address that exists only in an `href` is an address it never
+// sees.
 function linkPayload(href: string): string {
   if (href.startsWith("mailto:")) return href.slice("mailto:".length).toLowerCase();
   return href
@@ -217,8 +218,9 @@ const dateFormat: LintRule = {
 // to be missing, and a certification carries its own field.
 const DATED_KINDS = new Set(["experience", "education"]);
 
-// A period with no start is one the manifest resolved to a display string alone,
-// which is what a reader gets: something to print and nothing to sort by.
+// A period with no start is one the manifest resolved to a display string
+// alone, which is what a reader gets: something to print and nothing to sort
+// by.
 const undatedHistory: LintRule = {
   id: "undated-history",
   check: ({ document }) =>

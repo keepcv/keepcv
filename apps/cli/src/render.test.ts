@@ -25,7 +25,8 @@ describe("keepcv render", () => {
         expect(html.startsWith("<!doctype html>")).toBe(true);
         expect(html).toContain("Ada Lovelace");
         expect(html).toContain("<title>Ada Lovelace - Staff engineer, 2026</title>");
-        // Nothing to fetch, which is the whole point of a file someone sends on.
+        // Nothing to fetch, which is the whole point of a file someone sends
+        // on.
         expect(html).not.toMatch(/<link\b|<script\b|@import/i);
       } finally {
         await rm(dataDir, { recursive: true, force: true });

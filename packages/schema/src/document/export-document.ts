@@ -27,10 +27,8 @@ import { timestampSchema } from "../primitives/timestamp.js";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-// Current state, which is what the boot payload carries. History is in
-// `archiveSchema` below, and grows without bound. `import(export(store)) ==
-// store` is a tested property, so anything omitted there is data the format
-// silently drops. A slice adding a table adds it to one of these two.
+// `import(export(store)) == store` is a tested property, so a table missing
+// from here or from `archiveSchema` below is data the format silently drops.
 export const storeSchema = z
   .object({
     profile: profileSchema,

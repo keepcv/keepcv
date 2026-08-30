@@ -31,10 +31,9 @@ function Breadcrumb({ trail }: { trail: readonly Crumb[] }) {
   );
 }
 
-// The two widths a screen body takes. `reading` caps a list of one-line rows at
-// a measure the eye can cross; `full` is for the lists dense enough to earn a
-// wide canvas, and those restructure their rows so nothing has to be read
-// across it.
+// `reading` caps one-line rows at a measure the eye can cross. `full` is for
+// rows dense enough to earn the canvas, and those restructure rather than
+// spread.
 export function PageBody({
   width = "reading",
   className,

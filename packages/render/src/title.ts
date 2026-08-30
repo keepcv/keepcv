@@ -10,7 +10,8 @@ export function documentTitle(document: ResumeDocument): string {
 }
 
 // Marks left by NFKD are dropped rather than transliterated, so an accented
-// name files as plain letters and a script that does not decompose keeps its own.
+// name files as plain letters and a script that does not decompose keeps its
+// own.
 function slug(text: string): string {
   return text
     .normalize("NFKD")

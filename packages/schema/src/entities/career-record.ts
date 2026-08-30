@@ -90,7 +90,8 @@ export const RECORD_EXTRAS = {
   },
   publication: { doi: nullableText },
   award: {},
-  // Free text, unlike a skill's proficiency: "C1" and "reading only" both occur.
+  // Free text, unlike a skill's proficiency: "C1" and "reading only" both
+  // occur.
   language: { proficiency: nullableText },
   volunteering: {},
   speaking: {},

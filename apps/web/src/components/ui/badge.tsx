@@ -22,10 +22,6 @@ export function Badge({
   tone?: keyof typeof TONES;
   icon?: GlyphName;
   className?: string;
-  // Taking the thing off is part of the chip rather than a second control
-  // beside it. Three screens had built this by hand and all three spelled the
-  // affordance as a literal "x", which is a letter where every other control in
-  // the app carries a glyph.
   onRemove?: () => void;
   removeLabel?: string;
   children: ReactNode;

@@ -93,10 +93,8 @@ describe("writing a resume as a Word document", () => {
     expect(docxLines(toDocx(risky))[0]?.text).toBe('Ada & <b>Lovelace</b> "the" first');
   });
 
-  // Two files built from one document have to be the same bytes, and a zip
-  // stamps every entry with the time it was written unless it is told not to.
-  // Asserted on the stamp rather than by writing twice: two writes a moment
-  // apart share a DOS timestamp, which passes while the bytes are not fixed.
+  // A zip stamps every entry with the write time unless told not to. Asserted
+  // on the stamp, not by writing twice: two writes a moment apart match anyway.
   it("stamps every entry with a fixed date", () => {
     expect(toDocx(FIXTURE_DOCUMENT)).toEqual(FILE);
 

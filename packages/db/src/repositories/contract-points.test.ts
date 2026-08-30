@@ -170,8 +170,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toBe("point_record_fk");
     });
 
-    // Down to the metrics and the evidence, because evidence is the one thing in
-    // the store that must never reach anybody else.
+    // Down to the metrics and the evidence, because evidence is the one thing
+    // in the store that must never reach anybody else.
     it("is invisible to another owner", async () => {
       const point = await run(async (r) => {
         const point = await r.points.create(pointInput(null, "a0", "Mine"));
@@ -210,7 +210,8 @@ eachDriver(({ run, otherOwner }) => {
       );
     });
 
-    // The pair is the whole row, so there is nothing a second link could change.
+    // The pair is the whole row, so there is nothing a second link could
+    // change.
     it("links the same pair twice without complaint", async () => {
       const { point, recordId } = await run(async (r) => {
         const record = await r.records.create(recordInput("project", "a0"));
@@ -239,8 +240,8 @@ eachDriver(({ run, otherOwner }) => {
       ).rejects.toBeInstanceOf(DuplicatePointRecordLinkError);
     });
 
-    // Otherwise the same relationship would be recorded twice, and every read of
-    // "which records does this relate to" would have to deduplicate.
+    // Otherwise the same relationship would be recorded twice, and every read
+    // of "which records does this relate to" would have to deduplicate.
     it("drops the link when its record becomes the primary one", async () => {
       const { point, recordId } = await run(async (r) => {
         const record = await r.records.create(recordInput("project", "a0"));

@@ -11,8 +11,9 @@ import type { FieldErrors } from "../../../lib/form.js";
 import { useAddMetric, useArchiveMetric } from "../api/use-points.js";
 import { BLANK_METRIC, buildMetric, type MetricFormValues } from "../model/point-form.js";
 
-// Written straight away rather than staged with the rest of the screen: a metric
-// belongs to a point that already exists, and there is nothing to roll back.
+// Written straight away rather than staged with the rest of the screen: a
+// metric belongs to a point that already exists, and there is nothing to roll
+// back.
 export function PointMetrics({
   store,
   client,

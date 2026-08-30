@@ -2,7 +2,8 @@ import { type ConfigField, type ConfigOf, configOf, type TemplateConfig } from "
 import { FONT_FAMILY_FIELD, PAGE_SIZE_FIELD } from "./paper.js";
 
 // What a resume adjusts to make itself fit. These are the fields a template
-// hands the preview panel, and the only keys a stored `templateConfig` may move.
+// hands the preview panel, and the only keys a stored `templateConfig` may
+// move.
 export const FIT_KNOBS = [
   PAGE_SIZE_FIELD,
   FONT_FAMILY_FIELD,

@@ -3,8 +3,9 @@ import { SORT_KEY_DIGITS, type SortKey, sortKeySchema } from "@keepcv/schema";
 const SMALLEST_DIGIT = "0";
 const LARGEST_DIGIT = "z";
 
-// A magnitude-prefixed integer part plus an optional fraction: a0...az, b00...bzz.
-// Without the prefix an append halves the gap - 1000 appends gave 200-char keys.
+// A magnitude-prefixed integer part plus an optional fraction: a0...az,
+// b00...bzz. Without the prefix an append halves the gap - 1000 appends gave
+// 200-char keys.
 const MIN_KEY = `A${SMALLEST_DIGIT.repeat(26)}`;
 const FIRST_KEY = `a${SMALLEST_DIGIT}`;
 
@@ -147,7 +148,8 @@ function validated(key: string): SortKey {
 function keyBefore(upper: string): SortKey {
   const int = integerPart(upper);
   if (int === MIN_KEY) return validated(int + midpoint("", upper.slice(int.length)));
-  // `upper` carries a fraction, so its integer part alone already sorts before it.
+  // `upper` carries a fraction, so its integer part alone already sorts before
+  // it.
   if (int < upper) return validated(int);
   const decremented = decrementInteger(int);
   if (decremented === null) throw new SortKeyError("cannot order before the smallest key");

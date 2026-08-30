@@ -107,8 +107,8 @@ function Row({
   );
 }
 
-// The name is all a resume needs to exist; everything else about it is chosen on
-// the resume itself.
+// The name is all a resume needs to exist; everything else about it is chosen
+// on the resume itself.
 function NewResume({ client }: { client: ApiClient }) {
   const create = useCreateResume(client);
   const navigate = useNavigate();

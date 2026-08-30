@@ -381,10 +381,8 @@ function standardRecords(resume: ReactiveResume, read: Read): IntakeRecord[] {
 
 const FILED_UNDER_A_HEADING = new Set(["interests", "references", "summary", "cover-letter"]);
 
-// A custom section's items are typed, so they are filed as what they are rather
-// than flattened under its heading: a job kept under "Consulting" is still a job
-// and belongs in the same list as the rest. The heading is what does not
-// survive, and it is named rather than dropped quietly.
+// Items are filed by their own type, not flattened under the section heading -
+// a job kept under "Consulting" is still a job. The heading is named as lost.
 function customRecords(resume: ReactiveResume, read: Read): IntakeRecord[] {
   return (resume.customSections ?? []).flatMap((section) => {
     const heading = text(section.title) ?? "Other";

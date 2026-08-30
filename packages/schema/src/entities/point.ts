@@ -25,7 +25,8 @@ export const pointInputSchema = pointSchema
   .omit({ createdAt: true, updatedAt: true, archivedAt: true })
   .extend({ phrasing: newPhrasingSchema });
 
-// No `phrasingSetId`: text changes by appending a revision, never by repointing.
+// No `phrasingSetId`: text changes by appending a revision, never by
+// repointing.
 export const pointPatchSchema = pointInputSchema
   .omit({ id: true, phrasingSetId: true, phrasing: true })
   .partial();

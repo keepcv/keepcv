@@ -77,7 +77,8 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
   if (found.length > 1) return { choose: found, because: "ambiguous" };
 
   const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
-  // Only the resume being absent answers undefined, and it came from this store.
+  // Only the resume being absent answers undefined, and it came from this
+  // store.
   if (document === undefined) throw new Error(`${only.name} did not compile`);
 
   // No lint report: the linter is about what a machine reading a resume gets

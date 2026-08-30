@@ -9,8 +9,8 @@ describe("contentHash", () => {
       { t: "text", v: "Cut p95 latency to " },
       { t: "b", c: [{ t: "text", v: "180ms" }] },
     ];
-    // Independently: sha256 of
-    // [{"t":"text","v":"Cut p95 latency to "},{"c":[{"t":"text","v":"180ms"}],"t":"b"}]
+    // Independently: sha256 of [{"t":"text","v":"Cut p95 latency to
+    // "},{"c":[{"t":"text","v":"180ms"}],"t":"b"}]
     expect(contentHash(body)).toBe(
       "a712871a6d8a9c8e6628828b685104881e435142c45457f3d45f717bddc8d9fb",
     );

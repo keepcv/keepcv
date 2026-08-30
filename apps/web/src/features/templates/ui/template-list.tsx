@@ -22,10 +22,8 @@ function specOf(row: TemplateRow): TemplateSpec {
   return row.row?.spec ?? { settings: { ...row.template.defaultConfig }, extraCss: "" };
 }
 
-// One control rather than a copy button on every row and a second one for
-// loading a file: both answer "which design does this start from", so they are
-// two sources for one form. `template_name_unique` covers archived rows, so the
-// clash is named here rather than left to the store to refuse.
+// `template_name_unique` covers archived rows, so the clash is named here
+// rather than left to the store to refuse.
 function NewDesign({
   store,
   client,

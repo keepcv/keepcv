@@ -52,8 +52,8 @@ function fieldsOf<T>(
   });
 }
 
-// Keyed by what makes the row that row, with the occurrence appended: one record
-// placed twice under a heading is two rows, not one row seen twice.
+// Keyed by what makes the row that row, with the occurrence appended: one
+// record placed twice under a heading is two rows, not one row seen twice.
 function align<T>(as: readonly T[], bs: readonly T[], keyOf: (row: T) => string): Matched<T>[] {
   const indexed = (rows: readonly T[]) => {
     const seen = new Map<string, number>();
@@ -82,8 +82,9 @@ function align<T>(as: readonly T[], bs: readonly T[], keyOf: (row: T) => string)
   });
 }
 
-// Only rows on both sides can move, and only relative to each other: measured by
-// raw index, inserting one at the top would report every row below it as moved.
+// Only rows on both sides can move, and only relative to each other: measured
+// by raw index, inserting one at the top would report every row below it as
+// moved.
 function movedKeys<T>(rows: readonly Matched<T>[]): Set<string> {
   const common = rows.filter((row) => row.aIndex !== null && row.bIndex !== null);
   const inA = [...common].sort((x, y) => (x.aIndex ?? 0) - (y.aIndex ?? 0));
@@ -152,8 +153,8 @@ const RECORD_ASIDES = new Set([
   "summarySetId",
 ]);
 
-// Every remaining column of whichever kind the record is, so a column added to a
-// kind is diffed without anyone extending a second vocabulary.
+// Every remaining column of whichever kind the record is, so a column added to
+// a kind is diffed without anyone extending a second vocabulary.
 function entryReaders(
   texts: Texts,
   a: ManifestEntry | undefined,
@@ -253,9 +254,9 @@ function profileReaders(texts: Texts): Record<string, Reader<ResumeManifest>> {
   };
 }
 
-// What two versions of one resume say differently. The revisions come in for the
-// reason `renderManifest` takes them: a manifest pins text by id, and a diff a
-// reader has to resolve by hand has not answered the question.
+// What two versions of one resume say differently. The revisions come in for
+// the reason `renderManifest` takes them: a manifest pins text by id, and a
+// diff a reader has to resolve by hand has not answered the question.
 export function diffManifests(
   a: ResumeManifest,
   b: ResumeManifest,

@@ -274,7 +274,8 @@ function NewProfile({
                 roleProfileInput(
                   name,
                   // `role_profile_sort_key_unique` covers archived rows, so the
-                  // key comes from the whole collection rather than the live part.
+                  // key comes from the whole collection rather than the live
+                  // part.
                   keyForPosition(store.roleProfiles, null, store.roleProfiles.length),
                 ),
               );

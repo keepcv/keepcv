@@ -63,8 +63,8 @@ const READING_ORDER: readonly Pattern[] = [
   },
 ];
 
-// A string of punctuation is a bullet or a separator; one carrying a letter or a
-// digit is a word that exists only in the stylesheet.
+// A string of punctuation is a bullet or a separator; one carrying a letter or
+// a digit is a word that exists only in the stylesheet.
 const GENERATED_WORDS = /content\s*:\s*(["'])[^"']*[A-Za-z0-9][^"']*\1/;
 
 const TEXT_AS_IMAGE: readonly Pattern[] = [
@@ -94,9 +94,9 @@ const TEXT_AS_IMAGE: readonly Pattern[] = [
   },
 ];
 
-// Text in the file and not on the page. Whatever it was meant to do, it reads as
-// keyword stuffing to anyone who compares the two, and that is how a resume gets
-// binned rather than ranked.
+// Text in the file and not on the page. Whatever it was meant to do, it reads
+// as keyword stuffing to anyone who compares the two, and that is how a resume
+// gets binned rather than ranked.
 const HIDDEN_TEXT: readonly Pattern[] = [
   {
     pattern: /display\s*:\s*none/,
@@ -124,8 +124,9 @@ const HIDDEN_TEXT: readonly Pattern[] = [
   },
 ];
 
-// A margin box is page furniture rather than content: it is where a printer puts
-// a page number, and it is the first thing dropped when a page is read as text.
+// A margin box is page furniture rather than content: it is where a printer
+// puts a page number, and it is the first thing dropped when a page is read as
+// text.
 const PAGE_FURNITURE: readonly Pattern[] = [
   {
     pattern: /@(?:top|bottom)-(?:left|center|centre|right)/,

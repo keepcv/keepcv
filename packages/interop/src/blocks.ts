@@ -94,11 +94,8 @@ function entryBlocks(entry: DocumentEntry): ResumeBlock[] {
   ];
 }
 
-// Tags are not written, for the reason no template prints them: they are the
-// words the store files work under, not words the user chose to send.
-//
-// Groups are ignored deliberately. They are a hint for stacking roles at one
-// employer on a page, and none of these formats is being laid out here.
+// No tags: they are what the store files work under, not what the user sent.
+// Groups are a page-layout hint, and nothing here is being laid out.
 const sectionBlocks = (section: DocumentSection): ResumeBlock[] => [
   ...said("heading", section.heading),
   ...section.entries.flatMap(entryBlocks),

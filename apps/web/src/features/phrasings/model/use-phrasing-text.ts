@@ -10,8 +10,8 @@ export type EditorStatus = "clean" | "typing" | "draft-kept" | "committing" | "c
 export interface PhrasingText {
   typed: string;
   committed: string;
-  // Text from a previous session, offered rather than restored: the editor never
-  // resurrects words the user believed they had abandoned.
+  // Text from a previous session, offered rather than restored: the editor
+  // never resurrects words the user believed they had abandoned.
   waiting: string | undefined;
   status: EditorStatus;
   error: unknown;
@@ -77,8 +77,8 @@ export function usePhrasingText(client: ApiClient, store: Store, phrasing: Phras
     typed,
     committed,
     // Only ever what was found on open: once the user types, the draft in the
-    // store is the one this editor is writing, and offering it back would be the
-    // editor interrupting itself mid-sentence.
+    // store is the one this editor is writing, and offering it back would be
+    // the editor interrupting itself mid-sentence.
     waiting: touched ? undefined : draftText(draft),
     status,
     error: saveDraft.error ?? discardDraft.error ?? commit.error,

@@ -267,10 +267,8 @@ const KIND_BY_HEADING: [RegExp, CareerRecordKind][] = [
 const kindOfHeading = (heading: string): CareerRecordKind | undefined =>
   KIND_BY_HEADING.find(([pattern]) => pattern.test(fold(heading)))?.[1];
 
-// A one-line entry is a labelled fact - "Languages: English, Spanish" - with no
-// employer and no period. The tool's own example heads a list of them
-// "additional experience and awards", and filing those as jobs puts a teaching
-// note in the work history.
+// A one-line entry is a labelled fact - "Languages: English, Spanish" - and
+// filing those as jobs puts a teaching note in the work history.
 const NEEDS_MORE_THAN_A_LABEL = new Set<CareerRecordKind>([
   "experience",
   "education",

@@ -114,7 +114,8 @@ describe("searching the store", () => {
     expect(search(store, "platform").map((hit) => hit.id)).toEqual([role.id]);
   });
 
-  // The mark has to be in the middle: a trailing one falls off the token anyway.
+  // The mark has to be in the middle: a trailing one falls off the token
+  // anyway.
   it("folds accents and case, so a plain query finds an accented word", () => {
     const store = emptyStore();
     const crepe = aRecord({ title: "Cr\u00eape rebuild" });

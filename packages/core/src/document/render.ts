@@ -32,14 +32,9 @@ function keyed<T>(rows: readonly T[], prefix: string): { key: string; row: T }[]
   return rows.map((row, index) => ({ key: `${prefix}${index}`, row }));
 }
 
-// A user-defined field whose key collides with a presenter's keeps its label
-// and takes a suffixed key: specialised templates address the typed column by
-// key and must not be handed user-entered data instead.
-//
-// Unless it also carries the same value, in which case it is not a second fact
-// and the resume printed the line twice. A field's key is derived from its
-// label, so naming one "Grade" on a record whose kind already has a grade is
-// how a user reaches this without ever seeing a key.
+// The presenter keeps the canonical key: a template addressing the typed column
+// by key must not get user data. Same key and value is one fact - suffixing
+// that too printed "Thesis" on two lines of one resume.
 function withUserFields(entry: ManifestEntry, presented: DocumentField[]): DocumentField[] {
   const taken = new Map(presented.map((field) => [field.key, field.value]));
   return [

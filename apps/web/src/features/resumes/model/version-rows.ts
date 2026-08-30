@@ -85,9 +85,9 @@ export const CHANGE_LABELS: Record<ChangeKind, string> = {
   changed: "Changed",
 };
 
-// A row that arrived or left differs in every field it has, and the badge beside
-// its name already says so: listing them reads as noise around the one word that
-// matters.
+// A row that arrived or left differs in every field it has, and the badge
+// beside its name already says so: listing them reads as noise around the one
+// word that matters.
 function fieldLines(
   prefix: string,
   change: ChangeKind,

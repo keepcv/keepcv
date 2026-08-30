@@ -7,7 +7,8 @@ export interface Loss {
 }
 
 // Every format a resume leaves as that is not this product's own. HTML is not
-// one of them: that file is the resume, so there is nothing to count it against.
+// one of them: that file is the resume, so there is nothing to count it
+// against.
 export const EXPORT_TARGETS = ["jsonresume", "latex", "typst", "docx"] as const;
 export type ExportTarget = (typeof EXPORT_TARGETS)[number];
 
@@ -18,7 +19,8 @@ const entriesOf = (document: ResumeDocument): DocumentEntry[] =>
 const hasMarks = (text: RichText | undefined): boolean =>
   text?.some((node) => node.t !== "text") ?? false;
 
-// What the format has a list for. A section of any other kind has nowhere to go.
+// What the format has a list for. A section of any other kind has nowhere to
+// go.
 const KEPT_KINDS = new Set([
   "experience",
   "volunteering",

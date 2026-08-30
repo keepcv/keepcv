@@ -4,10 +4,8 @@ import type { ResumeDocument } from "@keepcv/schema";
 // limit is a rounding artefact rather than a page break.
 const EPSILON = 0.5;
 
-// One laid-out block of the document, in the order it flows, measured against
-// an unbroken column. `atomic` is `break-inside: avoid` and `keepWithNext` is
-// `break-after: avoid`, read from the template's own stylesheet rather than
-// declared a second time.
+// `atomic` is `break-inside: avoid` and `keepWithNext` is `break-after: avoid`,
+// read from the template's own stylesheet rather than declared a second time.
 export interface FlowBlock {
   key: string;
   top: number;

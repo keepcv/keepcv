@@ -24,8 +24,8 @@ const highlights = (entry: DocumentEntry): string[] =>
   entry.points.map((point) => point.plainText.trim()).filter((text) => text !== "");
 
 // `period.start` and `period.end` are the partial dates the record holds, and
-// `YYYY`, `YYYY-MM` and `YYYY-MM-DD` are all ISO 8601, which is what JSON Resume
-// asks for. `display` is ours and never travels.
+// `YYYY`, `YYYY-MM` and `YYYY-MM-DD` are all ISO 8601, which is what JSON
+// Resume asks for. `display` is ours and never travels.
 const dates = (entry: DocumentEntry) => ({
   ...(entry.period?.start === undefined ? {} : { startDate: entry.period.start }),
   ...(entry.period?.end === undefined ? {} : { endDate: entry.period.end }),

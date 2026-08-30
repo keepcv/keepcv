@@ -42,8 +42,7 @@ import type {
   ResumeDetail,
 } from "../model/resume-detail.js";
 
-// Off is a state, not an absence: the row stays visible so the selection can be
-// read, and only the document drops it.
+// A row that vanished when toggled would read as a delete.
 function Off() {
   return <Badge>off</Badge>;
 }
@@ -55,8 +54,7 @@ interface Writes {
   place: (placement: Placement) => void;
 }
 
-// Every label names its row, because four of these repeat down the screen and
-// "Up" on its own tells a screen reader nothing.
+// Every label names its row: "Up" alone tells a screen reader nothing.
 function Controls({
   subject,
   placed,
@@ -71,18 +69,9 @@ function Controls({
   writes: Writes;
 }) {
   return (
-    // Glyphs, not words: "Hide" and "Remove" spelled out on every section, entry
-    // and point put two words of chrome beside every line of the user's content.
-    // Each still carries the label naming its own row.
-    //
-    // Dimmed rather than hidden until the row is entered: four of these on every
-    // one of forty rows outweighed the text they act on, and revealing them on
-    // hover alone would take them away from touch and from the keyboard.
-    //
-    // `ml-auto` holds them against the right edge on the line they wrap onto. In
-    // a narrow pane an entry whose period is long enough - "Sept 2020 - Mar
-    // 2023" - pushed them to a second line, where they sat hard against the left
-    // margin under the title and read as belonging to the point below.
+    // Dimmed, not hidden: revealed on hover alone they are gone on touch and to
+    // the keyboard. `ml-auto` keeps them right when a long period wraps the
+    // row.
     <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100">
       {reorder}
       <Button
@@ -107,10 +96,8 @@ function Controls({
   );
 }
 
-// Nothing left to add is said by the picker being gone, so `empty` is passed
-// only where its absence would leave a panel with nothing in it. Spelled out
-// under every entry and every section it was the same sentence six times on one
-// screen, each one longer than the point it sat under.
+// `empty` only where the picker is alone in a panel: everywhere else its
+// absence is what says there is nothing left to add.
 function AddPicker<T extends { label: string }>({
   label,
   empty,
@@ -272,9 +259,6 @@ function Entry({
           </p>
         )
       ) : (
-        // Indented behind a rule, because section, entry and point were three
-        // levels laid out flat: a point sat at the same left edge as the entry
-        // it belongs to, and the only thing separating them was font weight.
         <ul className="mt-1.5 ml-2 border-l border-line-subtle pl-4">
           {entry.points.map((point) => (
             <Point
@@ -301,11 +285,6 @@ function Entry({
   );
 }
 
-// The heading a section prints under, edited in place: it is one field, and a
-// route for it would be a page with a single input on it. The trigger is a glyph
-// beside the heading rather than a sentence under it - spelled out it was a line
-// of prose per section, longer than any entry it sat above, and it read as
-// content rather than as a control.
 function Heading({
   section,
   typed,
@@ -441,8 +420,7 @@ function Section({
   );
 }
 
-// An override on top of the channel's own default, which is why following the
-// default again is a third choice rather than the same thing as hiding it.
+// `null` follows the channel's own default, which is not the same as `false`.
 function Contacts({
   resumeId,
   contacts,
@@ -545,8 +523,8 @@ export function Composer({
     writes.move({ level: "section", row }, sortKey);
   });
 
-  // Every write here is optimistic, so a refused one puts the row back exactly
-  // as it was and otherwise says nothing at all.
+  // Optimistic: a refusal puts the row back, so only the reason is left to
+  // show.
   const refused = add.error ?? patch.error ?? setArchived.error;
 
   return (

@@ -161,7 +161,8 @@ describe("keyForPosition", () => {
   });
 
   // The sort-key indexes have no predicate on `archived_at`, so the midpoint of
-  // two live neighbours is exactly the key a row removed from that gap still holds.
+  // two live neighbours is exactly the key a row removed from that gap still
+  // holds.
   it("clears a removed row still holding a key in the gap", () => {
     const rows = placed([
       ["a", "a0", true],

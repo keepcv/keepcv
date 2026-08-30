@@ -142,8 +142,8 @@ export function createCareerRecordRepository(db: Database): CareerRecordReposito
       return toCareerRecord(await insertOwned(db, record, "record", input));
     },
 
-    // Read back rather than added to the predicate, so a patch aimed at the wrong
-    // kind reports that instead of a missing row or a stale token.
+    // Read back rather than added to the predicate, so a patch aimed at the
+    // wrong kind reports that instead of a missing row or a stale token.
     async update(id, patch, expectedUpdatedAt) {
       const { kind, ...changes } = patch;
       const current = await requireOwned<RecordRow>(db, record, "record", id);
