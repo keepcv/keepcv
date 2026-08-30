@@ -10,8 +10,6 @@ everything permanently; a resume is a *selection* over the store plus a template
 The founding problem: people keep career history inside their resume file, so
 every trim to fit one page is an unrecoverable delete.
 
-Most of what follows is **specified but not yet built** - see "Current state".
-
 ## Read the specs first
 
 `docs/architecture/` is tracked and is the authoritative design. Read it before
@@ -19,11 +17,11 @@ changing anything it describes.
 
 | File | What it is |
 |---|---|
-| `data-model.md` | Tables, invariants I1-I15, indexing plan |
+| `data-model.md` | Tables, invariants I1-I18, indexing plan |
 | `template-model.md` | `ResumeDocument` - the uniform contract every renderer binds to |
 | `application-structure.md` | Layering, state ownership, query keys, screen read models |
 | `api-contract.md` | HTTP surface and the repository port |
-| `capabilities.md` | What the product will contain, the build order, the Definition of Complete |
+| `capabilities.md` | What the product contains, the build order, the Definition of Complete |
 
 `docs/PRODUCT.md` and `docs/adr/` are **gitignored on purpose** and exist on disk
 only: the product context, and every architectural decision with its rejected
@@ -98,19 +96,13 @@ pnpm --filter @keepcv/core exec vitest run src/ordering/sort-key.test.ts
 pnpm --filter @keepcv/core exec vitest run -t "produces the first key"
 ```
 
-The published JSON Schema is generated and a test fails when the committed copy
-has drifted. Re-emit it in the same commit as any schema change:
+Three generated artifacts fail CI when the committed copy has drifted. Re-emit
+in the same commit as the change, and read generated SQL before committing - a
+destructive migration step does not merge:
 
 ```sh
-pnpm --filter @keepcv/schema schema:emit
-```
-
-Migrations are generated from the Drizzle schema and CI fails when the two
-disagree. Regenerate in the same commit as any schema change, and read the SQL
-before committing - a destructive step does not merge:
-
-```sh
-pnpm --filter @keepcv/db db:generate
+pnpm --filter @keepcv/schema schema:emit   # the published JSON Schema
+pnpm --filter @keepcv/db db:generate       # migrations, from the Drizzle schema
 ```
 
 The repository contract suite runs against PGlite by default. Point it at a
@@ -122,535 +114,170 @@ DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
 
 ## Current state
 
-`packages/schema`, `packages/core`, `packages/db`, `packages/api`,
-`packages/templates`, `packages/render`, `packages/ats-lint` and
-`packages/interop` exist, `apps/cli` is the `keepcv` launcher and its `render`,
-`status`, `backup`, `restore` and `set-password` commands, and `apps/web` is the
-browser app. Every package the specs name is now
-scaffolded. Create a new one only when its capability is built, and add it to
-the root `tsconfig.json` references then - an empty package is noise, and a
-sub-feature is either not started or complete.
+Everything the specs name is built. Create a new package only when its capability
+is built, and add it to the root `tsconfig.json` references then - an empty
+package is noise, and a sub-feature is either not started or complete.
 
-`apps/web` is the one workspace project **not** in those references: it emits no
-declarations for anything to reference, so it is a `noEmit` project that Vite
-builds and `tsc` only checks.
+**What exists.** `packages/schema`, `core`, `db`, `api`, `templates`, `render`,
+`ats-lint` and `interop`; `apps/cli` is the `keepcv` launcher with `serve`,
+`render`, `status`, `backup`, `restore` and `set-password`; `apps/web` is the
+browser app. `apps/web` is the one workspace project **not** in the
+`tsconfig.json` references: it emits no declarations for anything to reference,
+so it is a `noEmit` project that Vite builds and `tsc` only checks.
 
-The database holds `owner`, `profile`, `contact_channel`, `organisation`,
-`custom_section`, `record`, `record_link`, `record_field`, `phrasing_set`,
-`phrasing`, `phrasing_revision`, `point`, `point_record_link`, `metric`,
-`evidence`, `tag`, `record_tag`, `point_tag`, `draft`, `resume`,
-`resume_section`, `resume_entry`, `resume_entry_point`,
-`resume_contact_channel`, `saved_filter`, `role_profile`, `role_profile_tag`,
-`template`, `resume_version`,
-`resume_snapshot` and `resume_content_ref`, and the port has fourteen
-repositories. That is the record store, its vocabulary, its editor state, the
-composition a resume is and its history. `resume_version` is append-only, like `phrasing_revision`, and held
-that way by the same hand-written trigger. There is no `search_document` and
-there will not be one: see below.
+**The database holds 31 tables** - the record store, its vocabulary, its editor
+state, the composition a resume is, and its history - and the port has fourteen
+repositories. `resume_version` and `phrasing_revision` are append-only, each held
+that way by its own hand-written trigger. There is no `search_document` and there
+will not be one.
 
-The API serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
-`/v1/openapi.json`, the point's secondary records, phrasing revisions, tag
-assignment on records and points, `/v1/tags/{id}/merge`,
-`/v1/drafts/{targetKind}/{targetId}/{field}`, a resume's contact-channel
-overrides, and eighteen owned collections: `/v1/contact-channels`,
-`/v1/organisations`, `/v1/custom-sections`, `/v1/records`, `/v1/record-links`,
-`/v1/record-fields`, `/v1/points`, `/v1/metrics`, `/v1/evidence`,
-`/v1/phrasing-sets`, `/v1/phrasings`, `/v1/tags`, `/v1/saved-filters`,
-`/v1/role-profiles`, `/v1/templates`, `/v1/resumes`, `/v1/resume-sections`,
-`/v1/resume-entries` and `/v1/resume-entry-points`.
-It also serves `GET /v1/resumes/{id}/document`, the compiled `ResumeDocument`,
-`POST /v1/resumes/{id}/derive`, the resume timeline at `/v1/resume-versions`,
-`/v1/resume-snapshots`, `POST /v1/intake`, `GET /v1/resume-versions/diff`,
-`GET /v1/resume-versions/{id}/document`,
-`POST /v1/resume-versions/{id}/restore`, and `/v1/points/{id}/usage` and
-`/v1/records/{id}/usage`. There is no `/v1/backup/*`: those routes would have
-handed `createApi` a filesystem, and the mirror is the launcher's. The shipped
-designs are in every build rather than in the store, so `/v1/templates` answers
-only the ones the user wrote; the resume carries `template_id` and
-`template_config`, and both travel in the boot payload.
+**The API** serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
+`/v1/intake`, `/v1/openapi.json`, eighteen owned collections, the nested routes
+for a point's secondary records, phrasing revisions, tag assignment, a resume's
+contact-channel overrides and drafts, plus `/v1/tags/{id}/merge`,
+`/v1/role-profiles/{id}/apply`, `GET /v1/resumes/{id}/document`,
+`POST /v1/resumes/{id}/derive`, the timeline at `/v1/resume-versions` and
+`/v1/resume-snapshots` with `diff`, `{id}/document` and `{id}/restore`, and
+`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. `api-contract.md` #3 is the
+full list and the argument for every route that is deliberately absent.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-The web app is an application frame - a collapsible navigation rail grouped into
-Store, Vocabulary, Resumes and System, a command palette on its header, and a
-sheet in place of the rail below `lg` - over the store overview, the profile, the
-record list, a record's detail and its form, the point list, the tag vocabulary,
-the custom-section headings, the role profiles, the template list and a design's
-editor, the resume
-list, a resume's composition, its compiled preview and its history, the backup
-screen, and search results. All of
-it is fed by one `GET /v1/store` on the root route's loader, and the preview is
-`compile()` running in the browser over that same payload, handed to a template
-in an iframe of its own that reports back how many pages it came to. React,
-TanStack Router and Query, Tailwind v4, Vite, lucide for glyphs, and
-`components/ui/` for the primitives a screen needs. Routes are declared in code
-rather than generated from filenames.
+**The web app** is an application frame - a collapsible navigation rail grouped
+into Store, Vocabulary, Resumes and System, a command palette on its header, and
+a sheet in place of the rail below `lg` - over the store overview, the profile,
+the record list, a record's detail and its form, the point list, the tag
+vocabulary, the custom-section headings, the role profiles, the template list and
+a design's editor, the resume list, a resume's composition, its compiled preview
+and its history, the backup screen, and search results. All of it is fed by one
+`GET /v1/store` on the root route's loader, and the preview is `compile()`
+running in the browser over that same payload. React, TanStack Router and Query,
+Tailwind v4, Vite, lucide for glyphs, and `components/ui/` for the primitives a
+screen needs. Routes are declared in code rather than generated from filenames.
 
-**Screens name semantic tokens, never palette colours.** `styles/app.css` holds
-the ramps and, above them, `surface`, `line`, `text`, `brand`, the status trio
-and `paper`; the semantic block is `@theme inline`, so a utility emits
-`var(--surface)` and `.dark` reassigns it. The canvas is a warm ivory a real step
-below the white it holds, and `shadow-card` is two warm-tinted layers: at the
-1.5% and 5%-opacity it had, a panel was a hairline rectangle rather than an
-object. The `ink` ramp kept its lightness when it went warm, so no contrast ratio
-moved. There is no webfont - a store that never leaves the machine must not fetch
-one on first paint. Dark mode is a class on the root, set
-by an inline script in `index.html` before first paint - an effect flashes a
-white page on the way into a dark one - and the choice lives on the shell, since
-two toggles with two hooks disagree. `components/icon/` keys a glyph by what it
-means here rather than what lucide calls it, and hand-draws the larger spot
-illustrations an empty state wants (`application-structure.md` #10).
+### The rules, and where each one is argued
 
-**There are three screen shapes.** Browse is full width behind a page header and
-a sticky toolbar; detail is two columns above `xl`, the thing on the left and
-what it is filed under on the right; the resume is a full-height workspace with
-the composition and the compiled preview scrolling independently. The shell is
-`h-dvh` with `main` as the scroll container, which is what gives a workspace a
-height to fill. Forms and prose are capped - the whole canvas is right for a list
-and wrong for a name field. **A pane's own layout is a container query**: the
-preview renders full width on its own tab and in half a workspace, and a viewport
-breakpoint left it unreadable in the second.
+These are the ones an agent breaks by not knowing them. The reason each is
+right - and every rejected alternative - is in the spec section named beside it;
+do not restate that argument here, in code, or in a commit message.
 
-**The toolbar is a rule with the controls on it, and the count goes on it.**
-Every one of them holds a single pill group that already looks like a control, so
-a bordered card around it was a box inside a box with most of the row empty; the
-row count fills the rest, because that is what a narrowing produces. It lives
-there and nowhere else - it had been a page header's blurb on one screen and a
-panel's title on two more. **In the rail, "you are here" is a marker in the
-margin**, not a brand-filled pill that shouts over the eleven rows the user has
-not reached; declare the whole marker in the active class, because the router
-appends `activeProps.className` rather than merging it and a base
-`before:bg-transparent` won. Nothing in the rail's footer moves when it
-collapses: the scheme toggle used to vanish below `w-16`.
+| Rule | Argued in |
+|---|---|
+| Screens read the cached store through selectors in `@keepcv/core`, never a request of their own. Counting, filtering, tag usage, every nudge, `composition(store, resumeId)` and `search(store, query)` are pure functions there. Formatting is the opposite and lives in the web app's `model/` | `application-structure.md` #1, #2 |
+| `renderHtml`, `renderSite`, `lint`, `toBlocks` and the `interop` writers are functions, not routes: the caller holds every input | `api-contract.md` #3 |
+| `GET /v1/store` is current state; `GET /v1/export` is the archive. Drafts are in both; revision history and manifests only in the second | `api-contract.md` #3 |
+| Writes go through `useStoreMutation`, which patches the cache, rolls back on refusal and re-reads on settle; a composition write passes `settle` and merges the row instead | `application-structure.md` #4 |
+| Adding and taking off are one control: every uniqueness index on the composition covers archived rows, so placing is a create or a put-back | `application-structure.md` #5.6 |
+| Sub-collections - metrics, evidence, record links, record fields, contact channels - write as they are typed rather than staged in a form | `application-structure.md` #5.3, #5.10 |
+| Evidence is private structurally: `ResumeDocument` has no field it could travel in | `template-model.md` #1 |
+| Every ordered list drags **and** keys, through `useReorder`; sort keys compare by code unit, never by locale | `capabilities.md` #3, `data-model.md` #3.5 |
+| Text is never submitted: an 800ms debounce writes a `draft`, blur or thirty seconds idle appends a `phrasing_revision`. A draft found on open is offered, never restored | `application-structure.md` #6 |
+| `captureManifest` freezes a resume and `renderManifest` turns it into the document, so there is no second compiler. A restore puts back the selection, not the words, and never rewinds | `template-model.md` #7, `data-model.md` #9.2 |
+| A template is data: `fromSpec` over a `TemplateSpec`, `FIT_KNOBS` what a resume may move and `DESIGN_KNOBS` what it may not, settings declared as `fields` | `template-model.md` #5 |
+| Side by side is a grid, never a float, a coordinate or a column count - the lint rules refuse all three by name | `template-model.md` #5 |
+| The browser lays the page out and `@keepcv/core` counts it: `FlowBlock` geometry in, `paginate` and `lengthBudget` out. There is deliberately no pagination library | `template-model.md` #4 |
+| `lint({ document, html })` takes the rendered bytes rather than producing them, so the thing linted is the thing sent | `capabilities.md` #3 |
+| `lossOf(document, target)` is counted against this resume, and anything at zero is not in the list | `capabilities.md` #3 |
+| The launcher serves app and API on one origin; the launch token travels in the URL fragment. `--auth token`, `--auth password` and `--auth proxy` all answer one owner, and binding off loopback refuses `token` | `api-contract.md` #6 |
+| Screens name semantic tokens, never palette colours; three screen shapes; a pane's own layout is a container query | `application-structure.md` #10 |
+| `danger` is for losing something, and archiving is not that | `application-structure.md` #10 |
 
-**`PageBody` is the only thing that sets a browse screen's width.** `reading`
-caps and centres it, `full` does not, and a `full` list restructures its rows so
-nothing is read across the canvas - laid out as four columns, a record row put
-its period a thousand pixels from the title it dated. **Export, the ATS findings,
-the page limit and the template settings are one collapsing column on the preview
-tab, and are absent beside the composition**, where they would open over the very
-thing they change.
+### What is written down only here
 
-**`danger` is for losing something, and archiving is not that.** Nothing here is
-destroyed, so a red Archive taught users to fear the mechanism that keeps them
-safe; it is a secondary button with the `archive` glyph, and `danger` is left on
-merging a tag and discarding a draft. **A form nobody is filling in is not on the
-screen** - it sits behind the control that names it and opens as a bounded block
-with its own confirm and cancel, rather than leaving empty inputs open with the
-submit button under them. A repeated row action is a glyph and still passes
-`label`. Note that TypeScript does not excess-check a hyphenated JSX attribute,
-so `aria-expanded` on a component that does not forward it type-checks and is
-dropped; `Button` takes `expanded`.
+Hard-won details with no home in the specs. Each one has cost a debugging
+session already.
 
-**`Ctrl-K` opens a palette over `search(store, query)`**, the same selector the
-search screen reads, so the two cannot disagree about what matches. Arriving with
-no token renders a landing page rather than a 401 panel, and the router never
-mounts: every route under it would only render the same 401.
+**Declaring routes.**
 
-**Records, points, their wording, resumes and the composition all write.**
-Create, edit, archive and restore go through `useStoreMutation` in
-`lib/store-cache.ts`, which patches the cached `Store` before the request leaves,
-puts it back when the request is refused, and re-reads once it settles. A `409`
-opens a field-by-field comparison offering both resolutions and taking neither.
-Metrics are written as they are added rather than staged with a form, and so is
-evidence: both are sub-collections of a point that already exists, so there is
-nothing to roll back. Evidence is private structurally - `ResumeDocument` has no
-field it could travel in - and the panel says so beside the rows, because a user
-who does not believe it will not write down the thing worth writing down.
+- Routes are declared with `createRoute` from `@hono/zod-openapi` using the
+  schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
+  validator cannot describe different shapes. A route added any other way is
+  invisible to the document.
+- **A helper that builds routes takes the path as `<Path extends string>`, never
+  `string`**: a widened path collapses the whole typed client into one
+  `ClientRequest<string, string, ...>`, and the failure surfaces in the web app
+  as "property does not exist" on an unrelated route.
+- An owned collection's six declarations come from `collectionRoutes` in
+  `routes/collection.ts`. Handlers stay in the resource's own file: Hono derives
+  a handler's types through conditionals on the schema type, which TypeScript
+  defers while the schema is a type parameter, so a builder that mounted the
+  handlers too would have to cast away the checking that declaring routes this
+  way exists to provide. Add a resource by calling it, not by copying another
+  resource's declarations.
 
-**The profile is a screen, and it is where every resume header comes from.**
-Identity stages and saves as one patch, like the resume target; contact channels
-write as they are typed, like a metric on a point; and the summary is a phrasing
-set, so it gets variants, drafts and history for free. A profile that never had
-one names no set, so starting a summary creates the set and points the profile
-at it in one write. The panel names email and phone when neither is there, which
-is the finding the linter would otherwise raise after the resume is built.
+**Export and import.**
 
-**Every ordered list drags, and every ordered list still keys.** `useReorder` in
-`lib/order.ts` is the one place a move is computed: it takes the scope the
-sort-key index covers, archived rows included, answers the key through
-`keyForPosition` and writes one row. Both inputs, always - a list that only
-drags is one a keyboard cannot order, and the buttons are the only half a screen
-reader can announce. The dragged row is in React state rather than
-`dataTransfer`, which jsdom implements not at all. The record list splits custom
-entries by heading, because a custom entry's sort key is scoped by the section
-it prints under.
+- Native export and import are `repositories.store`, and the round-trip test in
+  `contract-store.test.ts` runs over a store built to cover every collection the
+  format declares. **A slice that adds a table adds it to `storeSchema` and to
+  that fixture**, or it ships a format that silently drops the user's data.
+- History goes in `archiveSchema` - `storeSchema` extended with versions and
+  snapshots - because the boot payload must not carry it; `read()` answers the
+  archive and `readCurrent()` the store. `resume_content_ref` is in neither: it
+  is derived from the manifests and rebuilt on import.
 
-**A resume can be started from another, and an old version leaves as a file.**
-`derivePlan` answers the rows a copy needs and one route writes them in a
-transaction; the composition and the template come across and the posting does
-not. `GET /v1/resume-versions/{id}/document` compiles what a version said in the
-words it pinned, so sending an old one no longer means restoring it first.
+**Reading somebody else's file.**
 
-**A resume somebody else's tool wrote comes in as an `Intake`.** That is what a
-file said before anything decides what to do about it: no ids, no ordering and
-no foreign keys, so an organisation arrives as the name that was printed. Its
-record union is built from the same `RECORD_EXTRAS` map the stored union is, and
-a test fails when a kind declares a field on one side only. Reading happens
-where the file is - the browser reads it in the tab - so parsing is off the API
-surface and the resume never leaves the machine. `matchIntake` answers what each
-incoming thing looks like it already is and `importPlan` answers the rows, both
-selectors; `POST /v1/intake` re-plans server-side and applies in one
-transaction. A merge adds what the file had and leaves the record the user
-curated alone, so every write is a create and applying one file twice writes
-nothing the second time.
+- An `Intake`'s record union is built from the same `RECORD_EXTRAS` map the
+  stored union is, and a test fails when a kind declares a field on one side
+  only.
+- `fromJsonResume`, `fromReactiveResume` and `fromRenderCv` all answer `Intake`,
+  and the helpers three readers share are in `reading.ts` rather than copied per
+  format - `readHtml` splits a Reactive Resume description into the summary and
+  the points, and `readPeriod`, written for PDFs, reads `"March 2021 - Present"`
+  there too.
+- Magic bytes answer first, then the shape of the parsed object. A Reactive
+  Resume export carries `basics` exactly as a JSON Resume one does, so that
+  branch is tried first and a test fails if the order is swapped.
+- `pdfjs-dist`, `fflate` and `yaml` are the only parsers, all three are behind
+  `@keepcv/interop/files`, and none runs server-side.
 
-**A PDF and a DOCX go through one segmenter.** Both extractors live in
-`@keepcv/interop/files` - a subpath, so nothing that only reads JSON loads a PDF
-engine - and both answer `DocumentLine[]`; `fromLines` does the reasoning. Same
-seam as pagination: the thing that knows about layout reports geometry, the pure
-function reasons about it. `pdfjs-dist`, `fflate` and `yaml` are the only
-parsers, all three are behind that subpath, and none runs server-side.
+**Writing somebody else's file.**
 
-**Five formats read, and the extension decides none of it.** The PDF and ZIP
-magic bytes answer first, then the shape of the parsed object - a Reactive Resume
-export carries `basics` exactly as a JSON Resume one does, so that branch is
-tried first and a test fails if the order is swapped. `fromJsonResume`,
-`fromReactiveResume` and `fromRenderCv` all answer `Intake`, and the helpers
-three readers share are in `reading.ts` rather than copied per format.
-`readHtml` splits a Reactive Resume description into the summary and the points,
-and `readPeriod` - written for PDFs - reads `"March 2021 - Present"` there too.
+- The Word document is written the way `docxLines` reads one - `Heading1`,
+  `Heading2`, `numPr` - which is what makes the round trip the only end-to-end
+  check available on a format with no compiler to hand. Those style choices are
+  not interchangeable with equally pretty ones. The zip is stamped with a fixed
+  date, or two files built from one document would differ.
+- A `.tex` and a `.typ` have to build on a machine with nothing installed, and
+  neither is compiled by anything in this tree. `//` in a Typst address opens a
+  comment and swallows the closing brackets after it, so a run carrying markup is
+  quoted whole rather than escaped character by character.
+- PDF is `renderHtml`'s file in a hidden iframe handed to `print()`. No headless
+  browser and no PDF library: either would be a second layout engine to keep in
+  step with the first. Where the printer and `paginate` disagree the printer is
+  right, which is why the length budget warns rather than gates.
 
-**RenderCV names its own sections, so the entry decides the kind and the heading
-only breaks a tie.** An entry carrying a company is experience under any heading;
-a bare bullet or a one-line label has said nothing, so the heading answers, and a
-heading that matches nothing becomes a custom section rather than a near miss.
-That match is the one guess in either reader, which is why neither is `inferred`:
-the kind is on the row the reviewer approves, and a warning banner claiming the
-layout was reverse-engineered would be untrue.
+**The web app.**
 
-**A Reactive Resume item marked `hidden` comes in.** It is content the user
-trimmed off a resume, and a store that exists so a resume can be a selection over
-it is the one place that belongs. Several roles at one company become several
-records under one organisation, and a custom section's items are typed, so they
-are filed as what they are with only the heading reported lost.
+- The dragged row is in React state rather than `dataTransfer`, which jsdom
+  implements not at all. `useReorder` lives in `lib/order.ts` and takes the scope
+  the sort-key index covers, archived rows **included**.
+- `useStoreMutation` lives in `lib/store-cache.ts`.
+- `record_field_key_unique` covers archived rows, so `buildField` answers a
+  put-back rather than a create when a removed field is named again.
+- Declare the whole "you are here" marker in the rail's active class: the router
+  appends `activeProps.className` rather than merging it, and a base
+  `before:bg-transparent` won.
+- TypeScript does not excess-check a hyphenated JSX attribute, so
+  `aria-expanded` on a component that does not forward it type-checks and is
+  silently dropped. `Button` takes `expanded`.
+- Dark mode is set by an inline script in `index.html` before first paint - an
+  effect flashes a white page on the way into a dark one - and the choice lives
+  on the shell, since two toggles with two hooks disagree.
+- A custom section is a screen of its own, because until one exists the record
+  form's section picker is empty and `custom_entry` is hidden, which made a whole
+  record kind unreachable.
 
-**The store backs up to one readable file, and the launcher keeps a copy.**
-`keepcv serve` writes it beside the data directory on start, on a timer and on
-stop, whole-then-renamed and skipped when nothing changed; `keepcv backup` and
-`keepcv restore` do the same on demand; the app reaches it through `/v1/export`
-and `/v1/import`. A restore only loads into a store nothing has been written to,
-and says which of three things stopped it rather than throwing.
+**The launcher.**
 
-**Every command answers an exit code and a sentence, never a stack trace.**
-`run(argv)` in `cli.ts` is total and `index.ts` is a bin shim over it, which is
-what makes the dispatch testable; an unknown flag, a busy port, a data directory
-nobody can write to and a file that is not a backup are all things the user did.
-`openStore` is the one place a store is opened, so a half-opened PGlite is
-closed on the way out rather than left holding the directory. `keepcv status`
-reads `overview()` - the same selector the app's store overview reads - so the
-nudges are not derived a second time for the terminal. `keepcv render --format` writes any of the five
-files the download panel writes, with `lossOf` printed after it: the loss is
-counted against this resume, so a format that costs nothing says nothing.
-
-**A narrowed list can be kept under a name.** `saved_filter` stores what the
-narrowing means rather than the vocabulary of the control that made it, so the
-point list's one four-valued widget becomes an archived scope plus an
-`unfinished` fact the store can answer, and redrawing the control needs no
-migration. A check constraint refuses a row carrying the other subject's
-narrowing.
-
-**A link and a field are written on the record's own screen, as they are typed.**
-Both are sub-collections of a record that already exists, so they follow metrics
-and evidence rather than the record form above them: nothing is staged and there
-is nothing to roll back. `record_field_key_unique` covers archived rows, so
-`buildField` answers a put-back rather than a create when a removed field is
-named again - the same shape as placing something on a resume, and the reason
-the add control is one control. A custom section is a screen of its own, because
-until one exists the record form's section picker is empty and `custom_entry` is
-hidden, which made a whole record kind unreachable.
-
-**A role profile is a rule over the vocabulary, and applying one only adds.** A
-profile is a name and a set of tags; something is selected if it carries one of
-the words, and a record's words reach the points under it, so a record tagged
-"Backend" comes whole and one that is not brings only the points that are.
-`roleProfileMatch(store, id)` in `@keepcv/core` answers what it reaches - the
-same selector the profiles screen and the resume's picker both read - and
-`roleProfilePlan` answers the writes. Applying places what the words select and
-takes nothing off, so a curated resume cannot be undone by a click and applying
-one twice writes nothing the second time; every write is a create or a put-back,
-because each uniqueness index on the composition covers archived rows.
-`CompositionPlan` is the shape a restore and a profile both answer, and
-`applyCompositionPlan` is the one place unarchive-then-patch is written.
-
-**A tag is created from wherever the word is being used.** The picker on a record
-and on a point takes a label, not an id: `tagForLabel(store, label)` in
-`@keepcv/core` answers whether that word is already a tag, so an existing one is
-reached for and a new one is created and assigned in the same motion. Two labels
-that slug alike are one tag and `tag_slug_unique` refuses the second, so the
-picker and the vocabulary screen name the tag they would collide with rather than
-letting the store answer with a constraint. Merging moves everything the losing
-tag carried before archiving it, and an archived tag is offered nowhere but its
-own filter. Both lists narrow by tag, and the tag is in the URL.
-
-**A resume's target is the one form that stages rather than writing as it is
-typed.** A posting is pasted in one motion, and the match below it would re-rank
-on every keystroke; Save sends one patch carrying the whole form, so Revert can
-clear a field. The `409` comparison is shared with the record form and reduces
-the posting to a length rather than showing two pages of prose side by side.
-
-**A template is a design, the design is data, and the user can write one.**
-`@keepcv/templates` holds the contract, the shared fixture that decides what "is
-a template" means, one renderer and one stylesheet builder. `fromSpec(id, name,
-spec)` turns a `TemplateSpec` into a `Template`; the two shipped designs are
-specs held in code and anything else is a `template` row. The knobs are one
-catalogue split in two - `FIT_KNOBS` is what a resume adjusts to fit and is the
-`fields` a template hands the preview panel, `DESIGN_KNOBS` is what the template
-*is* and `fromSpec` layers it over whatever config arrives, so a resume cannot
-move one. That is what lets `complianceNotes` be derived from the spec instead
-of written by hand. `extraCss` is appended last and the schema refuses
-`@import`, a non-`data:` `url()` and `</style` - React does not escape a `style`
-element's children - because a stylesheet that fetches is a resume that prints
-differently offline. A version pins a user's design **whole**: the row is
-editable, so `captureManifest` freezes the spec and `resolveTemplate` reads it
-ahead of the id. A template is handed a `ResumeDocument` and its config and
-returns markup plus its own stylesheet, so the preview mounts it in an iframe the
-app's CSS cannot reach, at the size it will print at. Settings are declared as
-`fields`, which is what both the validator and the settings panel read; the
-resume stores only what differs from the template's defaults; and the manifest
-pins the choice, so a template swapped later cannot rewrite what a version says
-was sent.
-
-**A design travels between stores as a file.** `templateFileSchema` is `{ name,
-spec }` - no id, no timestamps, no owner - and the download and the reader both
-name it, so a file this writes is a file this accepts. Reading is in the tab,
-like a resume's, and it lands as an ordinary `POST /v1/templates`, so nothing
-new reaches the API. Starting a design is **one** control with two sources: "copy
-this one" and "load that file" answer the same question, so the name, the clash
-check and the create path are written once. A resume's picker offers no archived
-design except the one it is already printing with - a select holding a value no
-option carries reads as a resume using something else, and moving off it cannot
-be undone.
-
-**A template owns its layout and nothing else.** Escaping a mark, tagging an
-element with the `data-key` the host paginates by, and printing a field as
-`label: value` are obligations every template has, so they are in `prose.tsx`;
-`@page`, `--kc-page-content-height` and the page-size and typeface vocabularies
-are in `paper.ts`, because a second copy of the page height drifts into a wrong
-page count rather than failing. `ats-left-heading` earns being a template rather
-than a setting on the other one by putting the section heading in a grid cell
-beside the section's first entry, which carries settings the other has no use
-for. Side by side is a **grid**, never a float, a coordinate or a column count -
-those move the words out of the order the markup has them in, and the lint rules
-refuse all three by name.
-
-**The browser lays the page out and `@keepcv/core` counts the pages.** The frame
-walks the column the template rendered and reports one `FlowBlock` per box - its
-offset, its height, and whether the stylesheet said `break-inside: avoid` or
-`break-after: avoid`, read with `getComputedStyle` so the host declares no break
-behaviour of its own. `paginate` fills pages from that geometry and `lengthBudget`
-names what sits past the resume's `page_limit`. The page height comes from
-`--kc-page-content-height`, which the stylesheet sets and a throwaway probe
-resolves, so no unit arithmetic happens in the host. There is deliberately no
-pagination library: one would fragment the DOM React owns, weigh megabytes, and
-be untestable in jsdom, which has no layout. The preview draws a labelled rule at
-each boundary rather than splitting the page into sheets.
-
-**A resume leaves as one file, and the browser is the PDF writer.**
-`renderHtml(document)` in `@keepcv/render` resolves the template the document
-names and inlines its stylesheet, so the file fetches nothing and prints the way
-the preview looked. That is a function rather than a route, for the reason
-`search` and `composition` are: the app calls it on the document it compiled in
-the tab, and `keepcv render` calls it on one compiled from the store on disk, so
-both produce the same bytes. PDF is that file in a hidden iframe handed to
-`print()` - the stylesheet already states `@page` and the break rules, and the
-printing engine fragments the DOM properly, which is exactly what the preview
-declines to do. No headless browser and no PDF library: either would be a second
-layout engine to keep in step with the first. Where it and `paginate` disagree
-the printer is right, which is why the length budget warns rather than gates.
-
-**The same selection also leaves as a page.** `renderSite(document)` in
-`@keepcv/render` is the second renderer over `ResumeDocument` the product was
-always going to have: one self-contained HTML file, system fonts, a light and a
-dark scheme, a jump list between sections and one card per entry. It is not a
-template and takes no configuration - every knob in the catalogue is about
-fitting paper, and a page has no page to fit - but it shares `prose.tsx`, because
-escaping a mark, keying an element and printing a field as `label: value` are
-obligations every renderer over a document has. It carries the contact details
-this resume carries, so what a stranger sees is decided in the composer rather
-than by a second switch, and it is named `index.html`, which is what a static
-host looks for and what stops it overwriting the resume beside it. There is no
-hosting here: this produces a file.
-
-**The linter reads the file, and the tier is derived rather than claimed.**
-`lint({ document, html })` in `@keepcv/ats-lint` takes both, because half the
-rules are about what the resume says - no email address, a heading nothing files,
-a date with no year, a job with no dates at all - and half are about what the
-template did with it - columns, floats, coordinates, images, words that live only
-in a stylesheet, words in the file that are not on the page, and words in a page
-margin. Hidden text is a blocker rather than a warning because of what happens
-next: a reader comparing the file with the page treats the difference as
-deliberate, and bins the resume rather than ranking it. Taking the
-rendered bytes rather than producing them means the thing linted is the thing
-sent, and it keeps the package free of React and of `@keepcv/render`. There is no
-`/v1/lint`: the caller holds both inputs, which is the argument that keeps
-`search` and `composition` out of the API too. `clean`, `readable` and `at-risk`
-are functions of the findings, and the panel says beside them that this product
-claims compatibility with no named commercial system. A rule that would fire on
-the file any shipped template writes would fire on every resume this product
-produces; the test covers the registry, so adding a template adds a case.
-
-**A resume also leaves in somebody else's format, and says what it costs.**
-`toJsonResume`, `toDocx`, `toLatex` and `toTypst` in `@keepcv/interop` read a
-`ResumeDocument` rather than the store, because those formats describe a resume
-and a store is a career history. JSON Resume maps only what that format has a
-list for and drops the rest rather than forcing a talk into `projects`; dates go
-as the partial dates the record holds, never `period.display`. `lossOf(document,
-target)` counts the loss **against this resume** - three metrics, one section
-with nowhere to go - and anything at zero is not in the list, because a standing
-disclaimer is one nobody reads. It is shown before the download. There is no
-`?format=` on `/v1/export`: that route is a whole-store read and this is a
-function of a document the caller already holds.
-
-**The three that lay themselves out go through one seam.** `toBlocks(document)`
-answers `ResumeBlock[]` - a role, rich text, and the period an entry head sets
-aside - and each writer decides only what its format calls a heading, a bullet
-and a bold run. That is the mirror of `DocumentLine[]` on the reading side, and
-it is why a fourth writer is a file rather than a second reading of what a
-resume is. Tags are not written, for the reason no template prints them.
-
-**The Word document is written the way `docxLines` reads one**: `Heading1` for
-sections, `Heading2` for entry heads, `numPr` for points. A file this writes
-reads back as the resume it came from, and that round trip is the only
-end-to-end check available on a format with no compiler to hand - which is why
-those style choices are not interchangeable with equally pretty ones. It lives
-behind `@keepcv/interop/files` with the readers that need a parser, and the app
-imports it when the format is chosen. The zip is stamped with a fixed date, or
-two files built from one document would differ.
-
-**A `.tex` and a `.typ` have to build on a machine with nothing installed.** The
-LaTeX preamble loads only what a full TeX installation already has and defines
-every command the body uses, so the body is one call per line. Typst text is
-emitted as markup when it holds nothing the parser reads and as a string literal
-when it does: `//` in an address opens a comment and swallows the closing
-brackets after it, so a run carrying one is quoted whole rather than escaped
-character by character. Neither file is compiled by anything in this tree.
-
-**A composition write settles by merging its answer instead of re-reading.** A
-toggle, a move, a placement or a wording choice writes one row and the response
-*is* that row, `updated_at` included, so `useStoreMutation` takes a `settle` and
-skips the invalidation - otherwise every move would cost a whole-store refetch.
-Adding and taking off are one control: every uniqueness index on the composition
-covers archived rows, so placing is a create or a put-back and never a second
-row. Order is changed by keyboard, not by dragging; `keyForPosition` in
-`@keepcv/core` answers the key, clears any an archived row in the gap still
-holds, and answers nothing when the row is already there.
-
-**Sort keys compare by code unit, never by locale.** A row moved above the first
-one takes a key in the upper-case magnitude, and `"Zz".localeCompare("a0")` is
-positive. Comparisons go through `bySortKey`, and the repositories order
-`sort_key collate "C"`.
-
-**A point's screen is the phrasing editor** (`application-structure.md` #6). Text
-is never submitted: a keystroke starts an 800ms debounce that writes a `draft`,
-and blur or thirty seconds idle commits, appending a `phrasing_revision` and
-dropping the draft in one go. Typing back what was already there discards the
-draft and appends nothing. A draft found on open is offered, never restored, and
-the timers do not start until the first keystroke - otherwise the editor would
-throw the draft away before the offer was read. A set holds variants, points at
-one of them, and each wording says which resumes pinned it.
-
-**`GET /v1/store` is the boot payload and `GET /v1/export` is the archive.** Both
-answer the same `Store` shape; the first narrows `phrasingRevisions` to what each
-phrasing currently says, because history grows without bound and is fetched on
-every open. **Drafts are in both** - one per field at most, and the newest thing
-the user wrote, so they are current state rather than history, and an editor
-learns a draft is waiting from the payload it already holds rather than from a
-`GET` per field. There is deliberately no summary route: counts, recent activity and
-nudges are pure functions of that payload and belong in `@keepcv/core`, which
-runs in the browser, rather than being derived a second time in SQL.
-
-**The launcher serves the app and the API on one origin.** Everything outside
-`/v1` is the built web app, so the client never learns where its store is and
-there is no CORS surface. The launch token travels in the URL **fragment**, which
-no browser sends to a server, and the app moves it into `sessionStorage` and
-clears the address bar. A token in a query string would be in every log between
-here and nowhere.
-
-**The launcher decides who is asking, three ways, and `createApi` still knows
-none of them.** `--auth token` is the launch token; `--auth password` is a
-scrypt hash and a signing secret in `auth.json`, handed out as a stateless
-`HttpOnly` cookie by `POST /auth/sign-in` and throttled to five refusals a
-minute; `--auth proxy` reads a header, but only from `--proxy-from`, because
-anyone who can reach the port otherwise sets that header themselves. Binding off
-loopback refuses `token`: a credential minted per run and printed to a terminal
-cannot survive a restart and cannot be typed on the device reading the store.
-`GET /auth/mode` answers `{ mode, signedIn }` without a credential, because the
-app has to know which of three screens to render before it has anything to send,
-and the cookie is `HttpOnly` so only the launcher can say whether it is still
-good. All three answer the same single owner: this is what a self-hoster needs,
-not a user system, and nothing here may grow one.
-
-**Screens read the cached store through selectors in `@keepcv/core`**, never
-through a request of their own. **What a resume is made of is one of them** -
-`composition(store, resumeId)`, not a route: every row it resolves is in the boot
-payload already, and the preview would otherwise resolve a resume twice, once per
-side. Counting, filtering, tag usage, every
-incompleteness nudge and **search itself** are pure functions there, so the same
-answer serves the browser, the CLI and anything server-side. Formatting is the
-opposite and lives in the web app's `model/`: a DTO is a contract, not a UI
-changelog.
-
-**Search is `search(store, query)` in `@keepcv/core`, not a route and not a
-table.** The store is kilobytes and the client already holds all of it, so a
-derived `search_document` would have been one fact stored twice, written by every
-mutation and kept honest by a rebuild-and-compare test - and it would have cost a
-round trip per keystroke. Prefix matching does what the trigram index was for.
-Do not add a `/v1/search`; add fields to the selector.
-
-**Reading the posting is the same shape: `targetMatch(store, resumeId)`.** It
-ranks the terms a posting leans on, says which the resume answers, and names the
-placed points that answer least. It is deliberately shallow - term frequency over
-a stopword list, prefix matching bounded to an inflection, and a weighting for
-what the store already files work under. No stemmer, no embeddings, no model
-call: the output is a list of words the user can check against the posting in
-front of them, and the posting never has to leave the machine. It misses matches
-rather than inventing them, which is the direction to keep it wrong in.
-
-**Routes are declared with `createRoute` from `@hono/zod-openapi`**, using the
-schemas from `@keepcv/schema` directly, so the OpenAPI document and the request
-validator cannot describe different shapes. A route added any other way is
-invisible to the document. **A helper that builds routes takes the path as
-`<Path extends string>`, never `string`**: a widened path collapses the whole
-typed client into one `ClientRequest<string, string, ...>`, and the failure
-surfaces in the web app as "property does not exist" on an unrelated route.
-
-**An owned collection answers six routes, and their declarations come from
-`collectionRoutes`** in `routes/collection.ts` - path, tag, noun and four
-schemas in, six `createRoute` values out. Handlers stay in the resource's own
-file: Hono derives a handler's types through conditionals on the schema type,
-which TypeScript defers while the schema is a type parameter, so a builder that
-mounted the handlers too would have to cast away the checking that declaring
-routes this way exists to provide. Add a resource by calling it, not by copying
-another resource's declarations.
-
-Native export and import exist as `repositories.store`, and the round-trip test
-in `contract-store.test.ts` runs over a store built to cover every collection the
-format declares. **A slice that adds a table adds it to `storeSchema` and to that
-fixture**, or it ships a format that silently drops the user's data. History goes
-in `archiveSchema` instead - `storeSchema` extended with versions and snapshots -
-because the boot payload must not carry it; `read()` answers the archive and
-`readCurrent()` the store. `resume_content_ref` is in neither: it is derived from
-the manifests and rebuilt on import.
-
-**A version pins the selection, and `compile()` is two steps.**
-`captureManifest(store, resumeId)` freezes what a resume says - rows whole, text
-by revision id, headings resolved - and `renderManifest(manifest, revisions,
-options)` turns that into the `ResumeDocument`. The preview, the export and a
-version captured months ago all render through the second step, so there is no
-second compiler to drift.
-
-**A restore puts back the selection, not the words, and never rewinds.**
-`restorePlan(store, resumeId, manifest, revisions)` in `@keepcv/core` answers the
-changes to make and the route applies them in one transaction, so the awkward
-part is tested without a database and no repository method is added. It
-reconciles rather than replaces - the uniqueness constraints cover archived rows,
-so archive-and-reinsert would be refused by the index - toggles off what the
-manifest does not name rather than archiving it, and rewrites sort keys only when
-the order is actually wrong. Restoring a resume nothing has moved on writes
-nothing. `diffManifests(a, b, revisions)` is the other half, and it is a route
-rather than a selector because manifests are the one thing the boot payload
-deliberately does not carry.
+- `run(argv)` in `cli.ts` is total and `index.ts` is a bin shim over it, which is
+  what makes the dispatch testable. Every command answers an exit code and a
+  sentence, never a stack trace.
+- `openStore` is the one place a store is opened, so a half-opened PGlite is
+  closed on the way out rather than left holding the directory.
+- `keepcv status` reads `overview()` - the same selector the app's store overview
+  reads - so the nudges are not derived a second time for the terminal.
 
 ## Architecture
 
@@ -720,15 +347,14 @@ These are the point of the product, not preferences.
   something exists beyond what they can see.
 - **Ordering uses fractional sort keys**, not integer positions, so a
   drag-and-drop move writes one row.
-- **A feature is usable without editing the file that implements it.** These
-  are libraries, and a consumer that has to fork one has stopped being a
-  consumer. Three shapes do this and all three are already here: injected at the
-  boundary (`createApi`'s `authenticate`), declared by the implementation and
-  rendered by the caller (a template's `fields`), or composed around rather than
-  inside (the launcher's `/auth` routes, its backup mirror). If using what you
-  built would mean changing a constant, widening a union or re-exporting a
-  module, the seam is in the wrong place, and moving it costs less now than
-  after a fork of it exists.
+- **A feature is usable without editing the file that implements it.** These are
+  libraries, and a consumer that has to fork one has stopped being a consumer.
+  Three shapes do this and all three are already here: injected at the boundary
+  (`createApi`'s `authenticate`), declared by the implementation and rendered by
+  the caller (a template's `fields`), or composed around rather than inside (the
+  launcher's `/auth` routes, its backup mirror). If using what you built would
+  mean changing a constant, widening a union or re-exporting a module, the seam
+  is in the wrong place, and moving it costs less now than after a fork exists.
 - **No package knows what a plan, quota, tier or entitlement is.** That is what
   keeps "export is never gated" true by construction rather than by review.
 
@@ -801,29 +427,28 @@ A comment earns its place by naming one of exactly three things:
 - **a failure that has actually happened** - not one that could
 - **a case the types cannot express** and the next edit would silently break
 
-**The test is the "Z", not the shape.** "X rather than Y, so that Z" is the
-form most comments here take, and it is fine when Z is something the next reader
-can act on: a failure that happened (`a typo in a test passed while writing to
-the wrong table`), a constraint (`record_field_key_unique` covers archived
-rows), or behaviour the types cannot state (`jsdom does not implement
-dataTransfer`). It is not fine when Z is why the design is nicer - readability,
-symmetry, "one vocabulary is one feature to read". That argument belongs in
-`docs/architecture/` and nowhere else. Applying this to the whole tree kept
-about four hundred comments and deleted about sixty, so the shape alone is not
-the thing to grep for.
+**The test is the "Z", not the shape.** "X rather than Y, so that Z" is the form
+most comments here take, and it is fine when Z is something the next reader can
+act on: a failure that happened (`a typo in a test passed while writing to the
+wrong table`), a constraint (`record_field_key_unique` covers archived rows), or
+behaviour the types cannot state (`jsdom does not implement dataTransfer`). It is
+not fine when Z is why the design is nicer - readability, symmetry, "one
+vocabulary is one feature to read". That argument belongs in
+`docs/architecture/` and nowhere else. Applying this to the whole tree kept about
+four hundred comments and deleted about sixty, so the shape alone is not the
+thing to grep for.
 
 **No file paths and no section numbers in code.** Not `data-model.md #3.6`, not
 an ADR number, not a bare pointer of any kind. A pointer is not the argument, so
 it does not help the reader who needs the argument; it does rot the moment a
 section is renumbered, and nothing checks it. Someone who needs to know why a
-line exists reads `docs/architecture/` - they do not need the code to tell them
-it is there. If the answer to "should this be a comment?" is "no, but the
-section number is short", the answer is no.
+line exists reads `docs/architecture/`. If the answer to "should this be a
+comment?" is "no, but the section number is short", the answer is no.
 
 **One line. Two only if the case genuinely needs it.** Three is a spec section
-that has escaped into the code. Aim for zero comments in a file; one is normal;
-a file wanting three is telling you the naming is wrong or `docs/architecture/`
-is missing a paragraph.
+that has escaped into the code. Aim for zero comments in a file; one is normal; a
+file wanting three is telling you the naming is wrong or `docs/architecture/` is
+missing a paragraph.
 
 **A comment that survives says what breaks, not where it is written down.**
 Comment blocks wrap at 80 columns even though Biome's `lineWidth` is 100; Biome
@@ -839,8 +464,8 @@ A worked example, from this repository before the bar was applied:
 export const organisationSchema = z.object({ ... });
 ```
 
-Three sentences of the spec copied, a pointer to where they were copied from,
-and one restating a field that is not there. It became:
+Three sentences of the spec copied, a pointer to where they were copied from, and
+one restating a field that is not there. It became:
 
 ```ts
 export const organisationSchema = z.object({ ... });
@@ -869,8 +494,8 @@ Several of these look like bugs. They are not - do not "fix" them.
 - **Biome owns formatting and most linting.** `eslint.config.js` is deliberately
   thin - type-aware rules only. If a rule does not need type information, it
   belongs in `biome.json` or nowhere.
-- **`complexity/useLiteralKeys` is off.** `noPropertyAccessFromIndexSignature`
-  is on in `tsconfig.base.json`, so `errors["url"]` is what TypeScript requires
+- **`complexity/useLiteralKeys` is off.** `noPropertyAccessFromIndexSignature` is
+  on in `tsconfig.base.json`, so `errors["url"]` is what TypeScript requires
   whenever the property comes from an index signature, and the rule's fix is
   `TS4111` every time. It sat at 32 permanent infos before it was turned off.
 - **`lint:types` runs eslint through `node --max-old-space-size=8192`.** The
@@ -898,8 +523,8 @@ Several of these look like bugs. They are not - do not "fix" them.
   `declare`d locally in `identity/uuid.ts` for the same reason.
 - **Dependency versions live in the `catalog:`**, one per dependency repo-wide.
   Add versions there and reference `"catalog:"` in package manifests.
-- **PostgreSQL is the only dialect**, on a laptop and on a server. Local uses PGlite (real
-  Postgres in WASM, no Docker). Do not introduce SQLite.
+- **PostgreSQL is the only dialect**, on a laptop and on a server. Local uses
+  PGlite (real Postgres in WASM, no Docker). Do not introduce SQLite.
 - **Timestamp columns are `precision: 3`, not the Postgres default.** `updated_at`
   is the optimistic-concurrency token: it goes to the client as an ISO string and
   comes back to be compared against the column. A JavaScript `Date` holds
@@ -914,11 +539,11 @@ Several of these look like bugs. They are not - do not "fix" them.
   annotation TypeScript infers each table's type through the callback that names
   the next one and fails with TS7022. `drizzle-kit` itself handles the cycle
   fine, emitting the constraints as `ALTER TABLE` after every `CREATE TABLE`.
-- **`drizzle-kit` does not manage triggers.** The one the model needs -
-  `phrasing_revision` refusing an update - is hand-written at the end of the
-  migration that creates the table. A trigger is invisible to the snapshot, so
-  `db:generate` stays clean; it is also invisible in the Drizzle schema, so the
-  table that has one says so in a comment.
+- **`drizzle-kit` does not manage triggers.** The ones the model needs -
+  `phrasing_revision` and `resume_version` refusing an update - are hand-written
+  at the end of the migration that creates the table. A trigger is invisible to
+  the snapshot, so `db:generate` stays clean; it is also invisible in the Drizzle
+  schema, so the table that has one says so in a comment.
 
 ## How work is organised
 
