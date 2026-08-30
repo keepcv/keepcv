@@ -58,8 +58,9 @@ describe("laying a document out as blocks", () => {
   });
 
   it("makes a contact and a url field reachable as links", () => {
-    const marks = BLOCKS.flatMap((one) => one.text).filter((node) => node.t === "a");
-    const targets = marks.map((node) => (node.t === "a" ? node.href : ""));
+    const targets = BLOCKS.flatMap((one) => one.text)
+      .filter((node) => node.t === "a")
+      .map((node) => node.href);
 
     expect(targets).toContain("mailto:ada@example.org");
     expect(targets).toContain("https://github.com/ada");
