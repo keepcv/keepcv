@@ -78,7 +78,12 @@ function Controls({
     // Dimmed rather than hidden until the row is entered: four of these on every
     // one of forty rows outweighed the text they act on, and revealing them on
     // hover alone would take them away from touch and from the keyboard.
-    <span className="flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100">
+    //
+    // `ml-auto` holds them against the right edge on the line they wrap onto. In
+    // a narrow pane an entry whose period is long enough - "Sept 2020 - Mar
+    // 2023" - pushed them to a second line, where they sat hard against the left
+    // margin under the title and read as belonging to the point below.
+    <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100">
       {reorder}
       <Button
         tone="ghost"
