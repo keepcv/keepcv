@@ -169,8 +169,8 @@ describe("phrasing text is append-only", () => {
     expect(history[0]?.id).toBe(again.id);
   });
 
-  // The route shape is what makes the rule structural: there is no field a patch
-  // could carry the text in.
+  // The route shape is what makes the rule structural: there is no field a
+  // patch could carry the text in.
   it("has no way to change text through a patch", async () => {
     const set = await addSet("Led the migration");
     const phrasing = await onlyPhrasing(set.id);

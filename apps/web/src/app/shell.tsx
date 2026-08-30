@@ -18,14 +18,18 @@ function isMac(): boolean {
 
 function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
+    // At 390 this was about fifty pixels wide and "Search or jump to..."
+    // wrapped to four lines out through the bottom of an `h-8` control.
     <button
       type="button"
       onClick={onOpen}
-      className="flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line bg-surface-sunken px-2.5 text-sm text-text-subtle transition-colors hover:border-line-strong hover:text-text-muted"
+      className="flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line bg-surface-sunken px-2.5 text-sm text-text-subtle transition-colors hover:border-line-strong hover:text-text-muted"
     >
       <Icon name="search" size="sm" />
-      <span className="flex-1 text-left">Search or jump to...</span>
-      <Kbd>{isMac() ? "cmd K" : "ctrl K"}</Kbd>
+      <span className="min-w-0 flex-1 truncate text-left">Search or jump to...</span>
+      <span className="hidden sm:block">
+        <Kbd>{isMac() ? "cmd K" : "ctrl K"}</Kbd>
+      </span>
     </button>
   );
 }
@@ -58,7 +62,8 @@ export function Shell({
         setPalette(true);
         return;
       }
-      // `/` is the older habit and still works, but not while typing into a field.
+      // `/` is the older habit and still works, but not while typing into a
+      // field.
       if (event.key === "/" && !typing) {
         event.preventDefault();
         setPalette(true);

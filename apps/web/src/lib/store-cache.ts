@@ -43,10 +43,9 @@ export async function prefetchStore(queries: QueryClient, client: ApiClient): Pr
   await queries.ensureQueryData(storeQuery(client));
 }
 
-// Ids are minted on the client, so the row a screen shows before the response
-// arrives is the row the store ends up holding. `settle` writes the answer back
-// instead of re-reading the payload, which is what keeps a composition change
-// off the network twice.
+// Ids are minted on the client, so the optimistic row is the one the store
+// keeps. `settle` writes the answer back rather than re-reading the whole
+// payload.
 export function useStoreMutation<Variables, Result>(options: {
   send: (variables: Variables) => Promise<Result>;
   optimistic: (store: Store, variables: Variables) => Store;

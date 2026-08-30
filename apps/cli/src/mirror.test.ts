@@ -76,8 +76,8 @@ describe("keepcv backup and restore", () => {
     BOOTS_REAL_STORES,
   );
 
-  // A restore never merges two career histories: that needs a review step, which
-  // is what the lossy-format import flow is for.
+  // A restore never merges two career histories: that needs a review step,
+  // which is what the lossy-format import flow is for.
   it(
     "refuses a store that already holds something",
     async () => {

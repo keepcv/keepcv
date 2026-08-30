@@ -15,23 +15,39 @@ export function Badge({
   tone = "neutral",
   icon,
   className,
+  onRemove,
+  removeLabel,
   children,
 }: {
   tone?: keyof typeof TONES;
   icon?: GlyphName;
   className?: string;
+  onRemove?: () => void;
+  removeLabel?: string;
   children: ReactNode;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-md border py-0.5 text-xs font-medium",
+        onRemove === undefined ? "px-1.5" : "pl-1.5 pr-1",
         TONES[tone],
         className,
       )}
     >
       {icon === undefined ? null : <Icon name={icon} size="xs" />}
       {children}
+      {onRemove === undefined ? null : (
+        <button
+          type="button"
+          aria-label={removeLabel}
+          title={removeLabel}
+          onClick={onRemove}
+          className="rounded px-0.5 text-text-subtle transition-colors hover:bg-surface-hover hover:text-text"
+        >
+          <Icon name="close" size="xs" />
+        </button>
+      )}
     </span>
   );
 }

@@ -298,8 +298,8 @@ describe("composition", () => {
     });
   });
 
-  // Which resume a row is on is what it was created as, and the patch schema has
-  // no key for it, so a body naming one is dropped at the boundary.
+  // Which resume a row is on is what it was created as, and the patch schema
+  // has no key for it, so a body naming one is dropped at the boundary.
   it("does not move a row to another resume", async () => {
     const { entry, resume } = await compose();
 

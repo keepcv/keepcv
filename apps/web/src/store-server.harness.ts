@@ -288,7 +288,8 @@ function amend(store: Store, { method, path, body }: Call, at: string): Response
 
   const target = AMENDABLE[collection ?? ""];
   // Named rather than defaulted: a path this stub has never heard of used to
-  // amend a record, so a typo in a test passed while writing to the wrong table.
+  // amend a record, so a typo in a test passed while writing to the wrong
+  // table.
   if (target === undefined) {
     throw new Error(`the store stub has no collection ${String(collection)}`);
   }
@@ -358,10 +359,8 @@ interface CaptureInput {
   restoredFromVersionId: Uuid | null;
 }
 
-// Versions are not in the boot payload, so the stub keeps them beside it. The
-// manifest is captured here for the reason the store captures it: a version
-// records what the resume said, which no client can assert. Answers the current
-// version unchanged, exactly as the store does, unless it is a restore.
+// A version records what the resume said, which no client can assert, so the
+// stub captures a manifest as the store does and answers the current one back.
 function appendVersion(
   versions: ResumeVersion[],
   store: Store,
@@ -503,7 +502,8 @@ function onVersion(versions: ResumeVersion[], store: Store, call: Call, at: stri
     : jsonOf({ version, omissions: [] }, 201);
 }
 
-// An override keyed by the pair, so setting it twice replaces rather than appends.
+// An override keyed by the pair, so setting it twice replaces rather than
+// appends.
 function onContactChannel(store: Store, pair: RegExpExecArray, call: Call): Response {
   const [, resumeId, contactChannelId] = pair;
   const index = store.resumeContactChannels.findIndex(
@@ -528,7 +528,8 @@ function onContactChannel(store: Store, pair: RegExpExecArray, call: Call): Resp
   return jsonOf(override);
 }
 
-// A version the user named, which is an ordinary owned row: unstarring archives.
+// A version the user named, which is an ordinary owned row: unstarring
+// archives.
 function onSnapshot(snapshots: ResumeSnapshot[], call: Call, at: string): Response {
   if (call.path === "/v1/resume-snapshots") {
     const row = resumeSnapshotSchema.parse({ ...stamp(call.body, at), starredAt: at });

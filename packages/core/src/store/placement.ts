@@ -120,9 +120,8 @@ export function entryPointFor(
 }
 
 // `rows` is every row of the scope the sort-key index covers, archived
-// included, and `toIndex` a position among the live ones, clamped - so
-// `rows.length` is last. `id` is the row being moved, or `null` for one being
-// added. `undefined` means it is already there and nothing needs writing.
+// included, and `toIndex` a position among the live ones. `undefined` means
+// nothing to write.
 export function keyForPosition(rows: readonly Placed[], id: null, toIndex: number): SortKey;
 export function keyForPosition(
   rows: readonly Placed[],

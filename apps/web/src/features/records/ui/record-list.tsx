@@ -5,6 +5,7 @@ import { Empty } from "../../../app/states.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
+import { Meta } from "../../../components/ui/meta.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
@@ -54,8 +55,6 @@ function Row({
   order: Reorder<CareerRecord>;
   entry: CareerRecord | undefined;
 }) {
-  const details = [row.organisation, row.subtitle, row.period].filter(Boolean).join(" - ");
-
   return (
     <li
       {...(entry === undefined ? {} : order.rowProps(entry))}
@@ -82,9 +81,10 @@ function Row({
             )}
             {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
           </span>
-          {details === "" ? null : (
-            <span className="mt-0.5 block truncate text-xs text-text-subtle">{details}</span>
-          )}
+          <Meta
+            parts={[row.organisation, row.subtitle, row.period]}
+            className="mt-0.5 text-xs text-text-subtle"
+          />
         </span>
       </Link>
       {entry === undefined ? null : (

@@ -22,8 +22,9 @@ function canonicaliseNode(node: Inline): Inline | null {
   return withChildren(node, children);
 }
 
-// Bodies that render identically must canonicalise to the same tree, or an editor
-// emitting b(x)b(y) then b(xy) defeats phrasing_revision_content_hash_unique.
+// Bodies that render identically must canonicalise to the same tree, or an
+// editor emitting b(x)b(y) then b(xy) defeats
+// phrasing_revision_content_hash_unique.
 export function canonicaliseRichText(body: RichText): RichText {
   const canonical: Inline[] = [];
 

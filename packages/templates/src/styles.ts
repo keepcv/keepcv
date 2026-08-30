@@ -2,8 +2,8 @@ import type { TemplateConfig } from "./contract.js";
 import { type Design, designOf } from "./knobs.js";
 import { pageRule, STACKS } from "./paper.js";
 
-// Keyed by what the knob offers, so a colour added to the picker without a value
-// here is a compile error.
+// Keyed by what the knob offers, so a colour added to the picker without a
+// value here is a compile error.
 const ACCENTS: Record<Design["accent"], string> = {
   ink: "#101418",
   slate: "#334155",
@@ -12,10 +12,8 @@ const ACCENTS: Record<Design["accent"], string> = {
   forest: "#1f4d38",
 };
 
-// Grid rather than a float or a coordinate: those move the words away from the
-// order the markup has them in, and the lint rules refuse all three.
-// `align-self` because a stretched grid item reports its whole row's height, and
-// the host paginates off the boxes it measures.
+// Grid, never a float or a coordinate - the lint rules refuse all three.
+// `align-self`, or a stretched item reports its row's height to the paginator.
 function sectionRule(design: Design): string {
   if (design.headingPlace !== "beside") return ".kc-section { display: block; }";
 

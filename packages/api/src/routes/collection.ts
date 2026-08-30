@@ -3,8 +3,9 @@ import { timestampSchema, uuidSchema } from "@keepcv/schema";
 import { z } from "zod";
 import { jsonResponse, problemResponse, sessionRequired } from "../router.js";
 
-// In the body, not `If-Unmodified-Since`: that header has second granularity and
-// `updated_at` is milliseconds, so half of every comparison would match wrongly.
+// In the body, not `If-Unmodified-Since`: that header has second granularity
+// and `updated_at` is milliseconds, so half of every comparison would match
+// wrongly.
 const expectedUpdatedAt = timestampSchema;
 
 export const basedOn = z.object({ expectedUpdatedAt });

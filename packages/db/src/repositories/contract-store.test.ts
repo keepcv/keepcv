@@ -33,7 +33,8 @@ import {
 } from "./contract.harness.js";
 
 // Everything the format can carry: every kind, both halves of every nullable
-// pair, archived rows, markup, history, and a name no ASCII round trip survives.
+// pair, archived rows, markup, history, and a name no ASCII round trip
+// survives.
 async function fill(run: Run): Promise<void> {
   await run(async (r) => {
     const summary = await r.phrasings.createSet(
@@ -273,7 +274,8 @@ async function fill(run: Run): Promise<void> {
       restoredFromVersionId: null,
       manifest: second,
     });
-    // What a restore writes: the older manifest again, saying where it came from.
+    // What a restore writes: the older manifest again, saying where it came
+    // from.
     await r.versions.append({
       id: newUuid(),
       resumeId: applied.id,
@@ -332,10 +334,8 @@ function reversed(store: Archive): Archive {
   };
 }
 
-// Every test here fills a whole store, reads it back through the file format and
-// loads it into a second owner. That is past the default per-test budget when
-// every package's suite runs at once: it timed out under `pnpm check` and passed
-// on its own, which reads as a broken test.
+// A whole store through the file format is past the default per-test budget: it
+// timed out under `pnpm check` and passed alone, which reads as a broken test.
 const FILLS_A_WHOLE_STORE = 30_000;
 
 eachDriver(({ run, otherOwner }) => {
@@ -371,8 +371,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(exported.records.map((entry) => entry.kind)).toEqual(
         expect.arrayContaining([...CAREER_RECORD_KINDS]),
       );
-      // The collections with no `archivedAt`: revisions are immutable, a link or
-      // an assignment holds nothing of its own, and a draft is discarded.
+      // The collections with no `archivedAt`: revisions are immutable, a link
+      // or an assignment holds nothing of its own, and a draft is discarded.
       const unarchivable = [
         "phrasingRevisions",
         "resumeVersions",
@@ -406,8 +406,9 @@ eachDriver(({ run, otherOwner }) => {
       );
     });
 
-    // Identity is scoped to the owner, so the same export can live in two stores
-    // at once - which is what restoring a backup onto a shared server does.
+    // Identity is scoped to the owner, so the same export can live in two
+    // stores at once - which is what restoring a backup onto a shared server
+    // does.
     it("leaves the store it was exported from alone", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -428,7 +429,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
-    // I8: a file whose derived fields disagree with its body loads the projection.
+    // I8: a file whose derived fields disagree with its body loads the
+    // projection.
     it("derives revision text from the body rather than trusting the document", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -487,8 +489,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
     });
 
-    // Stated as a difference, so a collection added to the format is covered here
-    // without anyone remembering to extend a list.
+    // Stated as a difference, so a collection added to the format is covered
+    // here without anyone remembering to extend a list.
     it("reads current state as the export with the superseded wordings dropped", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -508,8 +510,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(current.phrasingRevisions.length).toBeLessThan(exported.phrasingRevisions.length);
     });
 
-    // Two stores hold the same revision ids once a backup is restored beside its
-    // original, and a join missing the owner would match across both.
+    // Two stores hold the same revision ids once a backup is restored beside
+    // its original, and a join missing the owner would match across both.
     it("reads current state unchanged when another owner holds the same rows", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());
@@ -521,8 +523,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.store.readCurrent())).toEqual(before);
     });
 
-    // "Where did my old entry go" is answered by a filter the client already has
-    // the rows for, not by a second request.
+    // "Where did my old entry go" is answered by a filter the client already
+    // has the rows for, not by a second request.
     it("carries archived rows in current state too", async () => {
       await fill(run);
       const current = await run(async (r) => await r.store.readCurrent());

@@ -161,9 +161,9 @@ export function roleProfileRoutes(unitOfWork: UnitOfWork) {
         return c.body(null, 204);
       })
 
-      // Planned server-side from the store it reads, for the reason an intake is:
-      // a client-computed list of rows to write is a client deciding what the
-      // store contains.
+      // Planned server-side from the store it reads, for the reason an intake
+      // is: a client-computed list of rows to write is a client deciding what
+      // the store contains.
       .openapi(applyProfile, async (c) => {
         const { id } = c.req.valid("param");
         const { resumeId } = c.req.valid("json");

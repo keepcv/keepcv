@@ -212,8 +212,8 @@ eachDriver(({ run, otherOwner }) => {
       ]);
     });
 
-    // A record already carrying both would collide with itself, which is why the
-    // assignments are inserted and deleted rather than repointed in place.
+    // A record already carrying both would collide with itself, which is why
+    // the assignments are inserted and deleted rather than repointed in place.
     it("leaves one assignment on a record that carried both tags", async () => {
       const { react, preact, record } = await run(async (r) => {
         const react = await r.tags.create(tagInput("React"));

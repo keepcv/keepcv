@@ -101,10 +101,9 @@ function split(lines: readonly DocumentLine[]): { header: DocumentLine[]; sectio
 // The separators a template sets between a title and where it happened.
 const PARTS = /(?:\s*[,|\u2022]\s+|\s+at\s+)/;
 
-// A dash separates a title from an employer and both ends of a date range, so
-// splitting on it first turns "Oct 2025 - Present" into a period and an
-// organisation called "Present". Parts that already read as a period are left
-// whole and only the rest are split again.
+// Splitting on the dash first turns "Oct 2025 - Present" into a period and an
+// organisation called "Present", so a part that reads as a period is left
+// whole.
 const DASH = /\s+[-\u2013\u2014]\s+/;
 
 interface Head {
@@ -142,14 +141,9 @@ function readHead(text: string): Head {
 
 const NOTHING: ReadPeriod = { startedOn: null, endedOn: null, isCurrent: false };
 
-// Two printed lines, one entry:
-//
-//   Visa                    Oct 2025 - Present
-//   Software Engineer       Bengaluru
-//
-// The employer is named first in this layout, so the line already read becomes
-// the organisation and the one under it the title. Without this the second line
-// lands in the summary and the entry has no role on it at all.
+// An employer-first entry prints over two lines - "Visa" then "Software
+// Engineer" - and without this the second lands in the summary, leaving the
+// entry with no role on it at all.
 const looksLikeSecondHalf = (text: string): boolean => text.length <= 60 && !/[.;]/.test(text);
 
 function merged(first: Head, second: Head): Head {
@@ -268,10 +262,8 @@ const continuing = (held: string, next: string): string =>
 const hasPeriodIn = (text: string): boolean =>
   text.split(/\s*[|\u2022]\s+/).some((part) => readPeriod(part.trim()) !== undefined);
 
-// What one line is, given what came above it. A period on a line of its own
-// belongs to the entry above rather than starting a new one, and a plain line
-// under a bullet is the rest of that bullet: a point set across three lines
-// otherwise keeps one line and loses the other two into the summary.
+// A plain line under a bullet is the rest of that bullet: a point set across
+// three lines otherwise keeps one and loses the other two into the summary.
 function stepFor(line: DocumentLine, where: Where): Step {
   const text = line.text.trim();
   if (text === "") return { as: "nothing" };

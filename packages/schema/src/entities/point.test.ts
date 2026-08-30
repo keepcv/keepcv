@@ -48,8 +48,8 @@ describe("pointSchema", () => {
     expect(pointSchema.safeParse({ ...point, confidence: "disputed" }).success).toBe(false);
   });
 
-  // Captured before it is decided where it belongs, which is a state the product
-  // exists to allow.
+  // Captured before it is decided where it belongs, which is a state the
+  // product exists to allow.
   it("accepts a point with no record, and none with no phrasing set", () => {
     expect(pointSchema.safeParse({ ...point, recordId: null }).success).toBe(true);
     expect(pointSchema.safeParse({ ...point, phrasingSetId: null }).success).toBe(false);
@@ -89,7 +89,8 @@ describe("metricSchema", () => {
     expect(metricSchema.safeParse({ ...metric, direction: "sideways" }).success).toBe(false);
   });
 
-  // JSON has no way to write either one back, and the store is exported as JSON.
+  // JSON has no way to write either one back, and the store is exported as
+  // JSON.
   it("rejects a value JSON cannot carry", () => {
     expect(metricSchema.safeParse({ ...metric, value: Number.POSITIVE_INFINITY }).success).toBe(
       false,

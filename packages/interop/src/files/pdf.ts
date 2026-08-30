@@ -62,10 +62,8 @@ function columnAt(x: number, split: number | undefined): number {
 const baseline = (row: readonly Piece[]): string =>
   `${String(row[0]?.page ?? 1)}:${String(Math.round(row[0]?.y ?? 0))}`;
 
-// A date set hard right of the employer it belongs to is the same line, not a
-// second column, and treating it as one detaches every date from its entry.
-// What tells them apart is whether anything shares the baseline: a column runs
-// down the page on its own, a right-aligned date never does.
+// What tells a column from a right-aligned date is whether anything shares the
+// baseline: a column runs down the page alone, a date never does.
 function splitPoint(rows: readonly Piece[][], width: number): number | undefined {
   const middle = width / 2;
   const onTheLeft = new Set(
@@ -78,10 +76,9 @@ function splitPoint(rows: readonly Piece[][], width: number): number | undefined
   return Math.min(...alone.map((row) => row[0]?.x ?? 0));
 }
 
-// A gutter split tells a column from a word space, but most gutters are neither:
-// a date or a location set hard right of the entry it belongs to is part of
-// that line. Only runs in a column of their own stay separate; the rest go back
-// together, so what the segmenter sees is the line as it was written.
+// Most gutters are not columns: a date or location set hard right is part of
+// the line. Only runs in a column of their own stay split; the rest go back
+// together.
 function rejoined(runs: readonly Piece[][], split: number | undefined): Piece[][] {
   const rows = new Map<string, Piece[]>();
   for (const run of runs) {
@@ -234,10 +231,8 @@ export async function pdfLines(data: Uint8Array): Promise<DocumentLine[]> {
   return demoted(sized);
 }
 
-// The name at the top is set larger than everything else, which the size rule
-// alone reads as a section heading - and then every section of the resume is
-// filed under the person's own name. A heading size is used several times; a
-// name's is used once, at the top.
+// The size rule alone reads the name as a heading, filing every section under
+// it. A heading size repeats; a name's is used once, at the top.
 function demoted(sized: readonly { line: DocumentLine; size: number }[]): DocumentLine[] {
   const largest = Math.max(...sized.map((each) => each.size), 0);
   const atLargest = sized.filter((each) => each.size === largest);

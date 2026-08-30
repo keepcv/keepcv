@@ -37,7 +37,8 @@ export function Empty({
   );
 }
 
-// The API answers RFC 9457, so this renders a problem rather than parsing prose.
+// The API answers RFC 9457, so this renders a problem rather than parsing
+// prose.
 export function Failure({ error, retry }: { error: unknown; retry?: () => void }) {
   const problem = isProblem(error) ? error.problem : undefined;
   const title = problem?.title ?? "Something went wrong";

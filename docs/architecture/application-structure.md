@@ -1093,6 +1093,23 @@ was blank boxes. They sit behind the control that names them - `Add a link`,
 the submit button belongs to something visible. That is the same shape the resume
 list already used for naming a new resume.
 
+The vocabulary screens - tags, sections, role profiles - each kept a permanently
+open `New tag` field in a panel of its own above the list, which is the same
+mistake one size down: a box waiting to be typed into is the first thing on the
+screen, above the thing the user came to read. All three now carry the create
+button in the page header and open the field as a bounded block under it, which
+is the shape the templates screen already had. **Every browse screen creates the
+same way**, and the two-panel stack - a form panel, then a list panel titled with
+a second description - collapses to one list.
+
+The point editor had it twice over, in the screen this document calls the
+highest-risk interface: a metric's four inputs and a piece of evidence's three
+both sat open under every point with `Add metric` and `Add evidence` underneath
+them, so two of the five panels on the screen read backwards. Both are behind the
+control that names them. **The reveal and the confirm may share a name** -
+`Add evidence` opens the block and submits it - because only one of the two is
+on the screen at a time.
+
 **A repeated row action is a glyph, and it keeps the label that names its row.**
 `Hide` and `Remove` spelled out on every section, entry and point put two words
 of chrome beside every line of the user's own content. Each still passes `label`,
@@ -1100,6 +1117,32 @@ because `Up` on its own tells a screen reader nothing about which row moved. The
 resume list is the same case one size up: `Start one from this` was a labelled
 button in a block of its own under every row, so a list of twelve resumes was a
 list of twelve buttons. It is a `copy` glyph on the row.
+
+**And it is dimmed until its row is entered.** The composer carries four of them
+on every section, entry and point, which on a resume of any size is forty-odd
+controls at the same weight as the text they act on, in the one place the user is
+reading their own words. They sit at 60% and go solid on hover or focus within
+the row. Dimmed rather than hidden: revealed on hover alone they are gone on
+touch and invisible to anyone tabbing, and 60% is far enough from a disabled
+control - which halves again from there - that the two do not read alike.
+
+**A tree is indented or it is not a tree.** Section, entry and point were laid
+out flat, so a point sat at the same left edge as the entry it belongs to and
+font weight was the only thing separating three levels. Points are indented
+behind a rule under their entry.
+
+**Taking a thing off is part of the chip, and it is a glyph.** Three screens had
+built a removable chip by hand and all three spelled the affordance as a literal
+`x`, which is a letter standing where every other control in the app carries a
+glyph; the point editor spelled it as the word `remove` twice more, on the same
+screen as a chip that did not. `Badge` takes `onRemove`.
+
+**A separator character may not be one the content also uses.** A record's
+metadata line joined organisation, subtitle and period with `" - "` and printed
+`Analytical Engines - Ingest platform - Apr 2023 - Present`, in which nothing
+tells the eye which dash binds the period together. The parts are divided by a
+rule instead - `Meta` in `components/ui/`, used by the record list, the record
+detail and the resume list, so there is one answer rather than one per screen.
 
 **One action, one control, even when it could be offered per row.** The
 templates screen starts a new design from an existing one; the obvious shape is
@@ -1183,6 +1226,22 @@ this directory; the panel gets the clause that tells the user what to do. So
 archives it, because it is what a resume printed last March" became "Saved as you
 add them. Removing one archives it." The rule is the one already applied to code
 comments: delete it, and ask what the reader does wrong.
+
+**The same test kills a repeated empty state.** "Every point of this record is
+already on the resume" sat under every entry whose points were all placed, and
+"Every record of this kind is already in this section" under every section - on a
+tailored resume that is the same two sentences six times, each longer than the
+point above it. Delete one and the reader sees no `Add a point` control, and
+concludes there is nothing to add, which is right. So the picker's absence is the
+message, and its `empty` text is passed only where the picker is alone in a panel
+and its absence would leave the panel blank.
+
+**A control that is a whole sentence is prose the user reads as content.** The
+composer spelled its section rename as `Rename, currently the default
+"Experience"` under every heading. It is an `edit` glyph beside the heading, and
+what it used to say - which heading is a default, and that emptying the box gives
+the kind's own heading back - is said inside the form, once it is open, where it
+is about to matter.
 
 ### 10.9 The templates screen
 

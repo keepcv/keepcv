@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn.js";
 
-// Archival objects rather than abstract shapes: this store is the drawer a
-// resume is drawn out of, and an empty state is the one place with room to say
-// so. `fill-surface` wherever one shape overlaps another, or a stroke-only
-// stack shows its own back edges through the front card.
+// `fill-surface` wherever one shape overlaps another, or a stroke-only stack
+// shows its own back edges through the front card.
 const SPOTS = {
   emptyStore: (
     <>

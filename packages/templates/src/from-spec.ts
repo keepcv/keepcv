@@ -4,9 +4,8 @@ import { DESIGN_KNOBS, designOf, FIT_KNOBS } from "./knobs.js";
 import { render } from "./render.js";
 import { stylesheet } from "./styles.js";
 
-// Observations about what this design does, not claims about what any named
-// product accepts. Derived, because a resume cannot move a design knob: a note
-// written by hand would go on being printed after the design stopped earning it.
+// Derived, not written by hand: a note typed here would go on being printed
+// after the design stopped earning it.
 function notesFor(spec: TemplateSpec): string[] {
   const design = designOf(spec.settings);
 

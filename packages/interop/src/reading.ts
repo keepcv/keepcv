@@ -100,10 +100,8 @@ export const linksOf = (
 export const tagsOf = (keywords: readonly string[] | undefined | null): string[] =>
   (keywords ?? []).map((keyword) => keyword.trim()).filter((keyword) => keyword !== "");
 
-// The four rungs the other tools offer, against the four this store has. This
-// is a translation between two named scales, not a rounding: a word outside both
-// is still reported rather than moved to the nearest one, which would claim
-// expertise nobody wrote down.
+// A translation between two named scales, not a rounding: a word on neither is
+// reported rather than moved to the nearest rung, claiming what nobody wrote.
 const LEVELS: Record<string, SkillProficiency> = {
   novice: "familiar",
   beginner: "familiar",
@@ -140,7 +138,8 @@ export const at = (value: PartialDate | null): Period => ({
 export const undated: Period = { startedOn: null, endedOn: null, isCurrent: false };
 
 // The formats that store a period as the line a template printed - "March 2023
-// to Present" - rather than as two dates. Unreadable is reported, never guessed.
+// to Present" - rather than as two dates. Unreadable is reported, never
+// guessed.
 export function periodFromText(
   value: string | undefined | null,
   about: string,

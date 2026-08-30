@@ -45,9 +45,9 @@ function Section({ title, lead, children }: { title: string; lead?: string; chil
   );
 }
 
-// Also the no-token state: the app is reached through a URL the launcher prints,
-// so anyone arriving without one used to get a red 401 panel. This is what
-// belongs there.
+// Also the no-token state: the app is reached through a URL the launcher
+// prints, so anyone arriving without one used to get a red 401 panel. This is
+// what belongs there.
 export function Landing() {
   return (
     <main className="min-h-screen bg-canvas text-text">

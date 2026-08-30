@@ -5,8 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MIGRATIONS_FOLDER } from "./store.js";
 
 // The two append-only tables are held that way by triggers, which are invisible
-// to the Drizzle schema and so to every other test in this package: nothing goes
-// through a repository here.
+// to the Drizzle schema and so to every other test in this package: nothing
+// goes through a repository here.
 const OWNER = "00000000-0000-4000-8000-000000000001";
 const RESUME = "00000000-0000-4000-8000-000000000002";
 const VERSION = "00000000-0000-4000-8000-000000000003";

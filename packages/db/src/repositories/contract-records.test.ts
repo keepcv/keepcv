@@ -119,8 +119,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.records.list())).toHaveLength(3);
     });
 
-    // Two kinds sharing a key is normal; two records of one kind is an ambiguous
-    // drag.
+    // Two kinds sharing a key is normal; two records of one kind is an
+    // ambiguous drag.
     it("scopes sort-key uniqueness to the kind", async () => {
       await run(async (r) => {
         await r.records.create(recordInput("experience", "a0"));
@@ -216,8 +216,8 @@ eachDriver(({ run, otherOwner }) => {
       ).rejects.toThrow();
     });
 
-    // P-A: a half-entered record saves. Ticking "still there" before clearing an
-    // end date is exactly the sequence a constraint here would punish.
+    // P-A: a half-entered record saves. Ticking "still there" before clearing
+    // an end date is exactly the sequence a constraint here would punish.
     it("saves an ongoing period that still has an end date", async () => {
       const created = await run(
         async (r) =>
@@ -290,8 +290,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(restored.archivedAt).toBeNull();
     });
 
-    // The headings are one list per owner, so that is the scope their own key is
-    // unique in (I11).
+    // The headings are one list per owner, so that is the scope their own key
+    // is unique in (I11).
     it("gives one owner at most one heading per sort key", async () => {
       await aSection("Patents", "a0");
 
@@ -302,8 +302,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toBe("custom_section_sort_key_unique");
     });
 
-    // A custom entry is an ordinary record, so it carries links, fields and points
-    // like any other and nothing downstream learns a second shape.
+    // A custom entry is an ordinary record, so it carries links, fields and
+    // points like any other and nothing downstream learns a second shape.
     it("holds records that behave like every other kind", async () => {
       const sectionId = await aSection("Patents", "a0");
       const created = await run(
@@ -318,8 +318,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toHaveLength(1);
     });
 
-    // Scoping to the kind would reject a legitimate move under the second heading
-    // because the first used the same key.
+    // Scoping to the kind would reject a legitimate move under the second
+    // heading because the first used the same key.
     it("scopes an entry's sort key to its section", async () => {
       const patents = await aSection("Patents", "a0");
       const press = await aSection("Press", "a1");
@@ -366,8 +366,8 @@ eachDriver(({ run, otherOwner }) => {
       expect(moved).toMatchObject({ customSectionId: press, title: "A folding wing" });
     });
 
-    // Archiving a heading hides it and leaves its entries alone, so restoring it
-    // does not have to guess which of them the user had archived beforehand.
+    // Archiving a heading hides it and leaves its entries alone, so restoring
+    // it does not have to guess which of them the user had archived beforehand.
     it("leaves its entries alone when it is archived", async () => {
       const sectionId = await aSection("Patents", "a0");
       await run(async (r) => await r.records.create(entry(sectionId, "a0", "A folding wing")));

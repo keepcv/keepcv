@@ -41,8 +41,8 @@ export async function mutate<T>(
   }
 }
 
-// A taken sort key is resolved by re-reading; a missing parent was wrong when it
-// was sent.
+// A taken sort key is resolved by re-reading; a missing parent was wrong when
+// it was sent.
 const CONSTRAINT_STATUS: Record<ConstraintKind, 409 | 422> = {
   unique: 409,
   foreignKey: 422,
@@ -122,7 +122,8 @@ export function problemFor(error: unknown, instance: string): Problem {
       constraint: error.constraint,
     };
   }
-  // A 409: the primary already says it, and the caller resolves it by re-reading.
+  // A 409: the primary already says it, and the caller resolves it by re-
+  // reading.
   if (error instanceof DuplicatePointRecordLinkError) {
     return {
       type: PROBLEM_TYPES.constraintViolated,

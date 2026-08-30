@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./button.js";
 
-// It replaces the control that was just clicked, so it appears under the cursor:
-// one that is not focused reads as broken, which it did in a browser.
+// It replaces the control that was just clicked, so it appears under the
+// cursor: one that is not focused reads as broken, which it did in a browser.
 export function NameBox({
   label,
   placeholder,

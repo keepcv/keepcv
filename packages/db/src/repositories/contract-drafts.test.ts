@@ -66,7 +66,8 @@ eachDriver(({ run, otherOwner }) => {
       const target = onPhrasing(phrasingId);
       const first = await run(async (r) => await r.drafts.save(target, { body: "a" }));
       // Timestamps are milliseconds, so two writes in the same tick carry the
-      // same one and the assertion below would hold however the row was written.
+      // same one and the assertion below would hold however the row was
+      // written.
       await new Promise((resolve) => setTimeout(resolve, 5));
       const second = await run(async (r) => await r.drafts.save(target, { body: "ab" }));
 
@@ -143,8 +144,8 @@ eachDriver(({ run, otherOwner }) => {
       ]);
     });
 
-    // The one delete the store performs: by now the text is either a revision or
-    // something the user explicitly abandoned.
+    // The one delete the store performs: by now the text is either a revision
+    // or something the user explicitly abandoned.
     it("discards a draft, and discarding one that is not there is the same answer", async () => {
       const phrasingId = await aPhrasing(run);
       const target = onPhrasing(phrasingId);

@@ -143,13 +143,9 @@ export function DocumentPreview({
     };
   }, [pending, resume, stored.template, mutate]);
 
-  // Every breakpoint here is a container query: this renders full width on its
-  // own tab and in half a workspace, and a 16rem sidebar off a viewport
-  // breakpoint left the page about 350px wide in the second. Wide enough for two
-  // columns, each scrolls on its own, so reading down the resume does not carry
-  // the settings off the top. `overflow-x-hidden` because a vertical scrollbar
-  // makes the horizontal one compute to `auto` too, and the 16px it reserves is
-  // enough to show it.
+  // Container queries: in half a workspace a 16rem sidebar off a viewport
+  // breakpoint left the page 350px wide. A vertical scrollbar computes the
+  // horizontal one to `auto`, hence `overflow-x-hidden`.
   return (
     <div className="@container flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden @3xl:overflow-y-hidden">
       <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
@@ -177,8 +173,8 @@ export function DocumentPreview({
       >
         {open ? (
           // Before the paper, not after it: stacked the other way round in a
-          // narrow pane, opening this appended it under a full-height resume and
-          // changed nothing the reader could see.
+          // narrow pane, opening this appended it under a full-height resume
+          // and changed nothing the reader could see.
           <aside className="space-y-5 @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pr-2">
             <Group title="Take it with you">
               <DownloadResume document={document} />

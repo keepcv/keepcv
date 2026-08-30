@@ -50,10 +50,8 @@ export const savedFilter = pgTable(
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
     uniqueIndex("saved_filter_sort_key_unique").on(table.ownerId, table.subject, table.sortKey),
-    // `cascade` like every other reference to a tag, and never `set null`: the
-    // key is composite, so Postgres would null `owner_id` with it. Nothing
-    // deletes a tag anyway - archiving is the removal there is - so this can
-    // only fire through the owner cascade.
+    // `cascade`, never `set null`: the key is composite, so Postgres would null
+    // `owner_id` with it.
     foreignKey({
       name: "saved_filter_tag_fk",
       columns: [table.ownerId, table.tagId],

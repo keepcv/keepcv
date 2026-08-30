@@ -31,8 +31,8 @@ export function createTemplateRepository(db: Database): TemplateRepository {
   }
 
   return {
-    // By name, like organisations: a design is reached for by what it is called,
-    // never dragged into an order.
+    // By name, like organisations: a design is reached for by what it is
+    // called, never dragged into an order.
     async list(options) {
       const rows = await db
         .select()

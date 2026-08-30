@@ -20,10 +20,8 @@ function slotOf(record: CareerRecord): Pick<ResumeSection, "kind" | "customSecti
     : { kind: record.kind, customSectionId: null };
 }
 
-// One rule, stated once: something is selected if it carries one of the words,
-// and a record's words reach the points under it. A record tagged "Backend" is
-// a job that was backend work, so all of it comes; a record that is not brings
-// only the points that are.
+// A record carrying one of the words comes whole, points included; one that
+// does not brings only the points that carry one.
 export function roleProfileMatch(store: Store, roleProfileId: Uuid): ProfileMatch | undefined {
   const profile = store.roleProfiles.find((row) => row.id === roleProfileId);
   if (profile === undefined) return undefined;

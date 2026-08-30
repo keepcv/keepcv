@@ -65,8 +65,8 @@ function TakeACopy({ client, store }: { client: ApiClient; store: Store }) {
   );
 }
 
-// Into an empty store only, which is the store's rule rather than this screen's:
-// merging two career histories needs a review step in front of it.
+// Into an empty store only, which is the store's rule rather than this
+// screen's: merging two career histories needs a review step in front of it.
 function PutOneBack({ client, store }: { client: ApiClient; store: Store }) {
   const load = useLoadBackup(client);
   const [unreadable, setUnreadable] = useState<string | undefined>(undefined);

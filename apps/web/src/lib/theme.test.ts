@@ -48,7 +48,8 @@ describe("theme", () => {
     expect(root.classList.contains("dark")).toBe(false);
   });
 
-  // jsdom implements no `matchMedia`, so an unguarded call throws on every mount.
+  // jsdom implements no `matchMedia`, so an unguarded call throws on every
+  // mount.
   it("treats the system as light where matchMedia is missing", () => {
     expect(isDark("system")).toBe(false);
   });

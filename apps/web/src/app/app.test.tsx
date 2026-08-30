@@ -570,6 +570,7 @@ describe("sections of your own", () => {
     mount(storeServer(store).answer, "/sections?archived=false");
 
     await screen.findByText("No sections of your own yet");
+    press("New section");
     type("New section", "Patents");
     press("Add");
 
@@ -604,6 +605,7 @@ describe("sections of your own", () => {
     mount(storeServer(store).answer, "/sections?archived=false");
 
     await screen.findByText("Patents");
+    press("New section");
     type("New section", "patents");
 
     expect(
@@ -717,6 +719,7 @@ describe("writing a point", () => {
     mount(server.answer, `/points/${point.id}/edit`);
 
     expect(await screen.findByRole("heading", { name: "Point" })).toBeInTheDocument();
+    press("Add a metric");
     type("Label", "p95 latency");
     type("Value", "120");
     type("Unit", "ms");
@@ -889,10 +892,8 @@ describe("a resume", () => {
     expect(answer).toHaveBeenCalledTimes(1);
   });
 
-  // The preview compiles in the browser from the cached store, which is the
-  // whole reason `@keepcv/core` does no I/O.
-  // Composition and preview are one workspace: a preview reached by leaving the
-  // screen that changes it is a preview nobody watches while composing.
+  // The preview compiles in the browser from the cached store, beside the
+  // composition, and makes no request of its own.
   it("shows the composition and what it compiles to at the same time", async () => {
     const store = aFilledStore();
     const resumeId = store.resumes[0]?.id ?? "";
@@ -948,8 +949,9 @@ describe("a resume", () => {
     expect(screen.getByLabelText("Wording for Angled for this application")).toHaveValue(angled.id);
   });
 
-  // A wording nobody has typed into yet has text, and it is the empty string, so
-  // the picker drew an option with nothing in it and no way to tell them apart.
+  // A wording nobody has typed into yet has text, and it is the empty string,
+  // so the picker drew an option with nothing in it and no way to tell them
+  // apart.
   it("names an empty wording by what it is for", async () => {
     const store = emptyStore();
     const record = addRecord(store, { kind: "experience", title: "Engine lead" });
@@ -1114,9 +1116,7 @@ describe("composing a resume", () => {
     const { server, resumeId } = aComposedResume();
     mount(server.answer, `/resumes/${resumeId}`);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: 'Rename, currently the default "Experience"' }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Rename Experience" }));
     fireEvent.change(screen.getByLabelText("Heading for Experience"), {
       target: { value: "What I have done" },
     });
@@ -1125,11 +1125,7 @@ describe("composing a resume", () => {
       await screen.findByRole("heading", { name: "What I have done", level: 2 }),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: 'Rename, or empty the box to print "What I have done" no more',
-      }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Rename What I have done" }));
     fireEvent.change(screen.getByLabelText("Heading for What I have done"), {
       target: { value: "  " },
     });
@@ -2095,7 +2091,10 @@ describe("what backs a point up", () => {
     const server = storeServer(store);
     mount(server.answer, `/points/${point.id}/edit`);
 
-    await screen.findByLabelText("Kind");
+    // Twice: the first press opens the form, the second submits it. Only one
+    // button of that name is on the screen at a time.
+    await screen.findByRole("button", { name: "Add evidence" });
+    press("Add evidence");
     type("Link", "https://reviews.test/q3");
     type("Why it matters", "named as the reason it landed");
     press("Add evidence");
@@ -2138,7 +2137,7 @@ describe("what backs a point up", () => {
     mount(server.answer, `/points/${point.id}/edit`);
 
     expect(await screen.findByText("Told me in the Q3 review")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "remove" }));
+    press("Remove Told me in the Q3 review");
 
     // Off the screen and still in the store: the row is archived, not deleted,
     // and an archived one must not keep rendering.
@@ -2741,7 +2740,8 @@ describe("role profiles", () => {
     const server = storeServer(store);
     mount(server.answer, "/role-profiles?archived=false");
 
-    await screen.findByLabelText("New role profile");
+    await screen.findByRole("button", { name: "New role profile" });
+    press("New role profile");
     type("New role profile", "Backend");
     press("Add");
 

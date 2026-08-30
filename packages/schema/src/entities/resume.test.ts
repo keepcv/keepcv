@@ -16,7 +16,8 @@ describe("section kinds", () => {
 
 describe("patching a resume", () => {
   // A field with a `.default()` survives `.partial()`, so an absent key parses
-  // to the default and the write resets it. Renaming used to clear the template.
+  // to the default and the write resets it. Renaming used to clear the
+  // template.
   it("carries only the fields it was given", () => {
     expect(resumePatchSchema.parse({ name: "Backend, Acme" })).toEqual({ name: "Backend, Acme" });
     expect(resumePatchSchema.parse({})).toEqual({});

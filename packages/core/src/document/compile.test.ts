@@ -269,6 +269,19 @@ describe("compile", () => {
     ]);
   });
 
+  // The preview printed "Thesis: On engines that outlive their authors" twice.
+  // A field's key comes from its label, so a user naming one after a column the
+  // kind already has reaches this without ever seeing a key.
+  it("drops a user field that repeats a presenter's value rather than printing it twice", () => {
+    const { store, resume, role } = aComposedStore();
+    aField(store, role.id, "employmentType", { label: "Employment type", value: "Full-time" });
+
+    const fields = compile(store, resume.id, { generatedAt: AT })?.sections[0]?.entries[0]?.fields;
+    expect(fields).toEqual([
+      { key: "employmentType", label: "Employment type", value: "Full-time", kind: "text" },
+    ]);
+  });
+
   it("resolves a heading from the section, its custom section, then the kind", () => {
     const { store, resume, section } = aComposedStore();
     expect(compile(store, resume.id, { generatedAt: AT })?.sections[0]?.heading).toBe("Experience");

@@ -14,8 +14,8 @@ export const fieldChangeSchema = z
   })
   .meta({ id: "FieldChange", title: "Changed field" });
 
-// A point has no title, so the wording is how it is named. It is here as well as
-// in `fields` because a point can change without its words changing at all.
+// A point has no title, so the wording is how it is named. It is here as well
+// as in `fields` because a point can change without its words changing at all.
 export const pointChangeSchema = z
   .object({
     pointId: uuidSchema,
@@ -28,7 +28,8 @@ export const pointChangeSchema = z
   .meta({ id: "PointChange", title: "Changed point" });
 
 // The title is what the entry printed as, not what the record says now: a title
-// corrected since is the change being reported, so reading it live would hide it.
+// corrected since is the change being reported, so reading it live would hide
+// it.
 export const entryChangeSchema = z
   .object({
     recordId: uuidSchema,

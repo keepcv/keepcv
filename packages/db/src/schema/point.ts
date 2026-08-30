@@ -33,8 +33,9 @@ export const point = pgTable(
     primaryKey({ columns: [table.ownerId, table.id] }),
     check("point_confidence_check", sql.raw(`confidence in (${quoted(CONFIDENCES)})`)),
 
-    // NULLS NOT DISTINCT: unplaced points are one list the user drags within, and
-    // with the default each would sit in a scope of its own and I11 hold vacuously.
+    // NULLS NOT DISTINCT: unplaced points are one list the user drags within,
+    // and with the default each would sit in a scope of its own and I11 hold
+    // vacuously.
     unique("point_sort_key_unique")
       .on(table.ownerId, table.recordId, table.sortKey)
       .nullsNotDistinct(),
@@ -56,7 +57,8 @@ export const point = pgTable(
 );
 
 // The primary parent decides placement; these drive discovery and selection. No
-// `archived_at`: the row carries nothing of its own, so unlinking destroys nothing.
+// `archived_at`: the row carries nothing of its own, so unlinking destroys
+// nothing.
 export const pointRecordLink = pgTable(
   "point_record_link",
   {

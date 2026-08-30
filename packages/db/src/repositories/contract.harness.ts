@@ -325,8 +325,6 @@ export interface Composed {
   phrasingId: Uuid;
 }
 
-// A resume with one section, one entry and one point under it: the shape almost
-// every composition case starts from.
 // `sortKey` because records are unique on it per kind: a second call into one
 // owner collides otherwise.
 export async function compose(run: Run, name = "Backend, Acme", sortKey = "a0"): Promise<Composed> {

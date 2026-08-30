@@ -229,6 +229,14 @@ receive user-entered data where they expect a typed column. The user's value is
 still rendered - nothing is dropped - it simply does not impersonate the typed
 field.
 
+**Unless it is the same value, in which case it is one fact and prints once.**
+Suffixing a collision unconditionally made a resume print `Thesis: On engines
+that outlive their authors` on two consecutive lines. Because a field's key is
+derived from its label, a user who types "Grade" on an education record - not
+knowing the kind already has a grade column, which is exactly what the field is
+for - reaches this without ever seeing a key. Two different values are two facts
+the user entered and both are rendered; identical ones are one fact.
+
 ---
 
 ## 4. Keys, overflow and length budgeting

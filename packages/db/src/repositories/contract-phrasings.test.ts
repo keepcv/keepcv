@@ -173,8 +173,8 @@ eachDriver(({ run, otherOwner }) => {
       ).toBe("phrasing_sort_key_unique");
     });
 
-    // The patch type has no `body`, so this is what the storage side of that rule
-    // looks like: renaming a wording leaves the words alone.
+    // The patch type has no `body`, so this is what the storage side of that
+    // rule looks like: renaming a wording leaves the words alone.
     it("renames a wording without touching its text", async () => {
       const first = newPhrasing("a0", "A");
       await run(async (r) => await r.phrasings.createSet(phrasingSetInput("point", first)));

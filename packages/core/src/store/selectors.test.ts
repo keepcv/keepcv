@@ -91,7 +91,8 @@ describe("a point's words", () => {
 
 describe("record counts", () => {
   // A kind at zero is the invitation to add the first one. Dropping it from the
-  // list would make it unclickable, which is the cold-start failure in miniature.
+  // list would make it unclickable, which is the cold-start failure in
+  // miniature.
   it("names every kind, including the ones with nothing in them", () => {
     const store = emptyStore();
     store.records.push(
@@ -133,8 +134,8 @@ describe("the overview", () => {
     expect(result.totals).toEqual({ records: 1, points: 0, archived: 1 });
   });
 
-  // "Still there" and "I have not filled this in yet" are different facts, which
-  // is why an ongoing period is a flag and not a null end date.
+  // "Still there" and "I have not filled this in yet" are different facts,
+  // which is why an ongoing period is a flag and not a null end date.
   it("nudges about a finished record with no end date but not an ongoing one", () => {
     const store = emptyStore();
     store.records.push(

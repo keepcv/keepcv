@@ -60,8 +60,8 @@ function unitOfWork(db: Database): UnitOfWork {
   };
 }
 
-// Created with the owner rather than lazily: a missing profile is a broken store,
-// which is easier to notice than a silent auto-create.
+// Created with the owner rather than lazily: a missing profile is a broken
+// store, which is easier to notice than a silent auto-create.
 async function insertOwner(tx: Database, id: Uuid): Promise<void> {
   await tx.insert(owner).values({ id });
   await tx.insert(profile).values({ id: newUuid(), ownerId: id });
@@ -105,8 +105,9 @@ export function openServerStore(options: { connectionString: string }): Store {
   return {
     unitOfWork: unitOfWork(db),
 
-    // Behind an advisory lock: drizzle's own bookkeeping table is not concurrency
-    // safe, and two migrating processes fail on pg_type's unique index.
+    // Behind an advisory lock: drizzle's own bookkeeping table is not
+    // concurrency safe, and two migrating processes fail on pg_type's unique
+    // index.
     migrate: async () => {
       const client = await pool.connect();
       try {

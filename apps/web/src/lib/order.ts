@@ -25,9 +25,8 @@ export interface Reorder<T extends Ordered> {
 }
 
 // `scope` is every row the sort-key index covers, archived included: a row
-// taken off a list keeps its key, and one computed from the live neighbours
-// alone can collide with it. A move writes one row, and a move that changes
-// nothing writes none.
+// taken off keeps its key, and one computed from live neighbours alone can
+// collide.
 export function useReorder<T extends Ordered>(
   scope: readonly T[],
   onMove: (row: T, sortKey: SortKey) => void,

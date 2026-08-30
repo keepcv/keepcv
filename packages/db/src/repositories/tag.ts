@@ -70,8 +70,8 @@ export function createTagRepository(db: Database): TagRepository {
   }
 
   return {
-    // An archived tag frees its slug, so two can share a label and the id breaks
-    // the tie.
+    // An archived tag frees its slug, so two can share a label and the id
+    // breaks the tie.
     async list(options) {
       const rows = await db
         .select()
@@ -131,8 +131,8 @@ export function createTagRepository(db: Database): TagRepository {
       return rows.map((row) => recordTagSchema.parse(row));
     },
 
-    // Idempotent: the pair is the whole row. A tag that does not exist fails the
-    // foreign key, which the API answers as 422.
+    // Idempotent: the pair is the whole row. A tag that does not exist fails
+    // the foreign key, which the API answers as 422.
     async tagRecord(recordId, tagId) {
       await requireOwned<RecordRow>(db, record, "record", recordId);
       await db

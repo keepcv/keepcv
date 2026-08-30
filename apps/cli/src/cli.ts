@@ -347,8 +347,8 @@ export async function run(argv: string[]): Promise<number> {
   try {
     args = readArgs(argv);
   } catch (reason) {
-    // Node's own text goes on to explain `--` and positional arguments, which is
-    // advice about a different mistake than the one that got here.
+    // Node's own text goes on to explain `--` and positional arguments, which
+    // is advice about a different mistake than the one that got here.
     process.stderr.write(`\n  ${messageOf(reason).split(". ")[0] ?? ""}\n${USAGE}`);
     return 1;
   }

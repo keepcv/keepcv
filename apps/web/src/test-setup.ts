@@ -6,9 +6,7 @@ import { afterEach } from "vitest";
 // render stacks in the same document and a query for one element finds three.
 afterEach(cleanup);
 
-// jsdom has no ResizeObserver, and the preview measures the page a template
-// renders so it can scale it to fit. The DOM lib declares it unconditionally,
-// which is why the assignment reads as unnecessary to a type-aware rule.
+// jsdom has no ResizeObserver, which the DOM lib declares unconditionally.
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 globalThis.ResizeObserver ??= class {
   observe(): void {}

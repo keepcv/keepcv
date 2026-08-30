@@ -2,6 +2,7 @@ import { live, tagForLabel, tagsOfPoint, tagsOfRecord } from "@keepcv/core";
 import type { Store, Tag } from "@keepcv/schema";
 import { useId, useState } from "react";
 import { Failure } from "../../../app/states.js";
+import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import type { ApiClient } from "../../../lib/api.js";
 import {
@@ -20,17 +21,9 @@ function carried(store: Store, subject: TagSubject): Tag[] {
 
 function Chip({ tag, onRemove }: { tag: Tag; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-sunken py-0.5 pl-1.5 pr-1 text-xs font-medium text-text-muted">
+    <Badge onRemove={onRemove} removeLabel={`Take ${tag.label} off`}>
       {tag.label}
-      <button
-        type="button"
-        aria-label={`Take ${tag.label} off`}
-        onClick={onRemove}
-        className="rounded px-1 text-text-subtle hover:bg-surface-hover hover:text-text"
-      >
-        x
-      </button>
-    </span>
+    </Badge>
   );
 }
 

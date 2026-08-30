@@ -1,10 +1,8 @@
 import type { ResumeDocument } from "@keepcv/schema";
 import { RESUME_DOCUMENT_SCHEMA_VERSION } from "@keepcv/schema";
 
-// Passing this is the definition of "is a template", so it carries every slot,
-// every field kind, all three inline marks, all three layouts, a section with
-// nothing under it, an entry with no points, a point with no metrics, an entry
-// no group claims, and a kind no presenter emits.
+// Passing this is the definition of "is a template": every slot, every field
+// kind, all three marks, all three layouts, and each empty and unclaimed case.
 export const FIXTURE_DOCUMENT: ResumeDocument = {
   schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
   meta: {

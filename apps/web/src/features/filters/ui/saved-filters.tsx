@@ -1,6 +1,7 @@
 import type { Store } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Icon } from "../../../components/icon/icon.js";
 import { Button } from "../../../components/ui/button.js";
 import { NameBox } from "../../../components/ui/name-box.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -55,9 +56,9 @@ export function SavedFilters({
             onClick={() => {
               forget.mutate(filter);
             }}
-            className="text-text-subtle hover:text-text"
+            className="rounded text-text-subtle transition-colors hover:text-text"
           >
-            x
+            <Icon name="close" size="xs" />
           </button>
         </span>
       ))}

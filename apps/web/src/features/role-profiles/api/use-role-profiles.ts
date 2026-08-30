@@ -129,8 +129,8 @@ export interface ApplyRoleProfile {
   resumeId: Uuid;
 }
 
-// Not optimistic: the rows the server writes are planned there from the store it
-// reads, so guessing them here would be a second planner to keep in step.
+// Not optimistic: the rows the server writes are planned there from the store
+// it reads, so guessing them here would be a second planner to keep in step.
 export function useApplyRoleProfile(client: ApiClient) {
   return useStoreMutation<ApplyRoleProfile, RoleProfileApplication>({
     send: async ({ roleProfileId, resumeId }) =>

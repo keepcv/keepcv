@@ -2,11 +2,8 @@ import type { ResumeDocument, RichText } from "@keepcv/schema";
 import type { ResumeBlock } from "./blocks.js";
 import { toBlocks } from "./blocks.js";
 
-// Every character Typst reads as markup. A run holding none of them is written
-// as itself, which is what keeps the file worth opening in an editor.
-//
-// `/` is in here for `//`, which starts a comment: without it the `https://` in
-// a link swallows the rest of the line, closing brackets included.
+// Every character Typst reads as markup. `/` is here for `//`, which opens a
+// comment: without it the `https://` in a link swallows the closing brackets.
 const MARKUP = /[\\#$[\]*_`<>@/]/;
 
 // Inside a string literal only these two mean anything, so a run that would

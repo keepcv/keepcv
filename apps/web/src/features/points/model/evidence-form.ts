@@ -39,7 +39,8 @@ export function buildEvidence(
 }
 
 // Only what a browser will actually open. A path or a malformed link is still
-// stored and still shown - it is the user's note to themselves, not a URL field.
+// stored and still shown - it is the user's note to themselves, not a URL
+// field.
 export function hrefOf(evidence: Evidence): string | undefined {
   if (evidence.kind !== "url") return undefined;
   try {

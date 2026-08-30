@@ -230,7 +230,8 @@ describe("merging tags", () => {
   });
 
   // Nothing changed under the caller, so re-reading would not help: the request
-  // was wrong when it was sent, and the problem points at the field that says so.
+  // was wrong when it was sent, and the problem points at the field that says
+  // so.
   it("answers 422 for a tag merged into itself", async () => {
     const tag = await addTag("React");
     const problem = await problemOf(

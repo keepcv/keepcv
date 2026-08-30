@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Empty } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { Meta } from "../../../components/ui/meta.js";
 import { NameBox } from "../../../components/ui/name-box.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
@@ -88,15 +89,16 @@ function Row({
         <p className="mt-0.5 truncate text-xs text-text-subtle">
           {row.target ?? "No target role recorded"}
         </p>
-        <p className="mt-1 text-xs tabular-nums text-text-subtle">
-          {[
+        <Meta
+          className="mt-1 text-xs tabular-nums text-text-subtle"
+          parts={[
             counted(row.sections, "section", "sections"),
             counted(row.entries, "entry", "entries"),
             counted(row.points, "point", "points"),
-          ].join(" - ")}
-          {row.hidden === 0 ? "" : ` - ${String(row.hidden)} toggled off`}
-          {row.template === undefined ? "" : ` - ${row.template}`}
-        </p>
+            row.hidden === 0 ? null : `${String(row.hidden)} toggled off`,
+            row.template,
+          ]}
+        />
       </Link>
       <span className="shrink-0 pt-2.5">
         {resume === undefined || row.isArchived ? null : <Derive resume={resume} client={client} />}
@@ -105,8 +107,8 @@ function Row({
   );
 }
 
-// The name is all a resume needs to exist; everything else about it is chosen on
-// the resume itself.
+// The name is all a resume needs to exist; everything else about it is chosen
+// on the resume itself.
 function NewResume({ client }: { client: ApiClient }) {
   const create = useCreateResume(client);
   const navigate = useNavigate();

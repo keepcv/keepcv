@@ -54,8 +54,8 @@ export function filterInput(store: Store, name: string, of: Narrowing): SavedFil
   });
 }
 
-// A filter naming exactly this narrowing already, so one list is not saved twice
-// under two names.
+// A filter naming exactly this narrowing already, so one list is not saved
+// twice under two names.
 export function alreadySaved(store: Store, of: Narrowing): SavedFilter | undefined {
   return savedFiltersOf(store, of.subject).find(
     (row) =>

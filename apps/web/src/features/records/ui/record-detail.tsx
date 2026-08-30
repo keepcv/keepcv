@@ -1,9 +1,9 @@
 import type { Point as PointRecord, Store, Uuid } from "@keepcv/schema";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
+import { Meta } from "../../../components/ui/meta.js";
 import { PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
@@ -16,16 +16,6 @@ import { type PointRow, recordDetail } from "../model/record-detail.js";
 import { KIND_NAMES } from "../model/record-rows.js";
 import { RecordFields } from "./record-fields.js";
 import { RecordLinks } from "./record-links.js";
-
-// Divided by a rule rather than a separator character, so a date range inside
-// one part cannot read as two.
-function Meta({ children }: { children: ReactNode }) {
-  return (
-    <span className="border-l border-line pl-2 text-sm text-text-muted first:border-0 first:pl-0">
-      {children}
-    </span>
-  );
-}
 
 function Point({
   point,
@@ -172,11 +162,10 @@ export function RecordDetail({
             Archived, and kept
           </Badge>
         ) : null}
-        {[row.organisation, row.subtitle, row.period, detail.record.location]
-          .filter((part) => part !== null && part !== "")
-          .map((part) => (
-            <Meta key={part}>{part}</Meta>
-          ))}
+        <Meta
+          className="gap-x-2 text-sm text-text-muted"
+          parts={[row.organisation, row.subtitle, row.period, detail.record.location]}
+        />
       </div>
 
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}

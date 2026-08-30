@@ -102,7 +102,8 @@ export interface WeakPoint {
 export interface TargetReading {
   covered: TargetTerm[];
   missing: TargetTerm[];
-  // Weakest first, which is the order the question "what do I drop" is asked in.
+  // Weakest first, which is the order the question "what do I drop" is asked
+  // in.
   weakest: WeakPoint[];
 }
 

@@ -38,12 +38,9 @@ const headingLevel = (paragraph: string): number | undefined => {
   return level === undefined ? undefined : Number(level);
 };
 
-// `Title` is the name at the top, not a section heading. Reading it as one
-// files the whole document under the person's own name.
-//
-// `section` is the shallowest heading level the document actually uses:
-// Heading2 is a section when nothing is a Heading1, and a job title under one
-// when something is.
+// Reading `Title` as a heading files the document under the person's own name.
+// `section` is the shallowest level used, so Heading2 is a section only when
+// nothing is a Heading1.
 function emphasisOf(
   paragraph: string,
   text: string,

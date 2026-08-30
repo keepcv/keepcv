@@ -56,8 +56,8 @@ describe("careerRecordSchema", () => {
     ).not.toHaveProperty("customSectionId");
   });
 
-  // Reading relies on this: the repository hands every column of the one `record`
-  // table to the union and lets the kind decide which of them survive.
+  // Reading relies on this: the repository hands every column of the one
+  // `record` table to the union and lets the kind decide which of them survive.
   it("drops fields belonging to another kind", () => {
     const parsed = careerRecordSchema.parse({
       ...shared,
@@ -74,8 +74,8 @@ describe("careerRecordSchema", () => {
     ).toBe(false);
   });
 
-  // P-A: contradictory is still saveable. "Still there" alongside a filled-in end
-  // date is something the UI nudges about, never something storage refuses.
+  // P-A: contradictory is still saveable. "Still there" alongside a filled-in
+  // end date is something the UI nudges about, never something storage refuses.
   it("accepts an ongoing period that also has an end date", () => {
     const parsed = careerRecordSchema.parse({
       ...shared,
