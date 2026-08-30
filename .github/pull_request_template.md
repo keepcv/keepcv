@@ -24,6 +24,7 @@ otherwise have to reconstruct from the diff.
 - [ ] Unit and integration tests, plus one end-to-end path
 - [ ] Accessibility pass - keyboard and screen reader
 - [ ] Docs updated; an architecture decision recorded if one was made
+- [ ] A changeset, or a deliberate empty one
 - [ ] No TODOs, no feature flags left enabled, no commented-out code
 
 <!-- Tick only what applies. Delete rows that genuinely do not apply to this
