@@ -66,7 +66,9 @@ describe("the web app handler", () => {
     }
   });
 
-  it("finds the built app that ships beside the launcher", () => {
-    expect(webAssetsDir()).toMatch(/web[/\\]dist$/);
+  // The launcher publishes and `@keepcv/web` does not, so assets resolved
+  // through that package are missing from an install, not merely elsewhere.
+  it("finds the app inside the launcher's own package", () => {
+    expect(webAssetsDir()).toMatch(/cli[/\\]dist[/\\]web$/);
   });
 });

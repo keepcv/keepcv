@@ -32,7 +32,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/copy-web.mjs",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
@@ -44,12 +44,10 @@
     "@keepcv/db": "workspace:*",
     "@keepcv/interop": "workspace:*",
     "@keepcv/render": "workspace:*",
-    "@keepcv/schema": "workspace:*",
-    "@keepcv/web": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "@keepcv/schema": "workspace:*"
   },
   "devDependencies": {
+    "@keepcv/web": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
