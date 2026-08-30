@@ -570,6 +570,7 @@ describe("sections of your own", () => {
     mount(storeServer(store).answer, "/sections?archived=false");
 
     await screen.findByText("No sections of your own yet");
+    press("New section");
     type("New section", "Patents");
     press("Add");
 
@@ -604,6 +605,7 @@ describe("sections of your own", () => {
     mount(storeServer(store).answer, "/sections?archived=false");
 
     await screen.findByText("Patents");
+    press("New section");
     type("New section", "patents");
 
     expect(
@@ -1114,9 +1116,7 @@ describe("composing a resume", () => {
     const { server, resumeId } = aComposedResume();
     mount(server.answer, `/resumes/${resumeId}`);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: 'Rename, currently the default "Experience"' }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Rename Experience" }));
     fireEvent.change(screen.getByLabelText("Heading for Experience"), {
       target: { value: "What I have done" },
     });
@@ -1125,11 +1125,7 @@ describe("composing a resume", () => {
       await screen.findByRole("heading", { name: "What I have done", level: 2 }),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: 'Rename, or empty the box to print "What I have done" no more',
-      }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Rename What I have done" }));
     fireEvent.change(screen.getByLabelText("Heading for What I have done"), {
       target: { value: "  " },
     });
@@ -2741,7 +2737,8 @@ describe("role profiles", () => {
     const server = storeServer(store);
     mount(server.answer, "/role-profiles?archived=false");
 
-    await screen.findByLabelText("New role profile");
+    await screen.findByRole("button", { name: "New role profile" });
+    press("New role profile");
     type("New role profile", "Backend");
     press("Add");
 

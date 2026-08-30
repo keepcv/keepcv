@@ -74,7 +74,11 @@ function Controls({
     // Glyphs, not words: "Hide" and "Remove" spelled out on every section, entry
     // and point put two words of chrome beside every line of the user's content.
     // Each still carries the label naming its own row.
-    <span className="flex shrink-0 items-center gap-0.5">
+    //
+    // Dimmed rather than hidden until the row is entered: four of these on every
+    // one of forty rows outweighed the text they act on, and revealing them on
+    // hover alone would take them away from touch and from the keyboard.
+    <span className="flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100">
       {reorder}
       <Button
         tone="ghost"
@@ -98,6 +102,10 @@ function Controls({
   );
 }
 
+// Nothing left to add is said by the picker being gone, so `empty` is passed
+// only where its absence would leave a panel with nothing in it. Spelled out
+// under every entry and every section it was the same sentence six times on one
+// screen, each one longer than the point it sat under.
 function AddPicker<T extends { label: string }>({
   label,
   empty,
@@ -105,14 +113,16 @@ function AddPicker<T extends { label: string }>({
   onPick,
 }: {
   label: string;
-  empty: string;
+  empty?: string;
   options: readonly T[];
   onPick: (option: T) => void;
 }) {
   const [chosen, setChosen] = useState("");
   const picked = options[Number(chosen)];
 
-  if (options.length === 0) return <p className="text-xs text-text-subtle">{empty}</p>;
+  if (options.length === 0) {
+    return empty === undefined ? null : <p className="text-xs text-text-subtle">{empty}</p>;
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -160,7 +170,7 @@ function Point({
   return (
     <li
       {...order.rowProps(point.row)}
-      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5 text-sm text-text-muted data-[held=true]:opacity-40 data-[off=true]:opacity-50"
+      className="group/row -mx-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-md px-2 py-0.5 text-sm text-text-muted transition-colors hover:bg-surface-sunken data-[held=true]:opacity-40 data-[off=true]:opacity-50"
       data-off={!point.isVisible}
     >
       <DragGrip />
@@ -226,7 +236,7 @@ function Entry({
       {/* Wraps rather than hiding: which role, where and when is the whole
           identity of an entry, and dropping it below `sm` leaves a bare title. */}
       <div
-        className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 data-[off=true]:opacity-50"
+        className="group/row -mx-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-sunken data-[off=true]:opacity-50"
         data-off={!entry.isVisible}
       >
         <DragGrip />
@@ -252,12 +262,15 @@ function Entry({
 
       {entry.points.length === 0 ? (
         entry.available === 0 ? null : (
-          <p className="mt-1 text-xs text-text-subtle">
+          <p className="mt-1 pl-6 text-xs text-text-subtle">
             None of its {entry.available} points are on this resume.
           </p>
         )
       ) : (
-        <ul className="mt-1.5">
+        // Indented behind a rule, because section, entry and point were three
+        // levels laid out flat: a point sat at the same left edge as the entry
+        // it belongs to, and the only thing separating them was font weight.
+        <ul className="mt-1.5 ml-2 border-l border-line-subtle pl-4">
           {entry.points.map((point) => (
             <Point
               key={point.row.id}
@@ -272,10 +285,9 @@ function Entry({
         </ul>
       )}
 
-      <div className="mt-2">
+      <div className="mt-2 pl-6 empty:mt-0">
         <AddPicker
           label={`Add a point to ${entry.title}`}
-          empty="Every point of this record is already on the resume."
           options={entry.placeable}
           onPick={onPlacePoint}
         />
@@ -285,32 +297,21 @@ function Entry({
 }
 
 // The heading a section prints under, edited in place: it is one field, and a
-// route for it would be a page with a single input on it.
+// route for it would be a page with a single input on it. The trigger is a glyph
+// beside the heading rather than a sentence under it - spelled out it was a line
+// of prose per section, longer than any entry it sat above, and it read as
+// content rather than as a control.
 function Heading({
   section,
+  typed,
+  onType,
   onRename,
 }: {
   section: CompositionSection;
+  typed: string;
+  onType: (typed: string | null) => void;
   onRename: (heading: string) => void;
 }) {
-  const [typed, setTyped] = useState<string | null>(null);
-
-  if (typed === null) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setTyped(section.isDefaultHeading ? "" : section.heading);
-        }}
-        className="text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline"
-      >
-        {section.isDefaultHeading
-          ? `Rename, currently the default "${section.heading}"`
-          : `Rename, or empty the box to print "${section.heading}" no more`}
-      </button>
-    );
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-2">
       <input
@@ -318,7 +319,7 @@ function Heading({
         value={typed}
         placeholder={section.heading}
         onChange={(event) => {
-          setTyped(event.target.value);
+          onType(event.target.value);
         }}
         className="min-w-0 flex-1 rounded-lg border border-line px-2 py-1 text-sm"
       />
@@ -326,18 +327,23 @@ function Heading({
         tone="primary"
         onClick={() => {
           onRename(typed);
-          setTyped(null);
+          onType(null);
         }}
       >
         Save
       </Button>
       <Button
         onClick={() => {
-          setTyped(null);
+          onType(null);
         }}
       >
         Cancel
       </Button>
+      <p className="w-full text-xs text-text-subtle">
+        {section.isDefaultHeading
+          ? `Currently the default "${section.heading}".`
+          : `Empty the box to print "${section.heading}" no more.`}
+      </p>
     </div>
   );
 }
@@ -357,18 +363,29 @@ function Section({
   onRename: (heading: string) => void;
   onChooseWording: (point: CompositionPoint, phrasingId: Uuid) => void;
 }) {
+  const [typed, setTyped] = useState<string | null>(null);
   const entries = useReorder(entriesOf(store, section.row.id), (row, sortKey) => {
     writes.move({ level: "entry", row }, sortKey);
   });
 
   return (
-    <div {...order.rowProps(section.row)} className="data-[held=true]:opacity-40">
+    <div {...order.rowProps(section.row)} className="group/row data-[held=true]:opacity-40">
       <Panel>
         <PanelHeader
           title={section.heading}
           aside={
             <span className="flex items-center gap-2">
               {section.isVisible ? null : <Badge>section off</Badge>}
+              <Button
+                tone="ghost"
+                size="sm"
+                icon="edit"
+                label={`Rename ${section.heading}`}
+                className="opacity-60 transition-opacity duration-150 focus-visible:opacity-100 group-hover/row:opacity-100"
+                onClick={() => {
+                  setTyped(section.isDefaultHeading ? "" : section.heading);
+                }}
+              />
               <Controls
                 subject={section.heading}
                 placed={{ level: "section", row: section.row }}
@@ -382,7 +399,9 @@ function Section({
           }
         />
         <PanelBody className="space-y-3">
-          <Heading section={section} onRename={onRename} />
+          {typed === null ? null : (
+            <Heading section={section} typed={typed} onType={setTyped} onRename={onRename} />
+          )}
 
           {section.entries.length === 0 ? (
             <p className="text-sm text-text-muted">Nothing placed in this section yet.</p>
@@ -406,7 +425,6 @@ function Section({
 
           <AddPicker
             label={`Add a record to ${section.heading}`}
-            empty="Every record of this kind is already in this section."
             options={section.placeable}
             onPick={(record) => {
               writes.place(placeRecord(store, section.row, record.id));

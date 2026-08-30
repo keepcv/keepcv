@@ -6,7 +6,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
-import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { Panel, PanelBody } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -133,34 +133,51 @@ function Row({
   );
 }
 
-function NewSection({ store, client }: { store: Store; client: ApiClient }) {
+function NewSection({
+  store,
+  client,
+  onDone,
+}: {
+  store: Store;
+  client: ApiClient;
+  onDone: () => void;
+}) {
   const create = useCreateCustomSection(client);
   const [heading, setHeading] = useState("");
   const problem = heading === "" ? undefined : headingError(store, heading);
 
   return (
-    <div className="flex items-end gap-2">
-      <div className="w-full max-w-72">
-        <TextField
-          label="New section"
-          value={heading}
-          onChange={setHeading}
-          placeholder="Patents"
-          error={problem}
-          hint="The heading it prints under."
-        />
-      </div>
-      <Button
-        tone="primary"
-        disabled={heading.trim() === "" || problem !== undefined || create.isPending}
-        onClick={() => {
-          create.mutate(sectionInput(store, heading));
-          setHeading("");
-        }}
-      >
-        Add
-      </Button>
-    </div>
+    <Panel>
+      <PanelBody className="space-y-3">
+        <div className="w-full max-w-72">
+          <TextField
+            label="New section"
+            value={heading}
+            onChange={setHeading}
+            placeholder="Patents"
+            error={problem}
+            hint="The heading it prints under."
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            tone="primary"
+            icon="confirm"
+            disabled={heading.trim() === "" || problem !== undefined || create.isPending}
+            onClick={() => {
+              create.mutate(sectionInput(store, heading));
+              setHeading("");
+              onDone();
+            }}
+          >
+            Add
+          </Button>
+          <Button tone="ghost" onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -174,6 +191,7 @@ export function SectionList({
   archived: boolean;
 }) {
   const update = useUpdateCustomSection(client);
+  const [adding, setAdding] = useState(false);
   const rows = sectionRows(store, archived);
   const order = useReorder(store.customSections, (section, sortKey) => {
     update.mutate({ section, patch: { sortKey } });
@@ -181,9 +199,36 @@ export function SectionList({
 
   return (
     <PageBody>
-      <PageHeader title="Sections" icon="section">
+      <PageHeader
+        title="Sections"
+        icon="section"
+        actions={
+          adding || archived ? null : (
+            <Button
+              tone="primary"
+              icon="add"
+              expanded={false}
+              onClick={() => {
+                setAdding(true);
+              }}
+            >
+              New section
+            </Button>
+          )
+        }
+      >
         Headings of your own, for work the built-in kinds have no name for.
       </PageHeader>
+
+      {adding ? (
+        <NewSection
+          store={store}
+          client={client}
+          onDone={() => {
+            setAdding(false);
+          }}
+        />
+      ) : null}
 
       <Toolbar count={counted(rows.length, "section", "sections")}>
         <Segmented label="Sections">
@@ -196,14 +241,6 @@ export function SectionList({
         </Segmented>
       </Toolbar>
 
-      {archived ? null : (
-        <Panel>
-          <PanelBody>
-            <NewSection store={store} client={client} />
-          </PanelBody>
-        </Panel>
-      )}
-
       {rows.length === 0 ? (
         <Empty
           title={archived ? "Nothing put aside" : "No sections of your own yet"}
@@ -214,16 +251,11 @@ export function SectionList({
             : "Patents, licences, exhibitions - whatever the built-in kinds do not cover."}
         </Empty>
       ) : (
-        <Panel>
-          <PanelHeader title="Headings of your own">
-            Every record under it is left alone.
-          </PanelHeader>
-          <ul>
-            {rows.map((row) => (
-              <Row key={row.section.id} store={store} row={row} client={client} order={order} />
-            ))}
-          </ul>
-        </Panel>
+        <ul className="rounded-xl border border-line bg-surface shadow-card">
+          {rows.map((row) => (
+            <Row key={row.section.id} store={store} row={row} client={client} order={order} />
+          ))}
+        </ul>
       )}
     </PageBody>
   );

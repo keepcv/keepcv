@@ -35,14 +35,21 @@ function keyed<T>(rows: readonly T[], prefix: string): { key: string; row: T }[]
 // A user-defined field whose key collides with a presenter's keeps its label
 // and takes a suffixed key: specialised templates address the typed column by
 // key and must not be handed user-entered data instead.
+//
+// Unless it also carries the same value, in which case it is not a second fact
+// and the resume printed the line twice. A field's key is derived from its
+// label, so naming one "Grade" on a record whose kind already has a grade is
+// how a user reaches this without ever seeing a key.
 function withUserFields(entry: ManifestEntry, presented: DocumentField[]): DocumentField[] {
-  const taken = new Set(presented.map((field) => field.key));
+  const taken = new Map(presented.map((field) => [field.key, field.value]));
   return [
     ...presented,
-    ...entry.fields.map((row) => {
-      const key = taken.has(row.key) ? `${row.key}-user` : row.key;
-      taken.add(key);
-      return { key, label: row.label, value: row.value, kind: row.valueKind };
+    ...entry.fields.flatMap((row) => {
+      const clash = taken.get(row.key);
+      if (clash === row.value) return [];
+      const key = clash === undefined ? row.key : `${row.key}-user`;
+      taken.set(key, row.value);
+      return [{ key, label: row.label, value: row.value, kind: row.valueKind }];
     }),
   ];
 }

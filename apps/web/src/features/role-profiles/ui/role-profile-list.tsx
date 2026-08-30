@@ -7,7 +7,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
-import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { Panel, PanelBody } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -75,23 +75,16 @@ function Words({
           <p className="text-sm text-text-subtle">No words yet, so this profile selects nothing.</p>
         ) : (
           tags.map((tag) => (
-            <span
+            <Badge
               key={tag.id}
-              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-sunken py-0.5 pl-1.5 pr-1 text-xs font-medium text-text-muted"
+              removeLabel={`Take ${tag.label} out of ${profile.name}`}
+              onRemove={() => {
+                setProblem(undefined);
+                remove.mutate({ profile, tag, isNew: false });
+              }}
             >
               {tag.label}
-              <button
-                type="button"
-                aria-label={`Take ${tag.label} out of ${profile.name}`}
-                onClick={() => {
-                  setProblem(undefined);
-                  remove.mutate({ profile, tag, isNew: false });
-                }}
-                className="rounded px-1 text-text-subtle hover:bg-surface-hover hover:text-text"
-              >
-                x
-              </button>
-            </span>
+            </Badge>
           ))
         )}
       </div>
@@ -245,41 +238,58 @@ function Row({
   );
 }
 
-function NewProfile({ store, client }: { store: Store; client: ApiClient }) {
+function NewProfile({
+  store,
+  client,
+  onDone,
+}: {
+  store: Store;
+  client: ApiClient;
+  onDone: () => void;
+}) {
   const create = useCreateRoleProfile(client);
   const [name, setName] = useState("");
   const problem = name === "" ? undefined : nameError(store, name);
 
   return (
-    <div className="flex items-end gap-2">
-      <div className="w-full max-w-72">
-        <TextField
-          label="New role profile"
-          value={name}
-          onChange={setName}
-          placeholder="Backend"
-          error={problem}
-          hint="The words a role like this is hired for."
-        />
-      </div>
-      <Button
-        tone="primary"
-        disabled={name.trim() === "" || problem !== undefined || create.isPending}
-        onClick={() => {
-          create.mutate(
-            roleProfileInput(
-              name,
-              // `role_profile_sort_key_unique` covers archived rows, so the key
-              // comes from the whole collection rather than the live part.
-              keyForPosition(store.roleProfiles, null, store.roleProfiles.length),
-            ),
-          );
-          setName("");
-        }}
-      >
-        Add
-      </Button>
-    </div>
+    <Panel>
+      <PanelBody className="space-y-3">
+        <div className="w-full max-w-72">
+          <TextField
+            label="New role profile"
+            value={name}
+            onChange={setName}
+            placeholder="Backend"
+            error={problem}
+            hint="The words a role like this is hired for."
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            tone="primary"
+            icon="confirm"
+            disabled={name.trim() === "" || problem !== undefined || create.isPending}
+            onClick={() => {
+              create.mutate(
+                roleProfileInput(
+                  name,
+                  // `role_profile_sort_key_unique` covers archived rows, so the
+                  // key comes from the whole collection rather than the live part.
+                  keyForPosition(store.roleProfiles, null, store.roleProfiles.length),
+                ),
+              );
+              setName("");
+              onDone();
+            }}
+          >
+            Add
+          </Button>
+          <Button tone="ghost" onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -293,6 +303,7 @@ export function RoleProfileList({
   archived: boolean;
 }) {
   const update = useUpdateRoleProfile(client);
+  const [adding, setAdding] = useState(false);
   const rows = roleProfileRows(store, archived);
   const order = useReorder(store.roleProfiles, (profile, sortKey) => {
     update.mutate({ profile, patch: { sortKey } });
@@ -300,10 +311,37 @@ export function RoleProfileList({
 
   return (
     <PageBody>
-      <PageHeader title="Role profiles" icon="roleProfile">
+      <PageHeader
+        title="Role profiles"
+        icon="roleProfile"
+        actions={
+          adding || archived ? null : (
+            <Button
+              tone="primary"
+              icon="add"
+              expanded={false}
+              onClick={() => {
+                setAdding(true);
+              }}
+            >
+              New role profile
+            </Button>
+          )
+        }
+      >
         The words a kind of role is hired for. Applying one to a resume places everything filed
         under them, so tailoring is a click rather than an afternoon.
       </PageHeader>
+
+      {adding ? (
+        <NewProfile
+          store={store}
+          client={client}
+          onDone={() => {
+            setAdding(false);
+          }}
+        />
+      ) : null}
 
       <Toolbar count={counted(rows.length, "profile", "profiles")}>
         <Segmented label="Role profiles">
@@ -315,14 +353,6 @@ export function RoleProfileList({
           </Segment>
         </Segmented>
       </Toolbar>
-
-      {archived ? null : (
-        <Panel>
-          <PanelBody>
-            <NewProfile store={store} client={client} />
-          </PanelBody>
-        </Panel>
-      )}
 
       {rows.length === 0 ? (
         <Empty
@@ -343,17 +373,11 @@ export function RoleProfileList({
           )}
         </Empty>
       ) : (
-        <Panel>
-          <PanelHeader title="What each one selects">
-            A record carrying one of the words comes whole; a record that is not brings only the
-            points that carry one.
-          </PanelHeader>
-          <ul>
-            {rows.map((row) => (
-              <Row key={row.profile.id} store={store} row={row} client={client} order={order} />
-            ))}
-          </ul>
-        </Panel>
+        <ul className="rounded-xl border border-line bg-surface shadow-card">
+          {rows.map((row) => (
+            <Row key={row.profile.id} store={store} row={row} client={client} order={order} />
+          ))}
+        </ul>
       )}
     </PageBody>
   );

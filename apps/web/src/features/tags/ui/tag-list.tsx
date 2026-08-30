@@ -6,7 +6,7 @@ import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextField } from "../../../components/ui/field.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
-import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { Panel, PanelBody } from "../../../components/ui/panel.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { counted } from "../../../lib/label.js";
@@ -228,33 +228,50 @@ function Row({
   );
 }
 
-function NewTag({ store, client }: { store: Store; client: ApiClient }) {
+function NewTag({
+  store,
+  client,
+  onDone,
+}: {
+  store: Store;
+  client: ApiClient;
+  onDone: () => void;
+}) {
   const create = useCreateTag(client);
   const [label, setLabel] = useState("");
   const problem = label === "" ? undefined : labelError(store, label);
 
   return (
-    <div className="flex items-end gap-2">
-      <div className="w-full max-w-64">
-        <TextField
-          label="New tag"
-          value={label}
-          onChange={setLabel}
-          placeholder="Kubernetes"
-          error={problem}
-        />
-      </div>
-      <Button
-        tone="primary"
-        disabled={label.trim() === "" || problem !== undefined || create.isPending}
-        onClick={() => {
-          create.mutate(tagInput(label, null));
-          setLabel("");
-        }}
-      >
-        Add
-      </Button>
-    </div>
+    <Panel>
+      <PanelBody className="space-y-3">
+        <div className="w-full max-w-64">
+          <TextField
+            label="New tag"
+            value={label}
+            onChange={setLabel}
+            placeholder="Kubernetes"
+            error={problem}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            tone="primary"
+            icon="confirm"
+            disabled={label.trim() === "" || problem !== undefined || create.isPending}
+            onClick={() => {
+              create.mutate(tagInput(label, null));
+              setLabel("");
+              onDone();
+            }}
+          >
+            Add
+          </Button>
+          <Button tone="ghost" onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -267,14 +284,42 @@ export function TagList({
   client: ApiClient;
   filter: TagFilter;
 }) {
+  const [adding, setAdding] = useState(false);
   const rows = tagRows(store, filter);
   const live = tagRows(store, "all");
 
   return (
     <PageBody>
-      <PageHeader title="Tags" icon="tag">
+      <PageHeader
+        title="Tags"
+        icon="tag"
+        actions={
+          adding || filter === "archived" ? null : (
+            <Button
+              tone="primary"
+              icon="add"
+              expanded={false}
+              onClick={() => {
+                setAdding(true);
+              }}
+            >
+              New tag
+            </Button>
+          )
+        }
+      >
         {TAG_BLURBS[filter]}
       </PageHeader>
+
+      {adding ? (
+        <NewTag
+          store={store}
+          client={client}
+          onDone={() => {
+            setAdding(false);
+          }}
+        />
+      ) : null}
 
       <Toolbar count={counted(rows.length, "tag", "tags")}>
         <Segmented label="Tags">
@@ -286,14 +331,6 @@ export function TagList({
         </Segmented>
       </Toolbar>
 
-      {filter === "archived" ? null : (
-        <Panel>
-          <PanelBody>
-            <NewTag store={store} client={client} />
-          </PanelBody>
-        </Panel>
-      )}
-
       {rows.length === 0 ? (
         <Empty title={filter === "all" ? "No tags yet" : "Nothing here"} spot="noResults">
           {filter === "all"
@@ -301,17 +338,11 @@ export function TagList({
             : "Nothing matches that filter, which on this screen is usually good news."}
         </Empty>
       ) : (
-        <Panel>
-          <PanelHeader title="The vocabulary">
-            A tag is never deleted. Archiving puts it aside; merging moves everything it carried
-            onto another one first.
-          </PanelHeader>
-          <ul>
-            {rows.map((row) => (
-              <Row key={row.tag.id} store={store} rows={live} row={row} client={client} />
-            ))}
-          </ul>
-        </Panel>
+        <ul className="rounded-xl border border-line bg-surface shadow-card">
+          {rows.map((row) => (
+            <Row key={row.tag.id} store={store} rows={live} row={row} client={client} />
+          ))}
+        </ul>
       )}
     </PageBody>
   );
