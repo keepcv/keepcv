@@ -40,8 +40,19 @@ describe("writing a resume as LaTeX", () => {
       "geometry",
       "hyperref",
       "inputenc",
+      "lmodern",
       "parskip",
     ]);
+  });
+
+  // Without it T1 selects the EC bitmap fonts and the compiled PDF extracts
+  // "Staff engineer" as "Sta engineer" - the ligature gone from text a machine
+  // reads back. It has to be loaded before `fontenc` chooses the family.
+  it("names a font family that survives being read back out of the PDF", () => {
+    const order = ["lmodern", "fontenc"].map((one) => TEX.indexOf(`{${one}}`));
+
+    expect(order.every((at) => at > 0)).toBe(true);
+    expect(order[0]).toBeLessThan(order[1] ?? 0);
   });
 
   it("defines every command its body uses", () => {
