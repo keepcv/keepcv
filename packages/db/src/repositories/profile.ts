@@ -16,6 +16,7 @@ import {
   type Changes,
   insertOwned,
   live,
+  nextTimestamp,
   owned,
   requireOwned,
   standardDto,
@@ -83,7 +84,7 @@ export function createProfileRepository(db: Database): ProfileRepository {
     async update(patch, expectedUpdatedAt) {
       const [row] = await db
         .update(profile)
-        .set({ ...patch, updatedAt: new Date() })
+        .set({ ...patch, updatedAt: nextTimestamp(expectedUpdatedAt) })
         .where(and(owned(profile), eq(profile.updatedAt, new Date(expectedUpdatedAt))))
         .returning();
       if (row !== undefined) {

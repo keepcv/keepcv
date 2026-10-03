@@ -104,6 +104,11 @@ primary key (owner_id, id)
 Immutable tables (`phrasing_revision`, `resume_version`) omit `updated_at` and
 `archived_at`: they cannot be edited and are never archived.
 
+For token-checked mutations, `updated_at` advances to the later of the current
+application time and the accepted token plus one millisecond. Two writes within
+one millisecond, or a clock moving backward, must never reuse a concurrency
+token. Native import still restores timestamps verbatim; drafts have no token.
+
 **Identity is scoped to the owner, not global.** A native import restores ids
 verbatim - that is what makes I10 hold - so a globally unique `id` would mean a
 restore failing because some unrelated tenant had already imported the same

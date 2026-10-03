@@ -3,10 +3,10 @@ name: Test
 on:
   pull_request:
   workflow_call:
-    inputs:
+    outputs:
       release-version:
-        required: true
-        type: string
+        description: Launcher version verified against the selected release branch
+        value: ${{ jobs.test.outputs.release-version }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,6 +24,8 @@ jobs:
     name: Lint, typecheck and test
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      release-version: ${{ steps.release.outputs.version }}
 
     services:
       postgres:
@@ -62,11 +64,16 @@ jobs:
         run: pnpm changeset status --since=origin/main
 
       - name: Check the prepared release
+        id: release
         if: github.event_name == 'workflow_dispatch'
-        env:
-          RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          node -e 'if (require("./apps/cli/package.json").version !== process.env.RELEASE_VERSION) process.exit(1)'
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          import { releaseVersion } from './scripts/release-branch.mjs';
+          const launcher = JSON.parse(readFileSync('apps/cli/package.json', 'utf8'));
+          const version = releaseVersion(process.env.GITHUB_REF, launcher.version);
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          NODE
           pnpm changeset status --output release-plan.json
           node -e 'if (require("./release-plan.json").releases.length) throw new Error("Version pending changesets before releasing")'
           rm release-plan.json

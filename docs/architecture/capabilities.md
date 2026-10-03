@@ -88,7 +88,10 @@ and preserve the archive through backup and restore. The GitHub Release workflow
 validates the reviewed commit, saves those tarballs, and publishes the same bytes
 after approval through the `npm` environment. The publish job installs no project
 dependencies and uses npm trusted publishing; a separate job creates package
-tags and the GitHub release. Publishing is an explicit workflow dispatch.
+tags and the GitHub release. Publishing is an explicit workflow dispatch from
+`release/<version>` after synchronizing reviewed `main`. The branch suffix must
+match the launcher package version; no workflow input repeats that version.
+Validation and artifact verification both enforce this before publication.
 
 **Native export and import, with the round-trip test, belong here** rather than
 later. Once that test exists, everything built afterwards inherits a test proving

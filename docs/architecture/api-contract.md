@@ -57,6 +57,10 @@ The header is deliberately not used: `If-Unmodified-Since` has second
 granularity and `updated_at` is milliseconds, so half of every comparison would
 match a write it should have refused.
 
+Every token-checked mutation advances `updated_at` by at least one millisecond,
+even when the application clock has not advanced. The token cannot be reused
+by a second write against the earlier state.
+
 **Idempotency.** Creates accept a client-generated UUIDv7 as the resource id, so
 a retried create cannot duplicate a row - no idempotency-key header needed. It is
 not silently idempotent: the second one is refused by the primary key as a
