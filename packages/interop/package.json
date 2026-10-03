@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/interop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Adapters between KeepCV and the resume formats other tools speak.",
   "keywords": [
     "keepcv",

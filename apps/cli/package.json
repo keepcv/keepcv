@@ -1,6 +1,6 @@
 {
   "name": "keepcv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run KeepCV locally: a career data store that compiles into resumes.",
   "keywords": [
     "keepcv",

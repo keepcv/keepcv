@@ -151,6 +151,10 @@ try {
     join(destination, "release-branch.mjs"),
   );
   await copyFile(
+    new URL("./release-registry.mjs", import.meta.url),
+    join(destination, "release-registry.mjs"),
+  );
+  await copyFile(
     join(root, "docs", "releases", `${versions.get("keepcv")}.md`),
     join(destination, "release-notes.md"),
   );

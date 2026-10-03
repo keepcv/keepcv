@@ -12,7 +12,7 @@ write is ever lost to make something fit.
 > **Status: early development.** The app runs locally from a checkout. There is
 > no release yet.
 
-The [0.1.0 release notes](docs/releases/0.1.0.md) describe the prepared first
+The [0.1.1 release notes](docs/releases/0.1.1.md) describe the prepared first
 release. Maintainers can follow the [release procedure](docs/RELEASING.md).
 
 ## The idea

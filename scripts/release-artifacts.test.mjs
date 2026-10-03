@@ -5,7 +5,7 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -35,8 +35,8 @@ async function fixture(t) {
   return { cwd, release };
 }
 
-function run(cwd, mode = "verify", extraEnv = {}) {
-  return exec(process.execPath, [script, mode], {
+function run(cwd, mode = "verify", extraEnv = {}, nodeArgs = []) {
+  return exec(process.execPath, [...nodeArgs, script, mode], {
     cwd,
     env: {
       ...process.env,
@@ -82,6 +82,39 @@ test("refuses publication outside the GitHub workflow before reaching npm", asyn
   await assert.rejects(run(cwd, "publish"), (error) =>
     /Publish through the GitHub Release workflow/.test(error.stderr),
   );
+});
+
+test("rejects a conflicting later package before invoking npm or GitHub", async (t) => {
+  const { cwd, release } = await fixture(t);
+  release.packages.push({ ...release.packages[0], name: "@keepcv/core" });
+  await writeFile(join(cwd, "release.json"), JSON.stringify(release));
+  const preload = join(cwd, "registry-mock.mjs");
+  await writeFile(
+    preload,
+    `import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+childProcess.execFile = () => { throw new Error("External command reached before registry preflight"); };
+syncBuiltinESMExports();
+globalThis.fetch = async (url) => url.includes("%40keepcv%2Fcore")
+  ? new Response(JSON.stringify({ dist: { integrity: "sha512-placeholder" } }), { status: 200 })
+  : new Response("{}", { status: 404 });
+`,
+  );
+  for (const mode of ["preflight", "publish", "github"]) {
+    await assert.rejects(
+      run(
+        cwd,
+        mode,
+        {
+          GITHUB_ACTIONS: "true",
+          GITHUB_REPOSITORY: "keepcv/keepcv",
+          GITHUB_REF: "refs/heads/release/0.1.0",
+        },
+        ["--import", pathToFileURL(preload).href],
+      ),
+      (error) => /Registry bytes differ for @keepcv\/core@0.1.0/.test(error.stderr),
+    );
+  }
 });
 
 test("verifies a matching release branch", async (t) => {

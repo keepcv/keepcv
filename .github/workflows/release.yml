@@ -42,7 +42,7 @@ jobs:
         working-directory: release
         env:
           RELEASE_VERSION: ${{ needs.validate.outputs.release-version }}
-        run: node release-artifacts.mjs verify
+        run: node release-artifacts.mjs preflight
 
   publish:
     needs: [validate, verify]
