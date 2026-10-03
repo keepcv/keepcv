@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
+import { releaseVersion } from "./release-branch.mjs";
 
 const exec = promisify(execFile);
 const mode = process.argv[2] ?? "verify";
@@ -15,6 +16,7 @@ const launcher = release.packages.find((pkg) => pkg.name === "keepcv");
 assert(launcher, "The release has no launcher");
 if (process.env.RELEASE_VERSION) assert.equal(launcher.version, process.env.RELEASE_VERSION);
 if (process.env.GITHUB_SHA) assert.equal(release.commit, process.env.GITHUB_SHA);
+if (process.env.GITHUB_REF) releaseVersion(process.env.GITHUB_REF, launcher.version);
 for (const pkg of release.packages) {
   assert.match(pkg.name, /^(keepcv|@keepcv\/[a-z-]+)$/);
   assert.match(pkg.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
@@ -30,7 +32,7 @@ if (mode === "verify") process.exit(0);
 
 assert.equal(process.env.GITHUB_ACTIONS, "true", "Publish through the GitHub Release workflow");
 assert.equal(process.env.GITHUB_REPOSITORY, "keepcv/keepcv");
-assert.equal(process.env.GITHUB_REF, "refs/heads/main");
+releaseVersion(process.env.GITHUB_REF, launcher.version);
 
 async function registryVersion(pkg) {
   const response = await fetch(

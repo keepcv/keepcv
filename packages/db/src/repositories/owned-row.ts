@@ -29,6 +29,10 @@ export function toTimestamp(value: Date): Timestamp {
   return value.toISOString() as Timestamp;
 }
 
+export function nextTimestamp(previous: Timestamp): Date {
+  return new Date(Math.max(Date.now(), Date.parse(previous) + 1));
+}
+
 // `phrasing_revision` is immutable and has neither, so it does not use this.
 export function standardDto(row: {
   id: string;
@@ -113,7 +117,7 @@ export async function updateOwned<Row extends OwnedRow>(
 ): Promise<Row> {
   const [row] = await db
     .update(table)
-    .set({ ...changes, updatedAt: new Date() })
+    .set({ ...changes, updatedAt: nextTimestamp(expectedUpdatedAt) })
     .where(and(owned(table), eq(table.id, id), eq(table.updatedAt, new Date(expectedUpdatedAt))))
     .returning();
   if (row !== undefined) {

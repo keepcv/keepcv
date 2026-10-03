@@ -9,13 +9,16 @@ The workspace root and `@keepcv/web` are private.
 
 1. Prepare versions and changelogs with Changesets on a branch, then review and
    merge the pull request. The first release is already prepared as `0.1.0`.
-2. Run **Actions -> Release -> Run workflow**, selecting `main`, the prepared
-   launcher version, and a mode. `verify` is the default and publishes nothing.
+2. Synchronize `release/<version>` from reviewed `main`, then run **Actions ->
+   Release -> Run workflow**, selecting that branch and a mode. There is no
+   version input: the branch suffix must match the launcher package version.
+   `verify` is the default and publishes nothing.
 3. The existing test workflow runs on that exact commit, including both database
    drivers, generated-file checks and an isolated install of the packed packages.
    Release builds do not restore dependency or build caches.
 4. The verified tarballs, SHA-512 digests, commit and release notes are uploaded
-   as a run artifact retained for 14 days.
+   as a run artifact retained for 14 days. A separate job downloads that artifact
+   and verifies its bytes, commit and branch version, including in `verify` mode.
 5. For `trusted` or `bootstrap` mode, the publish job waits for approval in the
    `npm` environment. It downloads that run's artifacts, checks their digests,
    commit and version, then publishes with provenance and lifecycle scripts
@@ -23,27 +26,27 @@ The workspace root and `@keepcv/web` are private.
 6. A separate job with GitHub write permission creates package tags and a GitHub
    release named `keepcv@<version>`, attaching all tarballs and `release.json`.
 
-Only `main` in `keepcv/keepcv` can release. Concurrent releases are serialized;
+Only `release/<version>` branches in `keepcv/keepcv` can release. The version
+must be stable semver, such as `release/0.1.0`; `main`, tags, prereleases and
+version mismatches fail validation. Concurrent releases are serialized;
 an in-progress publish is never cancelled by a newer run. The build job has no
 publish credentials, the publish job has no GitHub write permission, and the
 announcement job has no npm credentials or OIDC permission.
 
 ## One-time GitHub setup
 
-Create the `npm` environment in **Settings -> Environments**:
-
-It has been configured for `keepcv/keepcv` with `nipunrautela` as reviewer.
+The `npm` environment in **Settings -> Environments** has been configured for
+`keepcv/keepcv` with `nipunrautela` as reviewer.
 Check these settings if the environment is recreated:
 
-- Restrict deployments to the `main` branch.
+- Restrict deployments to the `release/*` branch pattern.
 - Require a maintainer review. A sole maintainer must be allowed to approve
   their own manually dispatched run.
 - Disable administrator bypass of the environment protection rules.
 
 Keep the existing pull-request and required-check rules on `main`. Actions are
 pinned to commit SHAs with readable version labels; Dependabot proposes weekly
-updates. This
-pipeline uses the built-in `GITHUB_TOKEN` and needs no personal GitHub token or
+updates. This pipeline uses the built-in `GITHUB_TOKEN` and needs no personal GitHub token or
 permission for Actions to create pull requests.
 
 ## Bootstrap the first npm release
@@ -60,8 +63,9 @@ an initial authenticated publication before that trust can be registered.
    Organisation management permissions are not needed.
 3. Add it as the **environment secret** `NPM_BOOTSTRAP_TOKEN` in `npm`. Never
    put the value in a workflow input, issue, repository file or chat.
-4. Run Release with version `0.1.0` and mode `verify`. Inspect the artifacts and
-   logs, then run with mode `bootstrap` and approve the publish job.
+4. Run Release from branch `release/0.1.0` with mode `verify`. Inspect the
+   artifacts and logs, then run from the same branch with mode `bootstrap` and
+   approve the publish job. No version needs to be typed.
 5. After publication, configure trusted publishing on each of the nine npm
    packages using these exact values:
 
@@ -98,7 +102,22 @@ Review versions and changelogs and write `docs/releases/<launcher-version>.md`.
 The empty changeset records that versioning consumed the descriptions; the
 ordinary CI changeset gate still applies without requesting another bump.
 Do not run versioning again on an already prepared release. The release workflow
-refuses pending version bumps or a launcher version different from its input.
+refuses pending version bumps or a launcher version different from its branch.
+
+After the preparation PR passes CI and merges into `main`, create the release
+branch from that reviewed revision. For an existing release branch, merge
+`main` into it and resolve any conflicts before pushing. Keep release fixes in
+reviewed PRs to `main`, then synchronize the release branch again. A push never
+publishes; start the workflow manually when the branch is ready.
+
+For example, after merging preparation for `0.2.0`:
+
+```sh
+git fetch origin
+git switch -c release/0.2.0 origin/main
+git push -u origin release/0.2.0
+gh workflow run release.yml --ref release/0.2.0 -f mode=verify
+```
 
 Validate locally with `pnpm check` and `pnpm release:check`. The latter requires
 network access, packs into `.keepcv-release-check/packages/`, and installs only

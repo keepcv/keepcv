@@ -38,7 +38,14 @@ async function fixture(t) {
 function run(cwd, mode = "verify", extraEnv = {}) {
   return exec(process.execPath, [script, mode], {
     cwd,
-    env: { ...process.env, GITHUB_SHA: "", GITHUB_ACTIONS: "", RELEASE_VERSION: "", ...extraEnv },
+    env: {
+      ...process.env,
+      GITHUB_SHA: "",
+      GITHUB_REF: "",
+      GITHUB_ACTIONS: "",
+      RELEASE_VERSION: "",
+      ...extraEnv,
+    },
   });
 }
 
@@ -74,5 +81,28 @@ test("refuses publication outside the GitHub workflow before reaching npm", asyn
   const { cwd } = await fixture(t);
   await assert.rejects(run(cwd, "publish"), (error) =>
     /Publish through the GitHub Release workflow/.test(error.stderr),
+  );
+});
+
+test("verifies a matching release branch", async (t) => {
+  const { cwd } = await fixture(t);
+  await run(cwd, "verify", { GITHUB_REF: "refs/heads/release/0.1.0" });
+});
+
+test("refuses non-release branches, malformed versions and version mismatches", async (t) => {
+  const { cwd } = await fixture(t);
+  for (const ref of [
+    "refs/heads/main",
+    "refs/tags/release/0.1.0",
+    "refs/heads/release/01.1.0",
+    "refs/heads/release/0.1.0-beta.1",
+    "refs/heads/release/0.1.0/extra",
+  ]) {
+    await assert.rejects(run(cwd, "verify", { GITHUB_REF: ref }), (error) =>
+      /Select a release/.test(error.stderr),
+    );
+  }
+  await assert.rejects(run(cwd, "verify", { GITHUB_REF: "refs/heads/release/0.2.0" }), (error) =>
+    /Release branch and launcher versions differ/.test(error.stderr),
   );
 });

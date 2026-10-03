@@ -13,6 +13,8 @@
 
 ### Patch Changes
 
+- Always advance concurrency tokens, including edits within one millisecond or
+  after the application clock moves backward, so stale writes are refused.
 - Updated dependencies [9b4555f]
 - Updated dependencies [d47dc1b]
 - Updated dependencies [9b4555f]
