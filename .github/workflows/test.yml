@@ -39,7 +39,11 @@ jobs:
           --health-retries 5
 
     steps:
+      # Full history: the changeset gate below compares against origin/main,
+      # which a shallow checkout does not have.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Enable pnpm
         run: corepack enable
@@ -51,6 +55,11 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      # Fails a pull request that changes a package and describes none of it.
+      # There is no per-package mode; a partial description is review's job.
+      - name: Check the change is described
+        run: pnpm changeset status --since=origin/main
 
       # Separate steps rather than `pnpm check`, so a failure names itself in
       # the job summary. Ordered cheapest first.

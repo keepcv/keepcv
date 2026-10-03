@@ -72,7 +72,7 @@ pnpm lint:types     # ESLint: type-aware rules only
 pnpm typecheck      # tsc across packages, including tests
 pnpm test           # Vitest across packages
 pnpm build          # tsc -b
-pnpm changeset      # optional until the first publish; see CONTRIBUTING.md
+pnpm changeset      # required for a change outside tests; see CONTRIBUTING.md
 ```
 
 Run the whole thing on this machine - store, API and web app - against a
@@ -274,6 +274,11 @@ session already.
 - `run(argv)` in `cli.ts` is total and `index.ts` is a bin shim over it, which is
   what makes the dispatch testable. Every command answers an exit code and a
   sentence, never a stack trace.
+- **The launcher serves the web app out of its own `dist/web`**, copied there by
+  `scripts/copy-web.mjs` at build time. `@keepcv/web` is private and is a
+  devDependency for that reason: resolving the assets through it at runtime
+  published a launcher whose interface was not on disk. `webAssetsDir()` names
+  one path that is right from `src` and from `dist` alike.
 - `openStore` is the one place a store is opened, so a half-opened PGlite is
   closed on the way out rather than left holding the directory.
 - `keepcv status` reads `overview()` - the same selector the app's store overview

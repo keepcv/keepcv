@@ -1,14 +1,13 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname, join, normalize, resolve, sep } from "node:path";
+import { join, normalize, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 
-// Resolved through the package, so `dist` in the repo and a published install
-// with the two packages side by side both work.
+// One level under the package root from `src` and `dist` alike, so source and
+// install name one directory. No trailing separator: `serveWebApp` adds one.
 export function webAssetsDir(): string {
-  const require = createRequire(import.meta.url);
-  return join(dirname(require.resolve("@keepcv/web/package.json")), "dist");
+  return fileURLToPath(new URL("../dist/web", import.meta.url));
 }
 
 const CONTENT_TYPES: Record<string, string> = {

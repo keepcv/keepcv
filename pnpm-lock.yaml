@@ -176,16 +176,10 @@ importers:
       '@keepcv/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+    devDependencies:
       '@keepcv/web':
         specifier: workspace:*
         version: link:../web
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.8(react@19.2.8)
-    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.2

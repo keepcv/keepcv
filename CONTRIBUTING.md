@@ -85,10 +85,17 @@ Two boundaries are enforced rather than merely encouraged:
 
 Conventional commits.
 
-Changesets are **not required yet**. Nothing here has been published, there is
-no release pipeline, and a checklist item nothing enforces only teaches people
-to tick boxes without reading them. Write one with `pnpm changeset` if a change
-is worth a line in the first changelog; skip it otherwise.
+**A change to a package needs a changeset.** Write one with `pnpm changeset`.
+CI runs `changeset status --since=origin/main`, which fails a pull request that
+changes a package and adds no changeset at all. It cannot tell that every
+changed package was described - changesets has no per-package mode - so name
+each one the change touches, and expect a reviewer to check.
 
-At the first publish this becomes a real gate: a `changeset status` step in CI
-and the checklist row back in the pull request template.
+The gate ignores `*.test.ts`, `*.test.tsx` and `*.harness.ts`, because a change
+confined to those has nothing to say in a changelog. Anything else that
+genuinely does not - a comment, a rename nobody can observe - takes
+`pnpm changeset add --empty`, which records that the omission was a decision.
+
+Nothing has been published, so the changesets on `main` describe a first
+release rather than a diff from one. Write each entry for someone reading the
+changelog with no other context.
