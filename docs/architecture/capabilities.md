@@ -80,6 +80,16 @@ token; the `npx keepcv` local launcher and the three ways it decides who is
 asking (`api-contract.md` #6); the JSON mirror and `keepcv restore`;
 and the test harness.
 
+The launcher is distributed with its built web app and requires Node 24 or
+newer. `pnpm release:check` builds and packs every public package, checks the
+published manifests and files, and installs the tarballs outside the checkout.
+That install must serve the app, write to the store, render every CLI format,
+and preserve the archive through backup and restore. The GitHub Release workflow
+validates the reviewed commit, saves those tarballs, and publishes the same bytes
+after approval through the `npm` environment. The publish job installs no project
+dependencies and uses npm trusted publishing; a separate job creates package
+tags and the GitHub release. Publishing is an explicit workflow dispatch.
+
 **Native export and import, with the round-trip test, belong here** rather than
 later. Once that test exists, everything built afterwards inherits a test proving
 it did not break portability. It is a whole-store read and write rather than an

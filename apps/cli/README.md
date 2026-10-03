@@ -8,6 +8,9 @@ and a resume is a selection over it.
 > and the web app, writes a resume out as a file, reports on what the store
 > holds, and keeps a readable backup of the whole store beside it.
 
+Requires Node 24 or newer. The package includes the built web app; no separate
+web package or build tools are needed to run it.
+
 ## Usage
 
 To run the unpublished launcher from a checkout, follow
