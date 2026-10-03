@@ -12,8 +12,8 @@ queries, so there is no dialect drift to manage.
 > **Status: early development.** The public API is unstable and there is no
 > release yet. The whole record store is here - profile, organisations, records,
 > custom sections, points, phrasings, tags, drafts and the native export - the
-> composition a resume is, and its history: versions, snapshots and the usage
-> index. A diff between two versions and restore follow.
+> composition a resume is, and its history: versions, snapshots, comparison,
+> restore and the usage index.
 
 ## Installation
 

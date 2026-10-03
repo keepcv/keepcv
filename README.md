@@ -9,7 +9,8 @@ and it stays there permanently. Resumes are *generated views* over that store:
 select what is relevant, choose a template, produce a document. Nothing you
 write is ever lost to make something fit.
 
-> **Status: early development.** Not yet usable. There is no release.
+> **Status: early development.** The app runs locally from a checkout. There is
+> no release yet.
 
 ## The idea
 
@@ -41,13 +42,31 @@ tool.
   behind an account. Trust in a tool like this comes from being able to leave
   it.
 
-## Development
+## Running locally
 
-Requires Node 24+ and pnpm via corepack.
+Requires Node 24+ and pnpm via corepack. From the repository root:
 
 ```sh
 corepack enable
 pnpm install
+pnpm build
+node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
+```
+
+Open the URL the launcher prints, including its `#token=...` fragment. The
+launcher serves the web app and API together at `http://127.0.0.1:4319`.
+
+The command keeps the store and its readable backup in `.keepcv-scratch`, an
+ignored directory inside the checkout. Reuse it to keep your data between runs,
+or choose another directory with `--data-dir`. Stop the launcher with `Ctrl+C`.
+
+See the [launcher README](apps/cli/README.md) for its commands and sign-in modes.
+
+## Development
+
+Run the repository checks:
+
+```sh
 pnpm check
 ```
 

@@ -10,6 +10,10 @@ and a resume is a selection over it.
 
 ## Usage
 
+To run the unpublished launcher from a checkout, follow
+[Running locally](../../README.md#running-locally). The `npx` examples below
+apply to a published release.
+
 ```sh
 npx keepcv serve
 ```

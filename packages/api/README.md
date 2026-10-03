@@ -13,8 +13,8 @@ framework-internal RPC would not be.
 > release yet. Today it serves the whole record store - the profile, contact
 > channels, organisations, custom sections, records, points, phrasings, tags,
 > drafts and everything hanging off them - the composition a resume is, its
-> history, and the boot payload and the native export and import. A diff between
-> two versions and restore follow. There is no search route and no composition
+> history with version comparison and restore, and the boot payload and the
+> native export and import. There is no search route and no composition
 > route: both are pure functions over the boot payload, in `@keepcv/core`.
 
 ## Installation
