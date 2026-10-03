@@ -17,7 +17,8 @@ The workspace root and `@keepcv/web` are private.
    drivers, generated-file checks and an isolated install of the packed packages.
    Release builds do not restore dependency or build caches.
 4. The verified tarballs, SHA-512 digests, commit and release notes are uploaded
-   as a run artifact retained for 14 days.
+   as a run artifact retained for 14 days. A separate job downloads that artifact
+   and verifies its bytes, commit and branch version, including in `verify` mode.
 5. For `trusted` or `bootstrap` mode, the publish job waits for approval in the
    `npm` environment. It downloads that run's artifacts, checks their digests,
    commit and version, then publishes with provenance and lifecycle scripts
