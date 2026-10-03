@@ -104,4 +104,6 @@ without requesting another version bump.
 
 See [Releasing](docs/RELEASING.md) for preparation, package validation and
 publishing. The GitHub Release workflow publishes after the versioning change
-has passed review and CI, and the maintainer approves the `npm` environment.
+has passed review and CI and is synchronized to `release/<version>`. Select that
+branch and a mode when running the workflow; the version comes from the branch
+and package metadata. The maintainer approves the `npm` environment to publish.

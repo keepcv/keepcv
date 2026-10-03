@@ -3,10 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Prepared launcher version on main (for example 0.1.0)
-        required: true
-        type: string
       mode:
         description: Verify artifacts, publish with OIDC, or bootstrap new npm packages
         required: true
@@ -26,10 +22,8 @@ permissions:
 
 jobs:
   validate:
-    if: github.repository == 'keepcv/keepcv' && github.ref == 'refs/heads/main'
+    if: github.repository == 'keepcv/keepcv'
     uses: ./.github/workflows/test.yml
-    with:
-      release-version: ${{ inputs.version }}
 
   publish:
     needs: validate
@@ -53,7 +47,7 @@ jobs:
       - name: Publish verified tarballs
         working-directory: release
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.release-version }}
           RELEASE_MODE: ${{ inputs.mode }}
           NODE_AUTH_TOKEN: ${{ inputs.mode == 'bootstrap' && secrets.NPM_BOOTSTRAP_TOKEN || '' }}
         run: |
@@ -64,7 +58,7 @@ jobs:
           node release-artifacts.mjs publish
 
   announce:
-    needs: publish
+    needs: [validate, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -82,5 +76,5 @@ jobs:
         working-directory: release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.release-version }}
         run: node release-artifacts.mjs github
