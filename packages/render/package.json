@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/render",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Turn a KeepCV ResumeDocument into a file someone can send.",
   "keywords": [
     "keepcv",
@@ -32,6 +32,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {

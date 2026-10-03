@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "KeepCV domain logic. Pure: no I/O, no database, no network. Runs unchanged in Node and the browser.",
   "keywords": [
     "keepcv",
@@ -32,6 +32,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {

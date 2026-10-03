@@ -27,10 +27,11 @@
     "lint:types": "node --max-old-space-size=8192 ./node_modules/eslint/bin/eslint.js .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "check": "turbo run typecheck test && pnpm lint && pnpm lint:types",
+    "check": "turbo run typecheck test && pnpm lint && pnpm lint:types && pnpm test:release",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
-    "release": "turbo run build && changeset publish"
+    "release:check": "pnpm build && node scripts/check-release.mjs",
+    "test:release": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

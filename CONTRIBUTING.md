@@ -52,6 +52,7 @@ silently checks it out as a text file containing the target path.
 | `pnpm test` | Vitest across every package |
 | `pnpm check` | All of the above |
 | `pnpm changeset` | Record a change for the next release |
+| `pnpm release:check` | Build, pack and exercise an isolated install |
 
 All of these run in CI and all must pass.
 
@@ -96,6 +97,11 @@ confined to those has nothing to say in a changelog. Anything else that
 genuinely does not - a comment, a rename nobody can observe - takes
 `pnpm changeset add --empty`, which records that the omission was a decision.
 
-Nothing has been published, so the changesets on `main` describe a first
-release rather than a diff from one. Write each entry for someone reading the
-changelog with no other context.
+Write each changeset for someone reading the changelog with no other context.
+Versioning consumes those entries into package changelogs. A versioning change
+adds a deliberate empty changeset afterwards, so the same CI gate applies
+without requesting another version bump.
+
+See [Releasing](docs/RELEASING.md) for preparation, package validation and
+publishing. The GitHub Release workflow publishes after the versioning change
+has passed review and CI, and the maintainer approves the `npm` environment.

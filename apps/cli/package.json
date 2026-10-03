@@ -1,6 +1,6 @@
 {
   "name": "keepcv",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Run KeepCV locally: a career data store that compiles into resumes.",
   "keywords": [
     "keepcv",
@@ -20,12 +20,16 @@
   },
   "homepage": "https://github.com/keepcv/keepcv/tree/main/apps/cli#readme",
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "bin": {
     "keepcv": "./dist/index.js"
   },
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {

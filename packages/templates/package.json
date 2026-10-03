@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/templates",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "KeepCV resume templates and the contract every renderer binds to.",
   "keywords": [
     "keepcv",
@@ -32,6 +32,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {
