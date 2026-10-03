@@ -71,8 +71,8 @@ if (mode === "publish") {
       { timeout: 120_000 },
     );
     process.stdout.write(stdout);
-    await waitForPublished(pkg);
   }
+  await waitForPublished(release.packages);
 } else {
   for (const pkg of release.packages) {
     assert(existing.has(pkg.name), `${pkg.name}@${pkg.version} has not been published`);

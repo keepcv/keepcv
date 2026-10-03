@@ -94,8 +94,10 @@ match the launcher package version; no workflow input repeats that version.
 Validation and artifact verification both enforce this before publication.
 Before publishing any package, registry preflight checks every requested version
 and refuses an existing version with a different tarball digest. Identical
-versions can be skipped when retrying a partial publication. A successful publish
-waits for registry visibility with bounded retries; the announcement checks every
+versions can be skipped when retrying a partial publication. Missing packages
+are submitted before verification so npm's scans can proceed together. Registry
+visibility is checked every thirty seconds for up to thirty minutes, and already
+verified packages are not queried again. The announcement checks every
 published digest again before creating tags or a GitHub release.
 
 **Native export and import, with the round-trip test, belong here** rather than
