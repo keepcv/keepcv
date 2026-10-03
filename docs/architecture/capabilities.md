@@ -92,6 +92,11 @@ tags and the GitHub release. Publishing is an explicit workflow dispatch from
 `release/<version>` after synchronizing reviewed `main`. The branch suffix must
 match the launcher package version; no workflow input repeats that version.
 Validation and artifact verification both enforce this before publication.
+Before publishing any package, registry preflight checks every requested version
+and refuses an existing version with a different tarball digest. Identical
+versions can be skipped when retrying a partial publication. A successful publish
+waits for registry visibility with bounded retries; the announcement checks every
+published digest again before creating tags or a GitHub release.
 
 **Native export and import, with the round-trip test, belong here** rather than
 later. Once that test exists, everything built afterwards inherits a test proving

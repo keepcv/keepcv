@@ -5,10 +5,11 @@ import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { releaseVersion } from "./release-branch.mjs";
+import { preflight, waitForPublished } from "./release-registry.mjs";
 
 const exec = promisify(execFile);
 const mode = process.argv[2] ?? "verify";
-assert(["verify", "publish", "github"].includes(mode));
+assert(["verify", "preflight", "publish", "github"].includes(mode));
 const release = JSON.parse(await readFile("release.json", "utf8"));
 assert.match(release.commit, /^[a-f0-9]{40}$/);
 assert.equal(release.packages.length, new Set(release.packages.map((pkg) => pkg.name)).size);
@@ -30,21 +31,16 @@ for (const pkg of release.packages) {
 process.stdout.write(`Verified ${release.packages.length} tarballs from ${release.commit}\n`);
 if (mode === "verify") process.exit(0);
 
-assert.equal(process.env.GITHUB_ACTIONS, "true", "Publish through the GitHub Release workflow");
-assert.equal(process.env.GITHUB_REPOSITORY, "keepcv/keepcv");
-releaseVersion(process.env.GITHUB_REF, launcher.version);
-
-async function registryVersion(pkg) {
-  const response = await fetch(
-    `https://registry.npmjs.org/${encodeURIComponent(pkg.name)}/${pkg.version}`,
-    {
-      signal: AbortSignal.timeout(30_000),
-    },
-  );
-  if (response.status === 404) return undefined;
-  assert(response.ok, `Registry lookup for ${pkg.name}: ${response.status}`);
-  return await response.json();
+if (mode !== "preflight") {
+  assert.equal(process.env.GITHUB_ACTIONS, "true", "Publish through the GitHub Release workflow");
+  assert.equal(process.env.GITHUB_REPOSITORY, "keepcv/keepcv");
+  releaseVersion(process.env.GITHUB_REF, launcher.version);
 }
+const existing = await preflight(release.packages);
+process.stdout.write(
+  `Registry preflight passed; ${existing.size} matching versions already published\n`,
+);
+if (mode === "preflight") process.exit(0);
 
 if (mode === "publish") {
   const { stdout: npmVersion } = await exec("npm", ["--version"]);
@@ -54,7 +50,7 @@ if (mode === "publish") {
     "npm 11.5.1+ is required",
   );
   for (const pkg of release.packages) {
-    if (await registryVersion(pkg)) {
+    if (existing.has(pkg.name)) {
       process.stdout.write(`Already published: ${pkg.name}@${pkg.version}\n`);
       continue;
     }
@@ -75,12 +71,11 @@ if (mode === "publish") {
       { timeout: 120_000 },
     );
     process.stdout.write(stdout);
-    const published = await registryVersion(pkg);
-    assert.equal(published?.dist.integrity, pkg.integrity, `Registry bytes differ for ${pkg.name}`);
+    await waitForPublished(pkg);
   }
 } else {
   for (const pkg of release.packages) {
-    assert(await registryVersion(pkg), `${pkg.name}@${pkg.version} has not been published`);
+    assert(existing.has(pkg.name), `${pkg.name}@${pkg.version} has not been published`);
   }
   const repo = "keepcv/keepcv";
   const { stdout } = await exec("gh", ["api", `repos/${repo}/git/matching-refs/tags/`]);
