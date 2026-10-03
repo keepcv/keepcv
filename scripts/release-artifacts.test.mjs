@@ -122,6 +122,47 @@ test("verifies a matching release branch", async (t) => {
   await run(cwd, "verify", { GITHUB_REF: "refs/heads/release/0.1.0" });
 });
 
+test("submits every missing package before waiting for npm availability", async (t) => {
+  const { cwd, release } = await fixture(t);
+  release.packages.push({ ...release.packages[0], name: "@keepcv/core" });
+  await writeFile(join(cwd, "release.json"), JSON.stringify(release));
+  const preload = join(cwd, "publish-mock.mjs");
+  await writeFile(
+    preload,
+    `import assert from "node:assert/strict";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { promisify } from "node:util";
+let submissions = 0;
+childProcess.execFile = () => { throw new Error("Unexpected external command"); };
+childProcess.execFile[promisify.custom] = async (command, args) => {
+  assert.equal(command, "npm");
+  if (args[0] === "--version") return { stdout: "11.19.0" };
+  assert.equal(args[0], "publish");
+  return { stdout: "Accepted submission " + ++submissions + "\\n" };
+};
+syncBuiltinESMExports();
+globalThis.fetch = async () => {
+  if (submissions === 0) return new Response("{}", { status: 404 });
+  assert.equal(submissions, 2, "Verification began before all submissions completed");
+  return new Response(JSON.stringify({ dist: { integrity: ${JSON.stringify(release.packages[0].integrity)} } }), { status: 200 });
+};
+`,
+  );
+  const { stdout } = await run(
+    cwd,
+    "publish",
+    {
+      GITHUB_ACTIONS: "true",
+      GITHUB_REPOSITORY: "keepcv/keepcv",
+      GITHUB_REF: "refs/heads/release/0.1.0",
+    },
+    ["--import", pathToFileURL(preload).href],
+  );
+  assert.match(stdout, /Accepted submission 2/);
+  assert.equal(stdout.match(/Registry bytes verified:/g).length, 2);
+});
+
 test("refuses non-release branches, malformed versions and version mismatches", async (t) => {
   const { cwd } = await fixture(t);
   for (const ref of [

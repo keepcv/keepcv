@@ -38,10 +38,10 @@ test("publication waits for registry propagation and complete integrity metadata
     { status: 200, body: {} },
     { status: 200, body: { dist: { integrity: pkg.integrity } } },
   ]);
-  const pending = waitForPublished(pkg);
+  const pending = waitForPublished([pkg]);
   for (let attempt = 0; attempt < 2; attempt++) {
     await setImmediate();
-    t.mock.timers.tick(5_000);
+    t.mock.timers.tick(30_000);
   }
   await pending;
   assert.equal(calls(), 3);
@@ -49,7 +49,7 @@ test("publication waits for registry propagation and complete integrity metadata
 
 test("publication stops immediately when visible bytes differ", async (t) => {
   const calls = registry(t, [{ status: 200, body: { dist: { integrity: "sha512-other" } } }]);
-  await assert.rejects(waitForPublished(pkg), /Registry bytes differ/);
+  await assert.rejects(waitForPublished([pkg]), /Registry bytes differ/);
   assert.equal(calls(), 1);
 });
 
@@ -57,13 +57,33 @@ test("publication fails clearly after bounded propagation retries", async (t) =>
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const calls = registry(t, [{ status: 404 }]);
   const pending = assert.rejects(
-    waitForPublished(pkg),
-    /did not become visible.*retry the workflow/,
+    waitForPublished([pkg]),
+    /did not become visible.*retry after npm scanning completes/,
   );
-  for (let attempt = 0; attempt < 11; attempt++) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await setImmediate();
+    t.mock.timers.tick(30_000);
+  }
+  await pending;
+  assert.equal(calls(), 61);
+});
+
+test("waits through a multi-minute scan and stops querying packages already verified", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 0 });
+  const calls = new Map();
+  t.mock.method(globalThis, "fetch", async (url) => {
+    calls.set(url, (calls.get(url) ?? 0) + 1);
+    const visible = url.includes("keepcv/0.1.1") || Date.now() >= 180_000;
+    return new Response(JSON.stringify({ dist: { integrity: pkg.integrity } }), {
+      status: visible ? 200 : 404,
+    });
+  });
+  const pending = waitForPublished([{ ...pkg, name: "keepcv" }, pkg]);
+  pending.catch(() => {});
+  for (let attempt = 0; attempt < 36; attempt++) {
     await setImmediate();
     t.mock.timers.tick(5_000);
   }
   await pending;
-  assert.equal(calls(), 12);
+  assert.deepEqual([...calls.values()], [1, 7]);
 });

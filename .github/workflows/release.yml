@@ -48,7 +48,7 @@ jobs:
     needs: [validate, verify]
     if: inputs.mode != 'verify'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 50
     environment: npm
     permissions:
       contents: read

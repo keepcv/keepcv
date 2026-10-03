@@ -139,10 +139,13 @@ are skipped only when their digests match the verified tarballs. Every version
 is checked before any package is published, and the announcement job checks
 them again before creating tags. A conflicting existing version stops the run;
 prepare a new version for the complete package set instead of rerunning it.
-After each successful publish, registry visibility and complete integrity
-metadata are retried up to twelve times, five seconds apart. A visible digest
-mismatch fails immediately. Existing tags and releases are not moved or
-replaced. Registry errors other than a missing version fail the run. Never
+All missing packages are submitted before waiting for availability, so their
+scans can proceed together. Registry visibility and complete integrity metadata
+are checked every thirty seconds for up to thirty minutes; verified packages
+are removed from subsequent lookups. A visible digest mismatch fails immediately.
+The publish job allows fifty minutes for submission and verification. Existing
+tags and releases are not moved or replaced. Registry errors other than a
+missing version fail the run. Never
 unpublish or overwrite a version to repair it.
 
 The partial `0.1.0` bootstrap published five libraries before an immediate
@@ -151,9 +154,19 @@ files and did not match the reviewed tarball. The launcher was not published.
 `0.1.1` replaces that incomplete package set with matching internal dependencies;
 do not rerun the `0.1.0` bootstrap.
 
+npm scans newly published versions before making them installable. npm reports
+a typical delay of around five minutes, sometimes fifteen minutes or more.
+A successful `npm publish` therefore does not prove immediate availability.
+If the wait expires, check npm notifications for a scan hold or rejection and
+confirm the accepted versions are visible before retrying; a 404 alone does not
+prove a version was never submitted.
+
 After the artifact retention window, run a new verification from the same
 reviewed commit before retrying. Do not rebuild a failed release from newer
-source under the same version number.
+package contents under the same version number. A workflow-only repair can
+rebuild from a newer reviewed commit, provided every package digest matches the
+previous artifact before retrying. If any package differs, prepare a new version
+for the complete package set.
 
 After publishing, from outside the checkout:
 
@@ -170,6 +183,8 @@ root and launcher READMEs only after the first release is actually available.
 
 - [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/): workflow
   identity, OIDC, provenance and package-level setup.
+- [npm publish-time scanning](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/):
+  availability delays after a successful publish.
 - [GitHub Actions security](https://docs.github.com/en/actions/reference/security/secure-use):
   immutable action pins, minimal job permissions and credential isolation.
 - [GitHub environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments):
