@@ -16,13 +16,16 @@ function registry(t, responses) {
 
 test("preflight accepts only identical existing versions and leaves absent versions to publish", async (t) => {
   registry(t, [{ status: 404 }, { status: 200, body: { dist: { integrity: pkg.integrity } } }]);
-  assert.deepEqual(await preflight([{ ...pkg, name: "keepcv" }, pkg]), new Set([pkg.name]));
+  assert.deepEqual(await preflight([{ ...pkg, name: "@keepcv/cli" }, pkg]), new Set([pkg.name]));
 });
 
 test("preflight refuses a later package with different bytes or missing integrity", async (t) => {
   for (const body of [{ dist: { integrity: "sha512-placeholder" } }, {}]) {
     registry(t, [{ status: 404 }, { status: 200, body }]);
-    await assert.rejects(preflight([{ ...pkg, name: "keepcv" }, pkg]), /Registry bytes differ/);
+    await assert.rejects(
+      preflight([{ ...pkg, name: "@keepcv/cli" }, pkg]),
+      /Registry bytes differ/,
+    );
   }
 });
 
@@ -73,12 +76,12 @@ test("waits through a multi-minute scan and stops querying packages already veri
   const calls = new Map();
   t.mock.method(globalThis, "fetch", async (url) => {
     calls.set(url, (calls.get(url) ?? 0) + 1);
-    const visible = url.includes("keepcv/0.1.1") || Date.now() >= 180_000;
+    const visible = url.includes("%40keepcv%2Fcli/0.1.1") || Date.now() >= 180_000;
     return new Response(JSON.stringify({ dist: { integrity: pkg.integrity } }), {
       status: visible ? 200 : 404,
     });
   });
-  const pending = waitForPublished([{ ...pkg, name: "keepcv" }, pkg]);
+  const pending = waitForPublished([{ ...pkg, name: "@keepcv/cli" }, pkg]);
   pending.catch(() => {});
   for (let attempt = 0; attempt < 36; attempt++) {
     await setImmediate();

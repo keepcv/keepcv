@@ -23,14 +23,14 @@ async function fixture(t) {
     commit: "a".repeat(40),
     packages: [
       {
-        name: "keepcv",
+        name: "@keepcv/cli",
         version: "0.1.0",
-        file: "keepcv-0.1.0.tgz",
+        file: "keepcv-cli-0.1.0.tgz",
         integrity: `sha512-${createHash("sha512").update(bytes).digest("base64")}`,
       },
     ],
   };
-  await writeFile(join(cwd, "keepcv-0.1.0.tgz"), bytes);
+  await writeFile(join(cwd, "keepcv-cli-0.1.0.tgz"), bytes);
   await writeFile(join(cwd, "release.json"), JSON.stringify(release));
   return { cwd, release };
 }
@@ -57,7 +57,7 @@ test("verifies the exact reviewed bytes without registry access", async (t) => {
 
 test("refuses a tarball changed after the build job", async (t) => {
   const { cwd } = await fixture(t);
-  await writeFile(join(cwd, "keepcv-0.1.0.tgz"), "changed package");
+  await writeFile(join(cwd, "keepcv-cli-0.1.0.tgz"), "changed package");
   await assert.rejects(run(cwd), (error) => /changed after validation/.test(error.stderr));
 });
 
@@ -72,7 +72,7 @@ test("refuses a different release commit or requested version", async (t) => {
 
 test("refuses artifact paths outside the downloaded directory", async (t) => {
   const { cwd, release } = await fixture(t);
-  release.packages[0].file = "../keepcv-0.1.0.tgz";
+  release.packages[0].file = "../keepcv-cli-0.1.0.tgz";
   await writeFile(join(cwd, "release.json"), JSON.stringify(release));
   await assert.rejects(run(cwd), (error) => /ERR_ASSERTION/.test(error.stderr));
 });
@@ -161,6 +161,54 @@ globalThis.fetch = async () => {
   );
   assert.match(stdout, /Accepted submission 2/);
   assert.equal(stdout.match(/Registry bytes verified:/g).length, 2);
+});
+
+test("announces the scoped launcher using its package tag", async (t) => {
+  const { cwd, release } = await fixture(t);
+  const preload = join(cwd, "github-mock.mjs");
+  await writeFile(
+    preload,
+    `import assert from "node:assert/strict";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { promisify } from "node:util";
+const tag = "@keepcv/cli@0.1.0";
+let tagged = false;
+childProcess.execFile = () => { throw new Error("Unexpected external command"); };
+childProcess.execFile[promisify.custom] = async (command, args) => {
+  assert.equal(command, "gh");
+  if (args[0] === "api" && args[1].endsWith("git/matching-refs/tags/")) return { stdout: "[]" };
+  if (args.includes("POST")) {
+    assert(args.includes("ref=refs/tags/" + tag));
+    tagged = true;
+    return { stdout: "{}" };
+  }
+  if (args[0] === "api") {
+    if (!args[1].endsWith("releases/tags/" + tag)) {
+      throw { stderr: "Unexpected GitHub release tag: " + args[1] };
+    }
+    throw { stderr: "HTTP 404" };
+  }
+  assert.deepEqual(args.slice(0, 3), ["release", "create", tag]);
+  assert(tagged);
+  assert(args.includes("--verify-tag"));
+  return { stdout: "" };
+};
+syncBuiltinESMExports();
+globalThis.fetch = async () => new Response(JSON.stringify({ dist: { integrity: ${JSON.stringify(release.packages[0].integrity)} } }), { status: 200 });
+`,
+  );
+  const { stdout } = await run(
+    cwd,
+    "github",
+    {
+      GITHUB_ACTIONS: "true",
+      GITHUB_REPOSITORY: "keepcv/keepcv",
+      GITHUB_REF: "refs/heads/release/0.1.0",
+    },
+    ["--import", pathToFileURL(preload).href],
+  );
+  assert.match(stdout, /GitHub release ready: @keepcv\/cli@0.1.0/);
 });
 
 test("refuses non-release branches, malformed versions and version mismatches", async (t) => {

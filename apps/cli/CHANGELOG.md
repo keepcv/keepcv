@@ -1,4 +1,18 @@
-# keepcv
+# @keepcv/cli
+
+## 0.1.2
+
+### Patch Changes
+
+- Publish the complete package set under the @keepcv organization, with the launcher named @keepcv/cli and its executable still named keepcv. Use fresh matching internal versions after the library-only 0.1.1 publication.
+- Updated dependencies
+  - @keepcv/api@0.1.2
+  - @keepcv/ats-lint@0.1.2
+  - @keepcv/core@0.1.2
+  - @keepcv/db@0.1.2
+  - @keepcv/interop@0.1.2
+  - @keepcv/render@0.1.2
+  - @keepcv/schema@0.1.2
 
 ## 0.1.1
 

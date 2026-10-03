@@ -1,6 +1,6 @@
 # Releasing KeepCV
 
-Releases are published through GitHub Actions. The public packages are `keepcv`
+Releases are published through GitHub Actions. The public packages are `@keepcv/cli`
 and `@keepcv/api`, `@keepcv/ats-lint`, `@keepcv/core`, `@keepcv/db`,
 `@keepcv/interop`, `@keepcv/render`, `@keepcv/schema` and `@keepcv/templates`.
 The workspace root and `@keepcv/web` are private.
@@ -8,7 +8,7 @@ The workspace root and `@keepcv/web` are private.
 ## How the pipeline works
 
 1. Prepare versions and changelogs with Changesets on a branch, then review and
-   merge the pull request. The first complete release is prepared as `0.1.1`.
+   merge the pull request. The first complete release is prepared as `0.1.2`.
 2. Synchronize `release/<version>` from reviewed `main`, then run **Actions ->
    Release -> Run workflow**, selecting that branch and a mode. There is no
    version input: the branch suffix must match the launcher package version.
@@ -26,10 +26,10 @@ The workspace root and `@keepcv/web` are private.
    commit and version, then publishes with provenance and lifecycle scripts
    disabled. It does not check out source or install project dependencies.
 6. A separate job with GitHub write permission creates package tags and a GitHub
-   release named `keepcv@<version>`, attaching all tarballs and `release.json`.
+   release named `@keepcv/cli@<version>`, attaching all tarballs and `release.json`.
 
 Only `release/<version>` branches in `keepcv/keepcv` can release. The version
-must be stable semver, such as `release/0.1.1`; `main`, tags, prereleases and
+must be stable semver, such as `release/0.1.2`; `main`, tags, prereleases and
 version mismatches fail validation. Concurrent releases are serialized;
 an in-progress publish is never cancelled by a newer run. The build job has no
 publish credentials, the publish job has no GitHub write permission, and the
@@ -51,21 +51,27 @@ pinned to commit SHAs with readable version labels; Dependabot proposes weekly
 updates. This pipeline uses the built-in `GITHUB_TOKEN` and needs no personal GitHub token or
 permission for Actions to create pull requests.
 
+Automatic deletion of merged PR work branches is enabled. Active deletion
+rulesets preserve `release/*` branches and all tags. Use `prepare/<version>`
+for release preparation PRs, then create the versioned release branch after
+merging. Delete merged work branches locally; retain release branches and tags.
+
 ## Bootstrap the first npm release
 
 npm trusted publishers are configured on existing packages. New packages need
 an initial authenticated publication before that trust can be registered.
 
-1. Sign in to npm, enable 2FA, and confirm you can publish `keepcv` and packages
-   in the `@keepcv` scope. A registry 404 does not prove name ownership.
+1. Sign in to npm, enable 2FA, and confirm you can publish packages in the
+   `@keepcv` organization scope, including the new `@keepcv/cli` launcher.
+   A registry 404 does not prove publication permission.
 2. Create a short-lived granular token with **Read and write (publish and
    stage)** and **Bypass two-factor authentication** for this initial CI publish.
-   Scope it as narrowly as npm permits while allowing creation of the missing
-   packages; an uncreated unscoped name may require All Packages temporarily.
+   Limit package access to the `@keepcv` scope while allowing creation of missing
+   packages in that scope.
    Organisation management permissions are not needed.
 3. Add it as the **environment secret** `NPM_BOOTSTRAP_TOKEN` in `npm`. Never
    put the value in a workflow input, issue, repository file or chat.
-4. Run Release from branch `release/0.1.1` with mode `verify`. Inspect the
+4. Run Release from branch `release/0.1.2` with mode `verify`. Inspect the
    artifacts and logs, then run from the same branch with mode `bootstrap` and
    approve the publish job. No version needs to be typed.
 5. After publication, configure trusted publishing on each of the nine npm
@@ -151,8 +157,10 @@ unpublish or overwrite a version to repair it.
 The partial `0.1.0` bootstrap published five libraries before an immediate
 registry lookup failed. Its pre-existing `@keepcv/core@0.1.0` lacked runtime
 files and did not match the reviewed tarball. The launcher was not published.
-`0.1.1` replaces that incomplete package set with matching internal dependencies;
-do not rerun the `0.1.0` bootstrap.
+The `0.1.1` attempt published all eight libraries, but its token could not create
+the unscoped launcher. `0.1.2` publishes the launcher as `@keepcv/cli` and uses
+matching internal versions across the complete package set. Do not rerun the
+earlier bootstrap attempts.
 
 npm scans newly published versions before making them installable. npm reports
 a typical delay of around five minutes, sometimes fifteen minutes or more.
@@ -167,12 +175,15 @@ package contents under the same version number. A workflow-only repair can
 rebuild from a newer reviewed commit, provided every package digest matches the
 previous artifact before retrying. If any package differs, prepare a new version
 for the complete package set.
+Repacking can change digests when pnpm reorders dependency keys in a manifest;
+even when runtime files match, a published version still requires its exact
+reviewed artifact for recovery.
 
 After publishing, from outside the checkout:
 
 ```sh
-npx --yes keepcv@0.1.1 --version
-npx --yes keepcv@0.1.1 serve --data-dir ./keepcv-release-smoke
+npx --yes @keepcv/cli@0.1.2 --version
+npx --yes @keepcv/cli@0.1.2 serve --data-dir ./keepcv-release-smoke
 ```
 
 Open the complete printed URL and stop with Ctrl+C. Check all nine npm package
