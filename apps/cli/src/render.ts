@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import type { LintReport } from "@keepcv/ats-lint";
 import { lint } from "@keepcv/ats-lint";
-import { compile } from "@keepcv/core";
+import { captureManifest, newUuid, type Repositories, renderManifest } from "@keepcv/core";
 import type { ExportTarget, Loss } from "@keepcv/interop";
 import { lossOf, toJsonResume, toLatex, toTypst } from "@keepcv/interop";
 import { toDocx } from "@keepcv/interop/files";
@@ -64,8 +64,8 @@ function matching(store: Store, asked: string): Resume[] {
 const targetOf = (format: Format | undefined): ExportTarget | undefined =>
   format === undefined || format === "html" || format === "site" ? undefined : format;
 
-export async function renderResume(request: RenderRequest): Promise<RenderResult> {
-  const held = await withStore(request.dataDir, async (r) => await r.store.readCurrent());
+async function writeResume(request: RenderRequest, r: Repositories): Promise<RenderResult> {
+  const held = await r.store.readCurrent();
 
   if (request.resume === undefined) {
     return { choose: live(held.resumes), because: "none named" };
@@ -76,16 +76,26 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
   if (only === undefined) return { choose: live(held.resumes), because: "no match" };
   if (found.length > 1) return { choose: found, because: "ambiguous" };
 
-  const document = compile(held, only.id, { generatedAt: new Date().toISOString() });
-  // Only the resume being absent answers undefined, and it came from this
-  // store.
-  if (document === undefined) throw new Error(`${only.name} did not compile`);
+  const manifest = captureManifest(held, only.id);
+  if (manifest === undefined) throw new Error(`${only.name} did not compile`);
+  const document = renderManifest(manifest, held.phrasingRevisions, {
+    generatedAt: new Date().toISOString(),
+  });
+  const record = async () =>
+    await r.versions.append({
+      id: newUuid(),
+      resumeId: only.id,
+      trigger: "export",
+      restoredFromVersionId: null,
+      manifest,
+    });
 
   // No lint report: the linter is about what a machine reading a resume gets
   // out of it, and nothing here is going to a machine that reads resumes.
   if (request.format === "site") {
     const path = request.out ?? SITE_FILE_NAME;
     await writeFile(path, renderSite(document), "utf8");
+    await record();
     return { wrote: path, page: true };
   }
 
@@ -94,13 +104,19 @@ export async function renderResume(request: RenderRequest): Promise<RenderResult
     const writer = WRITERS[target];
     const path = request.out ?? fileNameFor(document, writer.extension);
     await writeFile(path, writer.write(document));
+    await record();
     return { wrote: path, loss: lossOf(document, target) };
   }
 
   const html = renderHtml(document);
   const path = request.out ?? fileNameFor(document, "html");
   await writeFile(path, html, "utf8");
+  await record();
   return { wrote: path, report: lint({ document, html }) };
+}
+
+export async function renderResume(request: RenderRequest): Promise<RenderResult> {
+  return await withStore(request.dataDir, async (r) => await writeResume(request, r));
 }
 
 const TIER: Record<LintReport["tier"], string> = {

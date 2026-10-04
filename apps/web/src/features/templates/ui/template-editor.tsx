@@ -1,9 +1,11 @@
 import type { Store, StoredTemplate, TemplateSpec } from "@keepcv/schema";
-import { extraCssSchema } from "@keepcv/schema";
+import { extraCssSchema, templateSpecSchema } from "@keepcv/schema";
 import type { TemplateConfig } from "@keepcv/templates";
 import { DESIGN_KNOBS, FIXTURE_DOCUMENT, fromSpec } from "@keepcv/templates";
-import { useEffect, useState } from "react";
-import { Empty } from "../../../app/states.js";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { z } from "zod";
+import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
 import { TextAreaField, TextField } from "../../../components/ui/field.js";
@@ -11,18 +13,19 @@ import { PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { counted } from "../../../lib/label.js";
+import { SaveState } from "../../../lib/save-state.js";
+import { STORE_KEY } from "../../../lib/store-cache.js";
+import { useAutosave } from "../../../lib/use-autosave.js";
 import { TemplateFrame } from "../../resumes/ui/template-frame.js";
 import { useUpdateTemplate } from "../api/use-templates.js";
 import { designFile, designFileName } from "../model/design-file.js";
 import { templateRows } from "../model/template-rows.js";
 import { Control } from "./control.js";
 
-// Long enough that dragging a slider is one write rather than forty. Each one
-// carries the row's `updatedAt`, and a burst would race its own answers.
-const SETTLES_AFTER = 500;
+const validSpec = (spec: TemplateSpec) => extraCssSchema.safeParse(spec.extraCss).success;
+const recoverableSpec = templateSpecSchema.extend({ extraCss: z.string() });
+const readSpec = (value: unknown) => recoverableSpec.safeParse(value).data ?? null;
 
-// A design leaves as a file the templates screen reads back: the store holds it
-// so it round-trips through the export, and this is what makes one shareable.
 function DownloadDesign({ name, spec }: { name: string; spec: TemplateSpec }) {
   const href = URL.createObjectURL(designFile(name, spec));
 
@@ -52,9 +55,20 @@ function Editor({
   template: StoredTemplate;
 }) {
   const update = useUpdateTemplate(client);
+  const queries = useQueryClient();
   const [name, setName] = useState(template.name);
-  const [pending, setPending] = useState<TemplateSpec | null>(null);
-  const spec = pending ?? template.spec;
+  const autosave = useAutosave(
+    `keepcv.template-edit:${template.id}`,
+    readSpec,
+    async (spec: TemplateSpec) => {
+      const current =
+        queries.getQueryData<Store>(STORE_KEY)?.templates.find((row) => row.id === template.id) ??
+        template;
+      await update.mutateAsync({ template: current, patch: { spec } });
+    },
+    validSpec,
+  );
+  const spec = autosave.pending ?? template.spec;
   const built = fromSpec(template.id, name, spec);
   const design: TemplateConfig = built.defaultConfig;
   const cssProblem = extraCssSchema.safeParse(spec.extraCss).error?.issues[0]?.message;
@@ -63,22 +77,8 @@ function Editor({
     (resume) => resume.templateId === template.id && resume.archivedAt === null,
   ).length;
 
-  useEffect(() => {
-    if (pending === null) return;
-    const timer = setTimeout(() => {
-      if (extraCssSchema.safeParse(pending.extraCss).success) {
-        mutate({ template, patch: { spec: pending } });
-        setPending(null);
-      }
-    }, SETTLES_AFTER);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [pending, template, mutate]);
-
   const change = (key: string, value: string | number) => {
-    setPending({ ...spec, settings: { ...spec.settings, [key]: value } });
+    autosave.change({ ...spec, settings: { ...spec.settings, [key]: value } });
   };
 
   return (
@@ -93,6 +93,12 @@ function Editor({
           ? "On no resume yet."
           : `On ${counted(usedBy, "resume", "resumes")}. Editing changes what they print next time, not what a saved version says they printed.`}
       </PageHeader>
+      <SaveState
+        saving={autosave.saving}
+        pending={autosave.pending !== null}
+        error={autosave.error}
+        retry={autosave.flush}
+      />
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
@@ -102,13 +108,22 @@ function Editor({
               <TextField label="Name" value={name} onChange={setName} />
               <Button
                 icon="confirm"
-                disabled={name.trim() === "" || name === template.name}
+                disabled={
+                  name.trim() === "" ||
+                  name === template.name ||
+                  update.isPending ||
+                  autosave.pending !== null ||
+                  autosave.saving
+                }
                 onClick={() => {
                   mutate({ template, patch: { name: name.trim() } });
                 }}
               >
                 Rename it
               </Button>
+              {update.error === null || autosave.error !== null ? null : (
+                <Failure error={update.error} />
+              )}
             </PanelBody>
           </Panel>
 
@@ -140,7 +155,7 @@ function Editor({
                 value={spec.extraCss}
                 placeholder=".kc-name { letter-spacing: 0; }"
                 onChange={(extraCss) => {
-                  setPending({ ...spec, extraCss });
+                  autosave.change({ ...spec, extraCss });
                 }}
               />
               {cssProblem === undefined ? null : (
@@ -181,5 +196,5 @@ export function TemplateEditorScreen({
     );
   }
 
-  return <Editor store={store} client={client} template={template} />;
+  return <Editor key={template.id} store={store} client={client} template={template} />;
 }

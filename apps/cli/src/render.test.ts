@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { costs, listing, renderResume, verdict } from "./render.js";
 import { aStore, BOOTS_REAL_STORES } from "./store.harness.js";
+import { withStore } from "./store.js";
 
 describe("keepcv render", () => {
   it(
@@ -12,6 +13,10 @@ describe("keepcv render", () => {
       const out = join(dataDir, "out.html");
 
       try {
+        await expect(
+          renderResume({ dataDir, resume: "staff", out: join(dataDir, "missing", "out.html") }),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(await withStore(dataDir, async (r) => await r.versions.list())).toEqual([]);
         const result = await renderResume({ dataDir, resume: "staff", out });
         expect(result).toMatchObject({ wrote: out });
 
@@ -28,6 +33,13 @@ describe("keepcv render", () => {
         // Nothing to fetch, which is the whole point of a file someone sends
         // on.
         expect(html).not.toMatch(/<link\b|<script\b|@import/i);
+        await renderResume({ dataDir, resume: "staff", out, format: "jsonresume" });
+        const versions = await withStore(dataDir, async (r) => await r.versions.list());
+        expect(versions).toHaveLength(1);
+        expect(versions[0]).toMatchObject({
+          trigger: "export",
+          manifest: { resume: { name: "Staff engineer, 2026" } },
+        });
       } finally {
         await rm(dataDir, { recursive: true, force: true });
       }

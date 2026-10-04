@@ -7,8 +7,8 @@ import {
   bodyOf,
   buildVariant,
   canonicalPhrasing,
+  draftBody,
   draftTarget,
-  draftText,
 } from "./editor.js";
 
 const EPOCH = "2026-01-01T00:00:00.000Z";
@@ -23,39 +23,41 @@ function aDraft(body: unknown) {
 }
 
 describe("the editor's transitions", () => {
-  const typed = "Cut p95 latency to 120ms";
-  const committed = "Cut p95 latency";
+  const typed = bodyOf("Cut p95 latency to 120ms");
+  const committed = bodyOf("Cut p95 latency");
 
   it("keeps a keystroke out of history and a settle out of the draft table", () => {
     expect(actionFor({ typed, committed, hasDraft: false }, "debounce")).toBe("save-draft");
     expect(actionFor({ typed, committed, hasDraft: false }, "settle")).toBe("commit");
   });
 
-  // A history of 400 single-character revisions is not history, and a draft
-  // that outlives the text it differed from would offer to restore what is
-  // already there.
   it("throws the draft away rather than appending when the words come back", () => {
     expect(actionFor({ typed: committed, committed, hasDraft: true }, "settle")).toBe(
       "discard-draft",
     );
-    expect(actionFor({ typed: `  ${committed}  `, committed, hasDraft: true }, "debounce")).toBe(
-      "discard-draft",
-    );
     expect(actionFor({ typed: committed, committed, hasDraft: false }, "settle")).toBe("none");
+    expect(
+      actionFor(
+        { typed: [{ t: "text", v: "  Cut p95 latency  " }], committed, hasDraft: true },
+        "settle",
+      ),
+    ).toBe("discard-draft");
+    expect(
+      actionFor({ typed: [{ t: "b", c: committed }], committed, hasDraft: false }, "settle"),
+    ).toBe("commit");
   });
 });
 
 describe("a drafted body", () => {
   it("survives the round trip through the draft table", () => {
-    expect(draftText(aDraft({ body: bodyOf("  a wording  ") }))).toBe("a wording");
+    expect(draftBody(aDraft({ body: bodyOf("  a wording  ") }))).toEqual(bodyOf("a wording"));
   });
 
-  // A draft is deliberately unvalidated, so an older shape has to read as no
-  // draft rather than as a crash on the screen that opens it.
+  // An unrecognized draft body must not crash the editor on open.
   it("reads a body this build does not understand as nothing waiting", () => {
-    expect(draftText(undefined)).toBeUndefined();
-    expect(draftText(aDraft({ body: "plain" }))).toBeUndefined();
-    expect(draftText(aDraft({}))).toBeUndefined();
+    expect(draftBody(undefined)).toBeUndefined();
+    expect(draftBody(aDraft({ body: "plain" }))).toBeUndefined();
+    expect(draftBody(aDraft({}))).toBeUndefined();
   });
 });
 
@@ -69,7 +71,7 @@ describe("a new wording", () => {
       phrasingSetId: point.phrasingSetId,
       variant: "short",
       label: "  for infra roles  ",
-      text: "Cut latency",
+      body: bodyOf("Cut latency"),
     });
 
     expect(input.body).toEqual([{ t: "text", v: "Cut latency" }]);
@@ -84,7 +86,7 @@ describe("a new wording", () => {
       phrasingSetId: point.phrasingSetId,
       variant: "long",
       label: "   ",
-      text: "Cut p95 latency across forty services",
+      body: bodyOf("Cut p95 latency across forty services"),
     });
 
     expect(input.label).toBeNull();

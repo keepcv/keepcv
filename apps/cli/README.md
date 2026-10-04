@@ -4,7 +4,7 @@ Run [KeepCV](https://github.com/keepcv/keepcv) on your own machine. A career
 data store that compiles into resumes: the store holds everything permanently,
 and a resume is a selection over it.
 
-> **Status: early development.** There is no release yet. It serves the HTTP API
+> **Status: early development.** Available on npm. It serves the HTTP API
 > and the web app, writes a resume out as a file, reports on what the store
 > holds, and keeps a readable backup of the whole store beside it.
 
@@ -14,9 +14,7 @@ web package or build tools are needed to run it.
 
 ## Usage
 
-To run the unpublished launcher from a checkout, follow
-[Running locally](../../README.md#running-locally). The `npx` examples below
-apply to a published release.
+Start the published launcher without a checkout:
 
 ```sh
 npx @keepcv/cli serve
@@ -58,6 +56,7 @@ The contract is at `/v1/openapi.json`, which needs no token.
 | `--host <address>` | `127.0.0.1` |
 | `--data-dir <path>` | `~/.keepcv` |
 | `--auth <mode>` | `token` |
+| `--origin <url>` | loopback only unless a public origin is supplied |
 
 `keepcv --help` lists every command, and `keepcv --version` says what is
 installed.
@@ -106,13 +105,15 @@ in. `keepcv serve` refuses to bind off loopback with nothing but that token.
 
 ```sh
 npx @keepcv/cli set-password
-npx @keepcv/cli serve --host 0.0.0.0 --auth password
+npx @keepcv/cli serve --host 0.0.0.0 --auth password --origin http://192.168.1.20:4319
 ```
 
 The password is hashed with scrypt into `auth.json` in the data directory, mode
 `0600`. Signing in sets a cookie that lasts thirty days and survives a restart.
 Setting a password again ends every session there is. Sign-in is throttled to
-five wrong answers a minute. Pipe it instead of typing it if you are scripting:
+five wrong answers a minute. The cookie carries `Secure` when `--origin` uses
+HTTPS. The launcher itself serves HTTP; terminate HTTPS at your proxy.
+Pipe it instead of typing it if you are scripting:
 `echo "$PASSWORD" | npx @keepcv/cli set-password`.
 
 **Or whatever is already in front of it.** If this is going behind Tailscale,
@@ -120,13 +121,20 @@ oauth2-proxy, Authelia, Cloudflare Access or a corporate gateway, let that thing
 say who you are:
 
 ```sh
-npx @keepcv/cli serve --auth proxy --proxy-header X-Forwarded-User
+npx @keepcv/cli serve --auth proxy --proxy-header X-Forwarded-User --origin https://cv.example.com
 ```
 
 The header is read **only** from `--proxy-from`, which defaults to `127.0.0.1`.
 Point it at your proxy if the proxy is elsewhere, because anything that can
 reach the port directly can otherwise set that header itself. `--proxy-user`
 pins the one value it may carry.
+
+`--origin` is the address opened in the browser, including its port when it
+is not the scheme's default. It is required when binding off loopback, and
+available on loopback for a reverse proxy. The proxy must preserve its public
+Host header. Requests with another Host or a different Origin are refused;
+forwarded host/protocol headers do not override this configuration. Use a
+password or proxy mode for a public origin; token mode remains loopback only.
 
 There is no account system here, and there will not be one. All three modes
 answer the same single owner: this is your store, and the question is only
@@ -146,6 +154,15 @@ margins and the page breaks are all in the file already.
 
 Nothing marked private travels in it. Evidence is not a field the resume
 document has.
+
+Successful exports record the exact selection and committed wording as a
+resume version. Repeated exports of unchanged content reuse the current
+version. Open wording drafts are not committed by exporting. Browser downloads
+also attempt to record history, but remain available while the store is offline;
+the app reports when a version could not be saved. Printing records the
+document handed to the print dialog, including when the dialog is cancelled.
+Exporting an existing version keeps using that version rather than capturing
+the current resume.
 
 After it writes the file it reads it back the way a machine would and says what
 it found: an email address nothing can extract, a heading no system looks for, a

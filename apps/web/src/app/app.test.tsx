@@ -1479,9 +1479,7 @@ describe("a resume and its template", () => {
     expect(await screen.findByText(/within the 1 page you asked for/)).toBeInTheDocument();
   });
 
-  // The document was compiled in this tab, so the file is written from what the
-  // browser already holds and the store is asked nothing.
-  it("writes the resume out as one file, without a request for it", async () => {
+  it("writes the resume locally and records the exported version", async () => {
     const { store, server, resume } = aResumeToPrint();
     const point = store.points[0];
     if (point === undefined) throw new Error("the filled store holds a point");
@@ -1514,7 +1512,18 @@ describe("a resume and its template", () => {
     // Structural, not filtered: `ResumeDocument` has no field evidence could
     // travel in, so no exporter can leak it even by mistake.
     expect(html).not.toContain("private.test");
-    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+    await screen.findByText("Export recorded in history");
+    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([
+      {
+        method: "POST",
+        path: "/v1/resume-versions",
+        body: expect.objectContaining({
+          resumeId: resume.id,
+          trigger: "export",
+          expectedDocumentHash: expect.any(String),
+        }),
+      },
+    ]);
   });
 
   it("writes the same selection as a page to put online", async () => {
@@ -1551,7 +1560,8 @@ describe("a resume and its template", () => {
     // The page is the output that goes somewhere public, and it is the same
     // document, so evidence cannot reach it any more than it reaches a resume.
     expect(html).not.toContain("private.test");
-    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+    await screen.findByText("Export recorded in history");
+    expect(server.versions).toHaveLength(1);
   });
 
   it("writes it as JSON Resume, and says first what will not fit", async () => {
@@ -1594,7 +1604,8 @@ describe("a resume and its template", () => {
     expect(parsed.basics.name).toBe("Ada Lovelace");
     expect(parsed.work[0]?.highlights).toContain("Cut p95 latency from 800ms to 120ms");
     expect(await file.text()).not.toContain("private.test");
-    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+    await screen.findByText("Export recorded in history");
+    expect(server.versions).toHaveLength(1);
   });
 
   // One control for four formats, and the loss list tracks it: a panel that
@@ -1638,7 +1649,8 @@ describe("a resume and its template", () => {
     expect(source.startsWith("#set page(")).toBe(true);
     expect(source).toContain("Cut p95 latency from 800ms to 120ms");
     expect(source).not.toContain("private.test");
-    expect(server.calls.filter((call) => call.method !== "GET")).toEqual([]);
+    await screen.findByText("Export recorded in history");
+    expect(server.versions).toHaveLength(1);
   });
 
   // The browser is the PDF writer: the template's stylesheet already states the

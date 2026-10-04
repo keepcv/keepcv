@@ -11,7 +11,7 @@ import type {
 import { draftSchema, phrasingSchema, phrasingSetSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
 import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
-import { bodyOf, draftTarget } from "../model/editor.js";
+import { draftTarget } from "../model/editor.js";
 
 function withoutDraft(store: Store, phrasingId: Uuid): Store {
   return {
@@ -22,9 +22,7 @@ function withoutDraft(store: Store, phrasingId: Uuid): Store {
   };
 }
 
-// The boot payload narrows revisions to what each phrasing currently says, so
-// the cached row is that projection and an edit rewrites it in place. The store
-// still appends; the re-read brings back the new revision's own id.
+// Only the cache changes in place; persisted revisions stay append-only.
 function withText(store: Store, phrasing: Phrasing, body: RichText): Store {
   const derived = deriveRevision(body);
   return {
@@ -37,26 +35,26 @@ function withText(store: Store, phrasing: Phrasing, body: RichText): Store {
 
 export interface DraftText {
   phrasingId: Uuid;
-  text: string;
+  body: RichText;
 }
 
 export function useSaveDraft(client: ApiClient) {
   return useStoreMutation<DraftText, void>({
-    send: async ({ phrasingId, text }) => {
+    send: async ({ phrasingId, body }) => {
       await unwrap(
         await client.v1.drafts[":targetKind"][":targetId"][":field"].$put({
           param: draftTarget(phrasingId),
-          json: { body: { body: bodyOf(text) } },
+          json: { body: { body } },
         }),
       );
     },
-    optimistic: (store, { phrasingId, text }) => {
+    optimistic: (store, { phrasingId, body }) => {
       const at = now();
       const draft = draftSchema.parse({
         ...draftTarget(phrasingId),
         createdAt: at,
         updatedAt: at,
-        body: { body: bodyOf(text) },
+        body: { body },
       });
       const kept = withoutDraft(store, phrasingId);
       return { ...kept, drafts: [...kept.drafts, draft] };
@@ -79,19 +77,18 @@ export function useDiscardDraft(client: ApiClient) {
 
 export interface CommitText {
   phrasing: Phrasing;
-  text: string;
+  body: RichText;
   hasDraft: boolean;
 }
 
-// Appending and dropping the draft are one commit: a draft that outlived the
-// revision it became would offer to restore text the phrasing already says.
+// Remove the draft only after the revision append succeeds.
 export function useCommitPhrasing(client: ApiClient) {
   return useStoreMutation<CommitText, void>({
-    send: async ({ phrasing, text, hasDraft }) => {
+    send: async ({ phrasing, body, hasDraft }) => {
       await unwrap(
         await client.v1.phrasings[":id"].revisions.$post({
           param: { id: phrasing.id },
-          json: { body: bodyOf(text) },
+          json: { body },
         }),
       );
       if (!hasDraft) return;
@@ -101,8 +98,8 @@ export function useCommitPhrasing(client: ApiClient) {
         }),
       );
     },
-    optimistic: (store, { phrasing, text }) =>
-      withText(withoutDraft(store, phrasing.id), phrasing, bodyOf(text)),
+    optimistic: (store, { phrasing, body }) =>
+      withText(withoutDraft(store, phrasing.id), phrasing, body),
   });
 }
 

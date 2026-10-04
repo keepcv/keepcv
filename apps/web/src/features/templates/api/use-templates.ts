@@ -44,6 +44,7 @@ export function useUpdateTemplate(client: ApiClient) {
       ),
     optimistic: (store, { template, patch }) =>
       upsert(store, templateSchema.parse({ ...template, ...patch, updatedAt: now() })),
+    settle: upsert,
   });
 }
 

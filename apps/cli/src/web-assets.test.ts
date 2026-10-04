@@ -14,6 +14,7 @@ beforeAll(async () => {
   await mkdir(join(root, "assets"), { recursive: true });
   await writeFile(join(root, "index.html"), "<!doctype html><title>KeepCV</title>");
   await writeFile(join(root, "assets", "index-abc123.js"), "console.log(1)");
+  await writeFile(join(root, "theme.js"), "document.documentElement.classList.add('dark')");
   await writeFile(join(outside, "secrets.txt"), "the launch token");
   serve = serveWebApp(root);
 });
@@ -34,13 +35,12 @@ describe("the web app handler", () => {
     expect(await response.text()).toBe("console.log(1)");
   });
 
-  // Asset names carry a content hash, so they can be cached forever. The entry
-  // document cannot: a stale one loads assets the new build has deleted.
-  it("caches hashed assets forever and the entry document never", async () => {
+  it("caches hashed assets forever and unversioned entry files never", async () => {
     expect((await get("/assets/index-abc123.js")).headers.get("cache-control")).toContain(
       "immutable",
     );
     expect((await get("/")).headers.get("cache-control")).toBe("no-store");
+    expect((await get("/theme.js")).headers.get("cache-control")).toBe("no-store");
   });
 
   // A single-page app resolves its own routes, so an unknown path is a route

@@ -1,27 +1,30 @@
 import type { LengthBudget, Pagination } from "@keepcv/core";
-import { lengthBudget } from "@keepcv/core";
-import type { Resume, ResumeDocument, Store } from "@keepcv/schema";
+import { compile, lengthBudget } from "@keepcv/core";
+import type { Resume, ResumeDocument, ResumePatch, Store } from "@keepcv/schema";
+import { resumePatchSchema, resumeSchema } from "@keepcv/schema";
 import type { Template, TemplateConfig } from "@keepcv/templates";
 import { resolveTemplate } from "@keepcv/templates";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import { Button } from "../../../components/ui/button.js";
 import { SelectField } from "../../../components/ui/field.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { cn } from "../../../lib/cn.js";
+import { SaveState } from "../../../lib/save-state.js";
+import { STORE_KEY } from "../../../lib/store-cache.js";
+import { useAutosave } from "../../../lib/use-autosave.js";
 import { pickableTemplates } from "../../templates/model/template-rows.js";
 import { Control } from "../../templates/ui/control.js";
 import { usePatchResume } from "../api/use-resumes.js";
+import { useCaptureVersion } from "../api/use-versions.js";
 import { DownloadResume } from "./download.js";
 import { LintPanel } from "./lint-report.js";
 import { TemplateFrame } from "./template-frame.js";
 
-// Long enough that dragging a slider is one write rather than forty. Each one
-// carries the row's `updatedAt`, and a burst would race its own answers.
-const SETTLES_AFTER = 500;
+const validSettings = () => true;
+const readSettings = (value: unknown) => resumePatchSchema.safeParse(value).data ?? null;
 
-// Only what differs from the template's own defaults, so a default that moves
-// in a later version moves with it.
 function overrides(template: Template, config: TemplateConfig): TemplateConfig {
   return Object.fromEntries(
     Object.entries(config).filter(([key, value]) => template.defaultConfig[key] !== value),
@@ -35,8 +38,6 @@ const LIMITS = [
   { value: "3", label: "Three pages" },
 ];
 
-// Enough to act on. The whole tail of a long resume is over the limit, and
-// listing it would push the template's own settings off the screen.
 const NAMES_AT_MOST = 5;
 
 const pages = (count: number) => `${String(count)} ${count === 1 ? "page" : "pages"}`;
@@ -108,40 +109,40 @@ export function DocumentPreview({
   client: ApiClient;
   resume: Resume;
   document: ResumeDocument;
-  // Off beside the composition, where this is live feedback on what was just
-  // placed and a panel of export and template controls would cover the thing it
-  // changes. They belong to the preview's own tab, which is one click away.
   settings?: boolean;
 }) {
-  const stored = resolveTemplate(document);
   const patch = usePatchResume(client);
+  const capture = useCaptureVersion(client, resume.id, "export");
+  const queries = useQueryClient();
+  const autosave = useAutosave(
+    `keepcv.resume-settings:${resume.id}`,
+    readSettings,
+    async (changes: ResumePatch) => {
+      const current =
+        queries.getQueryData<Store>(STORE_KEY)?.resumes.find((row) => row.id === resume.id) ??
+        resume;
+      await patch.mutateAsync({ resume: current, patch: changes });
+    },
+    validSettings,
+  );
+  const shownResume = resumeSchema.parse({ ...resume, ...autosave.pending });
+  const shown =
+    compile(
+      { ...store, resumes: store.resumes.map((row) => (row.id === resume.id ? shownResume : row)) },
+      resume.id,
+      {
+        generatedAt: document.meta.generatedAt,
+        locale: document.meta.locale,
+      },
+    ) ?? document;
+  const stored = resolveTemplate(shown);
   const [open, setOpen] = useState(settings);
-  const [pending, setPending] = useState<TemplateConfig | null>(null);
   const [pagination, setPagination] = useState<Pagination>({ pages: 1, pageOf: {}, breaks: [] });
-  const config = pending ?? stored.config;
-  const { mutate } = patch;
-  const budget = lengthBudget(document, pagination, resume.pageLimit);
+  const config = stored.config;
+  const budget = lengthBudget(shown, pagination, shownResume.pageLimit);
   const onPaginate = useCallback((measured: Pagination) => {
     setPagination(measured);
   }, []);
-
-  useEffect(() => {
-    if (pending === null) return;
-    const timer = setTimeout(() => {
-      mutate({
-        resume,
-        patch: {
-          templateId: stored.template.id,
-          templateConfig: overrides(stored.template, pending),
-        },
-      });
-      setPending(null);
-    }, SETTLES_AFTER);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [pending, resume, stored.template, mutate]);
 
   // Container queries: in half a workspace a 16rem sidebar off a viewport
   // breakpoint left the page 350px wide. A vertical scrollbar computes the
@@ -177,17 +178,33 @@ export function DocumentPreview({
           // and changed nothing the reader could see.
           <aside className="space-y-5 @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pr-2">
             <Group title="Take it with you">
-              <DownloadResume document={document} />
+              {store.drafts.some((draft) => draft.targetKind === "phrasing") ? (
+                <p className="text-xs text-caution-text">
+                  Unfinished wording drafts are not included in exports. Resume wording uses
+                  committed revisions.
+                </p>
+              ) : null}
+              <DownloadResume
+                document={shown}
+                onExport={async (exported) => {
+                  if (!(await autosave.flush()))
+                    throw new Error("The preview settings could not be saved.");
+                  return await capture.mutateAsync(exported);
+                }}
+              />
             </Group>
 
             <Group title="How it reads">
-              <LintPanel document={document} />
+              <LintPanel document={shown} />
               <SelectField
                 label="How long it may be"
                 options={LIMITS}
-                value={resume.pageLimit === null ? "" : String(resume.pageLimit)}
+                value={shownResume.pageLimit === null ? "" : String(shownResume.pageLimit)}
                 onChange={(chosen) => {
-                  mutate({ resume, patch: { pageLimit: chosen === "" ? null : Number(chosen) } });
+                  autosave.change({
+                    ...autosave.pending,
+                    pageLimit: chosen === "" ? null : Number(chosen),
+                  });
                 }}
               />
               <Budget budget={budget} />
@@ -202,8 +219,7 @@ export function DocumentPreview({
                 }))}
                 value={stored.template.id}
                 onChange={(templateId) => {
-                  setPending(null);
-                  mutate({ resume, patch: { templateId, templateConfig: {} } });
+                  autosave.change({ ...autosave.pending, templateId, templateConfig: {} });
                 }}
               />
               {store.templates.some((row) => row.id === stored.template.id) ? (
@@ -221,10 +237,20 @@ export function DocumentPreview({
                   field={field}
                   config={config}
                   onChange={(value) => {
-                    setPending({ ...config, [field.key]: value });
+                    autosave.change({
+                      ...autosave.pending,
+                      templateId: stored.template.id,
+                      templateConfig: overrides(stored.template, { ...config, [field.key]: value }),
+                    });
                   }}
                 />
               ))}
+              <SaveState
+                saving={autosave.saving}
+                pending={autosave.pending !== null}
+                error={autosave.error}
+                retry={autosave.flush}
+              />
               <ul className="space-y-1 text-xs leading-relaxed text-text-subtle">
                 {stored.template.complianceNotes.map((note) => (
                   <li key={note}>{note}</li>
@@ -239,10 +265,10 @@ export function DocumentPreview({
             <TemplateFrame
               title={`${resume.name}, as it prints`}
               styles={stored.template.styles(config)}
-              overflowsFrom={resume.pageLimit ?? undefined}
+              overflowsFrom={shownResume.pageLimit ?? undefined}
               onPaginate={onPaginate}
             >
-              {stored.template.render(document, config)}
+              {stored.template.render(shown, config)}
             </TemplateFrame>
           </div>
         </div>

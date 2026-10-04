@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { reusePublishedTarball } from "./reuse-published.mjs";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -72,6 +73,7 @@ for (const { directory, manifest } of packages) {
     }
   }
   for (const path of files) {
+    assert(!path.endsWith(".map"), `${manifest.name} ships a source map: ${path}`);
     assert(!/\.(test|harness)\./.test(path), `${manifest.name} ships a test: ${path}`);
     assert(!path.startsWith("src/"), `${manifest.name} ships source: ${path}`);
   }
@@ -96,6 +98,11 @@ for (const { directory, manifest } of packages) {
     assert([...files].some((path) => path.startsWith("schema/") && path.endsWith(".json")));
   }
   dependencies[manifest.name] = `file:${tarball.replaceAll("\\", "/")}`;
+  if (process.env.REUSE_PUBLISHED_PACKAGES === "true") {
+    if (await reusePublishedTarball(manifest, tarball)) {
+      process.stdout.write(`Reused identical published ${manifest.name}@${manifest.version}\n`);
+    }
+  }
   artifacts.push({
     name: manifest.name,
     version: manifest.version,

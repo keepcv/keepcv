@@ -2,6 +2,7 @@ import { createRoute } from "@hono/zod-openapi";
 import {
   captureManifest,
   diffManifests,
+  documentContentHash,
   manifestRefs,
   NotFoundError,
   type Repositories,
@@ -11,6 +12,7 @@ import {
   type UnitOfWork,
 } from "@keepcv/core";
 import {
+  contentHashSchema,
   manifestDiffSchema,
   type PhrasingRevision,
   type ResumeManifest,
@@ -26,7 +28,7 @@ import {
   versionTriggerSchema,
 } from "@keepcv/schema";
 import { z } from "zod";
-import { mutate } from "../problems.js";
+import { ExportChangedError, mutate } from "../problems.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 import { applyCompositionPlan } from "./composition-plan.js";
@@ -62,6 +64,8 @@ const captureVersion = createRoute({
         id: uuidSchema,
         resumeId: uuidSchema,
         trigger: versionTriggerSchema,
+        expectedDocumentHash: contentHashSchema.optional(),
+        locale: z.string().min(2).optional(),
         restoredFromVersionId: uuidSchema.nullable().default(null),
       }),
     ),
@@ -71,7 +75,7 @@ const captureVersion = createRoute({
     200: jsonResponse(resumeVersionSchema, "the current version, because the manifest matched it"),
     201: jsonResponse(resumeVersionSchema, "the version as stored"),
     404: problemResponse("no resume of this owner has that id"),
-    409: problemResponse("the id is already taken"),
+    409: problemResponse("the id is already taken, or the exported preview no longer matches"),
   },
 });
 
@@ -213,8 +217,17 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     .openapi(captureVersion, async (c) => {
       const input = c.req.valid("json");
       const appended = await unitOfWork.run(async (r) => {
-        const manifest = captureManifest(await r.store.readCurrent(), input.resumeId);
+        const store = await r.store.readCurrent();
+        const manifest = captureManifest(store, input.resumeId);
         if (manifest === undefined) throw new NotFoundError("resume", input.resumeId);
+        if (input.expectedDocumentHash !== undefined) {
+          const document = renderManifest(manifest, store.phrasingRevisions, {
+            generatedAt: new Date().toISOString(),
+            ...(input.locale === undefined ? {} : { locale: input.locale }),
+          });
+          if (documentContentHash(document) !== input.expectedDocumentHash)
+            throw new ExportChangedError();
+        }
         return await r.versions.append({ ...input, manifest });
       });
       return appended.created ? c.json(appended.version, 201) : c.json(appended.version, 200);

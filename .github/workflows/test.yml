@@ -103,6 +103,8 @@ jobs:
 
       - name: Check release packages
         run: pnpm release:check
+        env:
+          REUSE_PUBLISHED_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
 
       - name: Test release guards
         run: pnpm test:release

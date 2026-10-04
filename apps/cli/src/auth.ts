@@ -175,10 +175,8 @@ function reply(body: unknown, status: number, cookie?: string): Response {
   });
 }
 
-function sessionCookie(value: string, seconds: number): string {
-  // No `Secure`: the launcher serves plain HTTP and a proxy in front of it is
-  // the only thing that could be terminating TLS.
-  return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${String(seconds)}`;
+function sessionCookie(value: string, seconds: number, secure = false): string {
+  return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${String(seconds)}${secure ? "; Secure" : ""}`;
 }
 
 function passwordFrom(body: unknown): string | undefined {
@@ -205,7 +203,11 @@ function signIn(stored: StoredAuth, ownerId: Uuid): (request: Request) => Promis
     }
 
     refused.length = 0;
-    const cookie = sessionCookie(mintSession(stored.secret, ownerId), SESSION_LASTS_MS / 1000);
+    const cookie = sessionCookie(
+      mintSession(stored.secret, ownerId),
+      SESSION_LASTS_MS / 1000,
+      new URL(request.url).protocol === "https:",
+    );
     return reply(undefined, 204, cookie);
   };
 }
@@ -243,7 +245,11 @@ export function launcherAuth(setting: AuthSetting, ownerId: Uuid): LauncherAuth 
           : await attempt(request);
       }
       if (pathname === "/auth/sign-out" && request.method === "POST") {
-        return reply(undefined, 204, sessionCookie("", 0));
+        return reply(
+          undefined,
+          204,
+          sessionCookie("", 0, new URL(request.url).protocol === "https:"),
+        );
       }
       return undefined;
     },

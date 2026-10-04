@@ -5,6 +5,7 @@ import { type AuthMode, createApi } from "@keepcv/api";
 import { runAsOwner } from "@keepcv/db";
 import { type AuthSetting, launcherAuth } from "./auth.js";
 import { mirrorPath, writeMirror } from "./mirror.js";
+import { acceptsRequest, CONTENT_SECURITY_POLICY, publicOrigin } from "./request-policy.js";
 import { openStore } from "./store.js";
 import { serveWebApp, webAssetsDir } from "./web-assets.js";
 
@@ -17,6 +18,7 @@ export interface RunningServer {
   port: number;
   host: string;
   mode: AuthMode;
+  origin: string | undefined;
   // Token mode only: the other two have a credential that outlives the run.
   token: string | undefined;
   mirror: string;
@@ -36,16 +38,24 @@ export async function startServer(options: {
   dataDir: string;
   host?: string;
   auth?: AuthSetting;
+  origin?: string | undefined;
   mirrorEveryMs?: number;
 }): Promise<RunningServer> {
   const setting: AuthSetting = options.auth ?? { mode: "token" };
   const host = options.host ?? DEFAULT_HOST;
+  const origin = options.origin === undefined ? undefined : publicOrigin(options.origin);
+  if (origin !== undefined && setting.mode === "token") {
+    throw new Error("--origin needs --auth password or --auth proxy.");
+  }
   if (!isLoopback(host) && setting.mode === "token") {
     throw new Error(
       `Serving on ${host} needs --auth password or --auth proxy: the launch token is minted per run and printed to this terminal.`,
     );
   }
 
+  if (!isLoopback(host) && origin === undefined) {
+    throw new Error("Binding off loopback needs --origin: the URL used to reach this store.");
+  }
   const { store, ownerId } = await openStore(options.dataDir);
 
   const auth = launcherAuth(setting, ownerId);
@@ -58,25 +68,41 @@ export async function startServer(options: {
   // Composed here, so `createApi` knows nothing about a filesystem, a cookie or
   // a password.
   const web = serveWebApp(webAssetsDir());
+  let port = options.port;
   const handle = async (request: Request, from: string | undefined): Promise<Response> => {
     // Proxy mode believes a header. Anything that did not arrive through the
     // upstream could have written that header itself.
-    if (!auth.trusts(from)) return new Response(null, { status: 403 });
+    if (!auth.trusts(from) || !acceptsRequest(request, port, origin)) {
+      return new Response("Host or Origin refused", { status: 403 });
+    }
 
     const { pathname } = new URL(request.url);
     if (pathname.startsWith("/v1/")) return await api.fetch(request);
-    return (await auth.routes(request)) ?? (await web(request));
+    const authRequest =
+      origin === undefined
+        ? request
+        : new Request(
+            new URL(new URL(request.url).pathname + new URL(request.url).search, origin),
+            request,
+          );
+    return (await auth.routes(authRequest)) ?? (await web(request));
   };
 
   const server = serve({
-    fetch: (request, env) => handle(request, env.incoming.socket.remoteAddress),
+    fetch: async (request, env) => {
+      const response = await handle(request, env.incoming.socket.remoteAddress);
+      response.headers.set("content-security-policy", CONTENT_SECURITY_POLICY);
+      response.headers.set("x-content-type-options", "nosniff");
+      response.headers.set("referrer-policy", "no-referrer");
+      return response;
+    },
     port: options.port,
     hostname: host,
   });
 
   // Without the `error` arm a busy port is an unhandled event, which takes the
   // process down with a stack trace instead of saying what is on the port.
-  const port = await new Promise<number>((resolve, reject) => {
+  port = await new Promise<number>((resolve, reject) => {
     server.once("listening", () => {
       const address = server.address();
       resolve(typeof address === "object" && address !== null ? address.port : options.port);
@@ -122,6 +148,7 @@ export async function startServer(options: {
     port,
     host,
     mode: auth.mode,
+    origin,
     token: auth.token,
     mirror: path,
     stop: async () => {

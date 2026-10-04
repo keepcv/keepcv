@@ -8,7 +8,7 @@ The workspace root and `@keepcv/web` are private.
 ## How the pipeline works
 
 1. Prepare versions and changelogs with Changesets on a branch, then review and
-   merge the pull request. The first complete release is prepared as `0.1.2`.
+   merge the pull request. The first complete release was published as `0.1.2`.
 2. Synchronize `release/<version>` from reviewed `main`, then run **Actions ->
    Release -> Run workflow**, selecting that branch and a mode. There is no
    version input: the branch suffix must match the launcher package version.
@@ -21,6 +21,12 @@ The workspace root and `@keepcv/web` are private.
    and verifies its bytes, commit and branch version, including in `verify` mode.
    It checks every target npm version before publication: any existing version
    must have the same SHA-512 digest as its reviewed tarball.
+   When a package version is already published, the release build compares its
+   complete file contents and manifest with npm's integrity-checked tarball.
+   Identical contents reuse the original registry bytes before the isolated
+   install; changed contents require a new version. This allows partial package
+   bumps without relying on cross-platform compression or JSON key ordering.
+   Publication and recovery still require exact SHA-512 equality.
 5. For `trusted` or `bootstrap` mode, the publish job waits for approval in the
    `npm` environment. It downloads that run's artifacts, checks their digests,
    commit and version, then publishes with provenance and lifecycle scripts
@@ -95,6 +101,11 @@ bypass-2FA tokens ends in January 2027; do not retain this as the regular releas
 path. npm's newer staged-publishing flow is an alternative if policy requires
 approval on npm itself, but this pipeline uses the GitHub environment approval.
 
+The first complete publication is finished. Trusted publishers are configured
+for all nine packages; the bootstrap token was revoked and its environment
+secret removed. Use `trusted` for the next new version to verify OIDC publication
+end to end. Bootstrap instructions above apply only when adding a new package.
+
 ## Preparing later versions
 
 Use Node 24+ and the pnpm version pinned in `package.json`, on a clean branch:
@@ -132,6 +143,19 @@ network access, packs into `.keepcv-release-check/packages/`, and installs only
 the launcher outside the checkout. Overrides resolve unpublished KeepCV
 dependencies to the tarballs; third-party dependencies come from the registry.
 The temporary installation is removed after the check.
+
+Packages contain JavaScript and TypeScript declarations, with no `.js.map` or
+`.d.ts.map` files. Build emission disables maps and each public manifest excludes
+old maps that might remain in a local `dist`; package validation refuses them.
+This applies to future versions. Existing npm publications, release attachments,
+release branches and tags remain unchanged.
+
+On a prepared release branch, `REUSE_PUBLISHED_PACKAGES=true pnpm release:check`
+also exercises partial-release reuse. In PowerShell, set
+`$env:REUSE_PUBLISHED_PACKAGES = 'true'`, run the command, then remove that
+environment variable. Do this only after versioning: changed files at an already
+published version are correctly refused. The Release workflow enables it
+automatically. Pull-request checks test the candidate tarballs directly.
 
 Also exercise a representative resume in the browser: import and review it,
 edit a phrasing, tailor the selection, print a PDF, compare history and reopen

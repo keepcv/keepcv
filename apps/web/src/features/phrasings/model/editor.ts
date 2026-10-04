@@ -1,4 +1,4 @@
-import { keyForPosition, newUuid, phrasingsOfSet, projectPlainText } from "@keepcv/core";
+import { deriveRevision, keyForPosition, newUuid, phrasingsOfSet } from "@keepcv/core";
 import type {
   Draft,
   DraftTarget,
@@ -10,6 +10,7 @@ import type {
   Uuid,
 } from "@keepcv/schema";
 import { phrasingInputSchema, richTextSchema } from "@keepcv/schema";
+import { trimBody } from "./markup.js";
 
 export const DRAFT_AFTER_MS = 800;
 export const COMMIT_AFTER_MS = 30_000;
@@ -18,8 +19,6 @@ export function draftTarget(phrasingId: Uuid): DraftTarget {
   return { targetKind: "phrasing", targetId: phrasingId, field: "body" };
 }
 
-// One paragraph and no marks yet: the schema allows bold, italic and links, and
-// the input that produces them is its own piece of work.
 export function bodyOf(text: string): RichText {
   const trimmed = text.trim();
   return trimmed === "" ? [] : [{ t: "text", v: trimmed }];
@@ -27,22 +26,26 @@ export function bodyOf(text: string): RichText {
 
 // A draft is deliberately unvalidated, so a body written by an older shape
 // reads as no draft rather than as a crash on open.
-export function draftText(draft: Draft | undefined): string | undefined {
+export function draftBody(draft: Draft | undefined): RichText | undefined {
   if (draft === undefined) return undefined;
   const parsed = richTextSchema.safeParse(draft.body["body"]);
-  return parsed.success ? projectPlainText(parsed.data) : undefined;
+  return parsed.success ? parsed.data : undefined;
 }
 
 export type EditorAction = "none" | "save-draft" | "discard-draft" | "commit";
 
 export interface EditorState {
-  typed: string;
-  committed: string;
+  typed: RichText;
+  committed: RichText;
   hasDraft: boolean;
 }
 
 export function actionFor(state: EditorState, trigger: "debounce" | "settle"): EditorAction {
-  if (state.typed.trim() === state.committed) return state.hasDraft ? "discard-draft" : "none";
+  if (
+    deriveRevision(trimBody(state.typed)).contentHash ===
+    deriveRevision(trimBody(state.committed)).contentHash
+  )
+    return state.hasDraft ? "discard-draft" : "none";
   return trigger === "debounce" ? "save-draft" : "commit";
 }
 
@@ -62,7 +65,7 @@ export interface NewVariant {
   phrasingSetId: Uuid;
   variant: PhrasingVariant;
   label: string;
-  text: string;
+  body: RichText;
 }
 
 // Started from the wording it is a variant of: a blank box is a phrasing that
@@ -75,6 +78,6 @@ export function buildVariant(store: Store, variant: NewVariant): PhrasingInput {
     variant: variant.variant,
     label: variant.label.trim() === "" ? null : variant.label.trim(),
     sortKey: keyForPosition(siblings, null, siblings.length),
-    body: bodyOf(variant.text),
+    body: variant.body,
   });
 }

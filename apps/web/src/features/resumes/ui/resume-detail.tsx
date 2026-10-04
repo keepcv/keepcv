@@ -89,6 +89,7 @@ function Workspace({
           <Empty title="Nothing to compile yet" spot="compose" />
         ) : (
           <DocumentPreview
+            key={resume.id}
             store={store}
             client={client}
             resume={resume}
@@ -133,7 +134,13 @@ function Chosen({
           {document === undefined ? (
             <Empty title="Nothing to compile yet" spot="compose" />
           ) : (
-            <DocumentPreview store={store} client={client} resume={resume} document={document} />
+            <DocumentPreview
+              key={resume.id}
+              store={store}
+              client={client}
+              resume={resume}
+              document={document}
+            />
           )}
         </div>
       );
