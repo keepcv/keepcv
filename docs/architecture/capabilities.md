@@ -412,6 +412,14 @@ CLI reads it on disk; what reaches the store is the reviewed intake. That keeps
 file parsing off the API surface entirely, and a resume - which is personal data
 - out of every request log between the tab and the store.
 
+The browser refuses resume files over 16 MiB before reading them. Magic bytes
+are read before a binary file is decoded as text. Word extraction runs in a
+dedicated worker that can be cancelled and is terminated after thirty seconds.
+The DOCX reader allows at most 512 ZIP entries and one document body, checks
+declared sizes before inflation, and counts actual XML bytes while inflating
+bounded input chunks. Its default XML budget is 4 MiB; library callers can pass
+another budget. A forged ZIP size cannot bypass the actual output budget.
+
 **The reconciliation interface is the point, not a wrapper around it.**
 `matchIntake(store, intake)` answers what each incoming thing looks like it
 already is, and `importPlan(store, intake, decisions)` answers the rows; both

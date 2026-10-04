@@ -526,8 +526,9 @@ Several of these look like bugs. They are not - do not "fix" them.
   The resulting error suggests installing `@types/node` - that is the wrong fix;
   move the I/O to `@keepcv/db` or `@keepcv/api`. Web Crypto's `getRandomValues` is
   `declare`d locally in `identity/uuid.ts` for the same reason.
-- **Dependency versions live in the `catalog:`**, one per dependency repo-wide.
-  Add versions there and reference `"catalog:"` in package manifests.
+- **Dependency versions live in catalogs.** Package manifests use the default
+  `catalog:`. A named catalog can retain a patched transitive legacy major when
+  an upstream still requires it; overrides reference that catalog too.
 - **PostgreSQL is the only dialect**, on a laptop and on a server. Local uses
   PGlite (real Postgres in WASM, no Docker). Do not introduce SQLite.
 - **Timestamp columns are `precision: 3`, not the Postgres default.** `updated_at`

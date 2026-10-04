@@ -166,7 +166,7 @@ async function chooseAuth(
     const stored = await readAuth(dataDir);
     return stored === undefined
       ? { refused: `No password is set for ${dataDir}. Run: keepcv set-password` }
-      : { setting: { mode: "password", stored } };
+      : { setting: { mode: "password", read: () => readAuth(dataDir) } };
   }
 
   const header = values["proxy-header"];

@@ -359,13 +359,19 @@ knob; a note written by hand would go on being printed after the design stopped
 earning it.
 
 **A design may carry CSS of its own, and it may not fetch.** `extraCss` is
-appended last so it wins, and the schema refuses `@import`, any `url()` that is
-not a `data:` one, and the string `</style` - React does not escape the children
-of a `style` element. Those are refusals, not lint findings, because a
-stylesheet that fetches is a resume that prints differently offline. What the
-CSS then does to the layout *is* a lint finding: the linter reads the rendered
-file, so a user's `position: absolute` is reported exactly as a shipped
-template's would be.
+appended last so it wins. New design writes and design-file imports tokenize CSS,
+decode escapes and allow known local at-rules and functions only. `url()` must
+contain a `data:` address; resource functions such as `image-set()` and unknown
+constructs are refused. The string `</style` is refused too - React does not
+escape a style element's children. These are refusals, not lint findings,
+because a stylesheet that fetches prints differently offline. Stored designs
+and manifests retain their original CSS so a stricter validator never destroys
+content or prevents native backup/restore. Rendering validates it again and
+omits unsafe or unsupported CSS with a compliance note; the saved bytes stay
+unchanged. Standalone HTML and site files include a CSP that refuses automatic
+resource loads except data images/fonts, permits inline styling, and refuses
+scripts, base overrides and form submissions. User-followed links still work.
+What the CSS does to layout remains a lint finding, read off the rendered file.
 
 **A design travels as a file, and the file is a spec with a name on it.**
 `templateFileSchema` is `{ name, spec }` - no id, no timestamps and no owner,

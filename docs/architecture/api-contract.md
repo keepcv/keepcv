@@ -552,11 +552,16 @@ no objects, base URL overrides or external framing. Inline styling is allowed
 for template previews and geometry, but inline scripts are not. The theme
 initializer is a blocking local script before first paint. Blob workers and
 frames support local parsers and exports; data images and fonts are local
-content. Responses also carry `nosniff` and `no-referrer`.
+content. Responses also carry `nosniff` and `no-referrer`. Protected API
+responses carry `Cache-Control: no-store`, including refusals.
 
 **The password mode.** `keepcv set-password` writes `auth.json` into the data
-directory, mode `0600`, holding a scrypt hash and a signing secret. The
-parameters are `N=2^14, r=8, p=1` - about 16MB and a tenth of a second - and are
+directory, mode `0600`, holding a scrypt hash and a signing secret. The file is
+replaced atomically. Password authentication reads it for every request; missing
+or malformed credentials refuse access. Running instances observe a password
+change without a restart. Sign-in also rechecks the signing secret after password
+verification before minting its cookie. The parameters are `N=2^14, r=8, p=1` -
+about 16MB and a tenth of a second - and are
 recorded in the stored string so raising them later does not lock anybody out.
 Node's own `scrypt` rather than argon2id, which is the better function and the
 only reason the launcher would take a native dependency; the cost of being wrong
@@ -567,9 +572,22 @@ A session is `<ownerId>.<expiry>.<hmac-sha256>` in a `keepcv.session` cookie -
 a session and there is no session table to keep; revocation is rotating the
 secret, which is what setting a password does. The cookie uses `Secure` when
 the declared public origin is HTTPS; a proxy terminates TLS because the launcher
-serves HTTP. Sign-in is throttled to five refusals a minute, since scrypt at
-a tenth of a second on its own leaves room for tens of thousands of guesses an
-hour.
+serves HTTP. Sign-in reserves an attempt before reading the body, and pending
+attempts count toward the five-attempt limit. Success clears completed refusals
+while preserving other pending attempts. Verification uses asynchronous scrypt.
+Sign-in bodies are limited to 8 KiB, including chunked requests, and must finish
+within ten seconds. Passwords have at most 1024 characters; setting a longer
+password is refused too. Sign-in is throttled to five refusals a minute, since
+scrypt at a tenth of a second on its own leaves room for tens of thousands of
+guesses an hour.
+
+The launcher protects its data directory and native backups. POSIX directories
+use mode `0700` and files use `0600`; Windows ACLs allow the current user, SYSTEM
+and Administrators, without inherited access. Temporary files are protected
+before content is written and atomically renamed into place. Existing mirrors
+have their access repaired even when their content is unchanged. An explicitly
+chosen backup's existing parent directory keeps its own access; the backup file
+itself is private. Storage paths used for access changes must not be symlinks.
 
 **The proxy mode.** `--auth proxy --proxy-header X-Forwarded-User` reads the user
 the upstream named. `--proxy-from` is the only address that header is read from,

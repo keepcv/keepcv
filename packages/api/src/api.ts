@@ -24,7 +24,6 @@ export const OPENAPI_PATH = "/v1/openapi.json";
 
 export interface ApiOptions {
   unitOfWork: UnitOfWork;
-  // Supplied by the implementation, so nothing here depends on a driver.
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
   authenticate: Authenticate;
 }
@@ -32,7 +31,7 @@ export interface ApiOptions {
 function answer(problem: Problem): Response {
   return new Response(JSON.stringify(problem), {
     status: problem.status as ContentfulStatusCode,
-    headers: { "content-type": "application/problem+json" },
+    headers: { "content-type": "application/problem+json", "cache-control": "no-store" },
   });
 }
 
@@ -47,12 +46,11 @@ export function createApi(options: ApiOptions) {
       await next();
       return;
     }
+    c.header("cache-control", "no-store");
     const ownerId = await authenticate(c.req.raw);
     if (ownerId === undefined) {
       throw new UnauthorizedError();
     }
-    // Entered once per request, so every call underneath is scoped by
-    // construction.
     await runAsOwner(ownerId, async () => {
       await next();
     });

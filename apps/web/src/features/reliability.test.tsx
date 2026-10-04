@@ -27,7 +27,7 @@ function mount(
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  return { ...mounted, router };
+  return { ...mounted, router, queries };
 }
 
 function downloads() {
@@ -285,6 +285,9 @@ it("recovers a failed settings save after reopening the template", async () => {
   await screen.findByRole("button", { name: "Retry saving" });
   await act(async () => {
     first.unmount();
+  });
+  await waitFor(() => {
+    expect(first.queries.isMutating()).toBe(0);
   });
   expect(window.localStorage.getItem(`keepcv.template-edit:${template.id}`)).not.toBeNull();
   mount(server.answer, `/templates/${template.id}`);

@@ -54,6 +54,8 @@ describe("an exported file", () => {
     expect(html.startsWith("<!doctype html>\n<html ")).toBe(true);
     expect(html).toContain('lang="en-GB"');
     expect(html).toMatch(/<meta charset="utf-8"\s*\/?>/i);
+    expect(html).toContain('http-equiv="Content-Security-Policy"');
+    expect(html).toContain("default-src &#x27;none&#x27;");
   });
 
   // React serialises a style child as raw text. If that ever stops being true,

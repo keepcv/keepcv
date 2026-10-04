@@ -8,8 +8,6 @@ import { describe, expect, it } from "vitest";
 import { readAuth, writePassword } from "./auth.js";
 import { startServer } from "./serve.js";
 
-// A PGlite store on disk is a WebAssembly boot plus a full migration run, which
-// is comfortably slower than the default per-test budget.
 const BOOTS_A_REAL_STORE = 60_000;
 
 function tokenOf(running: { token: string | undefined }): string {
@@ -26,10 +24,8 @@ describe("keepcv serve", () => {
       const url = (path: string) => `http://127.0.0.1:${running.port}${path}`;
 
       try {
-        // The contract is readable by tooling that has not been handed a token.
         expect((await fetch(url("/v1/openapi.json"))).status).toBe(200);
 
-        // The store is not, even on loopback.
         expect((await fetch(url("/v1/profile"))).status).toBe(401);
 
         const response = await fetch(url("/v1/profile"), {
@@ -63,7 +59,6 @@ describe("keepcv serve", () => {
         });
         expect(same.status).toBe(200);
 
-        // One origin: a client route gets the entry document, /v1 gets the API.
         const app = await fetch(url("/records"));
         expect(app.status).toBe(200);
         expect(app.headers.get("content-type")).toContain("text/html");
@@ -72,8 +67,6 @@ describe("keepcv serve", () => {
         expect(app.headers.get("x-content-type-options")).toBe("nosniff");
         expect(await app.text()).toContain('<div id="root">');
 
-        // The token is in the fragment the launcher prints, which the browser
-        // keeps to itself: the document it serves carries no token at all.
         expect((await (await fetch(url("/"))).text()).includes(tokenOf(running))).toBe(false);
       } finally {
         await running.stop();
@@ -83,8 +76,6 @@ describe("keepcv serve", () => {
     BOOTS_A_REAL_STORE,
   );
 
-  // Local mode holds exactly one owner, so relaunching has to find the store it
-  // left rather than mint a second one nothing can reach.
   it(
     "reopens the same store on the next launch",
     async () => {
@@ -104,7 +95,6 @@ describe("keepcv serve", () => {
         });
         expect(profileSchema.parse(await after.json()).id).toBe(created.id);
 
-        // A new launch means a new token, and the old one stops working.
         const stale = await fetch(`http://127.0.0.1:${second.port}/v1/profile`, {
           headers: { [SESSION_TOKEN_HEADER]: tokenOf(first) },
         });
@@ -117,9 +107,6 @@ describe("keepcv serve", () => {
     BOOTS_A_REAL_STORE,
   );
 
-  // A token minted per run and printed to a terminal is not a credential for an
-  // instance a network can reach: it cannot survive a restart and cannot be
-  // typed on the phone the store is being read from.
   it("refuses to bind off loopback with nothing but a launch token", async () => {
     const dataDir = await mkdtemp(join(tmpdir(), "keepcv-exposed-"));
     try {
@@ -134,6 +121,40 @@ describe("keepcv serve", () => {
 
 describe("keepcv serve --auth password", () => {
   it(
+    "revokes old credentials while the server remains running",
+    async () => {
+      const dataDir = await mkdtemp(join(tmpdir(), "keepcv-rotation-"));
+      await writePassword(dataDir, "the old password");
+      const running = await startServer({
+        port: 0,
+        dataDir,
+        auth: { mode: "password", read: () => readAuth(dataDir) },
+      });
+      const url = (path: string) => `http://127.0.0.1:${running.port}${path}`;
+      const signIn = (password: string) =>
+        fetch(url("/auth/sign-in"), { method: "POST", body: JSON.stringify({ password }) });
+      try {
+        const first = await signIn("the old password");
+        expect(first.status).toBe(204);
+        const cookie = first.headers.get("set-cookie")?.split(";")[0] ?? "";
+        await writePassword(dataDir, "the new password");
+        expect((await fetch(url("/v1/store"), { headers: { cookie } })).status).toBe(401);
+        expect((await signIn("the old password")).status).toBe(401);
+        const second = await signIn("the new password");
+        expect(second.status).toBe(204);
+        const current = second.headers.get("set-cookie")?.split(";")[0] ?? "";
+        expect((await fetch(url("/v1/store"), { headers: { cookie: current } })).status).toBe(200);
+        await rm(join(dataDir, "auth.json"));
+        expect((await fetch(url("/v1/store"), { headers: { cookie: current } })).status).toBe(401);
+        expect((await signIn("the new password")).status).toBe(401);
+      } finally {
+        await running.stop();
+        await rm(dataDir, { recursive: true, force: true });
+      }
+    },
+    BOOTS_A_REAL_STORE,
+  );
+  it(
     "uses an HTTPS public origin for real sign-in requests and secure cookies",
     async () => {
       const dataDir = await mkdtemp(join(tmpdir(), "keepcv-origin-"));
@@ -144,7 +165,7 @@ describe("keepcv serve --auth password", () => {
         port: 0,
         dataDir,
         origin: "https://cv.example.test",
-        auth: { mode: "password", stored },
+        auth: { mode: "password", read: () => readAuth(dataDir) },
       });
       try {
         const granted = await new Promise<{ status: number; cookie: string }>((resolve, reject) => {
@@ -194,7 +215,7 @@ describe("keepcv serve --auth password", () => {
       const running = await startServer({
         port: 0,
         dataDir,
-        auth: { mode: "password", stored },
+        auth: { mode: "password", read: () => readAuth(dataDir) },
       });
       const url = (path: string) => `http://127.0.0.1:${running.port}${path}`;
       const signIn = async (password: string): Promise<Response> =>
@@ -205,7 +226,6 @@ describe("keepcv serve --auth password", () => {
         });
 
       try {
-        // The app has to know what to render before it has anything to send.
         const mode = await fetch(url("/auth/mode"));
         expect(await mode.json()).toEqual({ mode: "password", signedIn: false });
 
@@ -229,12 +249,9 @@ describe("keepcv serve --auth password", () => {
         const profile = await fetch(url("/v1/profile"), { headers: { cookie: session } });
         expect(profileSchema.parse(await profile.json()).fullName).toBeNull();
 
-        // The cookie is HttpOnly, so only the launcher can say it is still
-        // good.
         const back = await fetch(url("/auth/mode"), { headers: { cookie: session } });
         expect(await back.json()).toEqual({ mode: "password", signedIn: true });
 
-        // Signing out is the launcher clearing the cookie it set.
         const goodbye = await fetch(url("/auth/sign-out"), { method: "POST" });
         expect(goodbye.status).toBe(204);
         expect(goodbye.headers.get("set-cookie")).toContain(`${SESSION_COOKIE}=;`);
@@ -246,8 +263,6 @@ describe("keepcv serve --auth password", () => {
     BOOTS_A_REAL_STORE,
   );
 
-  // scrypt is a tenth of a second, which on its own leaves room for tens of
-  // thousands of guesses an hour.
   it(
     "stops answering after a run of wrong ones",
     async () => {
@@ -256,7 +271,11 @@ describe("keepcv serve --auth password", () => {
       const stored = await readAuth(dataDir);
       if (stored === undefined) throw new Error("the password was just written");
 
-      const running = await startServer({ port: 0, dataDir, auth: { mode: "password", stored } });
+      const running = await startServer({
+        port: 0,
+        dataDir,
+        auth: { mode: "password", read: () => readAuth(dataDir) },
+      });
       const attempt = async (password: string): Promise<number> =>
         (
           await fetch(`http://127.0.0.1:${running.port}/auth/sign-in`, {
@@ -269,7 +288,6 @@ describe("keepcv serve --auth password", () => {
       try {
         for (let guess = 0; guess < 5; guess += 1) expect(await attempt("not it")).toBe(401);
         expect(await attempt("not it")).toBe(429);
-        // The right password is refused too: the throttle is on the route.
         expect(await attempt("a long enough password")).toBe(429);
       } finally {
         await running.stop();
@@ -314,7 +332,6 @@ describe("keepcv serve --auth proxy", () => {
         });
         expect(profileSchema.parse(await profile.json()).fullName).toBeNull();
 
-        // There is no password to sign in with, and the app must not offer one.
         expect((await fetch(url("/auth/sign-in"), { method: "POST" })).status).toBe(404);
       } finally {
         await running.stop();

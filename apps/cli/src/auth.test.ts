@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SESSION_COOKIE } from "@keepcv/api";
 import type { Uuid } from "@keepcv/schema";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   authPath,
   cookieFrom,
@@ -30,20 +30,17 @@ function withCookie(value: string): Request {
 }
 
 describe("passwords", () => {
-  it("verifies the password it hashed and nothing else", () => {
+  it("verifies the password it hashed and nothing else", async () => {
     const stored = hashPassword("correct horse battery staple");
-    expect(verifyPassword("correct horse battery staple", stored)).toBe(true);
-    expect(verifyPassword("correct horse battery stapl", stored)).toBe(false);
-    expect(verifyPassword("", stored)).toBe(false);
+    expect(await verifyPassword("correct horse battery staple", stored)).toBe(true);
+    expect(await verifyPassword("correct horse battery stapl", stored)).toBe(false);
+    expect(await verifyPassword("", stored)).toBe(false);
   });
 
-  // Salted, so the file never reveals that two instances share a password.
   it("hashes the same password to different strings", () => {
     expect(hashPassword("hunter2")).not.toBe(hashPassword("hunter2"));
   });
 
-  // The stored string carries its own parameters, so raising the cost later
-  // does not lock out everyone who set a password before.
   it("verifies against the cost recorded in the stored string", () => {
     const stored = hashPassword("hunter2");
     const [scheme, n, r, p] = stored.split("$");
@@ -51,20 +48,18 @@ describe("passwords", () => {
     expect([n, r, p]).toEqual(["16384", "8", "1"]);
   });
 
-  // A password typed on a Mac arrives decomposed and the same one typed on
-  // Windows does not; without normalising, one machine cannot sign in.
-  it("treats the two spellings of an accented password as one", () => {
+  it("treats the two spellings of an accented password as one", async () => {
     const composed = "caf\u00e9";
     const decomposed = "cafe\u0301";
     expect(composed).not.toBe(decomposed);
-    expect(verifyPassword(decomposed, hashPassword(composed))).toBe(true);
+    expect(await verifyPassword(decomposed, hashPassword(composed))).toBe(true);
   });
 
-  it("refuses a stored string it did not write", () => {
-    expect(verifyPassword("hunter2", "")).toBe(false);
-    expect(verifyPassword("hunter2", "hunter2")).toBe(false);
-    expect(verifyPassword("hunter2", "argon2$16384$8$1$c2FsdA$aGFzaA")).toBe(false);
-    expect(verifyPassword("hunter2", "scrypt$16384$8$1$c2FsdA")).toBe(false);
+  it("refuses a stored string it did not write", async () => {
+    expect(await verifyPassword("hunter2", "")).toBe(false);
+    expect(await verifyPassword("hunter2", "hunter2")).toBe(false);
+    expect(await verifyPassword("hunter2", "argon2$16384$8$1$c2FsdA$aGFzaA")).toBe(false);
+    expect(await verifyPassword("hunter2", "scrypt$16384$8$1$c2FsdA")).toBe(false);
   });
 });
 
@@ -83,15 +78,22 @@ describe("the auth file", () => {
     expect(await readAuth(dataDir)).toBeUndefined();
   });
 
+  it("refuses malformed credentials and an unusably long new password", async () => {
+    await writeFile(
+      authPath(dataDir),
+      JSON.stringify({ hash: "scrypt$16384$8$1$salt$", secret: SECRET }),
+    );
+    expect(await readAuth(dataDir)).toBeUndefined();
+    await expect(writePassword(dataDir, "x".repeat(1025))).rejects.toThrow("at most 1024");
+  });
+
   it("reads back a password it can verify", async () => {
     await writePassword(dataDir, "hunter2");
     const held = await readAuth(dataDir);
     expect(held).toBeDefined();
-    expect(verifyPassword("hunter2", held?.hash ?? "")).toBe(true);
+    expect(await verifyPassword("hunter2", held?.hash ?? "")).toBe(true);
   });
 
-  // Setting a password is the only revocation there is: every session was
-  // signed with the secret this replaces.
   it("rotates the secret on every write", async () => {
     await writePassword(dataDir, "hunter2");
     const first = await readAuth(dataDir);
@@ -122,8 +124,6 @@ describe("sessions", () => {
     expect(readSession(SECRET, mintSession("rotated", OWNER))).toBeUndefined();
   });
 
-  // The owner and the expiry are both in the signed body, so neither can be
-  // edited by whoever holds the cookie.
   it("refuses an edited owner or an extended expiry", () => {
     const cookie = mintSession(SECRET, OWNER);
     const [, expiry, mac] = cookie.split(".");
@@ -150,8 +150,6 @@ describe("cookieFrom", () => {
     expect(cookieFrom("keepcv.session=abc", SESSION_COOKIE)).toBe("abc");
   });
 
-  // `keepcv.session.other` shares a prefix, and a prefix match would hand back
-  // the wrong value.
   it("matches the whole name", () => {
     expect(cookieFrom("keepcv.session.other=abc", SESSION_COOKIE)).toBeUndefined();
     expect(cookieFrom("other=abc", SESSION_COOKIE)).toBeUndefined();
@@ -160,9 +158,20 @@ describe("cookieFrom", () => {
 });
 
 describe("passwordAuth", () => {
+  it("fails closed when current credentials are missing", async () => {
+    expect(
+      await passwordAuth(
+        () => Promise.resolve(undefined),
+        OWNER,
+      )(withCookie(mintSession(SECRET, OWNER))),
+    ).toBeUndefined();
+  });
   it("sets and clears secure cookies for an HTTPS public origin", async () => {
     const auth = launcherAuth(
-      { mode: "password", stored: { hash: hashPassword("hunter2"), secret: SECRET } },
+      {
+        mode: "password",
+        read: () => Promise.resolve({ hash: hashPassword("hunter2"), secret: SECRET }),
+      },
       OWNER,
     );
     const granted = await auth.routes(
@@ -181,21 +190,140 @@ describe("passwordAuth", () => {
     expect(cleared?.headers.get("set-cookie")).toContain("Max-Age=0");
   });
   it("answers the owner for a session it signed", async () => {
-    const authenticate = passwordAuth(SECRET, OWNER);
+    const authenticate = passwordAuth(
+      () => Promise.resolve({ hash: "unused", secret: SECRET }),
+      OWNER,
+    );
     expect(await authenticate(withCookie(mintSession(SECRET, OWNER)))).toBe(OWNER);
   });
 
   it("answers nothing without a cookie, or with one it did not sign", async () => {
-    const authenticate = passwordAuth(SECRET, OWNER);
+    const authenticate = passwordAuth(
+      () => Promise.resolve({ hash: "unused", secret: SECRET }),
+      OWNER,
+    );
     expect(await authenticate(new Request("http://127.0.0.1/v1/profile"))).toBeUndefined();
     expect(await authenticate(withCookie("forged"))).toBeUndefined();
   });
 
-  // A local store holds one owner. A validly signed session for anybody else is
-  // a session this instance cannot serve, and must not fall back to its own.
   it("answers nothing for a session belonging to another owner", async () => {
-    const authenticate = passwordAuth(SECRET, OWNER);
+    const authenticate = passwordAuth(
+      () => Promise.resolve({ hash: "unused", secret: SECRET }),
+      OWNER,
+    );
     expect(await authenticate(withCookie(mintSession(SECRET, OTHER)))).toBeUndefined();
+  });
+});
+
+describe("sign-in admission", () => {
+  it("does not mint a session if credentials rotate during verification", async () => {
+    const old = { hash: hashPassword("a long password"), secret: SECRET };
+    let reads = 0;
+    const held = launcherAuth(
+      {
+        mode: "password",
+        read: () => Promise.resolve(++reads === 1 ? old : { ...old, secret: "rotated" }),
+      },
+      OWNER,
+    );
+    const response = await held.routes(
+      new Request("http://127.0.0.1/auth/sign-in", {
+        method: "POST",
+        body: JSON.stringify({ password: "a long password" }),
+      }),
+    );
+    expect(response?.status).toBe(401);
+    expect(response?.headers.get("set-cookie")).toBeNull();
+  });
+  function auth() {
+    const stored = { hash: hashPassword("a long password"), secret: SECRET };
+    return launcherAuth({ mode: "password", read: () => Promise.resolve(stored) }, OWNER);
+  }
+
+  it("counts incomplete concurrent bodies before checking their passwords", async () => {
+    const held = auth();
+    const bodies: ReadableStreamDefaultController<Uint8Array>[] = [];
+    const pending = Array.from({ length: 12 }, () => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          bodies.push(controller);
+        },
+      });
+      const init = { method: "POST", body, duplex: "half" as const };
+      return held.routes(new Request("http://127.0.0.1/auth/sign-in", init));
+    });
+    for (const body of bodies) {
+      body.enqueue(new TextEncoder().encode('{"password":"wrong"}'));
+      body.close();
+    }
+    const statuses = (await Promise.all(pending)).map((response) => response?.status);
+    expect(statuses.filter((status) => status === 401)).toHaveLength(5);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(7);
+  });
+
+  it.each([{}, { "content-length": "1" }])(
+    "limits streamed bytes regardless of the length header: %s",
+    async (headers) => {
+      const response = await auth().routes(
+        new Request("http://127.0.0.1/auth/sign-in", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ password: "a long password", padding: "x".repeat(8192) }),
+        }),
+      );
+      expect(response?.status).toBe(413);
+    },
+  );
+
+  it("refuses a declared oversized body before waiting for bytes", async () => {
+    const response = await auth().routes(
+      new Request("http://127.0.0.1/auth/sign-in", {
+        method: "POST",
+        headers: { "content-length": "9000" },
+        body: "{}",
+      }),
+    );
+    expect(response?.status).toBe(413);
+  });
+
+  it("cancels an incomplete body after the deadline", async () => {
+    vi.useFakeTimers();
+    let cancelled = false;
+    try {
+      const body = new ReadableStream<Uint8Array>({
+        cancel() {
+          cancelled = true;
+        },
+      });
+      const init = { method: "POST", body, duplex: "half" as const };
+      const response = auth().routes(new Request("http://127.0.0.1/auth/sign-in", init));
+      await vi.advanceTimersByTimeAsync(10_001);
+      expect((await response)?.status).toBe(408);
+      expect(cancelled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("expires completed refusals and resets them after a successful sign-in", async () => {
+    vi.useFakeTimers();
+    const held = auth();
+    const attempt = (password: string) =>
+      held.routes(
+        new Request("http://127.0.0.1/auth/sign-in", {
+          method: "POST",
+          body: JSON.stringify({ password }),
+        }),
+      );
+    try {
+      for (let at = 0; at < 5; at += 1) expect((await attempt("wrong"))?.status).toBe(401);
+      expect((await attempt("a long password"))?.status).toBe(429);
+      await vi.advanceTimersByTimeAsync(60_001);
+      expect((await attempt("a long password"))?.status).toBe(204);
+      for (let at = 0; at < 5; at += 1) expect((await attempt("wrong"))?.status).toBe(401);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -217,8 +345,6 @@ describe("proxyAuth", () => {
     expect(await authenticate(asUser(""))).toBeUndefined();
   });
 
-  // A launcher that read the header from anywhere would let anyone who can
-  // reach the port set it themselves.
   it("trusts one address, in either of the two spellings of it", () => {
     expect(sameAddress("127.0.0.1", "127.0.0.1")).toBe(true);
     expect(sameAddress("::ffff:127.0.0.1", "127.0.0.1")).toBe(true);

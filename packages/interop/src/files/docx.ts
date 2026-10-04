@@ -1,4 +1,4 @@
-import { strFromU8, unzipSync } from "fflate";
+import { strFromU8, Unzip, UnzipInflate } from "fflate";
 import type { DocumentLine } from "../lines.js";
 
 const PARAGRAPH = /<w:p[ >][\s\S]*?<\/w:p>/g;
@@ -24,8 +24,7 @@ function decode(text: string): string {
     .replace(/&(amp|lt|gt|quot|apos);/g, (whole) => ENTITIES[whole] ?? whole);
 }
 
-// A break and a tab are whitespace in the markup and nothing in the text, so
-// without this two runs either side of one become a single joined word.
+// Dropping a break or tab joins the words from adjacent runs.
 function textOf(paragraph: string): string {
   const spaced = paragraph.replace(/<w:(?:br|tab|cr)\s*\/>/g, "<w:t> </w:t>");
   const parts: string[] = [];
@@ -38,9 +37,7 @@ const headingLevel = (paragraph: string): number | undefined => {
   return level === undefined ? undefined : Number(level);
 };
 
-// Reading `Title` as a heading files the document under the person's own name.
-// `section` is the shallowest level used, so Heading2 is a section only when
-// nothing is a Heading1.
+// Reading `Title` as a heading files records under the person's own name.
 function emphasisOf(
   paragraph: string,
   text: string,
@@ -50,22 +47,51 @@ function emphasisOf(
   const level = headingLevel(paragraph);
   if (level !== undefined) return level === section ? "heading" : "strong";
   if (/^(Title|Subtitle)$/i.test(style)) return "strong";
-  // Bold anywhere in the paragraph, which is how an entry head is set when the
-  // template gave it no style of its own.
   return BOLD.test(paragraph) && text.length < 80 ? "strong" : "normal";
 }
 
 export class NotADocxError extends Error {}
 
-// A DOCX is a zip, and the only part worth reading is the body. Styles, themes
-// and numbering definitions say how it looked, not what it said.
-export function docxLines(data: Uint8Array): DocumentLine[] {
+export function docxLines(data: Uint8Array, maxXmlBytes = 4 * 1024 * 1024): DocumentLine[] {
   let body: string;
   try {
-    const files = unzipSync(data, { filter: (file) => file.name === "word/document.xml" });
-    const found = files["word/document.xml"];
-    if (found === undefined) throw new NotADocxError("That file has no Word document inside it.");
-    body = strFromU8(found);
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    const state = { complete: false, found: false };
+    let entries = 0;
+    const unzip = new Unzip((file) => {
+      if (++entries > 512)
+        throw new NotADocxError("That Word document contains too many ZIP entries.");
+      if (file.name !== "word/document.xml") return;
+      if (state.found)
+        throw new NotADocxError("That file contains more than one Word document body.");
+      state.found = true;
+      if ((file.originalSize ?? 0) > maxXmlBytes) {
+        throw new NotADocxError("That Word document expands beyond the text size limit.");
+      }
+      file.ondata = (error, chunk, final) => {
+        if (error) throw error;
+        bytes += chunk.byteLength;
+        if (bytes > maxXmlBytes)
+          throw new NotADocxError("That Word document expands beyond the text size limit.");
+        chunks.push(chunk);
+        state.complete = final;
+      };
+      file.start();
+    });
+    unzip.register(UnzipInflate);
+    for (let at = 0; at < data.length; at += 1024) {
+      unzip.push(data.subarray(at, at + 1024), at + 1024 >= data.length);
+    }
+    if (!state.found || !state.complete)
+      throw new NotADocxError("That file has no complete Word document inside it.");
+    const text = new Uint8Array(bytes);
+    let at = 0;
+    for (const chunk of chunks) {
+      text.set(chunk, at);
+      at += chunk.length;
+    }
+    body = strFromU8(text);
   } catch (error) {
     if (error instanceof NotADocxError) throw error;
     throw new NotADocxError("That file is not a Word document this build can read.");

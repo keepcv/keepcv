@@ -1,11 +1,9 @@
-import { RESUME_DOCUMENT_SCHEMA_VERSION, type TemplateSpec } from "@keepcv/schema";
+import { extraCssSchema, RESUME_DOCUMENT_SCHEMA_VERSION, type TemplateSpec } from "@keepcv/schema";
 import { defaultsOf, type Template, withDefaults } from "./contract.js";
 import { DESIGN_KNOBS, designOf, FIT_KNOBS } from "./knobs.js";
 import { render } from "./render.js";
 import { stylesheet } from "./styles.js";
 
-// Derived, not written by hand: a note typed here would go on being printed
-// after the design stopped earning it.
 function notesFor(spec: TemplateSpec): string[] {
   const design = designOf(spec.settings);
 
@@ -30,10 +28,8 @@ function notesFor(spec: TemplateSpec): string[] {
 
 export function fromSpec(id: string, name: string, spec: TemplateSpec): Template {
   const fields = withDefaults(FIT_KNOBS, spec.settings);
-  // Layered over whatever config arrives rather than under it, so what the
-  // template is cannot be moved by a resume that stored a design key. That is
-  // what makes the notes above true of every resume this template prints.
   const design = defaultsOf(withDefaults(DESIGN_KNOBS, spec.settings));
+  const css = extraCssSchema.safeParse(spec.extraCss);
 
   return {
     id,
@@ -42,8 +38,15 @@ export function fromSpec(id: string, name: string, spec: TemplateSpec): Template
     documentVersions: [RESUME_DOCUMENT_SCHEMA_VERSION],
     fields,
     defaultConfig: { ...defaultsOf(fields), ...design },
-    complianceNotes: notesFor(spec),
-    styles: (config) => stylesheet({ ...config, ...design }, spec.extraCss),
+    complianceNotes: [
+      ...notesFor(spec),
+      ...(css.success
+        ? []
+        : [
+            "Extra CSS was omitted because it contains unsafe or unsupported CSS. The saved design is unchanged.",
+          ]),
+    ],
+    styles: (config) => stylesheet({ ...config, ...design }, css.success ? css.data : ""),
     render: (document, config) => render(document, { ...config, ...design }),
   };
 }

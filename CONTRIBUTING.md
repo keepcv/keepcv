@@ -79,8 +79,10 @@ Two boundaries are enforced rather than merely encouraged:
   `biome.json` or nowhere.
 - **TypeScript is pinned to 6.x.** typescript-eslint does not yet load against
   TypeScript 7, and the type-aware rules are the only reason ESLint is here.
-- **Dependency versions live in the `catalog:` in `pnpm-workspace.yaml`**, one
-  version per dependency across the repo. Upgrade there, not per package.
+- **Dependency versions live in catalogs in `pnpm-workspace.yaml`.** Package
+  manifests use the default catalog. A named catalog can retain a patched
+  transitive legacy major when an upstream still requires it; overrides reference
+  that catalog too. Upgrade there, not per package.
 
 ## Commits and releases
 

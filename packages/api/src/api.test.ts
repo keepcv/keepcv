@@ -7,6 +7,11 @@ import { SESSION_TOKEN_HEADER } from "./auth.js";
 const { send, raw } = withApi();
 
 describe("the session guard", () => {
+  it("prevents caching private responses even when access is refused", async () => {
+    expect((await raw("/v1/store")).headers.get("cache-control")).toBe("no-store");
+    expect((await send("GET", "/v1/store")).headers.get("cache-control")).toBe("no-store");
+    expect((await send("GET", "/v1/export")).headers.get("cache-control")).toBe("no-store");
+  });
   it("refuses a request carrying no token", async () => {
     const problem = await problemOf(await raw("/v1/profile"));
     expect(problem.status).toBe(401);

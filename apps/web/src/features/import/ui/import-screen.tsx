@@ -1,7 +1,7 @@
 import type { IntakeReview } from "@keepcv/core";
 import { matchIntake, suggestedDecisions } from "@keepcv/core";
 import type { Intake, IntakeChoice, IntakeDecisions, Store } from "@keepcv/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { Button } from "../../../components/ui/button.js";
@@ -200,6 +200,8 @@ function Found({
 
 function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
   const [unreadable, setUnreadable] = useState<string | undefined>(undefined);
+  const [reading, setReading] = useState<AbortController | undefined>(undefined);
+  useEffect(() => () => reading?.abort(), [reading]);
 
   return (
     <Panel>
@@ -213,6 +215,7 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
         )}
         <input
           type="file"
+          disabled={reading !== undefined}
           accept=".json,.yaml,.yml,.pdf,.docx,application/json,application/pdf"
           aria-label="A resume to read"
           className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
@@ -220,15 +223,36 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
             const file = event.target.files?.[0];
             if (file === undefined) return;
             setUnreadable(undefined);
-            void readFile(file).then(onRead, (error: unknown) => {
-              setUnreadable(
-                error instanceof UnreadableFileError
-                  ? error.message
-                  : `${file.name} is not a resume this build can read.`,
-              );
-            });
+            const controller = new AbortController();
+            setReading(controller);
+            void readFile(file, controller.signal)
+              .then(
+                (intake) => {
+                  if (!controller.signal.aborted) onRead(intake);
+                },
+                (error: unknown) => {
+                  if (controller.signal.aborted) return;
+                  setUnreadable(
+                    error instanceof UnreadableFileError
+                      ? error.message
+                      : `${file.name} is not a resume this build can read.`,
+                  );
+                },
+              )
+              .finally(() => setReading((active) => (active === controller ? undefined : active)));
           }}
         />
+        {reading === undefined ? null : (
+          <Button
+            onClick={() => {
+              reading.abort();
+              setReading(undefined);
+              setUnreadable("Reading was cancelled.");
+            }}
+          >
+            Cancel reading
+          </Button>
+        )}
       </PanelBody>
     </Panel>
   );

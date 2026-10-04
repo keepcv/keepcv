@@ -7,6 +7,7 @@ import type {
 import { Fields, joined, Links, Marks, Points } from "@keepcv/templates";
 import type { ReactElement, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { DOCUMENT_CONTENT_POLICY } from "./content-policy.js";
 import { SITE_STYLES } from "./site-styles.js";
 import { documentTitle } from "./title.js";
 
@@ -121,6 +122,7 @@ export function renderSite(document: ResumeDocument): string {
     <html lang={document.meta.locale}>
       <head>
         <meta charSet="utf-8" />
+        <meta httpEquiv="Content-Security-Policy" content={DOCUMENT_CONTENT_POLICY} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{documentTitle(document)}</title>
         {document.header.headline === undefined ? null : (
