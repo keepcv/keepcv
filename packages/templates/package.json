@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/templates",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "KeepCV resume templates and the contract every renderer binds to.",
   "keywords": [
     "keepcv",

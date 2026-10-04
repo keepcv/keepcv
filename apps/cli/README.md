@@ -1,4 +1,4 @@
-# keepcv
+# @keepcv/cli
 
 Run [KeepCV](https://github.com/keepcv/keepcv) on your own machine. A career
 data store that compiles into resumes: the store holds everything permanently,
@@ -8,7 +8,8 @@ and a resume is a selection over it.
 > and the web app, writes a resume out as a file, reports on what the store
 > holds, and keeps a readable backup of the whole store beside it.
 
-Requires Node 24 or newer. The package includes the built web app; no separate
+The package is `@keepcv/cli`; its executable is `keepcv`. Requires Node 24 or
+newer. The package includes the built web app; no separate
 web package or build tools are needed to run it.
 
 ## Usage
@@ -18,7 +19,7 @@ To run the unpublished launcher from a checkout, follow
 apply to a published release.
 
 ```sh
-npx keepcv serve
+npx @keepcv/cli serve
 ```
 
 It opens the store, runs any pending migrations, mints a session token for this
@@ -64,7 +65,7 @@ installed.
 ## Looking at the store without opening it
 
 ```sh
-npx keepcv status
+npx @keepcv/cli status
 ```
 
 It says what the store holds, where the backup is and how old it is, which of
@@ -104,22 +105,22 @@ in. `keepcv serve` refuses to bind off loopback with nothing but that token.
 **A password.** Set one, then serve behind it:
 
 ```sh
-npx keepcv set-password
-npx keepcv serve --host 0.0.0.0 --auth password
+npx @keepcv/cli set-password
+npx @keepcv/cli serve --host 0.0.0.0 --auth password
 ```
 
 The password is hashed with scrypt into `auth.json` in the data directory, mode
 `0600`. Signing in sets a cookie that lasts thirty days and survives a restart.
 Setting a password again ends every session there is. Sign-in is throttled to
 five wrong answers a minute. Pipe it instead of typing it if you are scripting:
-`echo "$PASSWORD" | npx keepcv set-password`.
+`echo "$PASSWORD" | npx @keepcv/cli set-password`.
 
 **Or whatever is already in front of it.** If this is going behind Tailscale,
 oauth2-proxy, Authelia, Cloudflare Access or a corporate gateway, let that thing
 say who you are:
 
 ```sh
-npx keepcv serve --auth proxy --proxy-header X-Forwarded-User
+npx @keepcv/cli serve --auth proxy --proxy-header X-Forwarded-User
 ```
 
 The header is read **only** from `--proxy-from`, which defaults to `127.0.0.1`.
@@ -134,7 +135,7 @@ whether the request came from you.
 ## Writing a resume out
 
 ```sh
-npx keepcv render "Staff engineer"
+npx @keepcv/cli render "Staff engineer"
 ```
 
 Any part of the name will do, as long as it names one resume; run it with no
@@ -155,7 +156,7 @@ It also writes the same resume as [JSON Resume](https://jsonresume.org), for
 piping into whatever else you run:
 
 ```sh
-npx keepcv render "Staff engineer" --format jsonresume
+npx @keepcv/cli render "Staff engineer" --format jsonresume
 ```
 
 That format has a fixed set of lists and one string per highlight, so some of
@@ -167,7 +168,7 @@ warning printed every time is one nobody reads.
 It also writes the same selection as a page to put online:
 
 ```sh
-npx keepcv render "Staff engineer" --format site
+npx @keepcv/cli render "Staff engineer" --format site
 ```
 
 One self-contained HTML file - a header, one card per entry, a jump list between
@@ -183,9 +184,9 @@ decided when the resume is composed.
 And it writes the same resume as a Word document, or as LaTeX or Typst source:
 
 ```sh
-npx keepcv render "Staff engineer" --format docx
-npx keepcv render "Staff engineer" --format latex
-npx keepcv render "Staff engineer" --format typst
+npx @keepcv/cli render "Staff engineer" --format docx
+npx @keepcv/cli render "Staff engineer" --format latex
+npx @keepcv/cli render "Staff engineer" --format typst
 ```
 
 These are for handing on to someone who wants to edit the thing themselves - a
@@ -218,8 +219,8 @@ store touches no disk.
 The same two things on demand:
 
 ```sh
-npx keepcv backup --out my-store.json
-npx keepcv restore --from my-store.json --data-dir ./fresh
+npx @keepcv/cli backup --out my-store.json
+npx @keepcv/cli restore --from my-store.json --data-dir ./fresh
 ```
 
 A restore only loads into a store nothing has been written to yet. It never

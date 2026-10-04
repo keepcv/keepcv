@@ -1,5 +1,18 @@
 # @keepcv/web
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @keepcv/api@0.1.2
+  - @keepcv/ats-lint@0.1.2
+  - @keepcv/core@0.1.2
+  - @keepcv/interop@0.1.2
+  - @keepcv/render@0.1.2
+  - @keepcv/schema@0.1.2
+  - @keepcv/templates@0.1.2
+
 ## 0.0.2
 
 ### Patch Changes

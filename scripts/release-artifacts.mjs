@@ -13,13 +13,13 @@ assert(["verify", "preflight", "publish", "github"].includes(mode));
 const release = JSON.parse(await readFile("release.json", "utf8"));
 assert.match(release.commit, /^[a-f0-9]{40}$/);
 assert.equal(release.packages.length, new Set(release.packages.map((pkg) => pkg.name)).size);
-const launcher = release.packages.find((pkg) => pkg.name === "keepcv");
+const launcher = release.packages.find((pkg) => pkg.name === "@keepcv/cli");
 assert(launcher, "The release has no launcher");
 if (process.env.RELEASE_VERSION) assert.equal(launcher.version, process.env.RELEASE_VERSION);
 if (process.env.GITHUB_SHA) assert.equal(release.commit, process.env.GITHUB_SHA);
 if (process.env.GITHUB_REF) releaseVersion(process.env.GITHUB_REF, launcher.version);
 for (const pkg of release.packages) {
-  assert.match(pkg.name, /^(keepcv|@keepcv\/[a-z-]+)$/);
+  assert.match(pkg.name, /^@keepcv\/[a-z-]+$/);
   assert.match(pkg.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
   assert.equal(pkg.file, basename(pkg.file));
   assert.match(pkg.file, /\.tgz$/);
@@ -95,7 +95,7 @@ if (mode === "publish") {
       ]);
     }
   }
-  const tag = `keepcv@${launcher.version}`;
+  const tag = `${launcher.name}@${launcher.version}`;
   let exists = false;
   try {
     await exec("gh", ["api", `repos/${repo}/releases/tags/${tag}`]);

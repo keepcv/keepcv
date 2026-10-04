@@ -83,7 +83,7 @@ for (const { directory, manifest } of packages) {
       }
     }
   }
-  if (manifest.name === "keepcv") {
+  if (manifest.name === "@keepcv/cli") {
     assert.equal(published.engines.node, ">=24.0.0");
     assert(files.has("dist/web/index.html"), "The launcher is missing its web app");
     assert([...files].some((path) => path.startsWith("dist/web/assets/") && path.endsWith(".js")));
@@ -116,7 +116,7 @@ try {
     JSON.stringify({
       private: true,
       type: "module",
-      dependencies: { keepcv: dependencies.keepcv },
+      dependencies: { "@keepcv/cli": dependencies["@keepcv/cli"] },
     }),
   );
   await writeFile(
@@ -128,10 +128,10 @@ try {
   );
   assert.equal(
     (await run(["exec", "keepcv", "--version"], installed)).trim(),
-    versions.get("keepcv"),
+    versions.get("@keepcv/cli"),
   );
   await copyFile(new URL("./release-smoke.mjs", import.meta.url), join(installed, "smoke.mjs"));
-  const { stdout } = await exec(process.execPath, ["smoke.mjs", versions.get("keepcv")], {
+  const { stdout } = await exec(process.execPath, ["smoke.mjs", versions.get("@keepcv/cli")], {
     cwd: installed,
     timeout: 180_000,
     maxBuffer: 10 * 1024 * 1024,
@@ -155,7 +155,7 @@ try {
     join(destination, "release-registry.mjs"),
   );
   await copyFile(
-    join(root, "docs", "releases", `${versions.get("keepcv")}.md`),
+    join(root, "docs", "releases", `${versions.get("@keepcv/cli")}.md`),
     join(destination, "release-notes.md"),
   );
   process.stdout.write(`Release check passed. Tarballs: ${destination}\n`);

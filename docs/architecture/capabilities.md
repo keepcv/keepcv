@@ -76,11 +76,13 @@ drivers, the migration runner and the repository port; the domain package with
 sort-key arithmetic, rich-text canonicalisation, content hashing and identifier
 generation; the Hono API with validation, `problem+json` and a typed client;
 the web app shell, its command palette and the landing page it shows without a
-token; the `npx keepcv` local launcher and the three ways it decides who is
+token; the `npx @keepcv/cli` local launcher and the three ways it decides who is
 asking (`api-contract.md` #6); the JSON mirror and `keepcv restore`;
 and the test harness.
 
-The launcher is distributed with its built web app and requires Node 24 or
+The launcher is published as `@keepcv/cli` and exposes the `keepcv` executable.
+All public packages belong to the `@keepcv` scope. The launcher includes its
+built web app and requires Node 24 or
 newer. `pnpm release:check` builds and packs every public package, checks the
 published manifests and files, and installs the tarballs outside the checkout.
 That install must serve the app, write to the store, render every CLI format,
@@ -98,7 +100,8 @@ versions can be skipped when retrying a partial publication. Missing packages
 are submitted before verification so npm's scans can proceed together. Registry
 visibility is checked every thirty seconds for up to thirty minutes, and already
 verified packages are not queried again. The announcement checks every
-published digest again before creating tags or a GitHub release.
+published digest again before creating tags or a GitHub release. The release
+uses the launcher's package tag, `@keepcv/cli@<version>`.
 
 **Native export and import, with the round-trip test, belong here** rather than
 later. Once that test exists, everything built afterwards inherits a test proving

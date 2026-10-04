@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/ats-lint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Read a KeepCV resume the way an applicant tracking system would, and report what it loses.",
   "keywords": [
     "keepcv",

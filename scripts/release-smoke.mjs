@@ -3,12 +3,12 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { startServer } from "./node_modules/keepcv/dist/serve.js";
+import { startServer } from "./node_modules/@keepcv/cli/dist/serve.js";
 
 const exec = promisify(execFile);
 const dataDir = join(process.cwd(), "store");
 const restoredDir = join(process.cwd(), "restored");
-const cli = join(process.cwd(), "node_modules", "keepcv", "dist", "index.js");
+const cli = join(process.cwd(), "node_modules", "@keepcv", "cli", "dist", "index.js");
 
 async function command(...args) {
   const { stdout } = await exec(process.execPath, [cli, ...args], { timeout: 60_000 });
