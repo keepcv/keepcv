@@ -1,10 +1,8 @@
 import type { Repositories } from "@keepcv/core";
 import { type LocalStore, openLocalStore, runAsOwner } from "@keepcv/db";
 import type { Uuid } from "@keepcv/schema";
+import { privateDirectory } from "./private-file.js";
 
-// A data directory that cannot be opened surfaces as whichever mkdir or query
-// was in flight, which reads as a bug in this product rather than as a path the
-// user cannot write to.
 export class StoreUnavailableError extends Error {
   constructor(dataDir: string, cause: unknown) {
     super(
@@ -18,6 +16,7 @@ export class StoreUnavailableError extends Error {
 export async function openStore(dataDir: string): Promise<{ store: LocalStore; ownerId: Uuid }> {
   let store: LocalStore | undefined;
   try {
+    await privateDirectory(dataDir);
     store = openLocalStore({ dataDir });
     await store.migrate();
     return { store, ownerId: await store.ensureLocalOwner() };
@@ -28,7 +27,6 @@ export async function openStore(dataDir: string): Promise<{ store: LocalStore; o
   }
 }
 
-// Every command but `serve` opens the store, does one thing and closes it.
 export async function withStore<T>(
   dataDir: string,
   work: (repositories: Repositories) => Promise<T>,

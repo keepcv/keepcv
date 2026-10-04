@@ -30,8 +30,6 @@ import {
 import { jsonOf, storeServer } from "../store-server.harness.js";
 import { buildRouter } from "./router.js";
 
-// Only the network is stubbed: the wiring is what a screen test would not
-// touch.
 function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"): void {
   vi.stubGlobal(
     "fetch",
@@ -2720,6 +2718,22 @@ describe("bringing a resume in", () => {
 describe("bringing in a file with no structure in it", () => {
   it("says a Word document was read from its layout, and shows what it found", async () => {
     const { zipSync, strToU8 } = await import("fflate");
+    const { fromLines } = await import("@keepcv/interop");
+    const { docxLines } = await import("@keepcv/interop/files");
+    class Worker {
+      onmessage: ((event: MessageEvent) => void) | undefined;
+      postMessage(bytes: ArrayBuffer): void {
+        queueMicrotask(() => {
+          this.onmessage?.(
+            new MessageEvent("message", {
+              data: { intake: fromLines(docxLines(new Uint8Array(bytes)), "docx") },
+            }),
+          );
+        });
+      }
+      terminate(): void {}
+    }
+    vi.stubGlobal("Worker", Worker);
     const paragraph = (text: string, extra = "") =>
       `<w:p>${extra}<w:r><w:t>${text}</w:t></w:r></w:p>`;
     const body = [

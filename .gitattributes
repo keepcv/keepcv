@@ -6,6 +6,9 @@
 # Generated; keep out of diffs and language statistics.
 pnpm-lock.yaml -diff linguist-generated=true
 
+# Unified-diff context lines need a leading space even when empty.
+patches/*.patch whitespace=-blank-at-eol
+
 # Binary assets.
 *.png binary
 *.jpg binary

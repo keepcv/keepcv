@@ -419,6 +419,17 @@ eachDriver(({ run, otherOwner }) => {
       expect(await run(async (r) => await r.store.read())).toEqual(exported);
     });
 
+    it("preserves older template CSS in a native archive without validating it as a new design", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const design = exported.templates[0];
+      if (design === undefined) throw new Error("the fixture must contain a design");
+      design.spec.extraCss = '.kc-name { background: image-set("https://example.test/a" 1x); }';
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(exported));
+      expect(await other(async (r) => await r.store.read())).toEqual(exported);
+    });
+
     it("does not depend on the order the rows arrive in", async () => {
       await fill(run);
       const exported = await run(async (r) => await r.store.read());

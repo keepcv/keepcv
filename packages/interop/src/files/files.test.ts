@@ -237,6 +237,23 @@ function aDocx(body: string): Uint8Array {
 }
 
 describe("pulling lines out of a DOCX", () => {
+  it("rejects a compressed document exceeding the XML budget", () => {
+    const data = aDocx(paragraph("x".repeat(8192)));
+    expect(data.length).toBeLessThan(1024);
+    expect(() => docxLines(data, 4096)).toThrow("text size limit");
+  });
+
+  it("checks actual expanded bytes when a ZIP header understates the size", () => {
+    const data = zipSync({
+      "word/document.xml": strToU8(`<w:document>${paragraph("x".repeat(8192))}</w:document>`),
+    });
+    new DataView(data.buffer, data.byteOffset, data.byteLength).setUint32(22, 1, true);
+    expect(() => docxLines(data, 4096)).toThrow("text size limit");
+  });
+
+  it("accepts a document within the requested XML budget", () => {
+    expect(docxLines(aDocx(paragraph("Ada")), 1024)[0]?.text).toBe("Ada");
+  });
   const BODY = [
     paragraph("Ada Lovelace", { style: "Title" }),
     paragraph("ada@example.org"),

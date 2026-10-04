@@ -48,7 +48,11 @@ override it.
 Password sessions are signed, HttpOnly, SameSite=Strict cookies lasting thirty
 days. Setting a password rotates the signing secret and ends existing sessions.
 HTTPS origins also set Secure; terminate HTTPS at the reverse proxy because the
-launcher itself serves HTTP. Sign-in is throttled after five wrong attempts.
+launcher itself serves HTTP. Running launchers read current credentials on every
+request, so password changes revoke existing cookies without a restart. Sign-in
+reserves one of five attempts before reading a request body, and verification
+uses asynchronous scrypt. The body is limited to 8 KiB and ten seconds; passwords
+are limited to 1024 characters. Protected API responses are not cacheable.
 
 Proxy identity headers are accepted only from the configured `--proxy-from`
 socket address. `--proxy-user` can restrict the one identity value permitted.
@@ -63,6 +67,17 @@ All modes answer the same single owner.
   history-write failure does not prevent a download.
 - Private evidence is absent from the rendering document's type, and is included
   in native backups so the store round-trips without losing it.
+- Launcher directories and backup files enforce private filesystem access:
+  `0700` directories and `0600` files on POSIX; the current user, SYSTEM and
+  Administrators on Windows. Backup replacement preserves this protection, and
+  an unchanged mirror repairs its access too.
+- New design CSS permits known local constructs and data URLs only, with escape
+  decoding. Older designs retain their saved CSS in native archives; rendering
+  omits unsafe CSS and reports that omission. Exported HTML/site files include
+  their own CSP to block automatic remote resources and scripts.
+- Browser resume imports have a 16 MiB source limit. DOCX extraction checks
+  actual expanded XML against a default 4 MiB budget and runs in a cancellable
+  worker with a thirty-second deadline.
 - Unacknowledged wording and settings edits have browser-local recovery copies.
   Successful server saves remove the copies they acknowledged. Wording recovery
   is offered explicitly on reopen. A browser profile therefore holds pending
@@ -72,3 +87,8 @@ All modes answer the same single owner.
 ## Supported versions
 
 KeepCV is in early development. Only the latest release is supported.
+
+The development dependency `braces` has a local pnpm patch that bounds parser
+and AST-walker depth at 128 levels. The registry advisory still reports version
+3.0.3 because its upstream patched release is not published. Regression tests
+exercise the installed patch; it is not suppressed from dependency audit output.

@@ -1,4 +1,4 @@
-import { templateSpecSchema } from "@keepcv/schema";
+import { templateFileSchema, templateSpecSchema } from "@keepcv/schema";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { atsLeftHeading, atsSingleColumn, BLANK_SPEC } from "./built-in.js";
@@ -18,8 +18,6 @@ describe("a template built from a design", () => {
     expect(template.defaultConfig["bullet"]).toBe("dash");
   });
 
-  // A resume may only move what makes it fit; the rest is what the template is,
-  // which is what lets the compliance notes be derived rather than claimed.
   it("offers a resume the fit knobs and none of the design ones", () => {
     const keys = made({}).fields.map((field) => field.key);
 
@@ -53,21 +51,32 @@ describe("a template built from a design", () => {
   });
 });
 
-// A design that fetches prints differently offline, and `</style` ends the
-// element the stylesheet is written into.
 describe("what a design may not carry", () => {
   it.each([
     ["@import url(x.css);", "an import"],
     [".kc-doc { background: url(https://example.test/a.png); }", "an address"],
     ["</style><script>alert(1)</script>", "a closing tag"],
   ])("refuses %s", (extraCss) => {
-    expect(templateSpecSchema.safeParse({ settings: {}, extraCss }).success).toBe(false);
+    expect(
+      templateFileSchema.safeParse({ name: "Design", spec: { settings: {}, extraCss } }).success,
+    ).toBe(false);
   });
 
   it("accepts a data: address, which fetches nothing", () => {
     const extraCss = '.kc-doc { background: url("data:image/gif;base64,R0lGOD"); }';
 
-    expect(templateSpecSchema.safeParse({ settings: {}, extraCss }).success).toBe(true);
+    expect(
+      templateFileSchema.safeParse({ name: "Design", spec: { settings: {}, extraCss } }).success,
+    ).toBe(true);
+  });
+
+  it("preserves an older design but omits its unsafe CSS when rendering", () => {
+    const extraCss = '.kc-name { background: image-set("https://example.test/a" 1x); }';
+    const spec = templateSpecSchema.parse({ settings: {}, extraCss });
+    const template = fromSpec("old", "Old", spec);
+    expect(spec.extraCss).toBe(extraCss);
+    expect(template.styles(template.defaultConfig)).not.toContain("example.test");
+    expect(template.complianceNotes.at(-1)).toContain("omitted");
   });
 });
 
@@ -103,8 +112,6 @@ describe("the design a document carries", () => {
   });
 });
 
-// The two shipped designs are the reason the vocabulary is the size it is, so a
-// knob that stops reaching the page is a design nobody can express any more.
 describe("the shipped designs", () => {
   it("put their headings in different places", () => {
     expect(atsSingleColumn.styles(atsSingleColumn.defaultConfig)).not.toContain(

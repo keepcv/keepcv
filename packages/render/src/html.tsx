@@ -1,10 +1,9 @@
 import type { ResumeDocument } from "@keepcv/schema";
 import { resolveTemplate } from "@keepcv/templates";
 import { renderToStaticMarkup } from "react-dom/server";
+import { DOCUMENT_CONTENT_POLICY } from "./content-policy.js";
 import { documentTitle } from "./title.js";
 
-// One file with nothing to fetch: the stylesheet goes inline and `isATemplate`
-// is what keeps it from naming an address.
 export function renderHtml(document: ResumeDocument): string {
   const { template, config } = resolveTemplate(document);
 
@@ -12,6 +11,7 @@ export function renderHtml(document: ResumeDocument): string {
     <html lang={document.meta.locale}>
       <head>
         <meta charSet="utf-8" />
+        <meta httpEquiv="Content-Security-Policy" content={DOCUMENT_CONTENT_POLICY} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{documentTitle(document)}</title>
         <style>{template.styles(config)}</style>
