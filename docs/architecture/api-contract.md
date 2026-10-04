@@ -169,7 +169,7 @@ GET    /v1/resumes/:id/document        ?locale=  compiled ResumeDocument
 POST   /v1/resumes/:id/derive          { id, name } - a new resume from this one
 
 GET    /v1/resume-versions             ?resumeId=
-POST   /v1/resume-versions             { id, resumeId, trigger } - the store captures the manifest
+POST   /v1/resume-versions             { id, resumeId, trigger, expectedDocumentHash?, locale? } - the store captures the manifest
 GET    /v1/resume-versions/diff        ?a=&b=  only what differs, wordings resolved
 GET    /v1/resume-versions/:id         the version and the manifest it pinned
 GET    /v1/resume-versions/:id/document          what it said, in the words it pinned
@@ -538,6 +538,22 @@ that can reach the port. The launcher will not start that way.
 and all three modes answer the same owner id. Accounts, sign-up, verification and
 anything that could gate a feature are not in this repository.
 
+**Host and Origin are checked before every route, including authentication.**
+The default accepts loopback hosts on the listening port. Password and proxy
+deployments can declare `--origin http[s]://host[:port]`; it is required off
+loopback and names the public Host and the only accepted browser Origin.
+Requests without Origin still need the correct Host and route credentials.
+Null, foreign and mismatched Origins are refused, and forwarded headers do not
+change the declared origin. Proxy socket trust remains a separate check.
+The default port is 4319; `--port` changes it.
+
+The served app has a same-origin CSP: local scripts, connections and assets;
+no objects, base URL overrides or external framing. Inline styling is allowed
+for template previews and geometry, but inline scripts are not. The theme
+initializer is a blocking local script before first paint. Blob workers and
+frames support local parsers and exports; data images and fonts are local
+content. Responses also carry `nosniff` and `no-referrer`.
+
 **The password mode.** `keepcv set-password` writes `auth.json` into the data
 directory, mode `0600`, holding a scrypt hash and a signing secret. The
 parameters are `N=2^14, r=8, p=1` - about 16MB and a tenth of a second - and are
@@ -549,9 +565,9 @@ is bounded by the throttle and by the attacker having to reach the port at all.
 A session is `<ownerId>.<expiry>.<hmac-sha256>` in a `keepcv.session` cookie -
 `HttpOnly`, `SameSite=Strict`, thirty days. Stateless, so a restart does not end
 a session and there is no session table to keep; revocation is rotating the
-secret, which is what setting a password does. No `Secure` flag: the launcher
-serves plain HTTP, and a proxy in front of it is the only thing that could be
-terminating TLS. Sign-in is throttled to five refusals a minute, since scrypt at
+secret, which is what setting a password does. The cookie uses `Secure` when
+the declared public origin is HTTPS; a proxy terminates TLS because the launcher
+serves HTTP. Sign-in is throttled to five refusals a minute, since scrypt at
 a tenth of a second on its own leaves room for tens of thousands of guesses an
 hour.
 

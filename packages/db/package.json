@@ -32,6 +32,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "!dist/**/*.map",
     "migrations",
     "README.md",
     "CHANGELOG.md",

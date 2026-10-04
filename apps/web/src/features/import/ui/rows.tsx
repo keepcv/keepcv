@@ -1,4 +1,5 @@
 import type { IntakeChoice, Uuid } from "@keepcv/schema";
+import { useId } from "react";
 import { cn } from "../../../lib/cn.js";
 
 const ACTIONS = ["create", "merge", "skip"] as const;
@@ -27,6 +28,7 @@ export function ChoiceRow({
   onChoose: (choice: IntakeChoice) => void;
 }) {
   const chosen = choice?.action ?? "skip";
+  const group = useId();
   const offered = ACTIONS.filter((action) => action !== "merge" || mergeInto !== undefined);
 
   return (
@@ -56,7 +58,7 @@ export function ChoiceRow({
             <input
               type="radio"
               className="sr-only"
-              name={`${title}-${String(offered.length)}`}
+              name={group}
               checked={chosen === action}
               onChange={() => {
                 onChoose(

@@ -481,6 +481,12 @@ so there is no second compiler to disagree with the first.
 
 Both steps are pure (`application-structure.md` #7).
 
+`documentContentHash(document)` identifies exported content by hashing the
+whole document with `meta.generatedAt` cleared. Locale, selected content,
+formatting, template design and settings remain covered. The capture route can
+compare that hash with its own rendered manifest before recording a browser
+export; a stale preview never creates a version claiming to be that file.
+
 Capture does, in order:
 
 1. resolve the composition, and drop hidden sections, hidden entries, hidden

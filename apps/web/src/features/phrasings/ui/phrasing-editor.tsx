@@ -1,9 +1,10 @@
-import { phrasingsOfSet, resumesUsingPhrasing, textOfPhrasing } from "@keepcv/core";
+import { phrasingsOfSet, projectPlainText, resumesUsingPhrasing } from "@keepcv/core";
 import {
   PHRASING_VARIANTS,
   type Phrasing,
   type PhrasingSet,
   type PhrasingVariant,
+  type RichText,
   type Store,
   type Uuid,
 } from "@keepcv/schema";
@@ -25,7 +26,9 @@ import {
 } from "../api/use-phrasings.js";
 import { buildVariant, VARIANT_HINTS } from "../model/editor.js";
 import { type EditorStatus, usePhrasingText } from "../model/use-phrasing-text.js";
+import { MarkupInput } from "./markup-input.js";
 import { PhrasingHistory } from "./phrasing-history.js";
+import { RichBody } from "./rich-body.js";
 
 const STATUS_NOTES: Record<EditorStatus, string> = {
   clean: "",
@@ -66,7 +69,7 @@ function DraftWaiting({
   onRestore,
   onDiscard,
 }: {
-  text: string;
+  text: RichText;
   onRestore: () => void;
   onDiscard: () => void;
 }) {
@@ -75,7 +78,9 @@ function DraftWaiting({
       <p className="text-xs font-medium text-caution-text">
         You were part-way through rewording this.
       </p>
-      <p className="mt-1 text-sm text-caution-text">{text}</p>
+      <p className="mt-1 text-sm text-caution-text">
+        <RichBody body={text} />
+      </p>
       <div className="mt-2 flex gap-2">
         <Button onClick={onRestore}>Put it back</Button>
         <Button tone="danger" onClick={onDiscard}>
@@ -172,24 +177,23 @@ function Wording({
         <DraftWaiting text={text.waiting} onRestore={text.restore} onDiscard={text.discard} />
       )}
 
-      {/* Read-only once archived: appending to a wording nothing reaches would
-          write history for a variant the user has put away. */}
-      <textarea
-        value={text.typed}
-        rows={3}
+      <MarkupInput
+        body={text.typed}
         readOnly={isArchived}
-        aria-label={`Wording, ${phrasing.variant}`}
-        onChange={(event) => {
-          text.onChange(event.target.value);
-        }}
+        label={`Wording, ${phrasing.variant}`}
+        onChange={text.onChange}
         onBlur={text.onBlur}
-        className="w-full resize-y rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm leading-relaxed text-text outline-none read-only:bg-surface-sunken focus:border-brand"
       />
 
-      {text.error === null ? null : <Failure error={text.error} />}
+      {text.error === null ? null : (
+        <div>
+          <Failure error={text.error} />
+          <Button onClick={text.retry}>Retry saving wording</Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-subtle">
-        <span className="tabular-nums">{text.typed.trim().length} characters</span>
+        <span className="tabular-nums">{projectPlainText(text.typed).length} characters</span>
         <span aria-live="polite">{STATUS_NOTES[text.status]}</span>
         <span className="ml-auto flex gap-3">
           {isCanonical || isArchived ? null : (
@@ -226,7 +230,9 @@ function Wording({
         </span>
       </div>
 
-      {showing ? <PhrasingHistory client={client} phrasing={phrasing} /> : null}
+      {showing ? (
+        <PhrasingHistory client={client} phrasing={phrasing} onRestore={text.onChange} />
+      ) : null}
     </div>
   );
 }
@@ -240,7 +246,7 @@ function AddWording({
   store: Store;
   client: ApiClient;
   phrasingSetId: Uuid;
-  from: string;
+  from: RichText;
 }) {
   const add = useAddVariant(client);
   const [variant, setVariant] = useState<PhrasingVariant>("short");
@@ -275,7 +281,7 @@ function AddWording({
         disabled={add.isPending}
         onClick={() => {
           setLabel("");
-          add.mutate(buildVariant(store, { phrasingSetId, variant, label, text: from }));
+          add.mutate(buildVariant(store, { phrasingSetId, variant, label, body: from }));
         }}
       >
         Add a wording
@@ -346,7 +352,10 @@ export function PhrasingEditor({
           store={store}
           client={client}
           phrasingSetId={phrasingSetId}
-          from={canonical === undefined ? "" : textOfPhrasing(store, canonical)}
+          from={
+            store.phrasingRevisions.find((row) => row.id === canonical?.currentRevisionId)?.body ??
+            []
+          }
         />
       </PanelBody>
     </Panel>

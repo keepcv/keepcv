@@ -35,6 +35,7 @@ try {
   for (const path of ["/", "/resumes"]) {
     const response = await fetch(`${origin}${path}`);
     assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
     const html = await response.text();
     assert.match(html, /<div id="root">/);
     for (const [, asset] of html.matchAll(/(?:src|href)="(\/assets\/[^" ]+)"/g)) {
@@ -43,6 +44,10 @@ try {
       assert(!loaded.headers.get("content-type")?.includes("text/html"), asset);
     }
   }
+  const theme = await fetch(`${origin}/theme.js`);
+  assert.equal(theme.status, 200);
+  assert.match(theme.headers.get("content-type"), /javascript/);
+  assert.equal(theme.headers.get("cache-control"), "no-store");
   assert.equal((await fetch(`${origin}/v1/store`)).status, 401);
   assert.equal((await fetch(`${origin}/v1/openapi.json`)).status, 200);
   const profile = await call("/v1/profile");
@@ -97,6 +102,8 @@ const restoredBackup = join(process.cwd(), "restored.json");
 await command("backup", "--data-dir", restoredDir, "--out", restoredBackup);
 const original = JSON.parse(await readFile(backup, "utf8"));
 const restored = JSON.parse(await readFile(restoredBackup, "utf8"));
+assert.equal(original.store.resumeVersions.length, 1);
+assert.equal(original.store.resumeVersions[0].trigger, "export");
 delete original.exportedAt;
 delete restored.exportedAt;
 assert.deepEqual(restored, original);

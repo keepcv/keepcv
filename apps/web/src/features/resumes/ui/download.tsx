@@ -3,6 +3,7 @@ import { lossOf, toJsonResume, toLatex, toTypst } from "@keepcv/interop";
 import { fileNameFor, renderHtml, renderSite, SITE_FILE_NAME } from "@keepcv/render";
 import type { ResumeDocument } from "@keepcv/schema";
 import { useMemo, useState } from "react";
+import { Failure } from "../../../app/states.js";
 import { Button } from "../../../components/ui/button.js";
 import { SelectField } from "../../../components/ui/field.js";
 import { printFile, saveFile } from "../../../lib/files.js";
@@ -76,9 +77,29 @@ function Loses({ document, target }: { document: ResumeDocument; target: ExportT
 }
 
 // The heading and the box come from the group this sits in.
-export function DownloadResume({ document }: { document: ResumeDocument }) {
+export function DownloadResume({
+  document,
+  onExport,
+}: {
+  document: ResumeDocument;
+  onExport?: (document: ResumeDocument) => Promise<unknown>;
+}) {
   const [target, setTarget] = useState<ExportTarget>("jsonresume");
+  const [history, setHistory] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [error, setError] = useState<unknown>(null);
   const chosen = TARGETS[target];
+  const record = () => {
+    if (onExport === undefined) return;
+    setHistory("saving");
+    void onExport(document).then(
+      () => {
+        setHistory("saved");
+      },
+      () => {
+        setHistory("failed");
+      },
+    );
+  };
 
   return (
     <div className="space-y-2">
@@ -87,6 +108,7 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
         className="w-full"
         onClick={() => {
           printFile(renderHtml(document));
+          record();
         }}
       >
         Print or save as PDF
@@ -95,6 +117,7 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
         className="w-full"
         onClick={() => {
           saveFile(fileNameFor(document, "html"), HTML, renderHtml(document));
+          record();
         }}
       >
         Download HTML
@@ -108,6 +131,7 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
           className="w-full"
           onClick={() => {
             saveFile(SITE_FILE_NAME, HTML, renderSite(document));
+            record();
           }}
         >
           Download personal page
@@ -132,15 +156,29 @@ export function DownloadResume({ document }: { document: ResumeDocument }) {
         <Button
           className="w-full"
           onClick={() => {
-            void chosen.write(document).then((content) => {
-              saveFile(fileNameFor(document, chosen.extension), chosen.type, content);
-            });
+            void chosen
+              .write(document)
+              .then((content) => {
+                saveFile(fileNameFor(document, chosen.extension), chosen.type, content);
+                record();
+              })
+              .catch(setError);
           }}
         >
           Download {chosen.label}
         </Button>
         <Loses document={document} target={target} />
       </div>
+      {error === null ? null : <Failure error={error} />}
+      {history === "idle" ? null : (
+        <p role="status" className="text-xs text-text-subtle">
+          {history === "saving"
+            ? "Recording export history"
+            : history === "saved"
+              ? "Export recorded in history"
+              : "The export is available, but its version could not be saved. Reopen the preview and export again when the store is available."}
+        </p>
+      )}
     </div>
   );
 }

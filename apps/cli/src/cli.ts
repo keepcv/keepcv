@@ -32,6 +32,7 @@ const USAGE = `
 
     --port <number>           default ${DEFAULT_PORT}
     --host <address>          default ${DEFAULT_HOST}; off loopback needs --auth
+    --origin <url>            public origin for password/proxy; required off loopback
     --data-dir <path>         default ${DEFAULT_DATA_DIR}
     --auth <mode>             ${AUTH_MODES.join(" | ")}, default token
     --proxy-header <name>     --auth proxy: the header the upstream sets
@@ -77,7 +78,7 @@ function origin(host: string, port: number): string {
 // In the fragment, which no browser sends to any server: a token in a query
 // string would be in every log between here and nowhere.
 function banner(running: RunningServer, dataDir: string): string {
-  const where = origin(running.host, running.port);
+  const where = running.origin ?? origin(running.host, running.port);
   const token = running.token;
 
   const opening =
@@ -259,7 +260,7 @@ async function restore(dataDir: string, from: string | undefined): Promise<numbe
 
 async function serveStore(
   dataDir: string,
-  values: { port?: string | undefined; host?: string | undefined },
+  values: { port?: string | undefined; host?: string | undefined; origin?: string | undefined },
   chosen: AuthSetting,
 ): Promise<number> {
   const port = values.port === undefined ? DEFAULT_PORT : Number(values.port);
@@ -273,6 +274,7 @@ async function serveStore(
     dataDir,
     host: values.host ?? DEFAULT_HOST,
     auth: chosen,
+    origin: values.origin,
   });
   process.stdout.write(banner(running, dataDir));
 
@@ -301,6 +303,7 @@ function readArgs(argv: string[]) {
     options: {
       port: { type: "string" },
       host: { type: "string" },
+      origin: { type: "string" },
       "data-dir": { type: "string" },
       auth: { type: "string" },
       "proxy-header": { type: "string" },

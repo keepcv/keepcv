@@ -1237,6 +1237,15 @@ store says. Turning in-progress text into permanent history as a side effect of
 pressing Export is the surprise drafts exist to prevent (#5), so the composer
 surfaces open drafts before capture rather than resolving them silently.
 
+Browser exports attempt capture after producing their local file. When the
+store is unavailable or its current rendered document differs from the preview,
+the file remains available and the app reports that history was not saved.
+The capture request can carry a document content hash and locale; a mismatch
+returns 409 without appending. Printing records the document handed to the
+dialog, since cancellation is outside the app's control. Exporting an existing
+version does not capture the current resume. CLI exports record their captured
+manifest after a successful file write inside the same store transaction.
+
 ### 9.3 Manifest shape
 
 Stored as `jsonb`, validated by Zod on read. Immutable, always read

@@ -1,4 +1,4 @@
-import { newUuid } from "@keepcv/core";
+import { documentContentHash, newUuid } from "@keepcv/core";
 import type {
   ManifestDiff,
   RestoredResume,
@@ -49,15 +49,30 @@ export function useVersionDiff(client: ApiClient, resumeId: Uuid, a: Uuid, b: Uu
   });
 }
 
-export function useCaptureVersion(client: ApiClient, resumeId: Uuid) {
+export function useCaptureVersion(
+  client: ApiClient,
+  resumeId: Uuid,
+  trigger: "export" | "manual_save" = "manual_save",
+) {
   const queries = useQueryClient();
 
   return useMutation({
-    mutationFn: async (): Promise<ResumeVersion> =>
+    mutationFn: async (document: ResumeDocument | undefined): Promise<ResumeVersion> =>
       resumeVersionSchema.parse(
         await unwrap(
           await client.v1["resume-versions"].$post({
-            json: { id: newUuid(), resumeId, trigger: "manual_save", restoredFromVersionId: null },
+            json: {
+              id: newUuid(),
+              resumeId,
+              trigger,
+              restoredFromVersionId: null,
+              ...(document === undefined
+                ? {}
+                : {
+                    expectedDocumentHash: documentContentHash(document),
+                    locale: document.meta.locale,
+                  }),
+            },
           }),
         ),
       ),

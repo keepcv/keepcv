@@ -15,6 +15,13 @@ export class UnauthorizedError extends Error {
   override readonly name = "UnauthorizedError";
 }
 
+export class ExportChangedError extends Error {
+  override readonly name = "ExportChangedError";
+  constructor() {
+    super("The resume changed since the exported preview. No version was saved for this file.");
+  }
+}
+
 export class StaleWriteError extends Error {
   override readonly name = "StaleWriteError";
   readonly current: unknown;
@@ -72,6 +79,15 @@ function validationProblem(error: ZodError, instance: string): Problem {
 }
 
 export function problemFor(error: unknown, instance: string): Problem {
+  if (error instanceof ExportChangedError) {
+    return {
+      type: PROBLEM_TYPES.staleWrite,
+      title: "Resume changed",
+      status: 409,
+      detail: error.message,
+      instance,
+    };
+  }
   if (error instanceof ZodError) {
     return validationProblem(error, instance);
   }

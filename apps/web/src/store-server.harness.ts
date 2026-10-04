@@ -4,6 +4,7 @@ import {
   derivePlan,
   deriveRevision,
   diffManifests,
+  documentContentHash,
   importPlan,
   type JsonValue,
   newUuid,
@@ -44,6 +45,7 @@ import {
   roleProfileTagSchema,
   savedFilterSchema,
   tagSchema,
+  templateSchema,
 } from "@keepcv/schema";
 
 export interface Call {
@@ -80,6 +82,7 @@ const CREATABLE: Record<string, (store: Store, row: object) => void> = {
     store.contactChannels.push(contactChannelSchema.parse(row)),
   "/v1/records": (store, row) => store.records.push(careerRecordSchema.parse(row)),
   "/v1/resumes": (store, row) => store.resumes.push(resumeSchema.parse(row)),
+  "/v1/templates": (store, row) => store.templates.push(templateSchema.parse(row)),
   "/v1/metrics": (store, row) => store.metrics.push(metricSchema.parse(row)),
   "/v1/resume-sections": (store, row) => store.resumeSections.push(resumeSectionSchema.parse(row)),
   "/v1/resume-entries": (store, row) => store.resumeEntries.push(resumeEntrySchema.parse(row)),
@@ -238,6 +241,7 @@ const AMENDABLE: Record<string, (store: Store) => Amendable> = {
     parse: (v) => phrasingSetSchema.parse(v),
   }),
   resumes: (store) => ({ rows: store.resumes, parse: (v) => resumeSchema.parse(v) }),
+  templates: (store) => ({ rows: store.templates, parse: (v) => templateSchema.parse(v) }),
   "resume-sections": (store) => ({
     rows: store.resumeSections,
     parse: (v) => resumeSectionSchema.parse(v),
@@ -357,6 +361,8 @@ interface CaptureInput {
   resumeId: Uuid;
   trigger: VersionTrigger;
   restoredFromVersionId: Uuid | null;
+  expectedDocumentHash?: string;
+  locale?: string;
 }
 
 // A version records what the resume said, which no client can assert, so the
@@ -480,7 +486,30 @@ function read(store: Store, archive: Archive, url: URL): Response {
 function onVersion(versions: ResumeVersion[], store: Store, call: Call, at: string): Response {
   const restoring = RESTORE.exec(call.path);
   if (restoring === null) {
-    const version = appendVersion(versions, store, call.body as CaptureInput, at);
+    const input = call.body as CaptureInput;
+    const manifest = captureManifest(store, input.resumeId);
+    if (
+      manifest !== undefined &&
+      input.expectedDocumentHash !== undefined &&
+      documentContentHash(
+        renderManifest(manifest, store.phrasingRevisions, {
+          generatedAt: at,
+          ...(input.locale === undefined ? {} : { locale: input.locale }),
+        }),
+      ) !== input.expectedDocumentHash
+    ) {
+      return jsonOf(
+        {
+          type: "about:blank",
+          title: "Resume changed",
+          status: 409,
+          detail: "The exported preview changed.",
+          instance: call.path,
+        },
+        409,
+      );
+    }
+    const version = appendVersion(versions, store, input, at);
     return version === undefined ? jsonOf({ status: 404 }, 404) : jsonOf(version, 201);
   }
 

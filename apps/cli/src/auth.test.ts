@@ -8,6 +8,7 @@ import {
   authPath,
   cookieFrom,
   hashPassword,
+  launcherAuth,
   mintSession,
   passwordAuth,
   proxyAuth,
@@ -159,6 +160,26 @@ describe("cookieFrom", () => {
 });
 
 describe("passwordAuth", () => {
+  it("sets and clears secure cookies for an HTTPS public origin", async () => {
+    const auth = launcherAuth(
+      { mode: "password", stored: { hash: hashPassword("hunter2"), secret: SECRET } },
+      OWNER,
+    );
+    const granted = await auth.routes(
+      new Request("https://cv.example.test/auth/sign-in", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: "hunter2" }),
+      }),
+    );
+    expect(granted?.status).toBe(204);
+    expect(granted?.headers.get("set-cookie")).toContain("; Secure");
+    const cleared = await auth.routes(
+      new Request("https://cv.example.test/auth/sign-out", { method: "POST" }),
+    );
+    expect(cleared?.headers.get("set-cookie")).toContain("; Secure");
+    expect(cleared?.headers.get("set-cookie")).toContain("Max-Age=0");
+  });
   it("answers the owner for a session it signed", async () => {
     const authenticate = passwordAuth(SECRET, OWNER);
     expect(await authenticate(withCookie(mintSession(SECRET, OWNER)))).toBe(OWNER);

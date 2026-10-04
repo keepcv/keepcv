@@ -1,4 +1,4 @@
-import { newUuid } from "@keepcv/core";
+import { documentContentHash, newUuid } from "@keepcv/core";
 import {
   manifestDiffSchema,
   PROBLEM_TYPES,
@@ -167,6 +167,46 @@ async function star(resumeVersionId: Uuid, label: string): Promise<ResumeSnapsho
 }
 
 describe("resume versions", () => {
+  it("records the exported preview, refuses stale previews and leaves drafts uncommitted", async () => {
+    const { resumeId, phrasingId } = await compose("Export audit");
+    const draft = { body: { body: [{ t: "text", v: "Unfinished wording" }] } };
+    expect((await send("PUT", `/v1/drafts/phrasing/${phrasingId}/body`, draft)).status).toBe(200);
+    const document = resumeDocumentSchema.parse(
+      await (await send("GET", `/v1/resumes/${resumeId}/document`)).json(),
+    );
+    const input = {
+      id: newUuid(),
+      resumeId,
+      trigger: "export",
+      expectedDocumentHash: documentContentHash(document),
+      locale: document.meta.locale,
+    };
+    expect((await send("POST", "/v1/resume-versions", input)).status).toBe(201);
+    expect((await send("POST", "/v1/resume-versions", { ...input, id: newUuid() })).status).toBe(
+      200,
+    );
+    const store = await read("/v1/store");
+    expect(store["drafts"]).toHaveLength(1);
+    expect(
+      (
+        await send("POST", `/v1/phrasings/${phrasingId}/revisions`, {
+          body: [{ t: "b", c: [{ t: "text", v: "Changed wording" }] }],
+        })
+      ).status,
+    ).toBe(201);
+    const refused = await send("POST", "/v1/resume-versions", { ...input, id: newUuid() });
+    expect(refused.status).toBe(409);
+    expect(await problemOf(refused)).toMatchObject({
+      type: PROBLEM_TYPES.staleWrite,
+      title: "Resume changed",
+    });
+    expect(
+      await items(
+        await send("GET", `/v1/resume-versions?resumeId=${resumeId}`),
+        resumeVersionSchema,
+      ),
+    ).toHaveLength(1);
+  });
   it("captures the manifest rather than taking one from the client", async () => {
     const { resumeId } = await compose("For Acme");
 

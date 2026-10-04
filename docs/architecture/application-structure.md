@@ -638,7 +638,7 @@ the reason phrasing revisions are immutable and append-only.
         |            +------------+
         |            | DraftSaved |   persisted to `draft`, not history
         |            +------------+
-        |                   |  blur / explicit save / about to be pinned / idle 30s
+        |                   |  blur / retry / navigation / idle 30s
         |                   v
         |            +------------+
         +------------| Committing |--> append phrasing_revision, move pointer,
@@ -652,8 +652,9 @@ Rules that fall out of append-only revisions:
 - **A revision is only appended if content actually changed.** Enforced by the
   unique `(phrasing_id, content_hash)` index, so retyping a word and undoing
   it cannot pollute the timeline.
-- **Pinning forces a commit.** Rendering or versioning a resume commits any
-  open draft first, so a version can never pin text the user never saw.
+- **Export and version capture leave drafts alone.** They use committed
+  wording, exactly as the preview does. A recovered draft is an offer to edit,
+  not permission to turn it into history while exporting.
 - **Reopening with a draft present is explicit.** The editor says a draft
   exists and offers restore or discard; it never silently resurrects text the
   user believed they had abandoned.
@@ -669,6 +670,24 @@ Rules that fall out of append-only revisions:
 - **The editor is bound to the AST, not to a string**. Bold, italic
   and link are the only marks; the input rejects anything else at the schema
   boundary rather than sanitising after the fact.
+
+The structured input holds the AST while a text area edits its plain-text
+projection. Range operations preserve marks outside the edited range and
+inherit marks for inserted text. Bold, italic, link and clear-formatting
+controls act on the selected range, with keyboard shortcuts and a formatted
+preview. Pasted markup is text, never HTML. Formatting-only changes count as
+edits, and new variants inherit the whole body. History compares a selected
+revision with the current wording and loads it into the editor to reapply or
+edit; the ordinary draft and commit rules still apply.
+
+Each edit also keeps a browser-local recovery copy before the debounce. It is
+removed once the server acknowledges those exact contents. Recovery is offered
+on open, including after a failed server save, and discard is explicit. Writes
+are serialized so an older draft save cannot land after its revision's discard.
+Navigation waits for the current edit to commit and remains on the editor when
+the save fails. Closing with an outstanding write triggers the browser's
+unsaved-change prompt; browser storage being disabled cannot prevent a server
+save.
 
 ---
 
@@ -736,9 +755,21 @@ user might never load at all.
 `renderHtml(document)` in `@keepcv/render` resolves the template the document
 names, inlines that template's stylesheet, and returns one HTML file. That is
 the whole exporter. It runs wherever a `ResumeDocument` does, so the app calls
-it on the document it already compiled in the tab - no request, and it works
-with the store stopped - and `keepcv render` calls it on one it compiled from
+it on the document it already compiled in the tab, including with the store
+stopped, and `keepcv render` calls it on one it compiled from
 the store on disk. Both produce the same bytes, because there is one function.
+
+Current-resume downloads and print-dialog requests attempt to capture a version
+after producing the file. Recording history never gates a browser export: a
+failure is shown beside the download controls. Pending preview settings are
+included in the downloaded document and flushed before capture. Capture sends
+the document content hash and locale; a changed server document returns 409
+without recording a misleading version. The generated timestamp is excluded
+from this comparison. Print cancellation cannot be observed reliably, so
+history records the document offered to the dialog. Downloading a previously
+captured version does not capture the working resume. The CLI writes the file
+and appends its captured manifest in the same store transaction; a failed file
+write records no version.
 
 **The file fetches nothing.** `isATemplate` already refuses a stylesheet that
 `@import`s or names an address, and the exporter's own suite asserts the file
@@ -982,8 +1013,9 @@ larger size, heavier weight and tighter tracking.
 
 ### 10.2 The scheme is applied before first paint
 
-The choice - `system`, `light` or `dark` - is in `localStorage`, and an inline
-script in `index.html` reads it and sets the class before the bundle loads.
+The choice - `system`, `light` or `dark` - is in `localStorage`, and a blocking
+local `theme.js` script reads it and sets the class before the bundle loads.
+It is served without caching and allowed by the launcher's `script-src 'self'`.
 Doing it in an effect flashes a white page on the way into a dark one. The key
 and the vocabulary therefore appear in both that script and `lib/theme.ts`,
 which cannot import each other, so a test feeds both the same values.
@@ -1278,3 +1310,10 @@ so what the editor shows is what the conformance suite checks. Writes are
 debounced exactly as the resume's own settings are, and a spec whose `extraCss`
 the schema would refuse is not sent at all: the message appears under the box and
 the debounce declines to fire.
+
+Template and preview settings keep a browser recovery copy, serialize writes,
+and retain pending values until acknowledgement. Navigation flushes the latest
+values before leaving. Failed or invalid saves leave the user on the editor,
+with an error and retry control; a tab close with outstanding changes prompts.
+Recovered settings are shown on reopen and saved when valid. The preview,
+findings and downloads all use the visible pending settings.

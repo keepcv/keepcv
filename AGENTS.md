@@ -262,7 +262,7 @@ session already.
 - TypeScript does not excess-check a hyphenated JSX attribute, so
   `aria-expanded` on a component that does not forward it type-checks and is
   silently dropped. `Button` takes `expanded`.
-- Dark mode is set by an inline script in `index.html` before first paint - an
+- Dark mode is set by a blocking local script before first paint - an
   effect flashes a white page on the way into a dark one - and the choice lives
   on the shell, since two toggles with two hooks disagree.
 - A custom section is a screen of its own, because until one exists the record

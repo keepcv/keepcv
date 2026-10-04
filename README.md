@@ -9,10 +9,9 @@ and it stays there permanently. Resumes are *generated views* over that store:
 select what is relevant, choose a template, produce a document. Nothing you
 write is ever lost to make something fit.
 
-> **Status: early development.** The app runs locally from a checkout. There is
-> no release yet.
+> **Status: early development.** Published on npm as `@keepcv/cli`.
 
-The [0.1.2 release notes](docs/releases/0.1.2.md) describe the prepared first
+The [0.1.2 release notes](docs/releases/0.1.2.md) describe the first complete
 release. Maintainers can follow the [release procedure](docs/RELEASING.md).
 
 ## The idea
@@ -47,7 +46,23 @@ tool.
 
 ## Running locally
 
-Requires Node 24+ and pnpm via corepack. From the repository root:
+Requires Node 24 or newer:
+
+```sh
+npx @keepcv/cli serve
+```
+
+Open the URL the launcher prints, including its `#token=...` fragment. The
+launcher serves the web app and API together at `http://127.0.0.1:4319`.
+
+The command keeps the store and its readable backup in `~/.keepcv`. Choose
+another directory with `--data-dir`. Stop the launcher with `Ctrl+C`.
+
+See the [launcher README](apps/cli/README.md) for its commands and sign-in modes.
+
+## Development
+
+From a checkout, use pnpm via corepack:
 
 ```sh
 corepack enable
@@ -56,16 +71,7 @@ pnpm build
 node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
 ```
 
-Open the URL the launcher prints, including its `#token=...` fragment. The
-launcher serves the web app and API together at `http://127.0.0.1:4319`.
-
-The command keeps the store and its readable backup in `.keepcv-scratch`, an
-ignored directory inside the checkout. Reuse it to keep your data between runs,
-or choose another directory with `--data-dir`. Stop the launcher with `Ctrl+C`.
-
-See the [launcher README](apps/cli/README.md) for its commands and sign-in modes.
-
-## Development
+The scratch directory is ignored. Reuse it to keep development data between runs.
 
 Run the repository checks:
 

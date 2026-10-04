@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SESSION_COOKIE, SESSION_TOKEN_HEADER } from "@keepcv/api";
@@ -35,11 +36,40 @@ describe("keepcv serve", () => {
           headers: { [SESSION_TOKEN_HEADER]: tokenOf(running) },
         });
         expect(profileSchema.parse(await response.json()).fullName).toBeNull();
+        for (const headers of [{ origin: "https://attacker.example" }, { origin: "null" }]) {
+          const refused = await fetch(url("/v1/profile"), {
+            headers: { ...headers, [SESSION_TOKEN_HEADER]: tokenOf(running) },
+          });
+          expect(refused.status).toBe(403);
+          expect(refused.headers.get("access-control-allow-origin")).toBeNull();
+        }
+        const rebound = await new Promise<number>((resolve, reject) => {
+          const call = httpRequest(
+            url("/v1/profile"),
+            {
+              headers: { host: "attacker.example", [SESSION_TOKEN_HEADER]: tokenOf(running) },
+            },
+            (answer) => {
+              answer.resume();
+              resolve(answer.statusCode ?? 0);
+            },
+          );
+          call.on("error", reject);
+          call.end();
+        });
+        expect(rebound).toBe(403);
+        const same = await fetch(url("/v1/profile"), {
+          headers: { origin: url(""), [SESSION_TOKEN_HEADER]: tokenOf(running) },
+        });
+        expect(same.status).toBe(200);
 
         // One origin: a client route gets the entry document, /v1 gets the API.
         const app = await fetch(url("/records"));
         expect(app.status).toBe(200);
         expect(app.headers.get("content-type")).toContain("text/html");
+        expect(app.headers.get("content-security-policy")).toContain("script-src 'self'");
+        expect(app.headers.get("content-security-policy")).toContain("connect-src 'self'");
+        expect(app.headers.get("x-content-type-options")).toBe("nosniff");
         expect(await app.text()).toContain('<div id="root">');
 
         // The token is in the fragment the launcher prints, which the browser
@@ -104,6 +134,56 @@ describe("keepcv serve", () => {
 
 describe("keepcv serve --auth password", () => {
   it(
+    "uses an HTTPS public origin for real sign-in requests and secure cookies",
+    async () => {
+      const dataDir = await mkdtemp(join(tmpdir(), "keepcv-origin-"));
+      await writePassword(dataDir, "a long enough password");
+      const stored = await readAuth(dataDir);
+      if (stored === undefined) throw new Error("the password was just written");
+      const running = await startServer({
+        port: 0,
+        dataDir,
+        origin: "https://cv.example.test",
+        auth: { mode: "password", stored },
+      });
+      try {
+        const granted = await new Promise<{ status: number; cookie: string }>((resolve, reject) => {
+          const call = httpRequest(
+            `http://127.0.0.1:${running.port}/auth/sign-in`,
+            {
+              method: "POST",
+              headers: {
+                host: "cv.example.test",
+                origin: "https://cv.example.test",
+                "content-type": "application/json",
+              },
+            },
+            (response) => {
+              response.resume();
+              resolve({
+                status: response.statusCode ?? 0,
+                cookie: response.headers["set-cookie"]?.join(";") ?? "",
+              });
+            },
+          );
+          call.on("error", reject);
+          call.end(JSON.stringify({ password: "a long enough password" }));
+        });
+        expect(granted.status).toBe(204);
+        expect(granted.cookie).toContain("; Secure");
+        expect(granted.cookie).toContain("SameSite=Strict");
+        const spoofed = await fetch(`http://127.0.0.1:${running.port}/auth/mode`, {
+          headers: { "x-forwarded-host": "cv.example.test", "x-forwarded-proto": "https" },
+        });
+        expect(spoofed.status).toBe(403);
+      } finally {
+        await running.stop();
+        await rm(dataDir, { recursive: true, force: true });
+      }
+    },
+    BOOTS_A_REAL_STORE,
+  );
+  it(
     "hands out a session for the password and nothing else",
     async () => {
       const dataDir = await mkdtemp(join(tmpdir(), "keepcv-password-"));
@@ -130,6 +210,12 @@ describe("keepcv serve --auth password", () => {
         expect(await mode.json()).toEqual({ mode: "password", signedIn: false });
 
         expect((await fetch(url("/v1/profile"))).status).toBe(401);
+        const forged = await fetch(url("/auth/sign-in"), {
+          method: "POST",
+          headers: { origin: "https://attacker.example", "content-type": "application/json" },
+          body: JSON.stringify({ password: "a long enough password" }),
+        });
+        expect(forged.status).toBe(403);
         expect((await signIn("not it")).status).toBe(401);
 
         const granted = await signIn("a long enough password");
@@ -195,6 +281,16 @@ describe("keepcv serve --auth password", () => {
 });
 
 describe("keepcv serve --auth proxy", () => {
+  it("requires a declared public origin for a network bind", async () => {
+    await expect(
+      startServer({
+        port: 4319,
+        dataDir: ".keepcv-scratch",
+        host: "0.0.0.0",
+        auth: { mode: "proxy", header: "X-Forwarded-User", from: "127.0.0.1" },
+      }),
+    ).rejects.toThrow(/--origin/);
+  });
   it(
     "reads the user the upstream named and refuses a request without one",
     async () => {

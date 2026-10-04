@@ -207,7 +207,11 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
         <PanelHeader
           title="Timeline"
           aside={
-            <Button tone="primary" disabled={capture.isPending} onClick={() => capture.mutate()}>
+            <Button
+              tone="primary"
+              disabled={capture.isPending}
+              onClick={() => capture.mutate(undefined)}
+            >
               Save a version
             </Button>
           }
@@ -221,7 +225,8 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
 
           {rows.length === 0 ? (
             <Empty title="Versions are what a resume said">
-              Every export saves one. A version pins the wording, the dates and the titles.
+              Exports record a version when the store is available. Unchanged exports reuse the
+              current version. A version pins the wording, the dates and the titles.
             </Empty>
           ) : (
             <ol aria-label="Versions of this resume" className="space-y-1">

@@ -1,56 +1,74 @@
 # Security
 
-KeepCV stores a complete personal career history: employment, education,
-contact details, and private evidence notes. That is sensitive personal data,
-and the threat model is treated accordingly.
+KeepCV stores personal career history, contact details and private evidence.
+The launcher authenticates every store request and serves the app and API on
+one origin.
 
 ## Reporting a vulnerability
 
 Please report privately through
 [GitHub Security Advisories](https://github.com/keepcv/keepcv/security/advisories/new),
-not as a public issue.
+not as a public issue. Include the affected version, reproduction and impact.
 
-Please include what you can reproduce, the impact, and the affected version.
-You will get an acknowledgement, and we will keep you informed until it is
-resolved.
+Anything that could lose, alter or silently expose content is treated as the
+highest severity. We will acknowledge the report and keep you informed.
 
-Anything that could **lose, alter, or silently expose a user's content** is
-treated as the highest severity, regardless of how difficult it is to trigger.
+## Launcher request boundary
 
-## Local mode threat model
+The default `npx @keepcv/cli serve` binds to `127.0.0.1:4319`.
+`--port` changes the port. Token mode refuses a network bind.
 
-`npx keepcv` runs an HTTP server on your machine holding your entire career
-store. Any web page open in the same browser can *send* requests to it - the
-same-origin policy prevents reading the responses, but not the requests. DNS
-rebinding can additionally defeat naive origin checks.
+- A random per-launch token travels in the launch URL fragment and is required
+  in `x-keepcv-session` for protected API routes. The fragment is not sent to
+  the HTTP server. The public OpenAPI document and app assets contain no token.
+- Host must name a loopback address on the listening port. If Origin is present,
+  it must be that exact origin. Foreign and null Origins and arbitrary hostnames
+  are refused before any route runs, including sign-in.
+- The launcher sets no CORS permission headers.
+- The app's CSP permits local scripts and connections, with no remote origins.
+  It refuses inline scripts, objects, base URL overrides and external framing.
+  Inline styles are allowed for rendered templates and geometry; local blob
+  workers/frames and data images/fonts support parsing and export.
+- Responses carry `X-Content-Type-Options: nosniff` and
+  `Referrer-Policy: no-referrer`.
+- The app has no telemetry, update checks, remote fonts or CDN assets. Resume
+  files are self-contained. User-followed links navigate to their destinations.
 
-These controls exist because of that, and each one is tested:
+Tests exercise the actual HTTP boundary, same-origin requests, authentication,
+foreign Origin and rebinding Host rejection, and the response policy.
 
-1. **Binds to `127.0.0.1` only** - never `0.0.0.0`, never a LAN interface.
-2. **Random ephemeral port per launch** - not a guessable fixed port.
-3. **Per-launch session token**, required in a custom request header. Custom
-   headers force a CORS preflight that a cross-origin page cannot satisfy,
-   which defeats drive-by request forgery.
-4. **Strict `Host` and `Origin` validation** - the DNS rebinding guard, and the
-   control most often omitted.
-5. **No CORS headers at all** - not a narrow allowlist. None.
-6. **Strict Content-Security-Policy** with no remote origins permitted.
-7. **Zero outbound network requests.** No telemetry, no update checks, no
-   remote fonts, no CDN assets. This is enforced by a test that fails the build
-   if any network call is attempted during the end-to-end suite.
+## Network deployments
 
-If you find a way around any of these, that is a vulnerability - please report
-it.
+Password and trusted-proxy modes support network access. Declare
+`--origin http[s]://host[:port]` using the address opened in the browser;
+it is required for a non-loopback bind. The proxy must preserve the public Host.
+Host and browser Origin must match that configuration. Forwarded headers do not
+override it.
+
+Password sessions are signed, HttpOnly, SameSite=Strict cookies lasting thirty
+days. Setting a password rotates the signing secret and ends existing sessions.
+HTTPS origins also set Secure; terminate HTTPS at the reverse proxy because the
+launcher itself serves HTTP. Sign-in is throttled after five wrong attempts.
+
+Proxy identity headers are accepted only from the configured `--proxy-from`
+socket address. `--proxy-user` can restrict the one identity value permitted.
+All modes answer the same single owner.
 
 ## Data handling
 
-- Nothing you write is destroyed by a normal delete. Content is archived and
-  restorable; genuine erasure is a separate, explicitly confirmed operation.
-- Export is never gated by any account, licence or entitlement state.
-- Private evidence notes are excluded from rendered output *structurally* -
-  the rendering document type has no field that could carry them - rather than
-  by a runtime filter that could be bypassed or forgotten.
+- Normal removal archives content. Phrasing revisions and resume versions are
+  immutable. Reapplying a wording moves the current pointer without rewriting
+  its old revisions.
+- Export is never gated by account, licence or entitlement state. A browser
+  history-write failure does not prevent a download.
+- Private evidence is absent from the rendering document's type, and is included
+  in native backups so the store round-trips without losing it.
+- Unacknowledged wording and settings edits have browser-local recovery copies.
+  Successful server saves remove the copies they acknowledged. Wording recovery
+  is offered explicitly on reopen. A browser profile therefore holds pending
+  content as well as the launcher data directory; clearing browser storage
+  removes those recovery copies, not saved store data.
 
 ## Supported versions
 
-The project is in early development. Only the latest release is supported.
+KeepCV is in early development. Only the latest release is supported.

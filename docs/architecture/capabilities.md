@@ -171,6 +171,12 @@ than in help text - see application-structure.md #5.4);
 confidence levels; revision history with compare and restore; and a usage view
 answering "where is this used?".
 
+Formatting controls and keyboard shortcuts edit selected ranges while keeping
+the AST through text edits, draft recovery and new variants. History compares
+formatted bodies and loads an earlier wording into the editor to reapply it.
+Browser recovery protects text before the debounce and during a failed save;
+the recovered wording is offered, never silently restored.
+
 Drafts belong here: keystrokes must not create revisions, and in-progress text
 must survive a closed tab. The store keeps one draft per field of a target,
 overwritable and outside history, and it travels with the boot payload so an

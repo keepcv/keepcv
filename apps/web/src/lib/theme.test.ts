@@ -54,15 +54,15 @@ describe("theme", () => {
     expect(isDark("system")).toBe(false);
   });
 
-  // The inline script in index.html runs before the bundle and cannot import
-  // this module, so the key and the choice vocabulary live in both places.
-  it("agrees with the pre-paint script in index.html", () => {
+  it("agrees with the pre-paint script", () => {
     // `import.meta.url` is an http URL under the jsdom environment.
     const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
+    expect(html).toContain('<script src="/theme.js"></script>');
+    const script = readFileSync(resolve(process.cwd(), "public/theme.js"), "utf8");
 
-    expect(html).toContain('localStorage.getItem("keepcv.theme")');
-    expect(html).toContain('choice === "dark"');
-    expect(html).toContain('choice === "system"');
-    expect(html).toContain('classList.add("dark")');
+    expect(script).toContain('localStorage.getItem("keepcv.theme")');
+    expect(script).toContain('choice === "dark"');
+    expect(script).toContain('choice === "system"');
+    expect(script).toContain('classList.add("dark")');
   });
 });
