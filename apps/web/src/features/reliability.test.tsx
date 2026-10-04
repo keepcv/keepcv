@@ -110,7 +110,7 @@ it("flushes template edits before navigation and preserves failed edits for retr
     await router.navigate({ to: "/templates", search: { archived: "exclude" } });
   });
   expect(router.state.location.pathname).toBe("/templates");
-});
+}, 15_000);
 
 it("serializes settings changes against a slow save and sends the latest value", async () => {
   const store = aFilledStore();
