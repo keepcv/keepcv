@@ -96,7 +96,7 @@ environment behavior applies. Certificate validation checks the configured
 hostname or IP, including when the driver omits TLS servername for an IP.
 Connection-string parsing uses the driver's parser before adding this check,
 so URL SSL parameters cannot overwrite it. Explicitly disabling certificate
-validation in a URL remains an insecure driver option. See
+validation in a URL or environment remains an insecure driver option. See
 [node-postgres TLS](https://node-postgres.com/features/ssl)
 and [pool configuration](https://node-postgres.com/apis/pool).
 

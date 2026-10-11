@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/editor",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Reusable KeepCV browser editor with an injected API client and query cache.",
   "license": "MIT",
   "author": "nrautela",

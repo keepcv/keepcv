@@ -1,5 +1,25 @@
 # @keepcv/core
 
+## 0.1.3
+
+### Patch Changes
+
+- 6b46294: Exclude source and declaration maps from npm packages while retaining runnable
+  JavaScript and TypeScript declarations.
+
+  Record current-resume exports in history, reject history capture for a stale
+  preview, preserve formatting through phrasing edits and recovery, and retain
+  pending settings across navigation and failed saves. Add phrasing comparison
+  and reapply controls and isolate repeated titles in import review.
+
+  Validate launcher Host and Origin before routing requests, apply a same-origin
+  Content Security Policy, and require a declared public origin for network binds.
+  Update installation and deployment documentation for the published launcher.
+
+- Updated dependencies [c0e1bf3]
+- Updated dependencies [6b46294]
+  - @keepcv/schema@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

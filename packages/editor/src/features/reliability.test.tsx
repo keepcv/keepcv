@@ -300,4 +300,4 @@ it("recovers a failed settings save after reopening the template", async () => {
     expect(store.templates.find((row) => row.id === template.id)?.spec.extraCss).toBe(css);
   });
   expect(window.localStorage.getItem(`keepcv.template-edit:${template.id}`)).toBeNull();
-}, 10_000);
+});
