@@ -87,6 +87,9 @@ catalogs:
     pg:
       specifier: ^8.22.0
       version: 8.22.0
+    pg-connection-string:
+      specifier: ^2.14.0
+      version: 2.14.0
     react:
       specifier: ^19.2.8
       version: 19.2.8
@@ -350,6 +353,9 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.22.0
+      pg-connection-string:
+        specifier: 'catalog:'
+        version: 2.14.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

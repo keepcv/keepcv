@@ -3,4 +3,10 @@
 
 export type { Database } from "./database.js";
 export { currentOwnerId, OwnerScopeError, runAsOwner } from "./owner-scope.js";
-export { type LocalStore, openLocalStore, openServerStore, type Store } from "./store.js";
+export {
+  type LocalStore,
+  openLocalStore,
+  openServerStore,
+  type ServerStoreOptions,
+  type Store,
+} from "./store.js";

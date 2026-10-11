@@ -258,10 +258,26 @@ formatting exists.
 
 ### `owner`
 
-The tenancy anchor. Exactly one row, created at first launch. Every other table
+The tenancy anchor. The local launcher keeps exactly one row, created at first
+launch; a server store can hold independently provisioned owners. Every other table
 carries `owner_id` from its first migration and every repository reads it from
 ambient scope, so the predicate is uniform whatever ends up putting an owner
 there.
+
+`Store.provisionOwner(id)` inserts the owner and its placeholder profile in one
+transaction, using the owner primary key and `profile_owner_unique` as conflict
+targets. Repeated and concurrent calls preserve existing data and repair a
+missing placeholder. A failed transaction leaves neither half behind.
+`createOwner(id)` remains a strict create for callers that need duplicate ids
+to be refused.
+
+`Store.eraseOwner(id, { erasePermanently: true })` is a separate lifecycle
+operation, outside editing repositories and HTTP routes. Runtime confirmation
+is required. One transaction deletes the tenancy anchor and its cascading
+references, including archived content, private evidence, drafts and immutable
+history. Repeating an erasure of an absent owner succeeds. The caller stops
+admitting work for that owner before erasure and separately removes any backups
+it holds. Provisioning the same id afterwards explicitly creates a new store.
 
 ```sql
 owner (

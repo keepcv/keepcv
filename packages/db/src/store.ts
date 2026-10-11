@@ -1,3 +1,4 @@
+import { checkServerIdentity } from "node:tls";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import {
@@ -7,11 +8,13 @@ import {
   type UnitOfWork,
 } from "@keepcv/core";
 import { type Uuid, uuidSchema } from "@keepcv/schema";
+import { eq } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate as migrateNodePostgres } from "drizzle-orm/node-postgres/migrator";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
+import { parseIntoClientConfig } from "pg-connection-string";
 import type { Database } from "./database.js";
 import { createRepositories } from "./repositories/index.js";
 import { owner, profile } from "./schema/index.js";
@@ -22,15 +25,24 @@ export interface Store {
   readonly unitOfWork: UnitOfWork;
   migrate(): Promise<void>;
   createOwner(id: Uuid): Promise<void>;
+  provisionOwner(id: Uuid): Promise<void>;
+  eraseOwner(id: Uuid, confirmation: { erasePermanently: true }): Promise<void>;
   close(): Promise<void>;
+}
+
+export interface ServerStoreOptions {
+  connectionString: string;
+  max?: number;
+  connectionTimeoutMillis?: number;
+  idleTimeoutMillis?: number;
+  statement_timeout?: number;
+  ssl?: { ca?: string };
 }
 
 export interface LocalStore extends Store {
   ensureLocalOwner(): Promise<Uuid>;
 }
 
-// Both drivers name the constraint on the cause, which is the only part worth
-// carrying upwards.
 const CONSTRAINT_KIND_BY_SQLSTATE: Record<string, ConstraintKind | undefined> = {
   "23505": "unique",
   "23503": "foreignKey",
@@ -46,8 +58,6 @@ function asDomainError(error: unknown): unknown {
   return new ConstraintViolationError(kind, cause.constraint, { cause: error });
 }
 
-// Every write runs inside a unit, so translating here covers repositories that
-// do not exist yet.
 function unitOfWork(db: Database): UnitOfWork {
   return {
     run: async (work) => {
@@ -60,23 +70,42 @@ function unitOfWork(db: Database): UnitOfWork {
   };
 }
 
-// Created with the owner rather than lazily: a missing profile is a broken
-// store, which is easier to notice than a silent auto-create.
 async function insertOwner(tx: Database, id: Uuid): Promise<void> {
   await tx.insert(owner).values({ id });
   await tx.insert(profile).values({ id: newUuid(), ownerId: id });
 }
 
+function ownerLifecycle(db: Database) {
+  return {
+    createOwner: async (id: Uuid) => await db.transaction(async (tx) => await insertOwner(tx, id)),
+    provisionOwner: async (id: Uuid) => {
+      await db.transaction(async (tx) => {
+        await tx.insert(owner).values({ id }).onConflictDoNothing({ target: owner.id });
+        await tx
+          .insert(profile)
+          .values({ id: newUuid(), ownerId: id })
+          .onConflictDoNothing({ target: profile.ownerId });
+      });
+    },
+    eraseOwner: async (id: Uuid, confirmation: { erasePermanently: true }) => {
+      if (!Object.is(confirmation.erasePermanently, true))
+        throw new TypeError("Owner erasure needs explicit permanent-erasure confirmation");
+      await db.transaction(async (tx) => {
+        await tx.delete(owner).where(eq(owner.id, id));
+      });
+    },
+  };
+}
+
 export function openLocalStore(options: { dataDir?: string } = {}): LocalStore {
   const client = options.dataDir === undefined ? new PGlite() : new PGlite(options.dataDir);
   const db = drizzlePglite(client);
+  let closing: Promise<void> | undefined;
   return {
     unitOfWork: unitOfWork(db),
     migrate: async () => await migratePglite(db, { migrationsFolder: MIGRATIONS_FOLDER }),
-    createOwner: async (id) => await db.transaction(async (tx) => await insertOwner(tx, id)),
+    ...ownerLifecycle(db),
 
-    // The look-up and the insert share a transaction, so a second caller cannot
-    // mint a second owner.
     ensureLocalOwner: async () =>
       await db.transaction(async (tx) => {
         const rows = await tx.select({ id: owner.id }).from(owner).limit(2);
@@ -92,33 +121,80 @@ export function openLocalStore(options: { dataDir?: string } = {}): LocalStore {
         return id;
       }),
 
-    close: async () => await client.close(),
+    close: () => (closing ??= client.close()),
   };
 }
 
-// Any constant; it only has to be the same one in every process that migrates.
 const MIGRATION_LOCK = 4460371;
 
-export function openServerStore(options: { connectionString: string }): Store {
-  const pool = new Pool({ connectionString: options.connectionString });
+function validateServerOptions(options: ServerStoreOptions): void {
+  for (const [name, value] of Object.entries({
+    max: options.max,
+    connectionTimeoutMillis: options.connectionTimeoutMillis,
+    idleTimeoutMillis: options.idleTimeoutMillis,
+    statement_timeout: options.statement_timeout,
+  })) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < (name === "max" ? 1 : 0)))
+      throw new RangeError(
+        `${name} must be a ${name === "max" ? "positive" : "non-negative"} safe integer`,
+      );
+  }
+  if (options.ssl !== undefined) {
+    const query = new URL(options.connectionString).searchParams;
+    if (["ssl", "sslmode", "sslcert", "sslkey", "sslrootcert"].some((key) => query.has(key)))
+      throw new TypeError("Use ssl options or connection-string SSL parameters, not both");
+  }
+}
+
+export function openServerStore(options: ServerStoreOptions): Store {
+  validateServerOptions(options);
+  const { connectionString, ssl: explicitSsl, ...limits } = options;
+  const config = parseIntoClientConfig(connectionString);
+  const ssl =
+    explicitSsl === undefined
+      ? (config.ssl ??
+        (["prefer", "require", "verify-ca", "verify-full"].includes(process.env["PGSSLMODE"] ?? "")
+          ? true
+          : undefined))
+      : { ...explicitSsl, rejectUnauthorized: true };
+  const host = config.host || process.env["PGHOST"] || "localhost";
+  const pool = new Pool({
+    ...limits,
+    ...config,
+    ...(ssl === undefined || ssl === false
+      ? {}
+      : {
+          ssl: {
+            ...(ssl === true ? {} : ssl),
+            // node-postgres omits servername for IPs, which verified localhost instead.
+            checkServerIdentity: (_hostname, certificate) => checkServerIdentity(host, certificate),
+          },
+        }),
+  });
   const db = drizzleNodePostgres(pool);
+  let closing: Promise<void> | undefined;
   return {
     unitOfWork: unitOfWork(db),
 
-    // Behind an advisory lock: drizzle's own bookkeeping table is not
-    // concurrency safe, and two migrating processes fail on pg_type's unique
-    // index.
+    // Concurrent migrators collided on pg_type before this advisory lock.
     migrate: async () => {
       const client = await pool.connect();
+      let locked = false;
       try {
         await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
-        await migrateNodePostgres(db, { migrationsFolder: MIGRATIONS_FOLDER });
+        locked = true;
+        await migrateNodePostgres(drizzleNodePostgres(client), {
+          migrationsFolder: MIGRATIONS_FOLDER,
+        });
       } finally {
-        await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]);
-        client.release();
+        try {
+          if (locked) await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]);
+        } finally {
+          client.release();
+        }
       }
     },
-    createOwner: async (id) => await db.transaction(async (tx) => await insertOwner(tx, id)),
-    close: async () => await pool.end(),
+    ...ownerLifecycle(db),
+    close: () => (closing ??= pool.end()),
   };
 }

@@ -42,8 +42,68 @@ await runAsOwner(ownerId, async () => {
 Omit `dataDir` for an in-memory store, which is what the tests use.
 
 `openServerStore({ connectionString })` returns the same thing over a
-node-postgres pool, minus `ensureLocalOwner`: a server is handed the owner rows
-it serves rather than minting one because a process started.
+node-postgres pool, minus `ensureLocalOwner`.
+
+### Owner lifecycle
+
+Use `await store.provisionOwner(ownerId)` with a stable UUID when provisioning
+may be retried. Concurrent calls converge on one owner and one profile in a
+transaction. Existing content is preserved; a missing placeholder profile is
+repaired. `createOwner(ownerId)` remains a strict create that refuses duplicates.
+
+Permanent erasure is `await store.eraseOwner(ownerId, { erasePermanently: true })`.
+It deletes the owner and all owned data atomically, including archived rows,
+evidence, drafts and history. Missing owners are already erased. The caller
+obtains explicit confirmation and stops admitting work for that owner first.
+This operation is outside editing repositories and is not an API route. It
+does not erase caller-held exports or backups; the caller manages those files.
+Provisioning an erased id creates a fresh store.
+
+### Server connections
+
+```ts
+const store = openServerStore({
+  connectionString,
+  max: 5,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  statement_timeout: 10000,
+  ssl: { ca: trustedCaPem },
+});
+try {
+  await store.migrate();
+  // Run owner-scoped units here.
+} finally {
+  await store.close();
+}
+```
+
+`max` is a positive integer. Timeout values are non-negative integer
+milliseconds; zero disables the timeout. Omitted values keep the driver's
+defaults. The connection timeout covers connection setup and waiting for a
+free pool slot. The statement timeout runs on PostgreSQL, which cancels the
+statement and rolls its unit back. Closing waits for checked-out work to finish
+and shares its completion promise across retries; it does not cancel a stuck
+callback. Bound statements and finish callbacks before shutdown.
+
+Explicit `ssl` enables certificate and hostname validation. Omit `ca` to use
+Node's trusted roots. Alternatively use a connection string with
+`sslmode=verify-full` and `sslrootcert`. Do not combine explicit SSL options with
+`ssl`, `sslmode`, `sslcert`, `sslkey` or `sslrootcert` in the URL: node-postgres
+would overwrite the supplied SSL configuration, so the adapter refuses that
+combination. Without explicit `ssl`, the driver's connection-string and
+environment behavior applies. Certificate validation checks the configured
+hostname or IP, including when the driver omits TLS servername for an IP.
+Connection-string parsing uses the driver's parser before adding this check,
+so URL SSL parameters cannot overwrite it. Explicitly disabling certificate
+validation in a URL remains an insecure driver option. See
+[node-postgres TLS](https://node-postgres.com/features/ssl)
+and [pool configuration](https://node-postgres.com/apis/pool).
+
+Migrations and their advisory lock share one connection, so a pool of one works.
+Use a migration identity with DDL rights and an appropriately restricted runtime
+identity. The adapter installs no RLS policies; isolation remains the owner
+predicates tested by the repository suite.
 
 ### Two rules the API shape enforces
 
@@ -98,6 +158,13 @@ diverges fails loudly instead of subtly.
 pnpm --filter @keepcv/db test                      # PGlite only
 DATABASE_URL=postgres://... pnpm --filter @keepcv/db test   # and server Postgres
 ```
+
+Use only a disposable synthetic database for the server tests. Configuration
+tests install temporary refusal triggers and exercise TLS through a local
+PostgreSQL protocol proxy using public test certificates. They verify trust,
+hostname checks, pool limits, acquisition/startup/statement timeouts, idle
+eviction, migration locking, provisioning recovery and shutdown. In CI the
+server URL is required, so these tests cannot silently skip that coverage.
 
 ## Licence
 

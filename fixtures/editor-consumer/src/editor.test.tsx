@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { createApi, createClient, sessionTokenAuth } from "@keepcv/api";
+import { NotFoundError, newUuid } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { Editor } from "@keepcv/editor";
 import type { Store } from "@keepcv/schema";
@@ -97,4 +98,32 @@ it("renders a refused request without assuming a launcher authentication mode", 
   expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   cleanup();
   queries.clear();
+});
+
+it("consumes provisioning and erasure from the installed database package", async () => {
+  const store = openLocalStore();
+  try {
+    await store.migrate();
+    const first = newUuid();
+    const second = newUuid();
+    await Promise.all([
+      store.provisionOwner(first),
+      store.provisionOwner(first),
+      store.provisionOwner(second),
+    ]);
+    const read = (id: typeof first) =>
+      runAsOwner(id, () => store.unitOfWork.run((r) => r.profile.get()));
+    const original = await read(first);
+    const kept = await read(second);
+    await store.eraseOwner(first, { erasePermanently: true });
+    await expect(read(first)).rejects.toBeInstanceOf(NotFoundError);
+    await store.eraseOwner(first, { erasePermanently: true });
+    expect(await read(second)).toEqual(kept);
+    await store.provisionOwner(first);
+    const fresh = await read(first);
+    expect(fresh.id).not.toBe(original.id);
+    expect(fresh.fullName).toBeNull();
+  } finally {
+    await store.close();
+  }
 });
