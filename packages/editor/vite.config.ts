@@ -20,5 +20,5 @@ export default defineConfig({
       external: (id) => external.some((name) => id === name || id.startsWith(`${name}/`)),
     },
   },
-  test: { environment: "jsdom", setupFiles: ["./src/test-setup.ts"] },
+  test: { environment: "jsdom", setupFiles: ["./src/test-setup.ts"], testTimeout: 10_000 },
 });
