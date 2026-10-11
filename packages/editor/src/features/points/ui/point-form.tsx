@@ -10,12 +10,13 @@ import {
   TextAreaField,
   TextField,
 } from "../../../components/ui/field.js";
+import { PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { sentenceCase } from "../../../lib/label.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
-import { KIND_NAMES } from "../../records/model/record-rows.js";
+import { KIND_NAMES, toRecordRow } from "../../records/model/record-rows.js";
 import { useCreatePoint } from "../api/use-points.js";
 import {
   blankPointValues,
@@ -26,25 +27,25 @@ import {
 
 export function MissingPoint() {
   return (
-    <Empty title="No point with that id">
-      It may have been on another store, or the link may be older than the row. Everything the store
-      holds is on the points list.
-    </Empty>
+    <Empty title="Point not found">Check the points list or return to the previous page.</Empty>
   );
 }
 
 function recordOptions(store: Store): Option[] {
   return [
-    { value: "", label: "Nothing yet - leave it unplaced" },
-    ...live(store.records).map((record) => ({
-      value: record.id,
-      label: `${record.title ?? "Untitled"} (${KIND_NAMES[record.kind]})`,
-    })),
+    { value: "", label: "Choose later" },
+    ...live(store.records).map((record) => {
+      const row = toRecordRow(store, record);
+      return {
+        value: record.id,
+        label: [row.title, row.organisation, row.period, KIND_NAMES[row.kind]]
+          .filter(Boolean)
+          .join(" - "),
+      };
+    }),
   ];
 }
 
-// The same three columns whether a point is being written or filed afterwards,
-// so the two screens cannot drift into asking for different things.
 export function Placement({
   store,
   values,
@@ -80,7 +81,7 @@ export function Placement({
         hint={CONFIDENCE_HINTS[values.confidence]}
       />
       <TextField
-        label="When"
+        label="Date (optional)"
         value={values.occurredOn}
         onChange={(occurredOn) => {
           onChange({ occurredOn });
@@ -132,13 +133,16 @@ export function PointForm({
         void save();
       }}
     >
-      <h1 className="text-xl font-semibold tracking-tight">New point</h1>
+      <PageHeader
+        title="New point"
+        trail={[{ label: "Points", to: "/points", search: { filter: "all" } }]}
+      />
 
       {create.error === null ? null : <Failure error={create.error} />}
 
       <Panel>
-        <PanelHeader title="What you did, and what it moved">
-          One sentence. Numbers and variants come next, on the point itself.
+        <PanelHeader title="Point wording">
+          Describe what you did and its impact. Add metrics and alternate wordings after saving.
         </PanelHeader>
         <PanelBody className="space-y-1">
           <TextAreaField
@@ -157,9 +161,9 @@ export function PointForm({
         </PanelBody>
       </Panel>
 
-      <Panel>
-        <PanelHeader title="Where it belongs">
-          A point with no record is not a mistake: capture it now, file it when you know where.
+      <Panel collapsible defaultOpen={recordId !== undefined}>
+        <PanelHeader title="Record and confidence">
+          Link to a job or project now, or do it later.
         </PanelHeader>
         <Placement store={store} values={values} errors={errors} onChange={change} />
       </Panel>
@@ -168,9 +172,15 @@ export function PointForm({
         <Button tone="primary" type="submit" disabled={create.isPending}>
           {create.isPending ? "Saving" : "Add point"}
         </Button>
-        <ButtonLink to="/points" search={{ filter: "all" }}>
-          Cancel
-        </ButtonLink>
+        {recordId === undefined ? (
+          <ButtonLink to="/points" search={{ filter: "all" }}>
+            Cancel
+          </ButtonLink>
+        ) : (
+          <ButtonLink to="/records/$recordId" params={{ recordId }}>
+            Cancel
+          </ButtonLink>
+        )}
       </div>
     </form>
   );

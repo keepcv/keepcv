@@ -43,65 +43,6 @@ export function MarkupInput({
         if (!event.currentTarget.contains(event.relatedTarget)) onBlur();
       }}
     >
-      {readOnly ? null : (
-        <fieldset aria-label={`Formatting for ${label}`} className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => {
-              apply({ t: "b" });
-            }}
-          >
-            Bold
-          </Button>
-          <Button
-            onClick={() => {
-              apply({ t: "i" });
-            }}
-          >
-            Italic
-          </Button>
-          <Button
-            onClick={() => {
-              setLinking(!linking);
-            }}
-          >
-            Link
-          </Button>
-          <Button
-            onClick={() => {
-              apply("clear");
-            }}
-          >
-            Clear formatting
-          </Button>
-        </fieldset>
-      )}
-      {linking ? (
-        <div className="flex gap-2">
-          <input
-            aria-label="Link address"
-            value={href}
-            onChange={(event) => {
-              setHref(event.target.value);
-            }}
-            placeholder="https://..."
-            className="min-w-0 flex-1 rounded border border-line-strong bg-surface px-2 text-sm"
-          />
-          <Button
-            onClick={() => {
-              apply({ t: "a", href: href.trim() });
-            }}
-          >
-            Apply link
-          </Button>
-          <Button
-            onClick={() => {
-              setLinking(false);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      ) : null}
       <textarea
         ref={input}
         value={projectPlainText(body)}
@@ -138,17 +79,80 @@ export function MarkupInput({
         }}
         className="w-full resize-y rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm leading-relaxed text-text outline-none read-only:bg-surface-sunken focus:border-brand"
       />
-      <section aria-label={`Formatted ${label}`}>
-        <p className="text-sm leading-relaxed text-text-muted">
-          <RichBody body={body} />
-        </p>
-      </section>
-      {readOnly ? null : (
-        <p className="text-xs text-text-subtle">
-          Select words to format them. Ctrl/Cmd+B: bold; Ctrl/Cmd+I: italic; Ctrl/Cmd+K: link.
-          Pasted text keeps no outside formatting.
-        </p>
-      )}
+      <details open={linking || undefined} className="space-y-2">
+        <summary className="cursor-pointer text-xs text-text-subtle hover:text-text">
+          Formatting and preview
+        </summary>
+        {readOnly ? null : (
+          <fieldset aria-label={`Formatting for ${label}`} className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                apply({ t: "b" });
+              }}
+            >
+              Bold
+            </Button>
+            <Button
+              onClick={() => {
+                apply({ t: "i" });
+              }}
+            >
+              Italic
+            </Button>
+            <Button
+              onClick={() => {
+                setLinking(!linking);
+              }}
+            >
+              Link
+            </Button>
+            <Button
+              onClick={() => {
+                apply("clear");
+              }}
+            >
+              Clear formatting
+            </Button>
+          </fieldset>
+        )}
+        {linking ? (
+          <div className="flex gap-2">
+            <input
+              aria-label="Link address"
+              value={href}
+              onChange={(event) => {
+                setHref(event.target.value);
+              }}
+              placeholder="https://..."
+              className="min-w-0 flex-1 rounded border border-line-strong bg-surface px-2 text-sm"
+            />
+            <Button
+              onClick={() => {
+                apply({ t: "a", href: href.trim() });
+              }}
+            >
+              Apply link
+            </Button>
+            <Button
+              onClick={() => {
+                setLinking(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : null}
+        <section aria-label={`Formatted ${label}`}>
+          <p className="text-sm leading-relaxed text-text-muted">
+            <RichBody body={body} />
+          </p>
+        </section>
+        {readOnly ? null : (
+          <p className="text-xs text-text-subtle">
+            Select text to format it. Ctrl/Cmd+B: bold; I: italic; K: link.
+          </p>
+        )}
+      </details>
       {error === null ? null : (
         <p role="alert" className="text-xs text-caution-text">
           {error}

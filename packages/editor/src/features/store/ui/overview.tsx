@@ -6,6 +6,7 @@ import { Empty } from "../../../app/states.js";
 import type { GlyphName } from "../../../components/icon/glyphs.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { ButtonLink } from "../../../components/ui/button.js";
+import { ContentGuide } from "../../../components/ui/content-guide.js";
 import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import {
@@ -15,9 +16,6 @@ import {
   KIND_NAMES,
 } from "../../records/model/record-rows.js";
 
-// The gap is the rule: one pixel of the container showing between cells draws
-// the dividers at any column count, so the strip wraps without a rule ending up
-// on the outside of a row.
 function Totals({ children }: { children: ReactNode }) {
   return (
     <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line-subtle shadow-card sm:grid-cols-4">
@@ -67,17 +65,13 @@ function Total({
   );
 }
 
-// What the store actually holds, by kind. The overview is the screen that says
-// how big the archive has got, and four totals do not say that.
 function Holdings({ store }: { store: Store }) {
   const counts = recordCounts(store).filter((count) => count.live > 0);
   if (counts.length === 0) return null;
 
   return (
     <Panel>
-      <PanelHeader title="What the store holds" icon="record">
-        Every kind with something filed under it.
-      </PanelHeader>
+      <PanelHeader title="Browse your career" icon="record" />
       <PanelBody className="px-2 py-2">
         <ul className="space-y-0.5">
           {counts.map((count) => (
@@ -107,7 +101,6 @@ function Tally({ count }: { count: number }) {
   );
 }
 
-// A nudge that names no destination is a nudge nobody acts on.
 function Nudge({
   count,
   icon,
@@ -149,16 +142,25 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
 
   if (summary.totals.records === 0 && summary.totals.points === 0) {
     return (
-      <Empty
-        title="Nothing in the store yet"
-        action={
-          <ButtonLink tone="primary" size="lg" icon="add" to="/records/new">
-            Add your first record
-          </ButtonLink>
-        }
-      >
-        The permanent record, not a resume. What fits on one page is decided later.
-      </Empty>
+      <PageBody>
+        <Empty
+          title="Start with your career"
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <ButtonLink tone="primary" size="lg" icon="upload" to="/import">
+                Import resume
+              </ButtonLink>
+              <ButtonLink size="lg" icon="add" to="/records/new">
+                Add your first record
+              </ButtonLink>
+            </div>
+          }
+        >
+          Import an existing resume or add a job, project, or qualification. Then choose what to
+          include in each resume.
+        </Empty>
+        <ContentGuide />
+      </PageBody>
     );
   }
 
@@ -169,16 +171,24 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
         icon="overview"
         actions={
           <>
-            <ButtonLink icon="add" to="/records/new">
-              Record
+            <ButtonLink icon="upload" to="/import">
+              Import resume
             </ButtonLink>
-            <ButtonLink tone="primary" icon="add" to="/resumes" search={{ archived: "exclude" }}>
-              Resume
+            <ButtonLink icon="add" to="/records/new">
+              Add record
+            </ButtonLink>
+            <ButtonLink
+              tone="primary"
+              icon="add"
+              to="/resumes"
+              search={{ archived: "exclude", create: true }}
+            >
+              Build a resume
             </ButtonLink>
           </>
         }
       >
-        Everything the store holds, and what is still half-finished.
+        Keep your career here. Choose what goes into each resume.
       </PageHeader>
 
       <Totals>
@@ -207,17 +217,15 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
           label="Archived"
           value={summary.totals.archived}
           icon="archive"
-          note="Kept, never deleted."
+          note="Available to restore"
         />
       </Totals>
 
+      <ContentGuide />
+
       <div className="grid gap-5 xl:grid-cols-3 xl:items-start">
-        {/* Every row here opens: the screen whose job is re-entry cannot be a
-            dead end. */}
         <Panel>
-          <PanelHeader title="Where you left off" icon="history">
-            Most recently edited, newest first.
-          </PanelHeader>
+          <PanelHeader title="Recently edited" icon="history" />
           <PanelBody className="px-1 py-1">
             {summary.recentlyEdited.length === 0 ? (
               <p className="px-3 py-2 text-sm text-text-muted">Nothing edited yet.</p>
@@ -228,16 +236,18 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
                     <Link
                       to="/records/$recordId"
                       params={{ recordId: entry.id }}
-                      className="flex items-baseline gap-3 rounded-lg px-3 py-1.5 transition-colors hover:bg-surface-hover"
+                      className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-hover"
                     >
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">
-                        {entry.title ?? "Untitled"}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-text">
+                          {entry.title ?? "Untitled"}
+                        </span>
+                        <span className="block text-xs tabular-nums text-text-subtle">
+                          {formatPeriod(entry)}
+                        </span>
                       </span>
                       <span className="shrink-0 text-xs text-text-subtle">
                         {KIND_NAMES[entry.kind]}
-                      </span>
-                      <span className="hidden w-36 shrink-0 text-right text-xs tabular-nums text-text-subtle sm:block">
-                        {formatPeriod(entry)}
                       </span>
                     </Link>
                   </li>
@@ -248,14 +258,12 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
         </Panel>
 
         <Panel>
-          <PanelHeader title="Loose ends" icon="warning">
-            Nudges, not errors: a half-entered record is a state the store is designed to hold.
+          <PanelHeader title="Worth reviewing" icon="warning">
+            Optional updates to your career details.
           </PanelHeader>
           <PanelBody className="px-2 py-2">
             {nudgeCount === 0 ? (
-              <p className="px-2 py-1.5 text-sm text-text-muted">
-                Nothing half-finished. Unusual, and good.
-              </p>
+              <p className="px-2 py-1.5 text-sm text-text-muted">Nothing to review.</p>
             ) : (
               <ul className="space-y-0.5">
                 <Nudge
@@ -264,7 +272,7 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
                   to="/points"
                   search={{ filter: "unplaced" }}
                 >
-                  points captured but not placed on a record
+                  Points without a record
                 </Nudge>
                 <Nudge
                   count={unfinished.pointsWithoutMetrics.length}
@@ -272,7 +280,7 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
                   to="/points"
                   search={{ filter: "unmeasured" }}
                 >
-                  points with no metric, so they say what you did but not what it moved
+                  Points without metrics
                 </Nudge>
                 <Nudge
                   count={unfinished.expiringCertifications.length}
@@ -280,14 +288,13 @@ export function Overview({ store, asOf }: { store: Store; asOf: string }) {
                   to="/records"
                   search={{ kind: "certification", archived: "exclude" }}
                 >
-                  certifications lapsing within ninety days
+                  Certifications expired or expiring soon
                 </Nudge>
-                {/* Named rather than filtered: these are few, and a record opens. */}
                 {unfinished.missingEndDate.length === 0 ? null : (
                   <li className="flex items-baseline gap-2.5 px-2 py-1.5 text-sm text-text-muted">
                     <Tally count={unfinished.missingEndDate.length} />
                     <span>
-                      ended without an end date:{" "}
+                      Missing end dates:{" "}
                       {unfinished.missingEndDate.slice(0, 5).map((entry, index) => (
                         <span key={entry.id}>
                           {index === 0 ? "" : ", "}

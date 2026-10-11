@@ -216,7 +216,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
             </Button>
           }
         >
-          Nothing here is ever overwritten. Saving twice with nothing changed keeps one entry.
+          Versions keep your past selections and wording. Star a version to save a named snapshot.
         </PanelHeader>
         <PanelBody>
           {restore.error === null ? null : <Failure error={restore.error} />}
@@ -238,7 +238,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
                   <span className="w-8 text-sm font-medium tabular-nums text-text">#{row.seq}</span>
                   <Badge>{row.trigger}</Badge>
                   {row.label === null ? null : <Badge tone="accent">{row.label}</Badge>}
-                  <span className="min-w-0 flex-1 text-xs tabular-nums text-text-subtle">
+                  <span className="flex-auto whitespace-nowrap text-xs tabular-nums text-text-subtle">
                     {row.when}
                     {row.restoredFrom === null ? "" : ` - from #${String(row.restoredFrom)}`}
                   </span>
@@ -267,9 +267,7 @@ export function ResumeHistory({ client, resumeId }: { client: ApiClient; resumeI
 
       {rows.length < 2 || compare === null ? null : (
         <Panel>
-          <PanelHeader title="What changed">
-            Any two, in either direction. The right-hand one is read as the newer.
-          </PanelHeader>
+          <PanelHeader title="What changed">Compare two saved versions.</PanelHeader>
           <PanelBody className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <select

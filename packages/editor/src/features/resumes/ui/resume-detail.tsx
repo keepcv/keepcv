@@ -19,9 +19,9 @@ export const RESUME_VIEWS = ["composition", "target", "preview", "history"] as c
 export type ResumeView = (typeof RESUME_VIEWS)[number];
 
 const VIEW_LABELS: Record<ResumeView, string> = {
-  composition: "Composition",
-  target: "Target",
-  preview: "Preview",
+  composition: "Content",
+  target: "Job target",
+  preview: "Preview and export",
   history: "History",
 };
 
@@ -168,9 +168,8 @@ export function ResumeDetailScreen({
 
   if (detail === undefined) {
     return (
-      <Empty title="No resume with that id" spot="noResults">
-        It may have been on another store, or the link may be older than the row. Every resume the
-        store holds is on the resumes list.
+      <Empty title="Resume not found" spot="noResults">
+        Check the resumes list or return to the previous page.
       </Empty>
     );
   }
@@ -198,14 +197,14 @@ export function ResumeDetailScreen({
                 setArchived.mutate({ resume, archived: !header.isArchived });
               }}
             >
-              {header.isArchived ? "Put back" : "Archive"}
+              {header.isArchived ? "Restore" : "Archive"}
             </Button>
           </>
         }
       >
-        {header.target ?? "No target role recorded"}
+        {header.target ?? "Choose content, then preview and export your resume."}
         {header.applied === null ? "" : ` - sent ${header.applied}`}
-        {header.template === undefined ? "" : ` - prints through ${header.template}`}
+        {header.template === undefined ? "" : ` - ${header.template}`}
       </PageHeader>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -226,14 +225,14 @@ export function ResumeDetailScreen({
           </Segmented>
           {header.isArchived ? (
             <Badge tone="warning" icon="archive">
-              Archived, and kept
+              Archived
             </Badge>
           ) : null}
         </div>
         <p className="text-xs tabular-nums text-text-subtle">
           {header.hidden === 0
-            ? "Everything placed prints."
-            : `${String(header.hidden)} placed and toggled off, kept either way.`}
+            ? "All selected content is visible"
+            : `${String(header.hidden)} ${header.hidden === 1 ? "item" : "items"} hidden from this resume`}
         </p>
       </div>
 

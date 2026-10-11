@@ -38,9 +38,9 @@ export function RecordLinks({
   };
 
   return (
-    <Panel>
+    <Panel collapsible defaultOpen={links.length > 0}>
       <PanelHeader title="Links">
-        Where the work itself lives. Removing one archives it.
+        Add links to the work, such as a project or publication.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {links.length === 0 ? null : (

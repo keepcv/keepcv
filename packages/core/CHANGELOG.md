@@ -1,5 +1,13 @@
 # @keepcv/core
 
+## 0.1.4
+
+### Patch Changes
+
+- Include default profile and record summaries in wording usage, counting live
+  resumes and hidden entries while excluding removed and archived content.
+- Stop requesting end dates for single-date records and languages.
+
 ## 0.1.3
 
 ### Patch Changes

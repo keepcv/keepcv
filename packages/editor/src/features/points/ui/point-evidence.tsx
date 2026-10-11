@@ -66,12 +66,9 @@ export function PointEvidence({
   };
 
   return (
-    <Panel>
-      <PanelHeader
-        title="What backs it up"
-        aside={<Badge tone="warning">Never leaves the store</Badge>}
-      >
-        What proves this. No resume can carry it and no template can reach it.
+    <Panel collapsible defaultOpen={rows.length > 0}>
+      <PanelHeader title="Private evidence" aside={<Badge>Excluded from resumes</Badge>}>
+        Keep supporting links and notes here. They are included in backups.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? null : (

@@ -1,5 +1,12 @@
 # @keepcv/interop
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @keepcv/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

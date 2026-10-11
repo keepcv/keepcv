@@ -138,6 +138,15 @@ registration. The package carries compiled CSS, the pre-paint theme script and
 the DOCX worker. An isolated installed consumer builds and exercises these
 artifacts as part of release validation.
 
+The entry also accepts an optional `dataPage: DataPagePresentation`: storage,
+backup, and restore descriptions plus `showTerminalInstructions`. The default
+describes the standalone launcher. A consumer with another storage location
+supplies its own guidance and can omit terminal instructions from both the DOM
+and the accessibility tree. This input changes presentation only; native backup
+and restore retain their API behavior and non-empty-store refusal. The caller
+keeps this input stable alongside the client and cache. No authentication or
+deployment vocabulary belongs in this input.
+
 Four kinds of state, four owners. Putting any of them in the wrong place is a
 bug class, not a style preference.
 
@@ -264,6 +273,10 @@ Needs: counts per record type; what changed since `owner.last_opened_at`;
 recently edited records; points with no tags or no metrics; records
 missing end dates; certifications expiring soon.
 
+Missing-end-date observations apply to experience, education, projects, skills,
+volunteering, and custom entries. Single-date records and languages do
+not generate this observation.
+
 Served by selectors over the cached `['store']` payload, not by a summary
 endpoint: every one of them is a pure function of current state, and deriving
 them in SQL as well would be the same numbers computed twice
@@ -321,6 +334,12 @@ not make a second one.
 the record, not on the list: a destructive-looking control on a row is one a
 mis-tap reaches.
 
+**A record summary is editable on the record detail.** It uses the same wording
+editor as the professional summary, including drafts, alternatives and revision
+history. Starting a summary creates its set and attaches it with the existing
+owner patch. A failed attachment retries against the set already created rather
+than creating another one. The editor opens after that attachment succeeds.
+
 ### 5.4 Point / phrasing editor - the highest-risk interface
 
 The highest-risk interface in the product: get it wrong and maintaining the
@@ -334,7 +353,7 @@ That last item is why `resume_content_ref` exists (data-model.md #9.2).
 Editing a phrasing without knowing which resumes depend on it is exactly the
 anxiety this product exists to remove.
 
-**Evidence is written on this screen, and the screen says it never leaves.**
+**Evidence is written on this screen and marked excluded from resumes.**
 Metrics and evidence are both sub-collections of a point that already exists, so
 both are saved as they are added rather than staged, and removing one archives it.
 The difference is what the panel has to communicate: evidence is private
@@ -344,6 +363,9 @@ the thing worth writing down. The panel says so where the rows are, not in help
 text. A `url` renders as a link only when it parses as `http` or `https`; a path,
 a half-typed address or any other scheme is shown as text, because the value is
 the user's own note and not a URL field.
+
+Evidence remains part of native backups. The UI states both boundaries rather
+than claiming evidence never leaves the store.
 
 **Points are also a destination of their own**, listed with the record each is
 filed under, its metrics, its tags and how many resumes print it. The point is
@@ -374,6 +396,20 @@ one row on the set and changes nothing a resume already pinned - that is the
 whole reason an entry pins a phrasing rather than a set. The canonical wording
 cannot be archived, because a set with nothing to say has no text for any screen
 to show.
+
+The UI calls canonical wording Default. Points and professional summaries expand
+it initially; existing record summaries and alternatives show their text and
+expand on demand. New wordings, recovered drafts and save errors
+open their editor. Formatting, rendered text and resume usage are expandable.
+Adding an alternative copies the default, retains entered values on refusal,
+and opens the new editor after creation succeeds.
+
+Summaries differ from points: every resume uses the profile's default summary
+and the default summary of each selected record. There is no per-resume summary
+wording choice. Summary guidance names this effect, and the existing usage
+selector includes live resumes using those defaults. A hidden selection still
+belongs to its resume; removed sections, removed entries and archived records
+do not contribute record-summary usage.
 
 **Nothing on that screen navigates when it saves.** The wording commits itself,
 metrics save as they are added, and only the filing - record, confidence, date -
@@ -487,8 +523,8 @@ writing `true` into it, so changing the channel's default later still reaches
 this resume.
 
 **The resume row itself writes here too** - created from the list with nothing
-but a name, renamed in place, archived and put back from its own header. A
-template chosen on the resume screen is a patch like any of those, and because
+but a name and template choice, renamed in place, archived and put back from its
+own header. A template chosen on the resume screen is a patch like any of those, and because
 the choice is a column the preview follows it through the boot payload rather
 than through a second piece of state.
 
@@ -1330,3 +1366,47 @@ values before leaving. Failed or invalid saves leave the user on the editor,
 with an error and retry control; a tab close with outstanding changes prompts.
 Recovered settings are shown on reopen and saved when valid. The preview,
 findings and downloads all use the visible pending settings.
+
+Each live template offers Use template, opening the new-resume form with that
+template selected. Built-in designs also offer Customize copy, opening the
+design form based on that row. New resumes ask for a name and template, then
+open Content only after the create succeeds. A refused create keeps the form,
+its values, and a visible error. Design and resume-copy creation follow the
+same acknowledgement rule.
+
+### 10.10 Progressive disclosure and task-oriented copy
+
+Page introductions name the feature's purpose and next action in one sentence.
+Panel copy describes the control's effect; it does not explain storage internals.
+Overview offers Import resume in both empty and populated states. The empty
+state explains the sequence: add career data, then choose resume content.
+
+Optional record fields and links, point metadata, metrics and evidence, resume
+contact overrides and role profiles, and custom CSS use native details/summary
+panels. Existing metrics, evidence, links, and fields open initially so recorded
+content remains easy to find. Values stay mounted while collapsed. Advanced
+CSS validation opens its panel when needed. Summary controls work with touch
+and keyboard and remain visible without hover.
+
+Composition pickers open from an Add control; the first section picker starts
+open on an empty resume. Views read Content, Job target, Preview and export,
+and History; existing URL values remain unchanged. Preview keeps exports and
+template choice visible, with other formats, checks, font and spacing, and
+template notes expandable.
+
+A compact content reference explains records, points, wordings, sections and
+templates with examples. It is collapsed on Overview, Records, the point editor
+and resume Content. Point breadcrumbs link to the parent record with its
+organisation. Record choices include organisation and dates to distinguish
+repeated titles. Cancelling point creation from a record returns there.
+
+Resume records keep their identity and controls visible while their points
+expand on demand. The first record in each section and records with no selected
+points open initially. Counts distinguish selected points from those available
+to add. Wording choices and a path to create a point are inside that record;
+collapsed content stays mounted so editing state survives toggling.
+
+Dropdowns share semantic tokens for controls and options. Browsers supporting
+customizable native selects use `appearance: base-select` with bounded, themed
+option lists; other browsers retain native controls and the active color scheme.
+Keyboard selection, type-ahead, focus, and touch interaction stay native.

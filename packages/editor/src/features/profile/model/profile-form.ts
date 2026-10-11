@@ -3,16 +3,11 @@ import type {
   ContactChannel,
   ContactChannelInput,
   ContactChannelKind,
-  PhrasingSetInput,
   Profile,
   ProfilePatch,
   Store,
 } from "@keepcv/schema";
-import {
-  contactChannelInputSchema,
-  phrasingSetInputSchema,
-  profilePatchSchema,
-} from "@keepcv/schema";
+import { contactChannelInputSchema, profilePatchSchema } from "@keepcv/schema";
 import {
   type Difference,
   differing,
@@ -20,7 +15,6 @@ import {
   fieldErrors,
   trimmed,
 } from "../../../lib/form.js";
-import { bodyOf } from "../../phrasings/model/editor.js";
 
 export interface ProfileValues {
   fullName: string;
@@ -37,10 +31,10 @@ const LABELS: Record<keyof ProfileValues, string> = {
 };
 
 export const PROFILE_HINTS: Record<keyof ProfileValues, string> = {
-  fullName: "What prints at the top of every resume.",
-  pronouns: "Printed beside the name only where a template asks for them.",
-  headline: "One line under the name. Not a summary.",
-  location: "The line the header prints, not a contact channel.",
+  fullName: "Shown at the top of your resumes.",
+  pronouns: "Shown by templates that support them.",
+  headline: "e.g. Senior software engineer",
+  location: "e.g. Bengaluru, India",
 };
 
 export function profileValuesOf(profile: Profile): ProfileValues {
@@ -133,22 +127,6 @@ export function buildChannel(
     sortKey: keyForPosition(store.contactChannels, null, store.contactChannels.length),
   });
   return parsed.success ? { input: parsed.data } : { errors: fieldErrors(parsed.error) };
-}
-
-// The first wording of a summary that has none. Everything after it goes
-// through the phrasing editor, which is where variants and history live.
-export function buildSummarySet(text: string): PhrasingSetInput {
-  return phrasingSetInputSchema.parse({
-    id: newUuid(),
-    purpose: "profile_summary",
-    phrasing: {
-      id: newUuid(),
-      variant: "standard",
-      label: null,
-      sortKey: keyForPosition([], null, 0),
-      body: bodyOf(text),
-    },
-  });
 }
 
 export interface ChannelRow {

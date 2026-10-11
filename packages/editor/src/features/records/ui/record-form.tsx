@@ -158,16 +158,15 @@ export function RecordForm({
       {failure === null || conflict !== undefined ? null : <Failure error={failure} />}
 
       <Panel>
-        <PanelHeader title="What it is">
-          Everything here may be left blank. A half-entered record is a state the store is built to
-          hold, not an error.
+        <PanelHeader title="Record details">
+          Add a job, project, or qualification. You can fill in more later.
         </PanelHeader>
         <PanelBody className="grid gap-4 sm:grid-cols-2">
           {/* Fixed once stored: a record's kind decides which columns it has,
               and the store has no way to move a row between them. */}
           {record === undefined ? (
             <SelectField
-              label="Kind"
+              label="Record type"
               value={values.kind}
               onChange={(next) => {
                 set({ kind: next as CareerRecordKind, extras: {} });
@@ -184,7 +183,7 @@ export function RecordForm({
             onChange={(title) => {
               set({ title });
             }}
-            placeholder="Staff engineer, BSc Mathematics, a project name"
+            placeholder="e.g. Staff engineer"
             error={errors["title"]}
           />
           <TextField
@@ -195,8 +194,6 @@ export function RecordForm({
             }}
             error={errors["subtitle"]}
           />
-          {/* Typed, not chosen from a list: an organisation the store has never
-              heard of is created by this submit. */}
           <TextField
             label="Organisation"
             value={values.organisation}
@@ -204,7 +201,7 @@ export function RecordForm({
               set({ organisation });
             }}
             suggestions={organisations}
-            hint="A name the store does not have yet is added to it."
+            hint="Choose an existing name or type a new one."
             error={errors["organisationId"]}
           />
           <TextField
@@ -219,8 +216,8 @@ export function RecordForm({
       </Panel>
 
       <Panel>
-        <PanelHeader title="When">
-          An ongoing period is the checkbox, never a missing end date: they are different facts.
+        <PanelHeader title="Dates">
+          For a current role or project, select Still ongoing.
         </PanelHeader>
         <PanelBody className="grid gap-4 sm:grid-cols-3">
           <TextField
@@ -242,8 +239,6 @@ export function RecordForm({
             placeholder="2024"
             error={errors["endedOn"]}
           />
-          {/* Padded to clear the label its neighbours have, but only once the
-              three are on one row. */}
           <CheckboxField
             label="Still ongoing"
             checked={values.isCurrent}
@@ -256,9 +251,17 @@ export function RecordForm({
       </Panel>
 
       {extras.length === 0 ? null : (
-        <Panel>
-          <PanelHeader title="What this kind carries">
-            Kept as real fields rather than folded into the title, so they stay queryable.
+        <Panel
+          collapsible
+          defaultOpen={
+            values.kind === "custom_entry" ||
+            extras.some((field) => errors[field.name] !== undefined)
+          }
+        >
+          <PanelHeader title={`${KIND_NAMES[values.kind]} details`}>
+            {values.kind === "custom_entry"
+              ? "Choose the section for this entry."
+              : "Optional details specific to this record type."}
           </PanelHeader>
           <PanelBody className="grid gap-4 sm:grid-cols-2">
             {extras.map((field) => {

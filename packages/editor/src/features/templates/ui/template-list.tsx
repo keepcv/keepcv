@@ -2,9 +2,9 @@ import { newUuid } from "@keepcv/core";
 import type { Store, TemplateFile, TemplateSpec } from "@keepcv/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useId, useState } from "react";
-import { Empty } from "../../../app/states.js";
+import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
-import { Button } from "../../../components/ui/button.js";
+import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { SelectField, TextField } from "../../../components/ui/field.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
@@ -29,17 +29,19 @@ function NewDesign({
   client,
   rows,
   onDone,
+  basedOnId,
 }: {
   store: Store;
   client: ApiClient;
   rows: TemplateRow[];
   onDone: () => void;
+  basedOnId: string;
 }) {
   const create = useCreateTemplate(client);
   const navigate = useNavigate();
   const fileId = useId();
   const [name, setName] = useState("");
-  const [basedOn, setBasedOn] = useState(rows[0]?.id ?? "");
+  const [basedOn, setBasedOn] = useState(basedOnId);
   const [loaded, setLoaded] = useState<TemplateFile | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
 
@@ -50,9 +52,15 @@ function NewDesign({
   const start = () => {
     if (spec === undefined) return;
     const id = newUuid();
-    create.mutate({ id, name: name.trim(), spec });
-    onDone();
-    void navigate({ to: "/templates/$templateId", params: { templateId: id } });
+    create.mutate(
+      { id, name: name.trim(), spec },
+      {
+        onSuccess: () => {
+          onDone();
+          void navigate({ to: "/templates/$templateId", params: { templateId: id } });
+        },
+      },
+    );
   };
 
   const read = (file: File) => {
@@ -72,9 +80,8 @@ function NewDesign({
 
   return (
     <Panel>
-      <PanelHeader title="Start a design">
-        From one that is already here, or from a file somebody saved out. It is read in this tab and
-        never uploaded.
+      <PanelHeader title="New design">
+        Copy a template or load a saved design file, then customize it.
       </PanelHeader>
       <PanelBody className="max-w-xl space-y-3">
         <TextField
@@ -133,26 +140,35 @@ function NewDesign({
           <Button
             tone="primary"
             icon="confirm"
-            disabled={name.trim() === "" || clash || spec === undefined}
+            disabled={name.trim() === "" || clash || spec === undefined || create.isPending}
             onClick={start}
           >
-            Start it
+            {create.isPending ? "Creating" : "Create design"}
           </Button>
-          <Button tone="ghost" onClick={onDone}>
+          <Button tone="ghost" onClick={onDone} disabled={create.isPending}>
             Cancel
           </Button>
         </div>
+        {create.error === null ? null : <Failure error={create.error} />}
       </PanelBody>
     </Panel>
   );
 }
 
-function Row({ row, client }: { row: TemplateRow; client: ApiClient }) {
+function Row({
+  row,
+  client,
+  onCustomize,
+}: {
+  row: TemplateRow;
+  client: ApiClient;
+  onCustomize: () => void;
+}) {
   const setArchived = useSetTemplateArchived(client);
   const held = row.row;
 
   return (
-    <li className="flex items-start gap-4 border-t border-line-subtle p-3 first:border-t-0">
+    <li className="flex flex-wrap items-start gap-4 border-t border-line-subtle p-3 first:border-t-0">
       <TemplateThumbnail template={row.template} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
@@ -174,16 +190,32 @@ function Row({ row, client }: { row: TemplateRow; client: ApiClient }) {
           {row.usedBy === 0 ? "On no resume yet" : `On ${counted(row.usedBy, "resume", "resumes")}`}
         </p>
       </div>
-      {held === undefined ? null : (
-        <Button
-          size="sm"
-          icon={row.isArchived ? "restore" : "archive"}
-          label={row.isArchived ? "Put this design back" : "Archive this design"}
-          onClick={() => {
-            setArchived.mutate({ template: held, archived: !row.isArchived });
-          }}
-        />
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {row.isArchived ? null : (
+          <ButtonLink
+            size="sm"
+            to="/resumes"
+            search={{ archived: "exclude", create: true, template: row.id }}
+          >
+            Use template
+          </ButtonLink>
+        )}
+        {row.isBuiltIn ? (
+          <Button size="sm" onClick={onCustomize}>
+            Customize copy
+          </Button>
+        ) : null}
+        {held === undefined ? null : (
+          <Button
+            size="sm"
+            icon={row.isArchived ? "restore" : "archive"}
+            label={row.isArchived ? "Put this design back" : "Archive this design"}
+            onClick={() => {
+              setArchived.mutate({ template: held, archived: !row.isArchived });
+            }}
+          />
+        )}
+      </div>
     </li>
   );
 }
@@ -197,7 +229,7 @@ export function TemplateList({
   client: ApiClient;
   archived: ArchivedFilter;
 }) {
-  const [starting, setStarting] = useState(false);
+  const [starting, setStarting] = useState<string | null>(null);
   const rows = templateRows(store, archived);
   const startable = templateRows(store, "exclude");
 
@@ -207,13 +239,13 @@ export function TemplateList({
         title="Templates"
         icon="template"
         actions={
-          starting ? null : (
+          starting !== null ? null : (
             <Button
               tone="primary"
               icon="add"
               expanded={false}
               onClick={() => {
-                setStarting(true);
+                setStarting(startable[0]?.id ?? "");
               }}
             >
               New design
@@ -221,16 +253,18 @@ export function TemplateList({
           )
         }
       >
-        What a resume prints through. Yours are kept in the store and travel in your export.
+        Templates control layout and style. Use one for a resume or customize a copy.
       </PageHeader>
 
-      {starting ? (
+      {starting !== null ? (
         <NewDesign
+          key={starting}
           store={store}
           client={client}
           rows={startable}
+          basedOnId={starting}
           onDone={() => {
-            setStarting(false);
+            setStarting(null);
           }}
         />
       ) : null}
@@ -257,7 +291,14 @@ export function TemplateList({
       ) : (
         <ul className="rounded-xl border border-line bg-surface shadow-card">
           {rows.map((row) => (
-            <Row key={row.id} row={row} client={client} />
+            <Row
+              key={row.id}
+              row={row}
+              client={client}
+              onCustomize={() => {
+                setStarting(row.id);
+              }}
+            />
           ))}
         </ul>
       )}

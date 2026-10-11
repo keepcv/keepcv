@@ -27,10 +27,9 @@ export function ApplyRoleProfile({
   const picked = rows.find((row) => row.profile.id === chosen);
 
   return (
-    <Panel>
+    <Panel collapsible>
       <PanelHeader title="Apply a role profile">
-        It places what the words select and takes nothing off, so nothing you have already put on
-        this resume is disturbed.
+        Add content matching a saved group of tags. Existing content stays selected.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? (

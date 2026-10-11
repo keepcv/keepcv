@@ -12,10 +12,9 @@ export const TAG_FILTER_LABELS: Record<TagFilter, string> = {
 };
 
 export const TAG_BLURBS: Record<TagFilter, string> = {
-  all: "The words you file work under. Both records and points carry them, and a resume is matched against them.",
-  unused: "Nothing carries these. They are the ones worth merging away or putting aside.",
-  archived:
-    "Put aside, never deleted. A merged tag ends up here with everything it carried moved on.",
+  all: "Label records and points with skills or topics to find and select related work.",
+  unused: "These tags are not assigned to any records or points.",
+  archived: "Archived tags remain available to restore.",
 };
 
 export interface TagRow {

@@ -123,52 +123,55 @@ export function DownloadResume({
         Download HTML
       </Button>
       <p className="text-xs leading-relaxed text-text-subtle">
-        One file, carrying its own styling and fetching nothing. Evidence never travels in it.
+        Includes styling. Private evidence is excluded.
       </p>
 
-      <div className="space-y-2 border-t border-line pt-2">
-        <Button
-          className="w-full"
-          onClick={() => {
-            saveFile(SITE_FILE_NAME, HTML, renderSite(document));
-            record();
-          }}
-        >
-          Download personal page
-        </Button>
-        <p className="text-xs leading-relaxed text-text-subtle">
-          The same selection as a page to put online, named {SITE_FILE_NAME} because that is what a
-          host looks for. It carries the contact details this resume carries, so the composer is
-          where you decide what a stranger sees.
-        </p>
-      </div>
+      <details className="space-y-2 border-t border-line pt-2">
+        <summary className="cursor-pointer text-xs font-medium text-text-muted">
+          More formats
+        </summary>
+        <div className="space-y-2">
+          <Button
+            className="w-full"
+            onClick={() => {
+              saveFile(SITE_FILE_NAME, HTML, renderSite(document));
+              record();
+            }}
+          >
+            Download personal page
+          </Button>
+          <p className="text-xs leading-relaxed text-text-subtle">
+            A web page with this resume's content and visible contact details.
+          </p>
+        </div>
 
-      <div className="space-y-2 border-t border-line pt-2">
-        <SelectField
-          label="Somebody else's format"
-          value={target}
-          onChange={(value) => {
-            const found = ORDER.find((one) => one === value);
-            if (found !== undefined) setTarget(found);
-          }}
-          options={ORDER.map((one) => ({ value: one, label: TARGETS[one].label }))}
-        />
-        <Button
-          className="w-full"
-          onClick={() => {
-            void chosen
-              .write(document)
-              .then((content) => {
-                saveFile(fileNameFor(document, chosen.extension), chosen.type, content);
-                record();
-              })
-              .catch(setError);
-          }}
-        >
-          Download {chosen.label}
-        </Button>
-        <Loses document={document} target={target} />
-      </div>
+        <div className="space-y-2 border-t border-line pt-2">
+          <SelectField
+            label="File format"
+            value={target}
+            onChange={(value) => {
+              const found = ORDER.find((one) => one === value);
+              if (found !== undefined) setTarget(found);
+            }}
+            options={ORDER.map((one) => ({ value: one, label: TARGETS[one].label }))}
+          />
+          <Button
+            className="w-full"
+            onClick={() => {
+              void chosen
+                .write(document)
+                .then((content) => {
+                  saveFile(fileNameFor(document, chosen.extension), chosen.type, content);
+                  record();
+                })
+                .catch(setError);
+            }}
+          >
+            Download {chosen.label}
+          </Button>
+          <Loses document={document} target={target} />
+        </div>
+      </details>
       {error === null ? null : <Failure error={error} />}
       {history === "idle" ? null : (
         <p role="status" className="text-xs text-text-subtle">

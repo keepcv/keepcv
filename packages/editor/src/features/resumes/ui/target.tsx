@@ -140,11 +140,11 @@ export function TargetScreen({
 
       <Panel>
         <PanelHeader
-          title="What this resume is for"
+          title="Target job"
           aside={changed ? <Badge tone="warning">Not saved yet</Badge> : undefined}
         >
-          The posting is read here and nowhere else: it never prints, and it is what the match below
-          is measured against.
+          Add a job description to compare it with your selected content. These details do not
+          print.
         </PanelHeader>
         <PanelBody className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -162,7 +162,7 @@ export function TargetScreen({
               onChange={(role) => {
                 set({ role });
               }}
-              hint="Read as part of the posting when none is pasted."
+              hint="Used for matching if no description is provided."
               error={errors.role}
             />
             <TextField
@@ -192,7 +192,7 @@ export function TargetScreen({
             }}
             rows={10}
             placeholder="Paste the posting."
-            hint="Kept whole. Nothing here reaches the printed page."
+            hint="Used for matching; excluded from the printed resume."
             error={errors.jdText}
           />
           <div className="flex flex-wrap gap-2">
@@ -222,7 +222,7 @@ export function TargetScreen({
         <Panel>
           <PanelBody>
             <p className="text-sm text-text-muted">
-              Which of the terms the posting leans on you answer, and which points answer none.
+              Compare job requirements with your selected content.
             </p>
           </PanelBody>
         </Panel>
@@ -237,20 +237,20 @@ export function TargetScreen({
                 </span>
               }
             >
-              Ranked by how much the posting leans on each term.
+              Terms ranked by relevance to the job description.
             </PanelHeader>
             <PanelBody className="space-y-3">
               {reading.missing.length === 0 ? null : (
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-text-muted">
-                    Nothing placed answers these
+                    Missing from selected content
                   </p>
                   <Terms terms={reading.missing} tone="warning" />
                 </div>
               )}
               {reading.covered.length === 0 ? null : (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-text-muted">Answered</p>
+                  <p className="text-xs font-medium text-text-muted">Matched terms</p>
                   <Terms terms={reading.covered} tone="neutral" />
                 </div>
               )}
@@ -260,8 +260,7 @@ export function TargetScreen({
           {reading.weakest.length === 0 ? null : (
             <Panel>
               <PanelHeader title="Least like the posting">
-                Taken off the page, not deleted: the point stays on this resume and prints again the
-                moment you put it back.
+                Hide less relevant points. Show them again in Content.
               </PanelHeader>
               <PanelBody className="py-0">
                 <Weakest

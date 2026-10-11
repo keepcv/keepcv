@@ -204,6 +204,7 @@ it("edits formatted wording with keyboard controls and can compare and reapply h
   const server = storeServer(store);
   mount(server.answer, `/points/${point.id}/edit`);
   const input = await screen.findByLabelText<HTMLTextAreaElement>("Wording, standard");
+  fireEvent.click(screen.getByText("Formatting and preview"));
   expect(
     within(screen.getByRole("region", { name: "Formatted Wording, standard" })).getByRole("link"),
   ).toHaveAttribute("href", "https://example.test");
@@ -263,7 +264,7 @@ it("offers unacknowledged formatted wording after reopening and saves it on retr
   mount(server.answer, `/points/${point.id}/edit`);
   const reopened = await screen.findByLabelText("Wording, standard");
   expect(reopened).toHaveValue("Keep these words");
-  fireEvent.click(screen.getByRole("button", { name: "Put it back" }));
+  fireEvent.click(screen.getByRole("button", { name: "Restore draft" }));
   expect(reopened).toHaveValue("Keep these words safely");
   fireEvent.blur(reopened);
   await waitFor(() => {

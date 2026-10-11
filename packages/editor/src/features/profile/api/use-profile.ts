@@ -1,19 +1,12 @@
-import { deriveRevision, newUuid } from "@keepcv/core";
 import type {
   ContactChannel,
   ContactChannelInput,
   ContactChannelPatch,
-  PhrasingSetInput,
   Profile,
   ProfilePatch,
   Store,
 } from "@keepcv/schema";
-import {
-  contactChannelSchema,
-  phrasingSchema,
-  phrasingSetSchema,
-  profileSchema,
-} from "@keepcv/schema";
+import { contactChannelSchema, profileSchema } from "@keepcv/schema";
 import { type ApiClient, unwrap } from "../../../lib/api.js";
 import { now, replaceRow, useStoreMutation } from "../../../lib/store-cache.js";
 
@@ -103,67 +96,5 @@ export function useSetChannelArchived(client: ApiClient) {
         archivedAt: archived ? now() : null,
         updatedAt: now(),
       }),
-  });
-}
-
-// Two requests, because a profile names its summary set rather than holding the
-// words: there is nowhere to write them until the set exists.
-export interface StartSummary {
-  profile: Profile;
-  input: PhrasingSetInput;
-}
-
-export function useStartSummary(client: ApiClient) {
-  return useStoreMutation<StartSummary, Profile>({
-    send: async ({ profile, input }) => {
-      await unwrap(await client.v1["phrasing-sets"].$post({ json: input }));
-      return profileSchema.parse(
-        await unwrap(
-          await client.v1.profile.$patch({
-            json: { expectedUpdatedAt: profile.updatedAt, patch: { summarySetId: input.id } },
-          }),
-        ),
-      );
-    },
-    optimistic: (store, { profile, input }) => {
-      const at = now();
-      // The store mints the real revision id, since a content hash is what
-      // makes an append idempotent. This one lives until the re-read.
-      const revisionId = newUuid();
-      return {
-        ...withProfile(store, { ...profile, summarySetId: input.id, updatedAt: at }),
-        phrasingSets: [
-          ...store.phrasingSets,
-          phrasingSetSchema.parse({
-            id: input.id,
-            createdAt: at,
-            updatedAt: at,
-            archivedAt: null,
-            purpose: input.purpose,
-            canonicalPhrasingId: input.phrasing.id,
-          }),
-        ],
-        phrasings: [
-          ...store.phrasings,
-          phrasingSchema.parse({
-            ...input.phrasing,
-            phrasingSetId: input.id,
-            createdAt: at,
-            updatedAt: at,
-            archivedAt: null,
-            currentRevisionId: revisionId,
-          }),
-        ],
-        phrasingRevisions: [
-          ...store.phrasingRevisions,
-          {
-            id: revisionId,
-            createdAt: at,
-            phrasingId: input.phrasing.id,
-            ...deriveRevision(input.phrasing.body),
-          },
-        ],
-      };
-    },
   });
 }

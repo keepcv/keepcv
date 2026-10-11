@@ -9,6 +9,7 @@ import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
+import { SummaryEditor } from "../../phrasings/ui/summary-editor.js";
 import { useUpdatePoint } from "../../points/api/use-points.js";
 import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetArchived } from "../api/use-records.js";
@@ -85,8 +86,7 @@ function Points({
   if (points.length === 0) {
     return (
       <p className="py-2 text-sm text-text-muted">
-        Nothing here yet. A point is one thing you did and what it moved - the unit every resume is
-        assembled from.
+        Add a point describing what you did and its impact.
       </p>
     );
   }
@@ -107,9 +107,8 @@ function Points({
 
 export function MissingRecord() {
   return (
-    <Empty title="No record with that id" spot="noResults">
-      It may have been on another store, or the link may be older than the row. Everything the store
-      holds is on the records list.
+    <Empty title="Record not found" spot="noResults">
+      Check the records list or return to the previous page.
     </Empty>
   );
 }
@@ -140,8 +139,6 @@ export function RecordDetail({
             <ButtonLink icon="edit" to="/records/$recordId/edit" params={{ recordId }}>
               Edit
             </ButtonLink>
-            {/* Archiving is the only removal there is, and it reverses from the
-                same button. */}
             <Button
               icon={row.isArchived ? "restore" : "archive"}
               disabled={setArchived.isPending}
@@ -159,7 +156,7 @@ export function RecordDetail({
         <Badge icon="record">{KIND_NAMES[row.kind]}</Badge>
         {row.isArchived ? (
           <Badge tone="warning" icon="archive">
-            Archived, and kept
+            Archived
           </Badge>
         ) : null}
         <Meta
@@ -170,17 +167,15 @@ export function RecordDetail({
 
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}
 
-      {/* Two columns: what the record says on the left, what it is filed under
-          and where it goes on the right. Six stacked panels buried the points. */}
+      {/* Six stacked panels buried the points. */}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
         <div className="space-y-5">
-          {detail.summary === "" ? null : (
-            <Panel>
-              <PanelBody className="text-sm leading-relaxed text-text-muted">
-                {detail.summary}
-              </PanelBody>
-            </Panel>
-          )}
+          <SummaryEditor
+            key={recordId}
+            store={store}
+            client={client}
+            owner={{ kind: "record", row: record }}
+          />
 
           <Panel>
             <PanelHeader
@@ -192,7 +187,7 @@ export function RecordDetail({
                 </ButtonLink>
               }
             >
-              What you actually did. Wording is chosen per resume; this is the canonical one.
+              What you did and its impact. Open a point to edit its wording.
             </PanelHeader>
             <PanelBody>
               <Points store={store} client={client} recordId={recordId} points={points} />
@@ -208,18 +203,15 @@ export function RecordDetail({
         <div className="space-y-5">
           <Panel>
             <PanelHeader title="Tags" icon="tag">
-              The words this is filed under. A resume is matched against them, and search reads
-              them.
+              Use tags to find and select related work.
             </PanelHeader>
             <PanelBody>
               <TagPicker store={store} client={client} subject={{ kind: "record", id: recordId }} />
             </PanelBody>
           </Panel>
 
-          <Panel>
-            <PanelHeader title="Where it appears" icon="resume">
-              It stays on every resume it already sits on.
-            </PanelHeader>
+          <Panel collapsible defaultOpen={placements.length > 0}>
+            <PanelHeader title="Used in resumes" icon="resume" />
             <PanelBody>
               {placements.length === 0 ? (
                 <p className="text-sm text-text-muted">Not on any resume yet.</p>
@@ -238,7 +230,7 @@ export function RecordDetail({
                       >
                         {placement.resumeName}
                       </Link>
-                      {placement.isVisible ? null : <Badge>toggled off</Badge>}
+                      {placement.isVisible ? null : <Badge>Hidden</Badge>}
                     </li>
                   ))}
                 </ul>

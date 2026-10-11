@@ -40,7 +40,7 @@ function DownloadDesign({ name, spec }: { name: string; spec: TemplateSpec }) {
         URL.revokeObjectURL(href);
       }}
     >
-      Save it as a file
+      Download design
     </Button>
   );
 }
@@ -91,7 +91,7 @@ function Editor({
       >
         {usedBy === 0
           ? "On no resume yet."
-          : `On ${counted(usedBy, "resume", "resumes")}. Editing changes what they print next time, not what a saved version says they printed.`}
+          : `Used by ${counted(usedBy, "resume", "resumes")}. Changes apply to their current previews; saved versions stay unchanged.`}
       </PageHeader>
       <SaveState
         saving={autosave.saving}
@@ -103,7 +103,7 @@ function Editor({
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
           <Panel>
-            <PanelHeader title="What it is called" />
+            <PanelHeader title="Design name" />
             <PanelBody className="space-y-3">
               <TextField label="Name" value={name} onChange={setName} />
               <Button
@@ -119,7 +119,7 @@ function Editor({
                   mutate({ template, patch: { name: name.trim() } });
                 }}
               >
-                Rename it
+                Rename
               </Button>
               {update.error === null || autosave.error !== null ? null : (
                 <Failure error={update.error} />
@@ -128,7 +128,7 @@ function Editor({
           </Panel>
 
           <Panel>
-            <PanelHeader title="How it looks" />
+            <PanelHeader title="Layout and style" />
             <PanelBody className="space-y-3">
               {DESIGN_KNOBS.map((field) => (
                 <Control
@@ -143,10 +143,9 @@ function Editor({
             </PanelBody>
           </Panel>
 
-          <Panel>
-            <PanelHeader title="CSS of your own" aside={<Badge tone="warning">Advanced</Badge>}>
-              Added last, so it wins. It cannot fetch anything, and the resume's findings are read
-              off the file this produces.
+          <Panel collapsible defaultOpen={cssProblem !== undefined}>
+            <PanelHeader title="Custom CSS" aside={<Badge>Advanced</Badge>}>
+              Override styles. External resources are not allowed.
             </PanelHeader>
             <PanelBody className="space-y-2">
               <TextAreaField

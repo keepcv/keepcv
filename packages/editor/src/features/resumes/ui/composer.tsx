@@ -11,6 +11,7 @@ import { type ReactNode, useState } from "react";
 import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { ContentGuide } from "../../../components/ui/content-guide.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import type { ApiClient } from "../../../lib/api.js";
@@ -42,9 +43,8 @@ import type {
   ResumeDetail,
 } from "../model/resume-detail.js";
 
-// A row that vanished when toggled would read as a delete.
 function Off() {
-  return <Badge>off</Badge>;
+  return <Badge>Hidden</Badge>;
 }
 
 interface Writes {
@@ -54,7 +54,6 @@ interface Writes {
   place: (placement: Placement) => void;
 }
 
-// Every label names its row: "Up" alone tells a screen reader nothing.
 function Controls({
   subject,
   placed,
@@ -69,16 +68,14 @@ function Controls({
   writes: Writes;
 }) {
   return (
-    // Dimmed, not hidden: revealed on hover alone they are gone on touch and to
-    // the keyboard. `ml-auto` keeps them right when a long period wraps the
-    // row.
+    // Hover-only controls were inaccessible on touch screens.
     <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100">
       {reorder}
       <Button
         tone="ghost"
         size="sm"
         icon={isVisible ? "visible" : "hidden"}
-        label={`${isVisible ? "Stop printing" : "Print"} ${subject}`}
+        label={`${isVisible ? "Hide" : "Show"} ${subject}`}
         onClick={() => {
           writes.toggle(placed, !isVisible);
         }}
@@ -87,7 +84,7 @@ function Controls({
         tone="ghost"
         size="sm"
         icon="close"
-        label={`Take ${subject} off this resume`}
+        label={`Remove ${subject} from this resume`}
         onClick={() => {
           writes.remove(placed);
         }}
@@ -96,25 +93,40 @@ function Controls({
   );
 }
 
-// `empty` only where the picker is alone in a panel: everywhere else its
-// absence is what says there is nothing left to add.
 function AddPicker<T extends { label: string }>({
   label,
   empty,
   options,
   onPick,
+  initiallyOpen = false,
 }: {
   label: string;
   empty?: string;
   options: readonly T[];
   onPick: (option: T) => void;
+  initiallyOpen?: boolean;
 }) {
   const [chosen, setChosen] = useState("");
+  const [open, setOpen] = useState(initiallyOpen);
   const picked = options[Number(chosen)];
 
   if (options.length === 0) {
     return empty === undefined ? null : <p className="text-xs text-text-subtle">{empty}</p>;
   }
+
+  if (!open)
+    return (
+      <Button
+        size="sm"
+        icon="add"
+        expanded={false}
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        {label}
+      </Button>
+    );
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -138,9 +150,19 @@ function AddPicker<T extends { label: string }>({
         onClick={() => {
           if (picked !== undefined) onPick(picked);
           setChosen("");
+          setOpen(false);
         }}
       >
         Add
+      </Button>
+      <Button
+        tone="ghost"
+        onClick={() => {
+          setOpen(false);
+          setChosen("");
+        }}
+      >
+        Cancel
       </Button>
     </div>
   );
@@ -174,20 +196,25 @@ function Point({
         {text}
       </Link>
       {point.wordings.length < 2 ? null : (
-        <select
-          aria-label={`Wording for ${text}`}
-          value={point.row.phrasingId}
-          onChange={(event) => {
-            onChooseWording(event.target.value as Uuid);
-          }}
-          className="max-w-40 rounded border border-line px-1 py-0.5 text-xs text-text-muted"
-        >
-          {point.wordings.map((wording) => (
-            <option key={wording.id} value={wording.id}>
-              {wording.label}
-            </option>
-          ))}
-        </select>
+        <details className="w-full pl-5 text-xs">
+          <summary className="cursor-pointer text-text-subtle hover:text-text">
+            Change wording
+          </summary>
+          <select
+            aria-label={`Wording for ${text}`}
+            value={point.row.phrasingId}
+            onChange={(event) => {
+              onChooseWording(event.target.value as Uuid);
+            }}
+            className="mt-1 w-full min-w-0 max-w-full rounded border border-line px-2 py-1 text-xs text-text-muted"
+          >
+            {point.wordings.map((wording) => (
+              <option key={wording.id} value={wording.id}>
+                {wording.label}
+              </option>
+            ))}
+          </select>
+        </details>
       )}
       {point.isVisible ? null : <Off />}
       <Controls
@@ -208,6 +235,7 @@ function Entry({
   writes,
   onPlacePoint,
   onChooseWording,
+  initiallyOpen,
 }: {
   store: Store;
   entry: CompositionEntry;
@@ -215,7 +243,9 @@ function Entry({
   writes: Writes;
   onPlacePoint: (point: CompositionEntry["placeable"][number]) => void;
   onChooseWording: (point: CompositionPoint, phrasingId: Uuid) => void;
+  initiallyOpen: boolean;
 }) {
+  const [open] = useState(initiallyOpen || entry.points.length === 0);
   const points = useReorder(pointsOf(store, entry.row.id), (row, sortKey) => {
     writes.move({ level: "point", row }, sortKey);
   });
@@ -225,8 +255,6 @@ function Entry({
       {...order.rowProps(entry.row)}
       className="border-t border-line-subtle py-3 first:border-t-0 first:pt-0 last:pb-0 data-[held=true]:opacity-40"
     >
-      {/* Wraps rather than hiding: which role, where and when is the whole
-          identity of an entry, and dropping it below `sm` leaves a bare title. */}
       <div
         className="group/row -mx-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-sunken data-[off=true]:opacity-50"
         data-off={!entry.isVisible}
@@ -252,35 +280,50 @@ function Entry({
         />
       </div>
 
-      {entry.points.length === 0 ? (
-        entry.available === 0 ? null : (
-          <p className="mt-1 pl-6 text-xs text-text-subtle">
-            None of its {entry.available} points are on this resume.
-          </p>
-        )
-      ) : (
-        <ul className="mt-1.5 ml-2 border-l border-line-subtle pl-4">
-          {entry.points.map((point) => (
-            <Point
-              key={point.row.id}
-              point={point}
-              order={points}
-              writes={writes}
-              onChooseWording={(phrasingId) => {
-                onChooseWording(point, phrasingId);
-              }}
-            />
-          ))}
-        </ul>
-      )}
+      <details className="group/entry mt-2 pl-6" open={open || undefined}>
+        <summary className="cursor-pointer text-xs text-text-muted hover:text-text">
+          {entry.points.length} selected {entry.points.length === 1 ? "point" : "points"}
+          {entry.available > entry.points.length
+            ? ` - ${entry.available - entry.points.length} more available`
+            : ""}
+        </summary>
+        {entry.points.length === 0 ? (
+          entry.available === 0 ? null : (
+            <p className="mt-1 pl-6 text-xs text-text-subtle">
+              Choose points from this record below.
+            </p>
+          )
+        ) : (
+          <ul className="mt-1.5 ml-2 border-l border-line-subtle pl-4">
+            {entry.points.map((point) => (
+              <Point
+                key={point.row.id}
+                point={point}
+                order={points}
+                writes={writes}
+                onChooseWording={(phrasingId) => {
+                  onChooseWording(point, phrasingId);
+                }}
+              />
+            ))}
+          </ul>
+        )}
 
-      <div className="mt-2 pl-6 empty:mt-0">
-        <AddPicker
-          label={`Add a point to ${entry.title}`}
-          options={entry.placeable}
-          onPick={onPlacePoint}
-        />
-      </div>
+        <div className="mt-2 pl-6 empty:mt-0">
+          <AddPicker
+            label={`Add a point to ${entry.title}`}
+            options={entry.placeable}
+            onPick={onPlacePoint}
+          />
+          <Link
+            to="/points/new"
+            search={{ recordId: entry.recordId }}
+            className="mt-2 inline-block text-xs text-text-subtle underline underline-offset-2 hover:text-text"
+          >
+            Create a new point in this record
+          </Link>
+        </div>
+      </details>
     </li>
   );
 }
@@ -325,8 +368,8 @@ function Heading({
       </Button>
       <p className="w-full text-xs text-text-subtle">
         {section.isDefaultHeading
-          ? `Currently the default "${section.heading}".`
-          : `Empty the box to print "${section.heading}" no more.`}
+          ? `Leave blank to keep "${section.heading}".`
+          : "Leave blank to use the default heading."}
       </p>
     </div>
   );
@@ -359,7 +402,7 @@ function Section({
           title={section.heading}
           aside={
             <span className="flex items-center gap-2">
-              {section.isVisible ? null : <Badge>section off</Badge>}
+              {section.isVisible ? null : <Badge>Hidden</Badge>}
               <Button
                 tone="ghost"
                 size="sm"
@@ -391,13 +434,14 @@ function Section({
             <p className="text-sm text-text-muted">Nothing placed in this section yet.</p>
           ) : (
             <ul>
-              {section.entries.map((entry) => (
+              {section.entries.map((entry, index) => (
                 <Entry
                   key={entry.row.id}
                   store={store}
                   entry={entry}
                   order={entries}
                   writes={writes}
+                  initiallyOpen={index === 0}
                   onPlacePoint={(point) => {
                     writes.place(placePoint(store, entry.row, point.id, point.phrasingId));
                   }}
@@ -435,9 +479,9 @@ function Contacts({
   if (contacts.length === 0) return null;
 
   return (
-    <Panel>
+    <Panel collapsible>
       <PanelHeader title="Contact details">
-        What this resume prints in its header. Each starts from the channel&apos;s own default.
+        Choose which contact details appear on this resume.
       </PanelHeader>
       <PanelBody>
         <ul className="space-y-1.5">
@@ -453,7 +497,7 @@ function Contacts({
               <Button
                 tone="ghost"
                 size="sm"
-                label={`${contact.prints ? "Stop printing" : "Print"} ${contact.channel.value}`}
+                label={`${contact.prints ? "Hide" : "Show"} ${contact.channel.value}`}
                 onClick={() => {
                   setVisibility.mutate({
                     resumeId,
@@ -523,17 +567,18 @@ export function Composer({
     writes.move({ level: "section", row }, sortKey);
   });
 
-  // Optimistic: a refusal puts the row back, so only the reason is left to
-  // show.
   const refused = add.error ?? patch.error ?? setArchived.error;
 
   return (
     <div className="space-y-5">
       {refused === null ? null : <Failure error={refused} />}
 
+      <ContentGuide />
+
       {detail.sections.length === 0 ? (
-        <Empty title="This resume is empty">
-          Sections, then the records in them, then the points under each. Nothing is copied.
+        <Empty title="Add your first section">
+          Start with Experience or Education below. Add records to the section, then choose their
+          points.
         </Empty>
       ) : (
         detail.sections.map((section) => (
@@ -559,14 +604,14 @@ export function Composer({
 
       <Panel>
         <PanelHeader title="Add a section">
-          A kind already on the resume is not offered twice, and one taken off comes back where it
-          was.
+          Group your content under a heading, such as Experience or Projects.
         </PanelHeader>
         <PanelBody>
           <AddPicker
             label="Add a section"
             empty="Every section kind is already on this resume."
             options={detail.addable.map((slot) => ({ ...slot, label: slot.heading }))}
+            initiallyOpen={detail.sections.length === 0}
             onPick={(slot) => {
               writes.place(placeSection(store, resumeId, slot));
             }}
