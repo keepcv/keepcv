@@ -1,15 +1,16 @@
 import { resumesUsingPoint } from "@keepcv/core";
 import type { Point, Store } from "@keepcv/schema";
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
-import { PageBody } from "../../../components/ui/page.js";
+import { ContentGuide } from "../../../components/ui/content-guide.js";
+import { type Crumb, PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
+import { toRecordRow } from "../../records/model/record-rows.js";
 import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetPointArchived, useUpdatePoint } from "../api/use-points.js";
 import { buildPointPatch, type PointFormValues, pointValuesOf } from "../model/point-form.js";
@@ -17,28 +18,6 @@ import { PointEvidence } from "./point-evidence.js";
 import { Placement } from "./point-form.js";
 import { PointMetrics } from "./point-metrics.js";
 
-function FiledUnder({ store, point }: { store: Store; point: Point }) {
-  const record = store.records.find((row) => row.id === point.recordId);
-  if (record === undefined) {
-    return <p className="text-sm text-text-subtle">Not filed under a record yet.</p>;
-  }
-
-  return (
-    <p className="text-sm text-text-subtle">
-      Filed under{" "}
-      <Link
-        to="/records/$recordId"
-        params={{ recordId: record.id }}
-        className="text-text-muted underline-offset-2 hover:underline"
-      >
-        {record.title ?? "Untitled"}
-      </Link>
-    </p>
-  );
-}
-
-// Nothing here navigates away when it saves: the wording commits itself, the
-// metrics save as they are added, and only the filing has a button.
 export function PointScreen({
   store,
   client,
@@ -56,37 +35,55 @@ export function PointScreen({
   const isArchived = point.archivedAt !== null;
   const onResumes = resumesUsingPoint(store, point.id).length;
   const failure = update.error ?? setArchived.error;
+  const parent = store.records.find((row) => row.id === point.recordId);
+  const trail: Crumb[] = [{ label: "Points", to: "/points", search: { filter: "all" } }];
+  if (parent !== undefined) {
+    const row = toRecordRow(store, parent);
+    trail.push({
+      label: [row.title, row.organisation].filter(Boolean).join(" - "),
+      to: "/records/$recordId",
+      params: { recordId: parent.id },
+    });
+  }
 
   return (
     <PageBody>
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-xl font-semibold tracking-tight">Point</h1>
-          {isArchived ? <Badge tone="warning">Archived, and kept</Badge> : null}
-          {onResumes === 0 ? null : (
-            <Badge>on {onResumes === 1 ? "one resume" : `${String(onResumes)} resumes`}</Badge>
-          )}
-          <Button
-            className="ml-auto"
-            icon={isArchived ? "restore" : "archive"}
-            disabled={setArchived.isPending}
-            onClick={() => {
-              setArchived.mutate({ point, archived: !isArchived });
-            }}
-          >
-            {isArchived ? "Restore" : "Archive"}
-          </Button>
-        </div>
-        <FiledUnder store={store} point={point} />
-      </div>
+      <PageHeader
+        title="Point"
+        trail={trail}
+        actions={
+          <>
+            {isArchived ? <Badge tone="warning">Archived</Badge> : null}
+            {onResumes === 0 ? null : (
+              <Badge>on {onResumes === 1 ? "one resume" : `${String(onResumes)} resumes`}</Badge>
+            )}
+            <Button
+              className="ml-auto"
+              icon={isArchived ? "restore" : "archive"}
+              disabled={setArchived.isPending}
+              onClick={() => {
+                setArchived.mutate({ point, archived: !isArchived });
+              }}
+            >
+              {isArchived ? "Restore" : "Archive"}
+            </Button>
+          </>
+        }
+      >
+        {parent === undefined
+          ? "Choose a record below to connect this point to a job or project."
+          : "Edit wording here. Open the record above to see its other points."}
+      </PageHeader>
 
       {failure === null ? null : <Failure error={failure} />}
 
       <PhrasingEditor store={store} client={client} phrasingSetId={point.phrasingSetId} />
 
-      <Panel>
-        <PanelHeader title="Where it belongs">
-          A point with no record is not a mistake: capture it now, file it when you know where.
+      <ContentGuide />
+
+      <Panel collapsible>
+        <PanelHeader title="Record and confidence">
+          Link this point to a job or project and note how certain its claims are.
         </PanelHeader>
         <Placement
           store={store}
@@ -122,10 +119,8 @@ export function PointScreen({
 
       <PointEvidence store={store} client={client} point={point} />
 
-      <Panel>
-        <PanelHeader title="Tags">
-          The words this is filed under. A resume is matched against them, and search reads them.
-        </PanelHeader>
+      <Panel collapsible>
+        <PanelHeader title="Tags">Use tags to find and select related work.</PanelHeader>
         <PanelBody>
           <TagPicker store={store} client={client} subject={{ kind: "point", id: point.id }} />
         </PanelBody>

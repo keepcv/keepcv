@@ -24,9 +24,7 @@ import {
 } from "../api/use-role-profiles.js";
 import { nameError, type RoleProfileRow, roleProfileRows } from "../model/role-profile-rows.js";
 
-// The same one control the picker on a record is: a word nobody has used yet is
-// created and added to the rule in one motion.
-function Words({
+function ProfileTags({
   store,
   profile,
   tags,
@@ -72,7 +70,7 @@ function Words({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {tags.length === 0 ? (
-          <p className="text-sm text-text-subtle">No words yet, so this profile selects nothing.</p>
+          <p className="text-sm text-text-subtle">Add tags to select matching work.</p>
         ) : (
           tags.map((tag) => (
             <Badge
@@ -94,8 +92,8 @@ function Words({
           <input
             value={label}
             list={listId}
-            aria-label={`Add a word to ${profile.name}`}
-            placeholder="Add a word"
+            aria-label={`Add a tag to ${profile.name}`}
+            placeholder="Add a tag"
             onChange={(event) => {
               setLabel(event.target.value);
             }}
@@ -231,7 +229,7 @@ function Row({
 
       {row.isArchived ? null : (
         <div className="mt-3">
-          <Words store={store} profile={profile} tags={row.tags} client={client} />
+          <ProfileTags store={store} profile={profile} tags={row.tags} client={client} />
         </div>
       )}
     </li>
@@ -261,7 +259,7 @@ function NewProfile({
             onChange={setName}
             placeholder="Backend"
             error={problem}
-            hint="The words a role like this is hired for."
+            hint="Name the role, then add tags for its relevant work."
           />
         </div>
         <div className="flex gap-2">
@@ -330,8 +328,7 @@ export function RoleProfileList({
           )
         }
       >
-        The words a kind of role is hired for. Applying one to a resume places everything filed
-        under them, so tailoring is a click rather than an afternoon.
+        Save a group of tags to quickly add matching content to a resume.
       </PageHeader>
 
       {adding ? (
@@ -361,15 +358,14 @@ export function RoleProfileList({
           spot={archived ? "permanent" : "emptyStore"}
         >
           {archived ? (
-            "A profile archived here keeps its words, and the tags it named are untouched."
+            "Archived profiles keep their tags and can be restored."
           ) : (
             <>
-              Backend, Platform, Data - a named set of words. Apply one on a resume to place what it
-              selects. It reads the{" "}
+              Group your{" "}
               <Link to="/tags" search={{ filter: "all" }}>
                 tags
               </Link>{" "}
-              you already file work under.
+              for a role, then apply the profile to add matching resume content.
             </>
           )}
         </Empty>

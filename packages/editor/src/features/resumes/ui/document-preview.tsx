@@ -81,8 +81,27 @@ function Budget({ budget }: { budget: LengthBudget }) {
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function Group({
+  title,
+  children,
+  collapsible = false,
+}: {
+  title: string;
+  children: ReactNode;
+  collapsible?: boolean;
+}) {
   const id = useId();
+  if (collapsible)
+    return (
+      <section aria-labelledby={id}>
+        <details className="space-y-2.5">
+          <summary id={id} className="cursor-pointer text-xs font-semibold text-text-muted">
+            {title}
+          </summary>
+          {children}
+        </details>
+      </section>
+    );
 
   return (
     <section aria-labelledby={id} className="space-y-2.5">
@@ -160,7 +179,7 @@ export function DocumentPreview({
               setOpen(!open);
             }}
           >
-            Export and settings
+            Template and export
           </Button>
         ) : null}
         <p className="ml-auto text-xs tabular-nums text-text-subtle">{pages(budget.pages)}</p>
@@ -168,7 +187,7 @@ export function DocumentPreview({
 
       <div
         className={cn(
-          "grid gap-6 @3xl:min-h-0 @3xl:flex-1",
+          "grid min-w-0 grid-cols-1 gap-6 @3xl:min-h-0 @3xl:flex-1",
           open && "@3xl:grid-cols-[16rem_minmax(0,1fr)]",
         )}
       >
@@ -176,8 +195,8 @@ export function DocumentPreview({
           // Before the paper, not after it: stacked the other way round in a
           // narrow pane, opening this appended it under a full-height resume
           // and changed nothing the reader could see.
-          <aside className="space-y-5 @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pr-2">
-            <Group title="Take it with you">
+          <aside className="min-w-0 space-y-5 @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pr-2">
+            <Group title="Export">
               {store.drafts.some((draft) => draft.targetKind === "phrasing") ? (
                 <p className="text-xs text-caution-text">
                   Unfinished wording drafts are not included in exports. Resume wording uses
@@ -194,10 +213,10 @@ export function DocumentPreview({
               />
             </Group>
 
-            <Group title="How it reads">
+            <Group title="Checks and page limit" collapsible>
               <LintPanel document={shown} />
               <SelectField
-                label="How long it may be"
+                label="Page limit"
                 options={LIMITS}
                 value={shownResume.pageLimit === null ? "" : String(shownResume.pageLimit)}
                 onChange={(chosen) => {
@@ -210,7 +229,7 @@ export function DocumentPreview({
               <Budget budget={budget} />
             </Group>
 
-            <Group title="How it looks">
+            <Group title="Appearance">
               <SelectField
                 label="Template"
                 options={pickableTemplates(store, stored.template.id).map((option) => ({
@@ -228,39 +247,46 @@ export function DocumentPreview({
                   params={{ templateId: stored.template.id }}
                   className="inline-flex items-center gap-1 text-xs text-text-muted underline-offset-2 hover:text-text hover:underline"
                 >
-                  Change what this design is
+                  Edit shared design
                 </Link>
               ) : null}
-              {stored.template.fields.map((field) => (
-                <Control
-                  key={field.key}
-                  field={field}
-                  config={config}
-                  onChange={(value) => {
-                    autosave.change({
-                      ...autosave.pending,
-                      templateId: stored.template.id,
-                      templateConfig: overrides(stored.template, { ...config, [field.key]: value }),
-                    });
-                  }}
-                />
-              ))}
+              <Group title="Font and spacing" collapsible>
+                {stored.template.fields.map((field) => (
+                  <Control
+                    key={field.key}
+                    field={field}
+                    config={config}
+                    onChange={(value) => {
+                      autosave.change({
+                        ...autosave.pending,
+                        templateId: stored.template.id,
+                        templateConfig: overrides(stored.template, {
+                          ...config,
+                          [field.key]: value,
+                        }),
+                      });
+                    }}
+                  />
+                ))}
+              </Group>
               <SaveState
                 saving={autosave.saving}
                 pending={autosave.pending !== null}
                 error={autosave.error}
                 retry={autosave.flush}
               />
-              <ul className="space-y-1 text-xs leading-relaxed text-text-subtle">
-                {stored.template.complianceNotes.map((note) => (
-                  <li key={note}>{note}</li>
-                ))}
-              </ul>
+              <Group title="About this template" collapsible>
+                <ul className="space-y-1 text-xs leading-relaxed text-text-subtle">
+                  {stored.template.complianceNotes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              </Group>
             </Group>
           </aside>
         ) : null}
 
-        <div className="@3xl:min-h-0 @3xl:overflow-y-auto">
+        <div className="min-w-0 @3xl:min-h-0 @3xl:overflow-y-auto">
           <div className="rounded-xl bg-paper p-4">
             <TemplateFrame
               title={`${resume.name}, as it prints`}

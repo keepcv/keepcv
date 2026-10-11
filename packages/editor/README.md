@@ -32,6 +32,27 @@ in. Keep the client, query cache and callback stable while mounted. Unmount and
 clear the cache before changing owners; use a fresh QueryClient for each owner.
 The editor uses `['store']` and the documented history keys in that cache.
 
+`dataPage` configures the explanatory text on Your data. Omit it for the
+standalone launcher's guidance. For an API with another storage location,
+provide all four fields, keeping the object stable while mounted:
+
+```tsx
+import type { DataPagePresentation } from "@keepcv/editor";
+
+const dataPage: DataPagePresentation = {
+  storageDescription: "Your career data is saved by the connected application.",
+  backupDescription: "Download a backup to keep a copy you control.",
+  restoreDescription: "Restore a backup into an empty store in the connected application.",
+  showTerminalInstructions: false,
+};
+
+<Editor api={api} queries={queries} dataPage={dataPage} />;
+```
+
+This changes guidance only. Browser backup includes archived content, wording
+revisions, and resume history. Restore still refuses a non-empty store. Setting
+`showTerminalInstructions` to `false` omits that card and its accessible content.
+
 This is a browser application at the origin root. Serve the entry HTML for
 editor navigation paths such as `/records` and `/resumes`. It owns browser
 history while mounted. Its public declaration does not register a router type
@@ -54,6 +75,7 @@ used by the local app's entry screens, plus the GlyphName type.
 `pnpm release:check` installs packed artifacts outside the workspace and builds,
 typechecks and tests `fixtures/editor-consumer`. It checks the emitted CSS and
 worker, keyboard palette navigation, profile writes, the supplied query cache,
-sign-out and refused authentication.
+sign-out, refused authentication, both data-page presentations, native backup,
+and refusal to restore over existing content.
 
 MIT.

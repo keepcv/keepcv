@@ -129,8 +129,8 @@ describe("the app", () => {
   it("invites a first entry rather than showing an empty dashboard", async () => {
     mount(() => jsonOf(emptyStore()));
 
-    expect(await screen.findByText("Nothing in the store yet")).toBeInTheDocument();
-    expect(screen.queryByText("Loose ends")).not.toBeInTheDocument();
+    expect(await screen.findByText("Start with your career")).toBeInTheDocument();
+    expect(screen.queryByText("Worth reviewing")).not.toBeInTheDocument();
   });
 
   it("shows the archived record only when the filter asks for it", async () => {
@@ -153,7 +153,7 @@ describe("the app", () => {
   it("surfaces a point nobody has placed, and opens the list of them", async () => {
     mount(() => jsonOf(aFilledStore()));
 
-    const nudge = await screen.findByRole("link", { name: /points captured but not placed/ });
+    const nudge = await screen.findByRole("link", { name: /Points without a record/ });
     expect(nudge).toHaveAttribute("href", expect.stringContaining("filter=unplaced"));
   });
 
@@ -351,13 +351,13 @@ describe("a record", () => {
     mount(() => jsonOf(store), `/records/${record.id}`);
 
     expect(await screen.findByRole("heading", { name: "Fresh record" })).toBeInTheDocument();
-    expect(screen.getByText(/Nothing here yet/)).toBeInTheDocument();
+    expect(screen.getByText(/Add a point describing/)).toBeInTheDocument();
   });
 
   it("says so when the id is not in the store", async () => {
     mount(() => jsonOf(aFilledStore()), "/records/01a00ff5-0000-7000-8000-000000000000");
 
-    expect(await screen.findByText("No record with that id")).toBeInTheDocument();
+    expect(await screen.findByText("Record not found")).toBeInTheDocument();
   });
 });
 
@@ -414,7 +414,7 @@ describe("writing a record", () => {
     await screen.findByRole("button", { name: "Archive" });
     press("Archive");
 
-    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+    expect(await screen.findByText("Archived", { selector: "span" })).toBeInTheDocument();
     expect(store.records[0]?.archivedAt).not.toBeNull();
 
     press("Restore");
@@ -597,7 +597,7 @@ describe("sections of your own", () => {
   it("offers no custom entry while there is no section to file one under", async () => {
     mount(storeServer(emptyStore()).answer, "/records/new");
 
-    await screen.findByLabelText("Kind");
+    await screen.findByLabelText("Record type");
     expect(screen.queryByRole("option", { name: "Custom entry" })).not.toBeInTheDocument();
   });
 
@@ -740,7 +740,7 @@ describe("writing a point", () => {
 
     await screen.findByRole("button", { name: "Archive" });
     press("Archive");
-    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+    expect(await screen.findByText("Archived", { selector: "span" })).toBeInTheDocument();
     expect(store.points[0]?.archivedAt).not.toBeNull();
 
     press("Restore");
@@ -827,7 +827,7 @@ describe("the phrasing editor", () => {
     await new Promise((resolve) => setTimeout(resolve, DRAFT_AFTER_MS + 400));
     expect(store.drafts).toHaveLength(1);
 
-    press("Put it back");
+    press("Restore draft");
     expect(box).toHaveValue("Rewrote the scheduler, twice");
   });
 
@@ -835,16 +835,17 @@ describe("the phrasing editor", () => {
     const { store, server } = anOpenPoint();
     await screen.findByLabelText("Wording, standard");
 
-    fireEvent.change(screen.getByLabelText("New variant"), { target: { value: "short" } });
-    type("New label", "for infra roles");
     press("Add a wording");
+    fireEvent.change(screen.getByLabelText("New wording type"), { target: { value: "short" } });
+    type("Wording name (optional)", "for infra roles");
+    press("Create wording");
 
     expect(await screen.findByLabelText("Wording, short")).toHaveValue("Rewrote the scheduler");
     expect(store.phrasings[1]?.label).toBe("for infra roles");
     // A variant is a wording, not a revision: nothing was appended to make one.
     expect(wrote(server)).toHaveLength(0);
 
-    press("Make canonical");
+    press("Make default");
     await waitFor(() => {
       expect(store.phrasingSets[0]?.canonicalPhrasingId).toBe(store.phrasings[1]?.id);
     });
@@ -889,8 +890,8 @@ describe("a resume", () => {
       "data-off",
       "true",
     );
-    expect(screen.getAllByText("off").length).toBe(1);
-    expect(screen.getByText(/1 placed and toggled off/)).toBeInTheDocument();
+    expect(screen.getAllByText("Hidden").length).toBe(1);
+    expect(screen.getByText(/1 item hidden/)).toBeInTheDocument();
     expect(answer).toHaveBeenCalledTimes(1);
   });
 
@@ -905,7 +906,7 @@ describe("a resume", () => {
 
     expect(await screen.findByRole("navigation", { name: "View" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Take Experience off this resume/ }),
+      screen.getByRole("button", { name: /Remove Experience from this resume/ }),
     ).toBeInTheDocument();
 
     const page = await printed();
@@ -991,7 +992,7 @@ describe("a resume", () => {
   it("says so when the id is not in the store", async () => {
     mount(() => jsonOf(aFilledStore()), "/resumes/01a00ff5-0000-7000-8000-000000000000");
 
-    expect(await screen.findByText("No resume with that id")).toBeInTheDocument();
+    expect(await screen.findByText("Resume not found")).toBeInTheDocument();
   });
 });
 
@@ -1004,6 +1005,7 @@ describe("composing a resume", () => {
   }
 
   function addFrom(label: string, option = "0"): void {
+    if (screen.queryByLabelText(label) === null) press(label);
     const select = screen.getByLabelText(label);
     fireEvent.change(select, { target: { value: option } });
     const picker = select.closest("div");
@@ -1022,12 +1024,12 @@ describe("composing a resume", () => {
     mount(server.answer, `/resumes/${resumeId}`);
 
     await screen.findByText("Cut p95 latency from 800ms to 120ms");
-    press("Stop printing Cut p95 latency from 800ms to 120ms");
+    press("Hide Cut p95 latency from 800ms to 120ms");
 
     await waitFor(() => {
       expect(methods(server)).toEqual(["GET", "PATCH"]);
     });
-    expect(await screen.findByText(/2 placed and toggled off/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 items hidden/)).toBeInTheDocument();
   });
 
   it("moves an entry with one row, because the key is fractional", async () => {
@@ -1063,7 +1065,7 @@ describe("composing a resume", () => {
     mount(server.answer, `/resumes/${resumeId}`);
 
     await screen.findByText("Engine lead");
-    press("Take Engine lead off this resume");
+    press("Remove Engine lead from this resume");
     await waitFor(() => {
       expect(screen.queryByText("Cut p95 latency from 800ms to 120ms")).not.toBeInTheDocument();
     });
@@ -1144,7 +1146,7 @@ describe("composing a resume", () => {
     mount(server.answer, `/resumes/${resumeId}`);
 
     await screen.findByText("ada@example.org");
-    press("Stop printing ada@example.org");
+    press("Hide ada@example.org");
     await waitFor(() => {
       expect(store.resumeContactChannels).toHaveLength(1);
     });
@@ -1347,8 +1349,9 @@ describe("a resume and its template", () => {
 
     await screen.findByText("No resumes yet");
     press("New resume");
-    type("A name for the new resume", "Backend, Acme");
-    press("Start it");
+    await screen.findByLabelText("Resume name");
+    type("Resume name", "Backend, Acme");
+    press("Create resume");
 
     expect(await screen.findByRole("heading", { name: "Backend, Acme" })).toBeInTheDocument();
     expect(server.calls.filter((call) => call.method === "POST")).toHaveLength(1);
@@ -1373,7 +1376,7 @@ describe("a resume and its template", () => {
       );
     }, `/resumes/${resume.id}?view=composition`);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Stop printing Experience/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Hide Experience/ }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("The store is unreachable");
   });
@@ -1391,11 +1394,11 @@ describe("a resume and its template", () => {
     ).toBeInTheDocument();
 
     press("Archive");
-    expect(await screen.findByText("Archived, and kept")).toBeInTheDocument();
+    expect(await screen.findByText("Archived", { selector: "span" })).toBeInTheDocument();
 
-    press("Put back");
+    press("Restore");
     await waitFor(() => {
-      expect(screen.queryByText("Archived, and kept")).not.toBeInTheDocument();
+      expect(screen.queryByText("Archived", { selector: "span" })).not.toBeInTheDocument();
     });
     expect(server.calls.map((call) => call.method)).toEqual(["GET", "PATCH", "DELETE", "POST"]);
   });
@@ -1466,10 +1469,10 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
     await printed();
-    expect(screen.getByLabelText("How long it may be")).toHaveValue("");
+    expect(screen.getByLabelText("Page limit")).toHaveValue("");
     expect(screen.getByText(/^This is 1 page long\.$/)).toBeInTheDocument();
 
-    type("How long it may be", "1");
+    type("Page limit", "1");
 
     await waitFor(() => {
       expect(patched(server)).toHaveLength(1);
@@ -1634,7 +1637,7 @@ describe("a resume and its template", () => {
     // JSON Resume drops metrics and a custom section; a Typst file this resume
     // fits entirely, and saying so is the point of counting per format.
     expect(screen.getByText(/not fit that format/)).toBeInTheDocument();
-    type("Somebody else's format", "typst");
+    type("File format", "typst");
     expect(screen.getByText("Everything in this resume fits that format.")).toBeInTheDocument();
 
     press("Download Typst source");
@@ -1668,7 +1671,8 @@ describe("a resume and its template", () => {
     expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
   });
 
-  const lintPanel = async () => await screen.findByRole("region", { name: "How it reads" });
+  const lintPanel = async () =>
+    await screen.findByRole("region", { name: "Checks and page limit" });
 
   it("reads the file back the way a machine would, and says so", async () => {
     const { server, resume } = aResumeToPrint();
@@ -1695,7 +1699,7 @@ describe("a resume and its template", () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
-    expect(await screen.findByRole("region", { name: "How it looks" })).toHaveTextContent(
+    expect(await screen.findByRole("region", { name: "Appearance" })).toHaveTextContent(
       /never images or table cells/,
     );
   });
@@ -1707,7 +1711,7 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=composition`);
 
     await printed();
-    expect(screen.queryByRole("button", { name: /Export and settings/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Template and export/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Print or save as PDF" })).not.toBeInTheDocument();
   });
 
@@ -1835,7 +1839,7 @@ describe("designs of your own", () => {
     press("New design");
     type("Name", "Navy headings");
     type("Based on", "ats-left-heading");
-    press("Start it");
+    press("Create design");
 
     await waitFor(() => {
       expect(posted(server)).toHaveLength(1);
@@ -1861,7 +1865,7 @@ describe("designs of your own", () => {
 
     // The name comes off the file, so a design that was named once stays named.
     expect(await screen.findByLabelText<HTMLInputElement>("Name")).toHaveValue("Navy headings");
-    press("Start it");
+    press("Create design");
 
     await waitFor(() => {
       expect(posted(server)).toHaveLength(1);
@@ -1899,7 +1903,7 @@ describe("designs of your own", () => {
     expect(
       await screen.findByText("A design of yours is already called that."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Start it/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Create design/ })).toBeDisabled();
   });
 
   it("writes a design knob as it is moved, once the moving stops", async () => {
@@ -1966,7 +1970,7 @@ describe("designs of your own", () => {
     const picker = await screen.findByLabelText<HTMLSelectElement>("Template");
     expect([...picker.options].map((option) => option.text)).toContain("Navy headings");
     expect(picker.value).toBe(template.id);
-    expect(screen.getByRole("link", { name: "Change what this design is" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Edit shared design" })).toHaveAttribute(
       "href",
       `/templates/${template.id}`,
     );
@@ -2219,7 +2223,7 @@ describe("the profile", () => {
 
     await screen.findByLabelText("Value");
     type("Value", "ada@example.org");
-    press("Add a way to reach you");
+    press("Add contact");
 
     await waitFor(() => {
       expect(store.contactChannels).toHaveLength(1);
@@ -2413,7 +2417,7 @@ describe("starting a resume from another", () => {
 
     await screen.findByText("Staff engineer");
     press("Start a resume from Staff engineer");
-    press("Start it");
+    press("Create copy");
 
     await waitFor(() => {
       expect(store.resumes).toHaveLength(2);
@@ -2664,7 +2668,7 @@ describe("bringing a resume in", () => {
     await screen.findByLabelText("A resume to read");
     chooseFile(A_RESUME);
     await screen.findByText("Staff engineer");
-    press("Bring these in");
+    press("Import selected");
 
     expect(await screen.findByText(/came in\./)).toBeInTheDocument();
     const sent = server.calls.find((call) => call.path === "/v1/intake");
@@ -2686,7 +2690,7 @@ describe("bringing a resume in", () => {
 
     const row = screen.getByText("Staff engineer").closest("div")?.parentElement;
     fireEvent.click(within(row as HTMLElement).getByRole("radio", { name: "Skip" }));
-    press("Bring these in");
+    press("Import selected");
 
     await screen.findByText(/came in\./);
     const sent = server.calls.find((call) => call.path === "/v1/intake");
@@ -2759,7 +2763,7 @@ describe("bringing in a file with no structure in it", () => {
     Object.defineProperty(input, "files", { value: [file], configurable: true });
     fireEvent.change(input);
 
-    expect(await screen.findByText(/worked out from the layout/)).toBeInTheDocument();
+    expect(await screen.findByText(/inferred from the/)).toBeInTheDocument();
     expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
   });
 });
@@ -2779,7 +2783,7 @@ describe("role profiles", () => {
       expect(store.roleProfiles).toHaveLength(1);
     });
 
-    type("Add a word to Backend", "Go");
+    type("Add a tag to Backend", "Go");
     press("Add to Backend");
 
     // The word was not in the vocabulary, so it is created and added at once.

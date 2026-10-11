@@ -35,9 +35,9 @@ export function PointMetrics({
   };
 
   return (
-    <Panel>
-      <PanelHeader title="What it moved">
-        Saved as you add them. Removing one archives it.
+    <Panel collapsible defaultOpen={rows.length > 0}>
+      <PanelHeader title="Metrics">
+        Add numbers that show impact, such as time saved or revenue growth.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {rows.length === 0 ? null : (

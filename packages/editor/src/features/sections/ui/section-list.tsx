@@ -217,7 +217,7 @@ export function SectionList({
           )
         }
       >
-        Headings of your own, for work the built-in kinds have no name for.
+        Create headings for custom records, such as patents or exhibitions.
       </PageHeader>
 
       {adding ? (

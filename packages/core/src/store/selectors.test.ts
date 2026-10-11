@@ -1,5 +1,5 @@
 import type { CareerRecord, DraftTarget } from "@keepcv/schema";
-import { draftSchema } from "@keepcv/schema";
+import { draftSchema, phrasingSetSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
@@ -35,6 +35,7 @@ import {
   aTag,
   EPOCH,
   emptyStore,
+  standard,
 } from "./store.harness.js";
 
 describe("live and archived", () => {
@@ -158,6 +159,14 @@ describe("the overview", () => {
 
     const result = overview(store, { asOf: EPOCH });
     expect(result.unfinished.pointsWithoutMetrics.map((p) => p.id)).toEqual([bare.id]);
+  });
+
+  it("does not ask for end dates on records describing one date or an undated capability", () => {
+    const store = emptyStore();
+    for (const kind of ["certification", "award", "publication", "speaking", "language"]) {
+      store.records.push(aRecord({ kind, startedOn: "2025", endedOn: null }));
+    }
+    expect(overview(store, { asOf: EPOCH }).unfinished.missingEndDate).toEqual([]);
   });
 
   // An archived metric is not a metric the point still claims, so the nudge
@@ -453,6 +462,56 @@ describe("the wordings a set holds", () => {
 });
 
 describe("what a rewording changes", () => {
+  function aSummary(
+    store: ReturnType<typeof emptyStore>,
+    purpose: "profile_summary" | "record_summary",
+  ) {
+    const set = phrasingSetSchema.parse({ ...standard(), purpose, canonicalPhrasingId: null });
+    store.phrasingSets.push(set);
+    const wording = aPhrasing(store, set.id, "The default summary");
+    set.canonicalPhrasingId = wording.id;
+    const alternative = aPhrasing(store, set.id, "An alternate summary", { sortKey: "a1" });
+    return { set, wording, alternative };
+  }
+
+  it("names live resumes using the default professional summary, but not its alternatives", () => {
+    const store = emptyStore();
+    const { set, wording, alternative } = aSummary(store, "profile_summary");
+    store.profile.summarySetId = set.id;
+    const resume = aResume(store, "Backend");
+    aResume(store, "Shelved", { archivedAt: EPOCH });
+    expect(resumesUsingPhrasing(store, wording.id)).toEqual([resume]);
+    expect(resumesUsingPhrasing(store, alternative.id)).toEqual([]);
+    set.canonicalPhrasingId = alternative.id;
+    expect(resumesUsingPhrasing(store, wording.id)).toEqual([]);
+    expect(resumesUsingPhrasing(store, alternative.id)).toEqual([resume]);
+  });
+
+  it("names resumes holding a record summary once, including hidden selections and excluding removed content", () => {
+    const store = emptyStore();
+    const { set, wording, alternative } = aSummary(store, "record_summary");
+    const record = aRecord({ kind: "experience", summarySetId: set.id });
+    store.records.push(record);
+    const resume = aResume(store, "Backend");
+    const section = aSection(store, resume.id, "experience", {});
+    anEntry(store, section, record.id, { isVisible: false });
+    const other = aResume(store, "Removed");
+    anEntry(store, aSection(store, other.id, "experience", {}), record.id, { archivedAt: EPOCH });
+    const archivedSection = aResume(store, "Removed section");
+    anEntry(
+      store,
+      aSection(store, archivedSection.id, "experience", { archivedAt: EPOCH }),
+      record.id,
+      {},
+    );
+    const archivedResume = aResume(store, "Archived", { archivedAt: EPOCH });
+    anEntry(store, aSection(store, archivedResume.id, "experience", {}), record.id, {});
+    expect(resumesUsingPhrasing(store, wording.id)).toEqual([resume]);
+    expect(resumesUsingPhrasing(store, alternative.id)).toEqual([]);
+    record.archivedAt = record.createdAt;
+    expect(resumesUsingPhrasing(store, wording.id)).toEqual([]);
+  });
+
   function aPlacedPoint() {
     const store = emptyStore();
     const record = aRecord({ kind: "experience" });

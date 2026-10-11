@@ -2,6 +2,7 @@ import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import type { DataPagePresentation } from "../features/data/model/presentation.js";
 import { DataScreen } from "../features/data/ui/data-screen.js";
 import { ImportScreen } from "../features/import/ui/import-screen.js";
 import { POINT_FILTERS } from "../features/points/model/point-rows.js";
@@ -35,6 +36,7 @@ export interface RouterContext {
   // one: the navigation asks whether signing out is a thing here, not which
   // mode the launcher is in.
   signOut: (() => void) | undefined;
+  dataPage?: DataPagePresentation | undefined;
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -82,8 +84,8 @@ const dataRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/data",
   component: function DataPage() {
-    const { api } = dataRoute.useRouteContext();
-    return <DataScreen store={useStore(api)} client={api} />;
+    const { api, dataPage } = dataRoute.useRouteContext();
+    return <DataScreen store={useStore(api)} client={api} presentation={dataPage} />;
   },
 });
 
@@ -273,11 +275,22 @@ const editPointRoute = createRoute({
 const resumesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/resumes",
-  validateSearch: z.object({ archived: z.enum(ARCHIVED_FILTERS).default("exclude") }),
+  validateSearch: z.object({
+    archived: z.enum(ARCHIVED_FILTERS).default("exclude"),
+    create: z.boolean().default(false),
+    template: z.string().optional(),
+  }),
   component: function ResumesScreen() {
     const { api } = resumesRoute.useRouteContext();
+    const { archived, create, template } = resumesRoute.useSearch();
     return (
-      <ResumeList store={useStore(api)} client={api} archived={resumesRoute.useSearch().archived} />
+      <ResumeList
+        store={useStore(api)}
+        client={api}
+        archived={archived}
+        creating={create}
+        template={template}
+      />
     );
   },
 });

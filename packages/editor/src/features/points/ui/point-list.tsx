@@ -20,10 +20,10 @@ import {
 } from "../model/point-rows.js";
 
 const BLURBS: Record<PointFilter, string> = {
-  all: "One thing you did and what it moved. Every resume is assembled from these.",
-  unplaced: "Captured but filed under no record. Nothing is lost; they are just not sorted yet.",
-  unmeasured: "They say what you did but not what it moved. A number is what a reader remembers.",
-  archived: "Put away, never deleted, and still on every resume that already printed them.",
+  all: "Reusable statements about your work and its impact. Add them to your resumes.",
+  unplaced: "Link these points to a job, project, or other record.",
+  unmeasured: "Add numbers where they help explain your impact.",
+  archived: "Archived points remain available to restore.",
 };
 
 function Row({ row }: { row: PointListRow }) {

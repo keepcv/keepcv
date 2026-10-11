@@ -17,18 +17,16 @@ import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
-import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
+import { SummaryEditor } from "../../phrasings/ui/summary-editor.js";
 import {
   useCreateChannel,
   useSetChannelArchived,
-  useStartSummary,
   useUpdateChannel,
   useUpdateProfile,
 } from "../api/use-profile.js";
 import {
   buildChannel,
   buildProfilePatch,
-  buildSummarySet,
   CHANNEL_LABELS,
   type ChannelValues,
   channelRows,
@@ -97,10 +95,10 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
 
       <Panel>
         <PanelHeader
-          title="Who the resume says you are"
+          title="Personal details"
           aside={changed ? <Badge tone="warning">Not saved yet</Badge> : undefined}
         >
-          The header of every resume this store compiles, and the only place it comes from.
+          These details appear in your resume headers.
         </PanelHeader>
         <PanelBody className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -326,6 +324,7 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
   const [values, setValues] = useState<ChannelValues>(newChannelValues);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [showArchived, setShowArchived] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const rows = channelRows(store, showArchived);
   const missing = missingExtractable(store);
@@ -336,7 +335,7 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
   return (
     <Panel>
       <PanelHeader
-        title="How to reach you"
+        title="Contact details"
         aside={
           <label className="flex items-center gap-1.5 text-xs text-text-subtle">
             <input
@@ -351,15 +350,15 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
           </label>
         }
       >
-        Each carries a default, and a resume can override it one channel at a time.
+        Choose contact details for your resume headers.
       </PanelHeader>
 
       {missing.length === 0 ? null : (
         <div className="mx-4 mt-3 rounded-lg bg-caution-soft px-3 py-2 text-xs text-caution-text">
           No {missing.map((kind) => CHANNEL_LABELS[kind].toLowerCase()).join(" and no ")} yet.{" "}
           {missing.length === EXTRACTABLE_KINDS.length
-            ? "A resume with neither is one a machine reading it cannot file an application from."
-            : "Both are worth having: a reader that pulls the text back out looks for each."}
+            ? "Add an email or phone number so employers can reach you."
+            : "Add another way for employers to reach you."}
         </div>
       )}
 
@@ -379,75 +378,56 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
       )}
 
       <PanelBody className="space-y-3 border-t border-line-subtle">
-        <ChannelFields
-          values={values}
-          errors={errors}
-          onChange={(patch) => {
-            setValues((current) => ({ ...current, ...patch }));
-          }}
-        />
-        {create.error === null ? null : <Failure error={create.error} />}
-        <Button
-          disabled={values.value.trim() === "" || create.isPending}
-          onClick={() => {
-            const built = buildChannel(store, values);
-            if ("errors" in built) {
-              setErrors(built.errors);
-              return;
-            }
-            setErrors({});
-            create.mutate(built.input);
-            setValues(newChannelValues());
-          }}
-        >
-          Add a way to reach you
-        </Button>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-// The summary is a phrasing set like a point's, so it gets variants and an
-// append-only history for free - but a profile that has never had one names no
-// set, and there is nowhere to type until one is made.
-function Summary({
-  store,
-  client,
-  profile,
-}: {
-  store: Store;
-  client: ApiClient;
-  profile: Profile;
-}) {
-  const start = useStartSummary(client);
-
-  if (profile.summarySetId !== null) {
-    return (
-      <PhrasingEditor
-        store={store}
-        client={client}
-        phrasingSetId={profile.summarySetId}
-        subject="profile"
-      />
-    );
-  }
-
-  return (
-    <Panel>
-      <PanelHeader title="Professional summary">
-        A paragraph at the top of the resume, with variants and a history like any other wording.
-      </PanelHeader>
-      <PanelBody className="space-y-3">
-        {start.error === null ? null : <Failure error={start.error} />}
-        <Button
-          tone="primary"
-          disabled={start.isPending}
-          onClick={() => {
-            start.mutate({ profile, input: buildSummarySet("") });
-          }}
-        >
-          {start.isPending ? "Starting" : "Write a summary"}
-        </Button>
+        {adding || rows.length === 0 ? (
+          <>
+            <ChannelFields
+              values={values}
+              errors={errors}
+              onChange={(patch) => {
+                setValues((current) => ({ ...current, ...patch }));
+              }}
+            />
+            {create.error === null ? null : <Failure error={create.error} />}
+            <Button
+              disabled={values.value.trim() === "" || create.isPending}
+              onClick={() => {
+                const built = buildChannel(store, values);
+                if ("errors" in built) {
+                  setErrors(built.errors);
+                  return;
+                }
+                setErrors({});
+                create.mutate(built.input, {
+                  onSuccess: () => {
+                    setValues(newChannelValues());
+                    setAdding(false);
+                  },
+                });
+              }}
+            >
+              {create.isPending ? "Adding" : "Add contact"}
+            </Button>
+            {rows.length === 0 ? null : (
+              <Button
+                tone="ghost"
+                onClick={() => {
+                  setAdding(false);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button
+            icon="add"
+            onClick={() => {
+              setAdding(true);
+            }}
+          >
+            Add contact
+          </Button>
+        )}
       </PanelBody>
     </Panel>
   );
@@ -457,12 +437,15 @@ export function ProfileScreen({ store, client }: { store: Store; client: ApiClie
   return (
     <PageBody>
       <PageHeader title="Profile" icon="profile">
-        One profile, and every resume prints from it. Nothing here is per-resume except which
-        contacts a resume shows.
+        Your name, introduction, and contact details are shared across resumes.
       </PageHeader>
 
       <Identity profile={store.profile} client={client} />
-      <Summary store={store} client={client} profile={store.profile} />
+      <SummaryEditor
+        store={store}
+        client={client}
+        owner={{ kind: "profile", row: store.profile }}
+      />
       <Contacts store={store} client={client} />
     </PageBody>
   );

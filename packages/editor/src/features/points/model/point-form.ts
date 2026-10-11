@@ -13,15 +13,13 @@ import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 import { bodyOf } from "../../phrasings/model/editor.js";
 
 export const CONFIDENCE_HINTS: Record<PointConfidence, string> = {
-  verified: "Backed by something you could show.",
-  estimated: "Your own figure, honestly arrived at.",
-  unverified: "True, but nothing to point at.",
+  verified: "Supported by evidence.",
+  estimated: "An approximate figure.",
+  unverified: "Not yet checked.",
 };
 
 export interface PointFormValues {
   text: string;
-  // "" is unplaced, which is a state the store is built to hold: capture first,
-  // decide where it belongs later.
   recordId: string;
   confidence: PointConfidence;
   occurredOn: string;

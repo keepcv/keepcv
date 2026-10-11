@@ -1,5 +1,15 @@
 # @keepcv/cli
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @keepcv/core@0.1.4
+  - @keepcv/api@0.1.4
+  - @keepcv/db@0.2.1
+  - @keepcv/interop@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

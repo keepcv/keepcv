@@ -13,7 +13,10 @@ export interface Crumb {
 
 function Breadcrumb({ trail }: { trail: readonly Crumb[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-text-subtle">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex flex-wrap items-center gap-1 text-xs text-text-subtle"
+    >
       {trail.map((crumb) => (
         <span key={crumb.to + crumb.label} className="flex items-center gap-1">
           <Link
@@ -31,9 +34,6 @@ function Breadcrumb({ trail }: { trail: readonly Crumb[] }) {
   );
 }
 
-// `reading` caps one-line rows at a measure the eye can cross. `full` is for
-// rows dense enough to earn the canvas, and those restructure rather than
-// spread.
 export function PageBody({
   width = "reading",
   className,
@@ -86,8 +86,6 @@ export function PageHeader({
   );
 }
 
-// Sticky against `main`, which is the scroll container: the app header sits
-// outside it, so this pins at zero rather than clearing a bar.
 export function Toolbar({
   count,
   className,

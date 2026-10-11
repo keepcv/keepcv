@@ -58,9 +58,8 @@ function Found({
           <PanelBody className="flex gap-2.5">
             <Icon name="warning" size="sm" className="mt-0.5 shrink-0 text-caution-text" />
             <p className="text-sm text-text-muted">
-              A {intake.source === "pdf" ? "PDF" : "Word document"} says how a resume looked, not
-              what each part of it was. Everything below was worked out from the layout, so read it
-              before you bring it in - titles, employers and dates are the ones to check.
+              Check titles, employers, and dates. These were inferred from the{" "}
+              {intake.source === "pdf" ? "PDF" : "Word document"} layout.
             </p>
           </PanelBody>
         </Panel>
@@ -69,8 +68,7 @@ function Found({
       {review.identity.length === 0 && review.summary === undefined ? null : (
         <Panel>
           <PanelHeader title="You">
-            An import fills what the profile has nowhere to show. It never writes over something you
-            typed.
+            Fill empty profile fields. Existing details stay unchanged.
           </PanelHeader>
           <PanelBody className="divide-y divide-line">
             {review.identity.map((match) => (
@@ -104,7 +102,7 @@ function Found({
       {review.organisations.length === 0 ? null : (
         <Panel>
           <PanelHeader title="Organisations">
-            Where the work was done. One named in three places is one row here.
+            Match employers and institutions to existing names.
           </PanelHeader>
           <PanelBody className="divide-y divide-line">
             {review.organisations.map((match, index) => (
@@ -130,7 +128,7 @@ function Found({
       {review.contactChannels.length === 0 ? null : (
         <Panel>
           <PanelHeader title="Ways to reach you">
-            These become the header of every resume this store compiles.
+            Contact details for your resume headers.
           </PanelHeader>
           <PanelBody className="divide-y divide-line">
             {review.contactChannels.map((match, index) => (
@@ -154,7 +152,7 @@ function Found({
 
       <Panel>
         <PanelHeader title={`Records (${String(review.records.length)})`}>
-          Merging adds what the file had and leaves the record you already have alone.
+          Add new records or merge new details into existing ones.
         </PanelHeader>
         <PanelBody className="divide-y divide-line">
           {review.records.length === 0 ? (
@@ -206,8 +204,8 @@ function Chooser({ onRead }: { onRead: (intake: Intake) => void }) {
   return (
     <Panel>
       <PanelHeader title="Choose a file">
-        A PDF, a Word document, or a JSON Resume, Reactive Resume or RenderCV export. It is read in
-        this tab and never uploaded.
+        PDF, DOCX, JSON Resume, Reactive Resume, or RenderCV. Review the extracted details before
+        adding them.
       </PanelHeader>
       <PanelBody className="space-y-2">
         {unreadable === undefined ? null : (
@@ -264,9 +262,8 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
 
   return (
     <PageBody>
-      <PageHeader title="Bring a resume in" icon="upload">
-        Everything arrives as records and points you own, not as a resume. Nothing is written until
-        you say so.
+      <PageHeader title="Import resume" icon="upload">
+        Turn an existing resume into career records and points you can reuse.
       </PageHeader>
 
       {apply.data === undefined ? null : (
@@ -306,7 +303,7 @@ export function ImportScreen({ store, client }: { store: Store; client: ApiClien
                 });
               }}
             >
-              {apply.isPending ? "Writing" : "Bring these in"}
+              {apply.isPending ? "Importing" : "Import selected"}
             </Button>
             <Button
               onClick={() => {

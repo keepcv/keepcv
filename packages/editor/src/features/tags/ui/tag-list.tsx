@@ -334,8 +334,8 @@ export function TagList({
       {rows.length === 0 ? (
         <Empty title={filter === "all" ? "No tags yet" : "Nothing here"} spot="noResults">
           {filter === "all"
-            ? "A word you file work under. Add one here, or type one straight onto a record."
-            : "Nothing matches that filter, which on this screen is usually good news."}
+            ? "Label related records and points to find them or select them for a resume."
+            : "No tags match this filter."}
         </Empty>
       ) : (
         <ul className="rounded-xl border border-line bg-surface shadow-card">

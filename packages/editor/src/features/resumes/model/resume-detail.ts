@@ -24,7 +24,7 @@ import type {
   Store,
   Uuid,
 } from "@keepcv/schema";
-import { formatPeriod } from "../../records/model/record-rows.js";
+import { formatPeriod, toRecordRow } from "../../records/model/record-rows.js";
 import { type ResumeRow, toResumeRow } from "./resume-rows.js";
 
 export interface Choice {
@@ -32,8 +32,6 @@ export interface Choice {
   label: string;
 }
 
-// The wording a point takes when it is placed: an entry point pins a phrasing
-// rather than a set, so there is nothing to resolve later.
 export interface PlaceablePoint extends Choice {
   phrasingId: Uuid;
 }
@@ -56,8 +54,6 @@ export interface CompositionEntry {
   isVisible: boolean;
   isArchived: boolean;
   points: CompositionPoint[];
-  // What the record could have contributed: a skill with none says nothing, and
-  // a job with six and none chosen is worth saying out loud.
   available: number;
   placeable: PlaceablePoint[];
 }
@@ -65,8 +61,6 @@ export interface CompositionEntry {
 export interface CompositionSection {
   row: ResumeSection;
   heading: string;
-  // A section printing its kind's default, so renaming starts from what is on
-  // the page rather than from an empty box.
   isDefaultHeading: boolean;
   isVisible: boolean;
   entries: CompositionEntry[];
@@ -89,8 +83,7 @@ export interface ResumeDetail {
   document: ResumeDocument | undefined;
 }
 
-// The pinned one is offered even when it has been put away, or the select would
-// show a wording this resume is not printing.
+// An archived pinned wording must remain an option for the current selection.
 function wordingsOf(store: Store, phrasingSetId: Uuid | null, pinned: Uuid): Choice[] {
   if (phrasingSetId === null) return [];
   return phrasingsOfSet(store, phrasingSetId)
@@ -99,8 +92,7 @@ function wordingsOf(store: Store, phrasingSetId: Uuid | null, pinned: Uuid): Cho
       const text = textOfPhrasing(store, phrasing);
       return {
         id: phrasing.id,
-        // A wording nobody has typed into yet has text, and it is the empty
-        // string, which named an option the picker drew blank.
+        // Empty wording text previously left the option blank.
         label: phrasing.label ?? (text === "" ? phrasing.variant : text),
       };
     });
@@ -134,10 +126,13 @@ export function resumeDetail(store: Store, resumeId: Uuid, asOf: string): Resume
       heading: sectionHeading(store, section.section),
       isDefaultHeading: section.section.heading === null,
       isVisible: section.section.isVisible,
-      placeable: placeableRecords(store, section.section.id).map((record) => ({
-        id: record.id,
-        label: record.title ?? "Untitled",
-      })),
+      placeable: placeableRecords(store, section.section.id).map((record) => {
+        const row = toRecordRow(store, record);
+        return {
+          id: record.id,
+          label: [row.title, row.organisation, row.period].filter(Boolean).join(" - "),
+        };
+      }),
       entries: section.entries.map((entry) => ({
         row: entry.entry,
         recordId: entry.record.id,

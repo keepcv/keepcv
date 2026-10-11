@@ -92,7 +92,23 @@ function resumesPinning(store: Store, pins: (row: ResumeEntryPoint) => boolean):
 }
 
 export function resumesUsingPhrasing(store: Store, phrasingId: Uuid): Resume[] {
-  return resumesPinning(store, (row) => row.phrasingId === phrasingId);
+  if (canonicalPhrasingOf(store, store.profile.summarySetId)?.id === phrasingId) {
+    return live(store.resumes);
+  }
+  const holding = new Set(
+    resumesPinning(store, (row) => row.phrasingId === phrasingId).map((row) => row.id),
+  );
+  const records = new Set(
+    live(store.records)
+      .filter((row) => canonicalPhrasingOf(store, row.summarySetId)?.id === phrasingId)
+      .map((row) => row.id),
+  );
+  const sections = new Set(live(store.resumeSections).map((row) => row.id));
+  for (const entry of live(store.resumeEntries)) {
+    if (records.has(entry.recordId) && sections.has(entry.resumeSectionId))
+      holding.add(entry.resumeId);
+  }
+  return live(store.resumes).filter((row) => holding.has(row.id));
 }
 
 export function resumesUsingPoint(store: Store, pointId: Uuid): Resume[] {
@@ -176,7 +192,6 @@ export function recordCounts(store: Store): RecordCount[] {
 }
 
 export interface Unfinished {
-  // Not current and with no end date: two different facts.
   missingEndDate: CareerRecord[];
   pointsWithoutMetrics: Point[];
   expiringCertifications: CareerRecord[];
@@ -218,7 +233,16 @@ export function overview(
       .slice(0, RECENTLY_EDITED),
     unfinished: {
       missingEndDate: liveRecords.filter(
-        (entry) => !entry.isCurrent && entry.startedOn !== null && entry.endedOn === null,
+        (entry) =>
+          (entry.kind === "experience" ||
+            entry.kind === "education" ||
+            entry.kind === "project" ||
+            entry.kind === "skill" ||
+            entry.kind === "volunteering" ||
+            entry.kind === "custom_entry") &&
+          !entry.isCurrent &&
+          entry.startedOn !== null &&
+          entry.endedOn === null,
       ),
       pointsWithoutMetrics: livePoints.filter((point) => !withMetrics.has(point.id)),
       // Partial dates compare correctly as strings: "2026-03" < "2026-03-14" <

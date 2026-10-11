@@ -36,9 +36,9 @@ export function RecordFields({
   };
 
   return (
-    <Panel>
-      <PanelHeader title="Fields">
-        Anything the form above has no box for, kept as a value with a name.
+    <Panel collapsible defaultOpen={fields.length > 0}>
+      <PanelHeader title="Extra fields">
+        Add details such as a credential ID, grade, or DOI.
       </PanelHeader>
       <PanelBody className="space-y-3">
         {fields.length === 0 ? null : (
@@ -97,7 +97,7 @@ export function RecordFields({
                 onChange={(valueKind) => {
                   set({ valueKind: valueKind as RecordFieldFormValues["valueKind"] });
                 }}
-                hint="A date says so, so a reader knows to parse it."
+                hint="Choose how this value should be read."
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">

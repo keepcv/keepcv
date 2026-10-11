@@ -1,23 +1,63 @@
 @import "tailwindcss" source("..");
 @source "../../../../apps/web/src";
 
-/* Class-based only. The system preference is read in `lib/theme.ts` and applied
-   as this class, so the dark values are written once rather than once here and
-   once inside a `prefers-color-scheme` block. */
-@custom-variant dark (&:where(.dark, .dark *));
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
 
-/* ---------------------------------------------------------------------------
-   Ramps. Raw colour, referenced only by the semantic tokens below and by the
-   marketing utilities. A screen naming `ink-400` is a screen that will not flip.
-   --------------------------------------------------------------------------- */
+select {
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select::picker(select) {
+    min-width: anchor-size(width);
+    max-width: min(32rem, calc(100vw - 2rem));
+    max-height: 18rem;
+    margin-block: 0.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    box-shadow: var(--shadow-overlay-value);
+  }
+  select::picker-icon {
+    color: var(--text-subtle);
+  }
+  select option {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    white-space: normal;
+  }
+  select option:hover,
+  select option:focus {
+    background: var(--surface-hover);
+  }
+  select option:checked {
+    background: var(--brand-soft);
+    color: var(--brand-text);
+  }
+  select option::checkmark {
+    color: var(--brand-text);
+  }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
 
-  /* Lightness matches the cool ramp this replaced, so every text-on-surface
-     contrast ratio is unchanged; only hue and chroma moved. The hue drifts
-     warmer as it darkens, which is what keeps a shadow brown rather than blue. */
   --color-ink-50: oklch(0.985 0.003 90);
   --color-ink-100: oklch(0.968 0.005 88);
   --color-ink-200: oklch(0.924 0.007 85);
@@ -42,8 +82,6 @@
   --color-brand-900: oklch(0.375 0.15 292);
   --color-brand-950: oklch(0.268 0.11 292);
 
-  /* Indigo rather than cyan: the gradients below run brand into accent, and a
-     cyan terminal on a warm canvas reads as a different product's palette. */
   --color-accent-300: oklch(0.812 0.098 268);
   --color-accent-400: oklch(0.712 0.135 268);
   --color-accent-500: oklch(0.618 0.166 268);
@@ -75,11 +113,6 @@
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
-
-/* ---------------------------------------------------------------------------
-   Semantic tokens. `inline` so the generated utility emits `var(--surface)`
-   rather than the resolved colour, which is what lets the values below flip.
-   --------------------------------------------------------------------------- */
 
 @theme inline {
   --color-canvas: var(--canvas);
@@ -117,8 +150,6 @@
 
   --color-focus: var(--focus);
 
-  /* The ground a rendered document sits on. Quiet in both schemes: bold chrome
-     around a resume is chrome competing with the resume. */
   --color-paper: var(--paper);
   --color-paper-edge: var(--paper-edge);
 
@@ -130,9 +161,6 @@
 :root {
   color-scheme: light;
 
-  /* Warm ivory, and a real step down from the white it holds. At the 1.5% the
-     canvas used to sit from `--surface`, a panel was a hairline rectangle
-     rather than an object on a ground. */
   --canvas: oklch(0.972 0.008 88);
   --surface: oklch(1 0 0);
   --surface-raised: oklch(1 0 0);
@@ -171,8 +199,6 @@
   --paper: oklch(0.94 0.009 85);
   --paper-edge: var(--color-ink-300);
 
-  /* Two layers: a tight contact shadow that seats the edge, and a wider ambient
-     one that lifts it. A single 1px shadow at 5% was doing neither. */
   --shadow-card-value:
     0 1px 2px -1px oklch(0.26 0.02 55 / 0.1), 0 2px 6px -2px oklch(0.26 0.02 55 / 0.07);
   --shadow-raised-value:
@@ -234,11 +260,6 @@
     outline-offset: 2px;
   }
 }
-
-/* ---------------------------------------------------------------------------
-   Marketing surfaces. Bold lives here and in the chrome, never around a
-   rendered document.
-   --------------------------------------------------------------------------- */
 
 @utility text-gradient-brand {
   background-image: linear-gradient(100deg, var(--color-brand-500), var(--color-accent-500));

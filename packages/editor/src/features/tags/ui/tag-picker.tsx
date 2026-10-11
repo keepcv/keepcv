@@ -27,8 +27,6 @@ function Chip({ tag, onRemove }: { tag: Tag; onRemove: () => void }) {
   );
 }
 
-// One control for both sides of the vocabulary: a label nobody has used yet is
-// created and assigned in one motion, and an existing one is never duplicated.
 export function TagPicker({
   store,
   client,
@@ -74,7 +72,7 @@ export function TagPicker({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {on.length === 0 ? (
-          <p className="text-sm text-text-subtle">Nothing filed under a tag yet.</p>
+          <p className="text-sm text-text-subtle">No tags yet.</p>
         ) : (
           on.map((tag) => (
             <Chip

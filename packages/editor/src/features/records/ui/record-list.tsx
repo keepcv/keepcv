@@ -5,6 +5,7 @@ import { Empty } from "../../../app/states.js";
 import { Icon } from "../../../components/icon/icon.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { ButtonLink } from "../../../components/ui/button.js";
+import { ContentGuide } from "../../../components/ui/content-guide.js";
 import { Meta } from "../../../components/ui/meta.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
 import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
@@ -128,16 +129,15 @@ function Group({ group, client }: { group: RecordGroup; client: ApiClient }) {
 function Nothing({ filters }: { filters: RecordFilters }) {
   if (filters.tagId !== undefined) {
     return (
-      <Empty title="Nothing carries that tag" spot="noResults">
-        A record takes a tag on its own screen, and a point takes one on the point screen.
+      <Empty title="No matching records" spot="noResults">
+        Add tags on a record or point to find related work here.
       </Empty>
     );
   }
   if (filters.archived === "only") {
     return (
       <Empty title="Nothing archived here" spot="permanent">
-        Archiving keeps a record out of the way without destroying it. Nothing here has been put
-        away.
+        Archived records appear here. Open one to restore it.
       </Empty>
     );
   }
@@ -156,7 +156,7 @@ function Nothing({ filters }: { filters: RecordFilters }) {
         </ButtonLink>
       }
     >
-      A job, a degree, a project, a talk. Points attach to it afterwards.
+      Add a job, degree, or project, then add its points.
     </Empty>
   );
 }
@@ -187,8 +187,10 @@ export function RecordList({
           </ButtonLink>
         }
       >
-        The permanent record. Nothing filed here is trimmed away to make a resume fit.
+        Your jobs, projects, qualifications, and skills. Open a record to add points.
       </PageHeader>
+
+      <ContentGuide />
 
       <Toolbar count={counted(total, "record", "records")}>
         {/* Archived content is reachable, never hidden: "where did my old entry

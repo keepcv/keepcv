@@ -55,10 +55,17 @@ export function canonicalPhrasing(store: Store, phrasingSetId: Uuid): Phrasing |
 }
 
 export const VARIANT_HINTS: Record<PhrasingVariant, string> = {
-  standard: "The wording you reach for first.",
-  short: "For a resume that has run out of room.",
-  long: "The full version, for when there is space.",
-  angled: "Aimed at one kind of role.",
+  standard: "Your usual wording.",
+  short: "A concise version to save space.",
+  long: "A fuller version with more detail.",
+  angled: "Wording tailored to a role.",
+};
+
+export const WORDING_LABELS: Record<PhrasingVariant, string> = {
+  standard: "Standard",
+  short: "Short",
+  long: "Detailed",
+  angled: "Role-specific",
 };
 
 export interface NewVariant {

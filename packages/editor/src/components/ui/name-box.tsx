@@ -38,8 +38,9 @@ export function NameBox({
           setTyped(event.target.value);
         }}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && typed.trim() !== "") onSave(typed.trim());
-          if (event.key === "Escape") onCancel();
+          if (event.key === "Enter" && typed.trim() !== "" && disabled !== true)
+            onSave(typed.trim());
+          if (event.key === "Escape" && disabled !== true) onCancel();
         }}
         className="min-w-0 rounded-lg border border-line bg-surface px-2.5 py-1 text-sm text-text outline-none transition-colors placeholder:text-text-subtle focus:border-brand"
       />
