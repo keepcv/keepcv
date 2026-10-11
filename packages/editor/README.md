@@ -1,0 +1,59 @@
+# @keepcv/editor
+
+The KeepCV browser editor: records, Points, phrasings, resumes, templates,
+search, import and export. The local web app mounts this same package.
+
+```sh
+pnpm add @keepcv/editor @keepcv/api @tanstack/react-query react react-dom
+```
+
+```tsx
+import { createClient } from "@keepcv/api";
+import { Editor } from "@keepcv/editor";
+import { QueryClient } from "@tanstack/react-query";
+import "@keepcv/editor/style.css";
+
+const api = createClient(window.location.origin);
+const queries = new QueryClient({
+  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+});
+
+export function App() {
+  return <Editor api={api} queries={queries} signOut={() => {
+    queries.clear();
+    window.location.assign("/");
+  }} />;
+}
+```
+
+The caller supplies authentication through the typed client and decides what
+signing out does. Omit `signOut` to hide the control. Mount only after signing
+in. Keep the client, query cache and callback stable while mounted. Unmount and
+clear the cache before changing owners; use a fresh QueryClient for each owner.
+The editor uses `['store']` and the documented history keys in that cache.
+
+This is a browser application at the origin root. Serve the entry HTML for
+editor navigation paths such as `/records` and `/resumes`. It owns browser
+history while mounted. Its public declaration does not register a router type
+in the caller's application. Server rendering and embedding in another router's
+route tree are outside this entry's contract.
+
+Import the compiled `style.css`; no Tailwind build or source scanning is
+required. It includes the semantic tokens and a document-wide reset. Icons use
+SVG and system fonts. The bundled DOCX worker is in `dist/assets` and remains
+relative to the module; preserve it when copying package files. A bundler such
+as Vite copies it into the consumer output.
+
+For dark mode before first paint, copy the exported `@keepcv/editor/theme.js`
+asset to a same-origin URL and load it with a blocking `<script src="/theme.js">`
+in the HTML head. The editor follows the stored choice after mount.
+
+`@keepcv/editor/ui` exports the Icon, Spot, Button, TextField and Kbd primitives
+used by the local app's entry screens, plus the GlyphName type.
+
+`pnpm release:check` installs packed artifacts outside the workspace and builds,
+typechecks and tests `fixtures/editor-consumer`. It checks the emitted CSS and
+worker, keyboard palette navigation, profile writes, the supplied query cache,
+sign-out and refused authentication.
+
+MIT.

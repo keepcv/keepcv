@@ -20,7 +20,7 @@ a codebase like this rots.
 | 1 | **Row** | `@keepcv/db` | storage layout | `point` table row + joined `phrasing_revision` |
 | 2 | **Entity** | `@keepcv/core` | domain rules and invariants | `Point` with resolved current phrasing |
 | 3 | **DTO** | `@keepcv/schema` | the wire and file contract | `PointDTO`, Zod-defined, versioned |
-| 4 | **View model** | `apps/web` | one screen's needs | `PointCardView` with formatted dates, computed badges |
+| 4 | **View model** | `@keepcv/editor` | one screen's needs | `PointCardView` with formatted dates, computed badges |
 
 There is a **fifth**, and it is not a layer - it is a destination:
 `ResumeDocument`. It is uniform where the other four are
@@ -124,6 +124,19 @@ preview and the output diverging.
 ---
 
 ## 3. State ownership in the SPA
+
+The browser editor lives in `packages/editor` and is published as
+`@keepcv/editor`. Its `Editor` entry takes an `ApiClient`, `QueryClient` and an
+optional sign-out callback. It provides the query and router contexts without
+discovering authentication, choosing an API origin or mounting a React root.
+The local `apps/web` owns those entry concerns and uses that same component.
+
+The entry owns root-relative browser history while mounted. The caller keeps
+its inputs stable, mounts after authentication, and clears the cache before
+switching owners. The public declaration does not augment the caller's router
+registration. The package carries compiled CSS, the pre-paint theme script and
+the DOCX worker. An isolated installed consumer builds and exercises these
+artifacts as part of release validation.
 
 Four kinds of state, four owners. Putting any of them in the wrong place is a
 bug class, not a style preference.
@@ -892,7 +905,7 @@ interface every import goes through - is not built.
 ## 8. Frontend folder structure
 
 ```
-apps/web/src/
+packages/editor/src/
   app/                  router, providers, shell, error boundaries
   features/
     records/  points/  phrasings/  resumes/

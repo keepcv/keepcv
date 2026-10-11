@@ -1,8 +1,6 @@
 import type { AuthMode } from "@keepcv/api";
+import { Button, Icon, TextField } from "@keepcv/editor/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Icon } from "../../../components/icon/icon.js";
-import { Button } from "../../../components/ui/button.js";
-import { TextField } from "../../../components/ui/field.js";
 import { signIn } from "../../../lib/auth-mode.js";
 
 function Card({ title, lead, children }: { title: string; lead: string; children: ReactNode }) {

@@ -2,7 +2,7 @@
 
 Releases are published through GitHub Actions. The public packages are `@keepcv/cli`
 and `@keepcv/api`, `@keepcv/ats-lint`, `@keepcv/core`, `@keepcv/db`,
-`@keepcv/interop`, `@keepcv/render`, `@keepcv/schema` and `@keepcv/templates`.
+`@keepcv/editor`, `@keepcv/interop`, `@keepcv/render`, `@keepcv/schema` and `@keepcv/templates`.
 The workspace root and `@keepcv/web` are private.
 
 ## How the pipeline works
@@ -142,7 +142,9 @@ Validate locally with `pnpm check` and `pnpm release:check`. The latter requires
 network access, packs into `.keepcv-release-check/packages/`, and installs only
 the launcher outside the checkout. Overrides resolve unpublished KeepCV
 dependencies to the tarballs; third-party dependencies come from the registry.
-The temporary installation is removed after the check.
+The temporary installation is removed after the check. It also installs the
+editor, builds an isolated browser consumer without Tailwind source scanning,
+checks the emitted stylesheet and DOCX worker, and runs its typed entry tests.
 
 Packages contain JavaScript and TypeScript declarations, with no `.js.map` or
 `.d.ts.map` files. Build emission disables maps and each public manifest excludes

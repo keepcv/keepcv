@@ -37,8 +37,6 @@ export function Empty({
   );
 }
 
-// The API answers RFC 9457, so this renders a problem rather than parsing
-// prose.
 export function Failure({ error, retry }: { error: unknown; retry?: () => void }) {
   const problem = isProblem(error) ? error.problem : undefined;
   const title = problem?.title ?? "Something went wrong";
@@ -57,8 +55,7 @@ export function Failure({ error, retry }: { error: unknown; retry?: () => void }
       <p className="mt-1 text-sm">{detail}</p>
       {problem?.status === 401 ? (
         <p className="mt-3 text-sm">
-          The launcher prints a URL carrying this session's token. Open that one - a token is minted
-          per launch and the previous one stops working.
+          Sign in again through the application that opened this editor, then reload this page.
         </p>
       ) : null}
       {retry === undefined ? null : (

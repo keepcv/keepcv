@@ -1,4 +1,4 @@
-import { type ApiClient, createClient } from "@keepcv/api";
+import type { ApiClient } from "@keepcv/api";
 import { type Problem, problemSchema } from "@keepcv/schema";
 
 export type { ApiClient };
@@ -16,13 +16,6 @@ export class ProblemError extends Error {
 
 export function isProblem(error: unknown): error is ProblemError {
   return error instanceof ProblemError;
-}
-
-export function apiClient(sessionToken: string | undefined): ApiClient {
-  return createClient(
-    window.location.origin,
-    ...(sessionToken === undefined ? [] : [{ sessionToken }]),
-  );
 }
 
 // A mismatched build is the normal state of self-hosted software, so this gets

@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: "/",
+  publicDir: "../../packages/editor/public",
   build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 1100 },
   server: { proxy: { "/v1": "http://127.0.0.1:4319" } },
   test: {

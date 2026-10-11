@@ -119,7 +119,7 @@ is built, and add it to the root `tsconfig.json` references then - an empty
 package is noise, and a sub-feature is either not started or complete.
 
 **What exists.** `packages/schema`, `core`, `db`, `api`, `templates`, `render`,
-`ats-lint` and `interop`; `apps/cli` is the `keepcv` launcher with `serve`,
+`ats-lint`, `interop` and `editor`; `apps/cli` is the `keepcv` launcher with `serve`,
 `render`, `status`, `backup`, `restore` and `set-password`; `apps/web` is the
 browser app. `apps/web` is the one workspace project **not** in the
 `tsconfig.json` references: it emits no declarations for anything to reference,
@@ -143,7 +143,13 @@ full list and the argument for every route that is deliberately absent.
 `createApi` takes the port, an owner scope and an `authenticate` function and
 knows nothing else - no driver, no token store, no port number.
 
-**The web app** is an application frame - a collapsible navigation rail grouped
+**The editor** is published as `@keepcv/editor`, with an `Editor` entry taking
+the typed API client, QueryClient and optional sign-out callback. It ships
+compiled styles, the theme script and the DOCX worker. `apps/web` keeps launcher
+authentication and mounts that same entry. Release validation installs an
+isolated editor consumer from tarballs outside the workspace.
+
+It is an application frame - a collapsible navigation rail grouped
 into Store, Vocabulary, Resumes and System, a command palette on its header, and
 a sheet in place of the rail below `lg` - over the store overview, the profile,
 the record list, a record's detail and its form, the point list, the tag

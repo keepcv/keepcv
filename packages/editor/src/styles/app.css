@@ -1,4 +1,5 @@
-@import "tailwindcss";
+@import "tailwindcss" source("..");
+@source "../../../../apps/web/src";
 
 /* Class-based only. The system preference is read in `lib/theme.ts` and applied
    as this class, so the dark values are written once rather than once here and

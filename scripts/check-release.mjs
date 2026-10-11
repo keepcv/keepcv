@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { checkEditorAssets, prepareEditorConsumer } from "./editor-consumer.mjs";
 import { reusePublishedTarball } from "./reuse-published.mjs";
 
 const exec = promisify(execFile);
@@ -97,6 +98,15 @@ for (const { directory, manifest } of packages) {
   if (manifest.name === "@keepcv/schema") {
     assert([...files].some((path) => path.startsWith("schema/") && path.endsWith(".json")));
   }
+  if (manifest.name === "@keepcv/editor") {
+    assert(files.has("dist/style.css"));
+    assert(files.has("dist/theme.js"));
+    assert(
+      [...files].some(
+        (path) => path.startsWith("dist/assets/read-docx.worker-") && path.endsWith(".js"),
+      ),
+    );
+  }
   dependencies[manifest.name] = `file:${tarball.replaceAll("\\", "/")}`;
   if (process.env.REUSE_PUBLISHED_PACKAGES === "true") {
     if (await reusePublishedTarball(manifest, tarball)) {
@@ -130,6 +140,7 @@ try {
     join(installed, "pnpm-workspace.yaml"),
     `overrides: ${JSON.stringify(dependencies)}\n`,
   );
+  await prepareEditorConsumer(root, installed, dependencies);
   process.stdout.write(
     await run(["install", "--ignore-scripts", "--no-frozen-lockfile"], installed),
   );
@@ -137,6 +148,10 @@ try {
     (await run(["exec", "keepcv", "--version"], installed)).trim(),
     versions.get("@keepcv/cli"),
   );
+  process.stdout.write(await run(["exec", "tsc", "-p", "tsconfig.json"], installed));
+  process.stdout.write(await run(["exec", "vite", "build"], installed));
+  await checkEditorAssets(installed);
+  process.stdout.write(await run(["exec", "vitest", "run"], installed));
   await copyFile(new URL("./release-smoke.mjs", import.meta.url), join(installed, "smoke.mjs"));
   const { stdout } = await exec(process.execPath, ["smoke.mjs", versions.get("@keepcv/cli")], {
     cwd: installed,
