@@ -1,5 +1,32 @@
 # @keepcv/schema
 
+## 0.1.3
+
+### Patch Changes
+
+- c0e1bf3: Revoke running password sessions when credentials change, bound concurrent
+  sign-in attempts and request bodies, and keep private API responses out of caches.
+  Protect launcher data and native backups with private filesystem permissions.
+
+  Reject fetching CSS in new designs after decoding escapes, preserve older CSS
+  in native archives, and omit unsafe CSS when rendering with a warning. Exported
+  HTML and site files carry a Content Security Policy.
+
+  Bound DOCX inflation and browser source files, move Word extraction to a
+  cancellable worker, and update dependencies with security fixes.
+
+- 6b46294: Exclude source and declaration maps from npm packages while retaining runnable
+  JavaScript and TypeScript declarations.
+
+  Record current-resume exports in history, reject history capture for a stale
+  preview, preserve formatting through phrasing edits and recovery, and retain
+  pending settings across navigation and failed saves. Add phrasing comparison
+  and reapply controls and isolate repeated titles in import review.
+
+  Validate launcher Host and Origin before routing requests, apply a same-origin
+  Content Security Policy, and require a declared public origin for network binds.
+  Update installation and deployment documentation for the published launcher.
+
 ## 0.1.2
 
 ### Patch Changes

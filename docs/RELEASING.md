@@ -102,9 +102,11 @@ path. npm's newer staged-publishing flow is an alternative if policy requires
 approval on npm itself, but this pipeline uses the GitHub environment approval.
 
 The first complete publication is finished. Trusted publishers are configured
-for all nine packages; the bootstrap token was revoked and its environment
-secret removed. Use `trusted` for the next new version to verify OIDC publication
-end to end. Bootstrap instructions above apply only when adding a new package.
+for the original nine packages. Launcher 0.1.3 adds `@keepcv/editor@0.2.0` as
+the tenth package, so use `bootstrap` for that publication. Afterwards configure
+the editor's trusted publisher with the same values, revoke the token and remove
+its environment secret. Use `trusted` for releases containing only packages
+whose trusted publishers are configured.
 
 ## Preparing later versions
 
@@ -139,8 +141,8 @@ gh workflow run release.yml --ref release/0.2.0 -f mode=verify
 ```
 
 Validate locally with `pnpm check` and `pnpm release:check`. The latter requires
-network access, packs into `.keepcv-release-check/packages/`, and installs only
-the launcher outside the checkout. Overrides resolve unpublished KeepCV
+network access, packs into `.keepcv-release-check/packages/`, and installs
+the launcher and editor consumer outside the checkout. Overrides resolve unpublished KeepCV
 dependencies to the tarballs; third-party dependencies come from the registry.
 The temporary installation is removed after the check. It also installs the
 editor, builds an isolated browser consumer without Tailwind source scanning,
