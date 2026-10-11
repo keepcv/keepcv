@@ -508,6 +508,20 @@ way out and runs `migrateDocument` on the way in.
 
 ## 5. Contract testing
 
+Database lifecycle belongs to the adapter's `Store` boundary, outside this
+repository port and the HTTP surface. Provisioning and permanent owner erasure
+must not be reachable through an ordinary content mutation. The server adapter
+accepts pool limits, connection and idle timeouts, a statement timeout, and a
+TLS CA option; explicit SSL options cannot be combined with connection-string
+parameters that overwrite them. Migration SQL uses the same checked-out
+connection as its advisory lock. Closing drains active units and can be awaited
+repeatedly.
+
+Isolation continues to use ambient owner scope and composite owner predicates.
+No RLS policy or transaction owner-setting hook is installed. The contract
+suite tests concurrent scopes, identical imported ids and denied reads/writes;
+it does not claim a database-level policy independent of those predicates.
+
 One suite runs against every implementation of `Repositories`: `@keepcv/db` on
 PGlite and `@keepcv/db` on server PostgreSQL today, and anything else that ever
 implements the port. It asserts the invariants in `data-model.md` #10 rather than

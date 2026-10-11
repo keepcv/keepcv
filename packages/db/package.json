@@ -52,7 +52,8 @@
     "@keepcv/core": "workspace:*",
     "@keepcv/schema": "workspace:*",
     "drizzle-orm": "catalog:",
-    "pg": "catalog:"
+    "pg": "catalog:",
+    "pg-connection-string": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
