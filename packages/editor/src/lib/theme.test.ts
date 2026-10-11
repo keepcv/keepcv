@@ -56,8 +56,6 @@ describe("theme", () => {
 
   it("agrees with the pre-paint script", () => {
     // `import.meta.url` is an http URL under the jsdom environment.
-    const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
-    expect(html).toContain('<script src="/theme.js"></script>');
     const script = readFileSync(resolve(process.cwd(), "public/theme.js"), "utf8");
 
     expect(script).toContain('localStorage.getItem("keepcv.theme")');

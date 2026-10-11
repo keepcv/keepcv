@@ -1,3 +1,4 @@
+import { createClient } from "@keepcv/api";
 import { deriveRevision } from "@keepcv/core";
 import type { RichText } from "@keepcv/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +7,6 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { buildRouter } from "../app/router.js";
-import { apiClient } from "../lib/api.js";
 import { addPoint, addTemplate, aFilledStore, emptyStore } from "../store.harness.js";
 import { jsonOf, storeServer } from "../store-server.harness.js";
 import { ChoiceRow } from "./import/ui/rows.js";
@@ -21,7 +21,11 @@ function mount(
   );
   window.history.replaceState(null, "", path);
   const queries = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = buildRouter({ queries, api: apiClient("a-token"), signOut: undefined });
+  const router = buildRouter({
+    queries,
+    api: createClient(window.location.origin, { sessionToken: "a-token" }),
+    signOut: undefined,
+  });
   const mounted = render(
     <QueryClientProvider client={queries}>
       <RouterProvider router={router} />

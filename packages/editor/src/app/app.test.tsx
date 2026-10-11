@@ -1,10 +1,10 @@
+import { createClient } from "@keepcv/api";
 import { compile } from "@keepcv/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_AFTER_MS } from "../features/phrasings/model/editor.js";
-import { apiClient } from "../lib/api.js";
 import {
   addContactChannel,
   addCustomSection,
@@ -38,7 +38,11 @@ function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"
   window.history.replaceState(null, "", path);
 
   const queries = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = buildRouter({ queries, api: apiClient("a-token"), signOut: undefined });
+  const router = buildRouter({
+    queries,
+    api: createClient(window.location.origin, { sessionToken: "a-token" }),
+    signOut: undefined,
+  });
 
   render(
     <QueryClientProvider client={queries}>
@@ -117,7 +121,7 @@ describe("the app", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Unauthorized");
-    expect(await screen.findByText(/token is minted per launch/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sign in again through the application/)).toBeInTheDocument();
   });
 
   // The moment the data-entry cold start is won or lost: it invites the first

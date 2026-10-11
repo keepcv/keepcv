@@ -1,8 +1,5 @@
+import { type GlyphName, Icon, Kbd, Spot } from "@keepcv/editor/ui";
 import type { ReactNode } from "react";
-import type { GlyphName } from "../../../components/icon/glyphs.js";
-import { Icon } from "../../../components/icon/icon.js";
-import { Spot } from "../../../components/icon/spot.js";
-import { Kbd } from "../../../components/ui/kbd.js";
 
 function Command({ children }: { children: string }) {
   return (

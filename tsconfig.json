@@ -1,14 +1,35 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/schema" },
-    { "path": "packages/core" },
-    { "path": "packages/templates" },
-    { "path": "packages/render" },
-    { "path": "packages/ats-lint" },
-    { "path": "packages/interop" },
-    { "path": "packages/db" },
-    { "path": "packages/api" },
-    { "path": "apps/cli" }
+    {
+      "path": "packages/schema"
+    },
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/templates"
+    },
+    {
+      "path": "packages/render"
+    },
+    {
+      "path": "packages/ats-lint"
+    },
+    {
+      "path": "packages/interop"
+    },
+    {
+      "path": "packages/db"
+    },
+    {
+      "path": "packages/api"
+    },
+    {
+      "path": "apps/cli"
+    },
+    {
+      "path": "packages/editor"
+    }
   ]
 }

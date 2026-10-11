@@ -32,13 +32,18 @@ pnpm --filter @keepcv/web dev
 
 ## How it is put together
 
+Authentication discovery, token claiming and entry screens live here. The
+editor itself comes from `@keepcv/editor`, mounted with the typed API client,
+QueryClient and optional sign-out callback. Its compiled styles and assets are
+also used by this app. See the editor package for its consumer contract.
+
 - **One request boots it.** `GET /v1/store` returns the whole store - kilobytes,
   archived rows included - and every screen reads from that cache through
   selectors. There is no sync engine and there will not be one.
 - **Counting and filtering live in `@keepcv/core`**, which runs unchanged in the
   browser. A nudge like "this point has no metric" is a pure function there, so
   the browser, the CLI and anything server-side give the same answer.
-- **Formatting lives here**, in each feature's `model/`. A date range is
+- **Formatting lives in the editor**, in each feature's `model/`. A date range is
   presentation; putting it on the DTO would make the wire contract a UI
   changelog.
 - **Filters live in the URL.** `/records?kind=experience&archived=only` is a view

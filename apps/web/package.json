@@ -32,20 +32,10 @@
   },
   "dependencies": {
     "@keepcv/api": "workspace:*",
-    "@keepcv/ats-lint": "workspace:*",
-    "@keepcv/core": "workspace:*",
-    "@keepcv/interop": "workspace:*",
-    "@keepcv/render": "workspace:*",
-    "@keepcv/schema": "workspace:*",
-    "@keepcv/templates": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "@tanstack/react-router": "catalog:",
-    "clsx": "catalog:",
-    "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tailwind-merge": "catalog:",
-    "zod": "catalog:"
+    "@keepcv/editor": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",
@@ -54,7 +44,6 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "fflate": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
