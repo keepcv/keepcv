@@ -57,6 +57,30 @@ const client = createClient("http://127.0.0.1:4319", { sessionToken });
 const response = await client.v1.profile.$get();
 ```
 
+`createApi` accepts `reportUnexpectedError`. Omit it to retain `console.error`,
+pass `null` to disable reporting, or supply an `UnexpectedErrorReporter`:
+
+```ts
+const api = createApi({
+  unitOfWork: store.unitOfWork,
+  runAsOwner,
+  authenticate,
+  reportUnexpectedError: () => {
+    console.error("keepcv.unexpected_error");
+  },
+});
+```
+
+The callback receives the original unexpected error, whose causes may contain
+SQL parameters or authored content. The caller chooses what is safe to report;
+the API adds no request or authentication data. Expected problems do not invoke
+it. Reporting is best effort: synchronous throws and rejected promises are
+ignored, with no fallback console output. Reports do not delay the response.
+Every reporting choice retains the same generic 500 problem and the existing
+validation, conflict, stale-write, restore and export-change responses.
+`problemFor(error, instance, reportUnexpectedError)` accepts the same optional
+reporter for callers using the mapper directly.
+
 ## What the boundary guarantees
 
 - **The owner is never a parameter.** `authenticate` resolves a request to an

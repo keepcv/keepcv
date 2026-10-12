@@ -1,3 +1,12 @@
+import { createContext, useContext } from "react";
+
+export const RecoveryNamespaceContext = createContext<string | undefined>(undefined);
+
+export function useRecoveryKey(key: string): string {
+  const namespace = useContext(RecoveryNamespaceContext);
+  return namespace === undefined ? key : `keepcv.edit:${JSON.stringify([namespace, key])}`;
+}
+
 export function readEdit(key: string): unknown {
   try {
     const value = window.localStorage.getItem(key);

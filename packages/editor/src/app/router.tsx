@@ -25,6 +25,7 @@ import { TemplateEditorScreen } from "../features/templates/ui/template-editor.j
 import { TemplateList } from "../features/templates/ui/template-list.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
+import { RecoveryNamespaceContext } from "../lib/edit-recovery.js";
 import { prefetchStore, useStore } from "../lib/store-cache.js";
 import { Shell } from "./shell.js";
 import { Failure, Skeleton } from "./states.js";
@@ -32,11 +33,9 @@ import { Failure, Skeleton } from "./states.js";
 export interface RouterContext {
   queries: QueryClient;
   api: ApiClient;
-  // Undefined when there is nothing to sign out of, which is every mode but
-  // one: the navigation asks whether signing out is a thing here, not which
-  // mode the launcher is in.
   signOut: (() => void) | undefined;
   dataPage?: DataPagePresentation | undefined;
+  recoveryNamespace?: string | undefined;
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -44,8 +43,12 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
     await prefetchStore(context.queries, context.api);
   },
   component: function Frame() {
-    const { api, signOut } = rootRoute.useRouteContext();
-    return <Shell store={useStore(api)} onSignOut={signOut} />;
+    const { api, signOut, recoveryNamespace } = rootRoute.useRouteContext();
+    return (
+      <RecoveryNamespaceContext.Provider value={recoveryNamespace}>
+        <Shell key={recoveryNamespace} store={useStore(api)} onSignOut={signOut} />
+      </RecoveryNamespaceContext.Provider>
+    );
   },
   errorComponent: ({ error }) => <Failure error={error} />,
   pendingComponent: () => <Skeleton rows={4} />,

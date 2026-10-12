@@ -32,6 +32,26 @@ in. Keep the client, query cache and callback stable while mounted. Unmount and
 clear the cache before changing owners; use a fresh QueryClient for each owner.
 The editor uses `['store']` and the documented history keys in that cache.
 
+Pass `recoveryNamespace` when the same origin can connect to different stores:
+
+```tsx
+<Editor api={api} queries={queries} recoveryNamespace={connectedStoreKey} />;
+```
+
+Use a stable, opaque string identifying the connected store, chosen by the
+caller from its trusted connection context. Different stores need different
+namespaces even when imported ids match. Keep it stable while mounted; unmount
+and use a fresh query cache when switching stores. Pending wording, template
+designs and resume settings remain with their original namespace through
+sign-out and failed saves, and recover when that store is reopened.
+
+Omitting the namespace retains standalone recovery, including existing
+unscoped edits. A supplied namespace never reads, migrates or removes those
+legacy copies: their store cannot be inferred safely. Recover them through the
+original standalone connection. Browser keys are internal and are not a
+consumer contract. Theme and navigation preferences remain shared. A namespace
+separates recovery; it is not an authorization boundary for same-origin code.
+
 `dataPage` configures the explanatory text on Your data. Omit it for the
 standalone launcher's guidance. For an API with another storage location,
 provide all four fields, keeping the object stable while mounted:
@@ -76,6 +96,7 @@ used by the local app's entry screens, plus the GlyphName type.
 typechecks and tests `fixtures/editor-consumer`. It checks the emitted CSS and
 worker, keyboard palette navigation, profile writes, the supplied query cache,
 sign-out, refused authentication, both data-page presentations, native backup,
-and refusal to restore over existing content.
+refusal to restore over existing content, scoped edit recovery, and configurable
+unexpected-error reporting.
 
 MIT.

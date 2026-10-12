@@ -177,6 +177,12 @@ formatted bodies and loads an earlier wording into the editor to reapply it.
 Browser recovery protects text before the debounce and during a failed save;
 the recovered wording is offered, never silently restored.
 
+Consumers can supply a connected-store recovery namespace to the editor.
+Wording, template designs and resume settings remain isolated when imported ids
+overlap, survive failed saves and sign-out, and recover on return. The
+standalone default retains existing unscoped recovery; scoped connections leave
+those copies untouched (application-structure.md #3).
+
 Drafts belong here: keystrokes must not create revisions, and in-progress text
 must survive a closed tab. The store keeps one draft per field of a target,
 overwritable and outside history, and it travels with the boot payload so an

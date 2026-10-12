@@ -4,7 +4,7 @@ import { richTextSchema } from "@keepcv/schema";
 import { useBlocker } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { ApiClient } from "../../../lib/api.js";
-import { keepEdit, readEdit } from "../../../lib/edit-recovery.js";
+import { keepEdit, readEdit, useRecoveryKey } from "../../../lib/edit-recovery.js";
 import { useCommitPhrasing, useDiscardDraft, useSaveDraft } from "../api/use-phrasings.js";
 import { actionFor, COMMIT_AFTER_MS, DRAFT_AFTER_MS, draftBody, draftTarget } from "./editor.js";
 import { trimBody } from "./markup.js";
@@ -30,7 +30,7 @@ export function usePhrasingText(client: ApiClient, store: Store, phrasing: Phras
   const discardDraft = useDiscardDraft(client);
   const commit = useCommitPhrasing(client);
   const [typed, setTyped] = useState<RichText>(committed);
-  const recoveryKey = `keepcv.phrasing-edit:${phrasing.id}`;
+  const recoveryKey = useRecoveryKey(`keepcv.phrasing-edit:${phrasing.id}`);
   const [recovered] = useState(() => richTextSchema.safeParse(readEdit(recoveryKey)).data);
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<unknown>(null);

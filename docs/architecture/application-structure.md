@@ -138,6 +138,21 @@ registration. The package carries compiled CSS, the pre-paint theme script and
 the DOCX worker. An isolated installed consumer builds and exercises these
 artifacts as part of release validation.
 
+The entry accepts an optional `recoveryNamespace`, a stable opaque string the
+caller assigns to its connected store from a trusted connection context. It
+scopes all authored browser recovery: wording, template designs and resume
+settings. Imported ids may overlap across stores; switching stores requires
+unmounting and a fresh query cache, but does not remove pending recovery copies.
+Reopening the same namespace recovers only that store's edits, including after
+failed saves and sign-out. Theme and navigation preferences remain shared.
+
+Omitting the namespace preserves standalone keys and existing recovery. A
+supplied namespace never reads, migrates or deletes legacy unscoped keys,
+because their connected store cannot be established from their ids. They remain
+recoverable through the original standalone connection. Key encoding is
+internal; the caller supplies only the namespace. This scopes recovery rather
+than authorizing access by same-origin code.
+
 The entry also accepts an optional `dataPage: DataPagePresentation`: storage,
 backup, and restore descriptions plus `showTerminalInstructions`. The default
 describes the standalone launcher. A consumer with another storage location

@@ -78,7 +78,13 @@ function validationProblem(error: ZodError, instance: string): Problem {
   };
 }
 
-export function problemFor(error: unknown, instance: string): Problem {
+export type UnexpectedErrorReporter = (error: unknown) => void | Promise<void>;
+
+export function problemFor(
+  error: unknown,
+  instance: string,
+  reportUnexpectedError: UnexpectedErrorReporter | null = console.error,
+): Problem {
   if (error instanceof ExportChangedError) {
     return {
       type: PROBLEM_TYPES.staleWrite,
@@ -138,8 +144,6 @@ export function problemFor(error: unknown, instance: string): Problem {
       constraint: error.constraint,
     };
   }
-  // A 409: the primary already says it, and the caller resolves it by re-
-  // reading.
   if (error instanceof DuplicatePointRecordLinkError) {
     return {
       type: PROBLEM_TYPES.constraintViolated,
@@ -149,7 +153,6 @@ export function problemFor(error: unknown, instance: string): Problem {
       instance,
     };
   }
-  // Not a 409: nothing changed under the caller and re-reading would not help.
   if (error instanceof CareerRecordKindMismatchError) {
     return {
       type: PROBLEM_TYPES.validationFailed,
@@ -160,7 +163,6 @@ export function problemFor(error: unknown, instance: string): Problem {
       errors: [{ path: "patch.kind", code: "wrong_record_kind" }],
     };
   }
-  // Not a 409, for the reason above.
   if (error instanceof TagMergedIntoItselfError) {
     return {
       type: PROBLEM_TYPES.validationFailed,
@@ -190,8 +192,12 @@ export function problemFor(error: unknown, instance: string): Problem {
     };
   }
 
-  // Logged rather than described: `detail` reaches the client.
-  console.error(error);
+  try {
+    if (reportUnexpectedError !== null)
+      void Promise.resolve(reportUnexpectedError(error)).catch(() => undefined);
+  } catch {
+    // A reporter failure must not replace the original client problem.
+  }
   return {
     type: PROBLEM_TYPES.internalError,
     title: "Internal error",

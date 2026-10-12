@@ -1,13 +1,14 @@
 import { useBlocker } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { forgetEdit, keepEdit, readEdit } from "./edit-recovery.js";
+import { forgetEdit, keepEdit, readEdit, useRecoveryKey } from "./edit-recovery.js";
 
 export function useAutosave<T>(
-  key: string,
+  recoveryKey: string,
   read: (value: unknown) => T | null,
   save: (value: T) => Promise<unknown>,
   valid: (value: T) => boolean,
 ) {
+  const key = useRecoveryKey(recoveryKey);
   const [pending, setPending] = useState<T | null>(() => read(readEdit(key)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);

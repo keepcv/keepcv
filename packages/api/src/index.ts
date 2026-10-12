@@ -10,4 +10,9 @@ export {
   sessionTokenAuth,
 } from "./auth.js";
 export { type ApiClient, createClient } from "./client.js";
-export { problemFor, StaleWriteError, UnauthorizedError } from "./problems.js";
+export {
+  problemFor,
+  StaleWriteError,
+  UnauthorizedError,
+  type UnexpectedErrorReporter,
+} from "./problems.js";
