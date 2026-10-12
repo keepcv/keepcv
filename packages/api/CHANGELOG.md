@@ -1,5 +1,14 @@
 # @keepcv/api
 
+## 0.2.0
+
+### Minor Changes
+
+- 5c9dc58: Add optional `reportUnexpectedError` to `createApi` and `problemFor`. Consumers
+  can disable default console reporting with `null` or supply their own reporter.
+  Reporter failures do not change client problems or produce fallback console
+  output. Expected problems retain their existing behavior and are not reported.
+
 ## 0.1.4
 
 ### Patch Changes

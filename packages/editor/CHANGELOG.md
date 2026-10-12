@@ -1,5 +1,20 @@
 # @keepcv/editor
 
+## 0.4.0
+
+### Minor Changes
+
+- 5c9dc58: Add an optional `recoveryNamespace` to `Editor` so pending wording, template
+  designs and resume settings stay with the connected store when imported ids
+  overlap. Failed saves and sign-out preserve recovery for each namespace.
+  Omitting it retains standalone recovery, including existing unscoped edits;
+  scoped connections leave those legacy copies untouched.
+
+### Patch Changes
+
+- Updated dependencies [5c9dc58]
+  - @keepcv/api@0.2.0
+
 ## 0.3.0
 
 ### Minor Changes
