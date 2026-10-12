@@ -23,6 +23,7 @@ import { type ApiClient, isProblem } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { sentenceCase } from "../../../lib/label.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { useCreateRecord, useUpdateRecord } from "../api/use-records.js";
 import {
   blankValues,
@@ -33,6 +34,7 @@ import {
   EXTRA_FIELDS,
   type ExtraField,
   type RecordFormValues,
+  recordFormValuesSchema,
   valuesOf,
 } from "../model/record-form.js";
 import { KIND_NAMES } from "../model/record-rows.js";
@@ -67,9 +69,14 @@ export function RecordForm({
   const update = useUpdateRecord(client);
   const pending = create.isPending || update.isPending;
 
-  const [values, setValues] = useState<RecordFormValues>(() =>
-    record === undefined ? blankValues(kind) : valuesOf(store, record),
+  const initial = record === undefined ? blankValues(kind) : valuesOf(store, record);
+  const recovery = useFormRecovery(
+    `keepcv.record-edit:${record?.id ?? `new:${kind}`}`,
+    recordFormValuesSchema,
+    initial,
+    record?.updatedAt,
   );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [conflict, setConflict] = useState<CareerRecord | undefined>(undefined);
 
@@ -85,21 +92,34 @@ export function RecordForm({
     void navigate({ to: "/records/$recordId", params: { recordId } });
   };
 
-  async function save(basedOn: CareerRecord | undefined): Promise<void> {
-    setConflict(undefined);
-    const target = basedOn ?? record;
-
-    if (target === undefined) {
-      const built = buildSubmission(store, values);
-      if ("errors" in built) {
-        setErrors(built.errors);
-        return;
-      }
-      setErrors({});
-      const saved = await create.mutateAsync(built.submission).catch(() => undefined);
-      if (saved !== undefined) openRecord(saved.id);
+  async function saveNew(): Promise<void> {
+    const built = buildSubmission(store, values);
+    if ("errors" in built) {
+      setErrors(built.errors);
       return;
     }
+    setErrors({});
+    const sent = recovery.begin();
+    if (sent === undefined) return;
+    const saved = await create
+      .mutateAsync(built.submission)
+      .catch(() => undefined)
+      .finally(recovery.finish);
+    if (saved !== undefined) {
+      recovery.acknowledge(sent, valuesOf(store, saved), saved.updatedAt);
+      openRecord(saved.id);
+    }
+  }
+
+  async function save(basedOn: CareerRecord | undefined): Promise<void> {
+    setConflict(undefined);
+    const target =
+      basedOn ??
+      (record === undefined
+        ? undefined
+        : { ...record, updatedAt: recovery.expectedUpdatedAt ?? record.updatedAt });
+
+    if (target === undefined) return await saveNew();
 
     const built = buildPatch(store, values);
     if ("errors" in built) {
@@ -107,6 +127,8 @@ export function RecordForm({
       return;
     }
     setErrors({});
+    const sent = recovery.begin();
+    if (sent === undefined) return;
     const saved = await update
       .mutateAsync({
         id: target.id,
@@ -120,8 +142,12 @@ export function RecordForm({
           if (current.success) setConflict(current.data);
         }
         return undefined;
-      });
-    if (saved !== undefined) openRecord(saved.id);
+      })
+      .finally(recovery.finish);
+    if (saved !== undefined) {
+      recovery.acknowledge(sent, valuesOf(store, saved), saved.updatedAt);
+      openRecord(saved.id);
+    }
   }
 
   const extras = EXTRA_FIELDS[values.kind];
@@ -147,6 +173,7 @@ export function RecordForm({
           title="This record changed while you were editing it"
           rows={differences(store, values, conflict)}
           onKeepTheirs={() => {
+            recovery.discard(valuesOf(store, conflict), conflict.updatedAt);
             openRecord(conflict.id);
           }}
           onKeepMine={() => {
@@ -162,8 +189,6 @@ export function RecordForm({
           Add a job, project, or qualification. You can fill in more later.
         </PanelHeader>
         <PanelBody className="grid gap-4 sm:grid-cols-2">
-          {/* Fixed once stored: a record's kind decides which columns it has,
-              and the store has no way to move a row between them. */}
           {record === undefined ? (
             <SelectField
               label="Record type"
@@ -297,6 +322,9 @@ export function RecordForm({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={pending} onClick={() => recovery.discard(initial, record?.updatedAt)}>
+          Revert
+        </Button>
         <Button tone="primary" type="submit" disabled={pending}>
           {pending ? "Saving" : record === undefined ? "Add record" : "Save"}
         </Button>

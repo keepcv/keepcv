@@ -1,6 +1,7 @@
 import { newUuid } from "@keepcv/core";
 import type { Evidence, EvidenceInput, EvidenceKind, Store, Uuid } from "@keepcv/schema";
-import { evidenceInputSchema } from "@keepcv/schema";
+import { EVIDENCE_KINDS, evidenceInputSchema } from "@keepcv/schema";
+import { z } from "zod";
 import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 
 export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {
@@ -15,11 +16,13 @@ export const EVIDENCE_PLACEHOLDERS: Record<EvidenceKind, string> = {
   file: "~/records/2025-review.pdf",
 };
 
-export interface EvidenceFormValues {
-  kind: EvidenceKind;
-  value: string;
-  note: string;
-}
+export const evidenceFormValuesSchema = z.object({
+  kind: z.enum(EVIDENCE_KINDS),
+  value: z.string(),
+  note: z.string(),
+});
+
+export type EvidenceFormValues = z.infer<typeof evidenceFormValuesSchema>;
 
 export const BLANK_EVIDENCE: EvidenceFormValues = { kind: "url", value: "", note: "" };
 

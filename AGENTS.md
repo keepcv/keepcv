@@ -174,7 +174,7 @@ do not restate that argument here, in code, or in a commit message.
 | `GET /v1/store` is current state; `GET /v1/export` is the archive. Drafts are in both; revision history and manifests only in the second | `api-contract.md` #3 |
 | Writes go through `useStoreMutation`, which patches the cache, rolls back on refusal and re-reads on settle; a composition write passes `settle` and merges the row instead | `application-structure.md` #4 |
 | Adding and taking off are one control: every uniqueness index on the composition covers archived rows, so placing is a create or a put-back | `application-structure.md` #5.6 |
-| Sub-collections - metrics, evidence, record links, record fields, contact channels - write as they are typed rather than staged in a form | `application-structure.md` #5.3, #5.10 |
+| Sub-collections write independently of parent forms; explicit Evidence and contact controls retain recovery until acknowledgment or discard | `application-structure.md` #5.3, #5.10 |
 | Evidence is private structurally: `ResumeDocument` has no field it could travel in | `template-model.md` #1 |
 | Every ordered list drags **and** keys, through `useReorder`; sort keys compare by code unit, never by locale | `capabilities.md` #3, `data-model.md` #3.5 |
 | Text is never submitted: an 800ms debounce writes a `draft`, blur or thirty seconds idle appends a `phrasing_revision`. A draft found on open is offered, never restored | `application-structure.md` #6 |

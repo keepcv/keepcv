@@ -121,7 +121,8 @@ const newRecordRoute = createRoute({
   validateSearch: z.object({ kind: careerRecordKindSchema.default("experience") }),
   component: function NewRecordScreen() {
     const { api } = newRecordRoute.useRouteContext();
-    return <RecordForm store={useStore(api)} client={api} kind={newRecordRoute.useSearch().kind} />;
+    const kind = newRecordRoute.useSearch().kind;
+    return <RecordForm key={kind} store={useStore(api)} client={api} kind={kind} />;
   },
 });
 
@@ -152,7 +153,9 @@ const editRecordRoute = createRoute({
     const record = store.records.find((row) => row.id === recordId);
 
     if (record === undefined) return <MissingRecord />;
-    return <RecordForm store={store} client={api} record={record} kind={record.kind} />;
+    return (
+      <RecordForm key={record.id} store={store} client={api} record={record} kind={record.kind} />
+    );
   },
 });
 
@@ -252,6 +255,7 @@ const newPointRoute = createRoute({
     const { recordId } = newPointRoute.useSearch();
     return (
       <PointForm
+        key={recordId ?? "unplaced"}
         store={useStore(api)}
         client={api}
         {...(recordId === undefined ? {} : { recordId })}
@@ -271,7 +275,7 @@ const editPointRoute = createRoute({
     const point = store.points.find((row) => row.id === pointId);
 
     if (point === undefined) return <MissingPoint />;
-    return <PointScreen store={store} client={api} point={point} />;
+    return <PointScreen key={point.id} store={store} client={api} point={point} />;
   },
 });
 

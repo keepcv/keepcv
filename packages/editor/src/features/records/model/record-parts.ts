@@ -3,9 +3,7 @@ import type {
   RecordField,
   RecordFieldInput,
   RecordFieldPatch,
-  RecordFieldValueKind,
   RecordLinkInput,
-  RecordLinkKind,
   Store,
   Uuid,
 } from "@keepcv/schema";
@@ -15,6 +13,7 @@ import {
   recordFieldInputSchema,
   recordLinkInputSchema,
 } from "@keepcv/schema";
+import { z } from "zod";
 import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 
 const titleCase = (word: string): string => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`;
@@ -29,11 +28,12 @@ export const VALUE_KIND_OPTIONS = RECORD_FIELD_VALUE_KINDS.map((kind) => ({
   label: titleCase(kind),
 }));
 
-export interface LinkFormValues {
-  kind: RecordLinkKind;
-  label: string;
-  url: string;
-}
+export const linkFormValuesSchema = z.object({
+  kind: z.enum(RECORD_LINK_KINDS),
+  label: z.string(),
+  url: z.string(),
+});
+export type LinkFormValues = z.infer<typeof linkFormValuesSchema>;
 
 export const BLANK_LINK: LinkFormValues = { kind: "repo", label: "", url: "" };
 
@@ -57,11 +57,12 @@ export function buildLink(
   return parsed.success ? { link: parsed.data } : { errors: fieldErrors(parsed.error) };
 }
 
-export interface RecordFieldFormValues {
-  label: string;
-  value: string;
-  valueKind: RecordFieldValueKind;
-}
+export const recordFieldFormValuesSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  valueKind: z.enum(RECORD_FIELD_VALUE_KINDS),
+});
+export type RecordFieldFormValues = z.infer<typeof recordFieldFormValuesSchema>;
 
 export const BLANK_FIELD: RecordFieldFormValues = { label: "", value: "", valueKind: "text" };
 

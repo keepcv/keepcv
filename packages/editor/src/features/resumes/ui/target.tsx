@@ -9,6 +9,7 @@ import { TextAreaField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { usePatchComposed } from "../api/use-composition.js";
 import { usePatchResume } from "../api/use-resumes.js";
 import {
@@ -20,11 +21,10 @@ import {
   targetDifferences,
   targetReading,
   targetValuesOf,
+  targetValuesSchema,
   type WeakPoint,
 } from "../model/target.js";
 
-// Enough to act on. A resume answering none of a long posting would otherwise
-// list every point it holds.
 const DROPS_AT_MOST = 6;
 const TERMS_AT_MOST = 3;
 
@@ -90,13 +90,20 @@ export function TargetScreen({
   const patch = usePatchResume(client);
   const patchComposed = usePatchComposed(client);
 
-  const [values, setValues] = useState<TargetValues>(() => targetValuesOf(resume));
+  const recovery = useFormRecovery(
+    `keepcv.target-edit:${resume.id}`,
+    targetValuesSchema,
+    targetValuesOf(resume),
+    resume.updatedAt,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<TargetErrors>({});
   const [conflict, setConflict] = useState<Resume | undefined>(undefined);
 
   const reading = targetReading(store, resume.id);
   const asked = reading.covered.length + reading.missing.length;
   const changed = isChanged(values, resume);
+  const unfinished = changed || recovery.pending;
 
   const set = (next: Partial<TargetValues>) => {
     setValues((current) => ({ ...current, ...next }));
@@ -110,14 +117,21 @@ export function TargetScreen({
       return;
     }
     setErrors({});
+    const sent = recovery.begin();
+    if (sent === undefined) return;
     await patch
-      .mutateAsync({ resume: basedOn ?? resume, patch: built.patch })
+      .mutateAsync({
+        resume: basedOn ?? { ...resume, updatedAt: sent.expectedUpdatedAt ?? resume.updatedAt },
+        patch: built.patch,
+      })
+      .then((saved) => recovery.acknowledge(sent, targetValuesOf(saved), saved.updatedAt))
       .catch((error: unknown) => {
         if (isProblem(error) && error.problem.status === 409) {
           const current = resumeSchema.safeParse(error.problem.current);
           if (current.success) setConflict(current.data);
         }
-      });
+      })
+      .finally(recovery.finish);
   }
 
   return (
@@ -127,7 +141,7 @@ export function TargetScreen({
           title="This resume changed while you were editing it"
           rows={targetDifferences(values, conflict)}
           onKeepTheirs={() => {
-            setValues(targetValuesOf(conflict));
+            recovery.discard(targetValuesOf(conflict), conflict.updatedAt);
             setConflict(undefined);
           }}
           onKeepMine={() => {
@@ -141,7 +155,7 @@ export function TargetScreen({
       <Panel>
         <PanelHeader
           title="Target job"
-          aside={changed ? <Badge tone="warning">Not saved yet</Badge> : undefined}
+          aside={unfinished ? <Badge tone="warning">Not saved yet</Badge> : undefined}
         >
           Add a job description to compare it with your selected content. These details do not
           print.
@@ -206,9 +220,11 @@ export function TargetScreen({
               {patch.isPending ? "Saving" : "Save"}
             </Button>
             <Button
-              disabled={!changed}
+              disabled={!unfinished || patch.isPending}
               onClick={() => {
-                setValues(targetValuesOf(resume));
+                recovery.discard(targetValuesOf(resume), resume.updatedAt);
+                setConflict(undefined);
+                patch.reset();
                 setErrors({});
               }}
             >

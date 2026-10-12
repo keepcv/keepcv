@@ -195,8 +195,20 @@ export function RecordDetail({
           </Panel>
 
           <div className="grid gap-5 lg:grid-cols-2 lg:items-start xl:grid-cols-1">
-            <RecordLinks store={store} client={client} recordId={recordId} links={links} />
-            <RecordFields store={store} client={client} recordId={recordId} fields={fields} />
+            <RecordLinks
+              key={recordId}
+              store={store}
+              client={client}
+              recordId={recordId}
+              links={links}
+            />
+            <RecordFields
+              key={recordId}
+              store={store}
+              client={client}
+              recordId={recordId}
+              fields={fields}
+            />
           </div>
         </div>
 

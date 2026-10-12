@@ -9,11 +9,12 @@ import { type Crumb, PageBody, PageHeader } from "../../../components/ui/page.js
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { PhrasingEditor } from "../../phrasings/ui/phrasing-editor.js";
 import { toRecordRow } from "../../records/model/record-rows.js";
 import { TagPicker } from "../../tags/ui/tag-picker.js";
 import { useSetPointArchived, useUpdatePoint } from "../api/use-points.js";
-import { buildPointPatch, type PointFormValues, pointValuesOf } from "../model/point-form.js";
+import { buildPointPatch, pointPlacementValuesSchema, pointValuesOf } from "../model/point-form.js";
 import { PointEvidence } from "./point-evidence.js";
 import { Placement } from "./point-form.js";
 import { PointMetrics } from "./point-metrics.js";
@@ -29,7 +30,14 @@ export function PointScreen({
 }) {
   const update = useUpdatePoint(client);
   const setArchived = useSetPointArchived(client);
-  const [values, setValues] = useState<PointFormValues>(() => pointValuesOf(store, point));
+  const initial = pointPlacementValuesSchema.parse(pointValuesOf(store, point));
+  const recovery = useFormRecovery(
+    `keepcv.point-edit:${point.id}`,
+    pointPlacementValuesSchema,
+    initial,
+    point.updatedAt,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const isArchived = point.archivedAt !== null;
@@ -81,7 +89,7 @@ export function PointScreen({
 
       <ContentGuide />
 
-      <Panel collapsible>
+      <Panel collapsible defaultOpen={recovery.pending}>
         <PanelHeader title="Record and confidence">
           Link this point to a job or project and note how certain its claims are.
         </PanelHeader>
@@ -104,12 +112,37 @@ export function PointScreen({
                 return;
               }
               setErrors({});
-              update.mutate({ point, patch: built.patch });
+              const sent = recovery.begin();
+              if (sent === undefined) return;
+              void update
+                .mutateAsync({
+                  point: { ...point, updatedAt: sent.expectedUpdatedAt ?? point.updatedAt },
+                  patch: built.patch,
+                })
+                .then((saved) =>
+                  recovery.acknowledge(
+                    sent,
+                    pointPlacementValuesSchema.parse(pointValuesOf(store, saved)),
+                    saved.updatedAt,
+                  ),
+                )
+                .catch(() => undefined)
+                .finally(recovery.finish);
             }}
           >
             {update.isPending ? "Saving" : "Save"}
           </Button>
-          {update.isSuccess && !update.isPending ? (
+          <Button
+            disabled={update.isPending}
+            onClick={() => {
+              recovery.discard(initial, point.updatedAt);
+              setErrors({});
+              update.reset();
+            }}
+          >
+            Revert
+          </Button>
+          {update.isSuccess && !update.isPending && !recovery.pending ? (
             <span className="text-xs text-text-subtle">Saved</span>
           ) : null}
         </div>

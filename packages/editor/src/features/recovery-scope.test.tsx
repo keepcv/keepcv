@@ -25,6 +25,12 @@ it.each([
     values: [".kc-name { color: red; }", ".kc-name { color: blue; }"],
   },
   { kind: "resume", label: "Body size", original: "10.5", values: ["12", "11"] },
+  {
+    kind: "target",
+    label: "Company",
+    original: "Babbage Ltd",
+    values: ["First pending company", "Second pending company"],
+  },
 ])(
   "keeps failed $kind edits with their store through sign-out and return",
   async ({ kind, label, original, values }) => {
@@ -40,7 +46,7 @@ it.each([
         ? `/points/${point.id}/edit`
         : kind === "template"
           ? `/templates/${template.id}`
-          : `/resumes/${resume.id}?view=preview`;
+          : `/resumes/${resume.id}?view=${kind === "target" ? "target" : "preview"}`;
     let refuse = true;
     vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
       const request = new Request(url, init);
@@ -71,9 +77,13 @@ it.each([
     async function edit(value: string | undefined) {
       fireEvent.change(screen.getByLabelText(label), { target: { value } });
       if (kind === "wording") fireEvent.blur(screen.getByLabelText(label));
-      await screen.findByRole("button", {
-        name: kind === "wording" ? "Retry saving wording" : "Retry saving",
-      });
+      if (kind === "target") {
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await screen.findByText("Offline");
+      } else
+        await screen.findByRole("button", {
+          name: kind === "wording" ? "Retry saving wording" : "Retry saving",
+        });
     }
 
     const legacy = await open(undefined, "first");
@@ -106,7 +116,9 @@ it.each([
         refuse = false;
         fireEvent.blur(reopened.input);
       } else {
-        const retry = await screen.findByRole("button", { name: "Retry saving" });
+        const retry = await screen.findByRole("button", {
+          name: kind === "target" ? "Save" : "Retry saving",
+        });
         refuse = false;
         fireEvent.click(retry);
       }
