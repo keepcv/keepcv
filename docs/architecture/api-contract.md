@@ -39,6 +39,17 @@ uses. An OpenAPI document is generated from those schemas and served at
 
 The client renders typed problems. No string parsing, ever.
 
+`createApi` accepts optional `reportUnexpectedError`, also the third argument
+to `problemFor`. Omission retains `console.error`; `null` disables reporting;
+an `UnexpectedErrorReporter` receives the original unexpected error and may
+return void or a promise. Adapter errors and their causes may contain authored
+content or SQL parameters, so the caller decides what to report. No request or
+authentication data is added. Expected problems never invoke the reporter.
+Synchronous throws and promise rejections from reporting are ignored without
+falling back to console or delaying the response. Reporting does not change
+generic 500 problems or expected validation, conflict, stale-write, restore and
+export-change problems.
+
 **Concurrency.** Mutations carry the `updated_at` they were based on. A mismatch
 returns `409` *with the current server state*, so the UI can present a comparison
 rather than discarding one side silently. It travels beside the changes rather
@@ -531,9 +542,10 @@ the queries, so a divergent implementation fails loudly instead of subtly.
 
 ## 6. Serving it yourself
 
-`createApi` takes `authenticate` and nothing else: no driver, no filesystem, no
-port and no password. Everything below belongs to the launcher, for the same
-reason the backup mirror does.
+`createApi` takes the repository port, owner scope, `authenticate` and an optional
+unexpected-error reporter: no driver, no filesystem, no port and no password.
+Everything below belongs to the launcher, for the same reason the backup mirror
+does.
 
 ### The three modes
 

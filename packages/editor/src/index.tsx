@@ -12,12 +12,19 @@ export interface EditorProps {
   queries: QueryClient;
   signOut?: (() => void) | undefined;
   dataPage?: DataPagePresentation | undefined;
+  recoveryNamespace?: string | undefined;
 }
 
-export function Editor({ api, queries, signOut, dataPage }: EditorProps): JSX.Element {
+export function Editor({
+  api,
+  queries,
+  signOut,
+  dataPage,
+  recoveryNamespace,
+}: EditorProps): JSX.Element {
   const router = useMemo(
-    () => buildRouter({ api, queries, signOut, dataPage }),
-    [api, queries, signOut, dataPage],
+    () => buildRouter({ api, queries, signOut, dataPage, recoveryNamespace }),
+    [api, queries, signOut, dataPage, recoveryNamespace],
   );
   return (
     <QueryClientProvider client={queries}>

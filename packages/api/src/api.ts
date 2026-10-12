@@ -2,7 +2,7 @@ import type { UnitOfWork } from "@keepcv/core";
 import { PROBLEM_TYPES, type Problem, type Uuid } from "@keepcv/schema";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Authenticate } from "./auth.js";
-import { problemFor, UnauthorizedError } from "./problems.js";
+import { problemFor, UnauthorizedError, type UnexpectedErrorReporter } from "./problems.js";
 import { router } from "./router.js";
 import { customSectionRoutes } from "./routes/custom-sections.js";
 import { draftRoutes } from "./routes/drafts.js";
@@ -26,6 +26,7 @@ export interface ApiOptions {
   unitOfWork: UnitOfWork;
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
   authenticate: Authenticate;
+  reportUnexpectedError?: UnexpectedErrorReporter | null;
 }
 
 function answer(problem: Problem): Response {
@@ -66,7 +67,7 @@ export function createApi(options: ApiOptions) {
     },
   });
 
-  app.onError((error, c) => answer(problemFor(error, c.req.path)));
+  app.onError((error, c) => answer(problemFor(error, c.req.path, options.reportUnexpectedError)));
 
   // Hono's own 404 is an empty text body, which a client cannot type.
   app.notFound((c) =>
