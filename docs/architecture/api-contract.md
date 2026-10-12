@@ -528,6 +528,21 @@ parameters that overwrite them. Migration SQL uses the same checked-out
 connection as its advisory lock. Closing drains active units and can be awaited
 repeatedly.
 
+The server store handles pool idle errors without process-wide handlers or
+logging raw errors, clients, credentials or authored values. Checked-out clients
+retain a local error listener for the entire unit, lifecycle operation or
+migration. A rejected or disconnected unit disposes of its client. Later work
+acquires another connection within the configured acquisition deadline;
+PostgreSQL enforces the configured statement deadline. Closing keeps error
+handling active while checked-out work drains and shares one completion promise.
+
+Recovery never retries or replays a transaction, including a lost COMMIT reply.
+Such an operation rejects even if the server committed. Callers re-read before
+choosing to retry authored work; no broken unit continues on another connection.
+Provisioning, erasure, migration locking and owner predicates keep their contracts.
+The adapter adds no diagnostic interface: the default is silent idle recovery
+and ordinary operation rejection.
+
 Isolation continues to use ambient owner scope and composite owner predicates.
 No RLS policy or transaction owner-setting hook is installed. The contract
 suite tests concurrent scopes, identical imported ids and denied reads/writes;
