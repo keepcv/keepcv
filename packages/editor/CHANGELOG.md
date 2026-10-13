@@ -1,5 +1,13 @@
 # @keepcv/editor
 
+## 0.4.1
+
+### Patch Changes
+
+- 9cf7fda: Preserve unfinished Job target, Profile, Record, Point, metrics, Evidence, record links/fields and contact inputs through refused saves, navigation and sign-out. Scope recovery to the connected store, retain conflict tokens, and clear only acknowledged or explicitly discarded copies.
+- Updated dependencies
+  - @keepcv/api@0.2.1
+
 ## 0.4.0
 
 ### Minor Changes
