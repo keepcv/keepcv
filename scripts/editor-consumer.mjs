@@ -28,6 +28,12 @@ export async function prepareEditorConsumer(root, installed, tarballs) {
     );
     dependencies[name] = manifest.version;
   }
+  for (const name of ["pg", "@types/pg"]) {
+    const manifest = JSON.parse(
+      await readFile(join(root, "packages/db/node_modules", name, "package.json"), "utf8"),
+    );
+    dependencies[name] = manifest.version;
+  }
   const manifestPath = join(installed, "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   await writeFile(

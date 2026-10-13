@@ -13,7 +13,7 @@ import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate as migrateNodePostgres } from "drizzle-orm/node-postgres/migrator";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { parseIntoClientConfig } from "pg-connection-string";
 import type { Database } from "./database.js";
 import { createRepositories } from "./repositories/index.js";
@@ -75,6 +75,11 @@ async function insertOwner(tx: Database, id: Uuid): Promise<void> {
   await tx.insert(profile).values({ id: newUuid(), ownerId: id });
 }
 
+function confirmErasure(confirmation: { erasePermanently: true }): void {
+  if (!Object.is(confirmation.erasePermanently, true))
+    throw new TypeError("Owner erasure needs explicit permanent-erasure confirmation");
+}
+
 function ownerLifecycle(db: Database) {
   return {
     createOwner: async (id: Uuid) => await db.transaction(async (tx) => await insertOwner(tx, id)),
@@ -88,8 +93,7 @@ function ownerLifecycle(db: Database) {
       });
     },
     eraseOwner: async (id: Uuid, confirmation: { erasePermanently: true }) => {
-      if (!Object.is(confirmation.erasePermanently, true))
-        throw new TypeError("Owner erasure needs explicit permanent-erasure confirmation");
+      confirmErasure(confirmation);
       await db.transaction(async (tx) => {
         await tx.delete(owner).where(eq(owner.id, id));
       });
@@ -146,6 +150,30 @@ function validateServerOptions(options: ServerStoreOptions): void {
   }
 }
 
+async function withServerConnection<T>(
+  pool: Pool,
+  work: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  let disconnected: Error | undefined;
+  let failed = true;
+  const onError = (error: Error) => {
+    disconnected ??= error;
+  };
+  client.on("error", onError);
+  try {
+    const result = await work(client);
+    if (disconnected !== undefined) throw disconnected;
+    failed = false;
+    return result;
+  } catch (error) {
+    throw disconnected ?? error;
+  } finally {
+    client.release(failed);
+    client.removeListener("error", onError);
+  }
+}
+
 export function openServerStore(options: ServerStoreOptions): Store {
   validateServerOptions(options);
   const { connectionString, ssl: explicitSsl, ...limits } = options;
@@ -171,30 +199,36 @@ export function openServerStore(options: ServerStoreOptions): Store {
           },
         }),
   });
-  const db = drizzleNodePostgres(pool);
+  // An idle backend disconnect otherwise becomes an unhandled pool error.
+  pool.on("error", () => undefined);
+  const connected = <T>(work: (db: Database) => Promise<T>) =>
+    withServerConnection(pool, async (client) => await work(drizzleNodePostgres(client)));
   let closing: Promise<void> | undefined;
   return {
-    unitOfWork: unitOfWork(db),
+    unitOfWork: {
+      run: async (work) => await connected(async (db) => await unitOfWork(db).run(work)),
+    },
 
     // Concurrent migrators collided on pg_type before this advisory lock.
-    migrate: async () => {
-      const client = await pool.connect();
-      let locked = false;
-      try {
+    migrate: async () =>
+      await withServerConnection(pool, async (client) => {
         await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
-        locked = true;
-        await migrateNodePostgres(drizzleNodePostgres(client), {
-          migrationsFolder: MIGRATIONS_FOLDER,
-        });
-      } finally {
         try {
-          if (locked) await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]);
+          await migrateNodePostgres(drizzleNodePostgres(client), {
+            migrationsFolder: MIGRATIONS_FOLDER,
+          });
         } finally {
-          client.release();
+          await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]);
         }
-      }
+      }),
+    createOwner: async (id) =>
+      await connected(async (db) => await ownerLifecycle(db).createOwner(id)),
+    provisionOwner: async (id) =>
+      await connected(async (db) => await ownerLifecycle(db).provisionOwner(id)),
+    eraseOwner: async (id, confirmation) => {
+      confirmErasure(confirmation);
+      await connected(async (db) => await ownerLifecycle(db).eraseOwner(id, confirmation));
     },
-    ...ownerLifecycle(db),
     close: () => (closing ??= pool.end()),
   };
 }

@@ -104,6 +104,7 @@ jobs:
       - name: Check release packages
         run: pnpm release:check
         env:
+          DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv
           REUSE_PUBLISHED_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
 
       - name: Test release guards

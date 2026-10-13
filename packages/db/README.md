@@ -86,6 +86,23 @@ statement and rolls its unit back. Closing waits for checked-out work to finish
 and shares its completion promise across retries; it does not cancel a stuck
 callback. Bound statements and finish callbacks before shutdown.
 
+The pool handles idle connection errors locally and retires the broken client.
+It writes no default diagnostics, credentials, authored values or driver/client
+objects. A later operation obtains a new connection on demand; there is no
+background reconnect loop or process-wide error handler. Checked-out connections
+also have an error listener through migration, lifecycle and unit-of-work calls.
+A disconnected or refused unit releases its client for disposal and rejects.
+The transaction stays on that one connection and is never continued on a
+replacement.
+
+The adapter never replays a transaction automatically. If PostgreSQL commits
+but the reply is lost, the operation rejects even though its changes may have
+landed. Re-read the store before deciding whether to retry authored work.
+Acquisition and statement limits above apply during recovery too; configure
+them for bounded database work. PostgreSQL enforces the statement deadline;
+it does not put a deadline on caller code inside a unit. Close retains its
+listener while active work drains and repeated calls share one promise.
+
 Explicit `ssl` enables certificate and hostname validation. Omit `ca` to use
 Node's trusted roots. Alternatively use a connection string with
 `sslmode=verify-full` and `sslrootcert`. Do not combine explicit SSL options with
@@ -163,7 +180,10 @@ Use only a disposable synthetic database for the server tests. Configuration
 tests install temporary refusal triggers and exercise TLS through a local
 PostgreSQL protocol proxy using public test certificates. They verify trust,
 hostname checks, pool limits, acquisition/startup/statement timeouts, idle
-eviction, migration locking, provisioning recovery and shutdown. In CI the
+eviction, idle and checked-out disconnects, outage recovery, lost COMMIT replies,
+owner isolation, migration locking, provisioning recovery and shutdown. Release
+validation exercises idle and active disconnects in an isolated process using
+the installed tarball and requires empty default diagnostics. In CI the
 server URL is required, so these tests cannot silently skip that coverage.
 
 ## Licence
