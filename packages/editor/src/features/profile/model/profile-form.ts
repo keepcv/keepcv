@@ -7,7 +7,12 @@ import type {
   ProfilePatch,
   Store,
 } from "@keepcv/schema";
-import { contactChannelInputSchema, profilePatchSchema } from "@keepcv/schema";
+import {
+  CONTACT_CHANNEL_KINDS,
+  contactChannelInputSchema,
+  profilePatchSchema,
+} from "@keepcv/schema";
+import { z } from "zod";
 import {
   type Difference,
   differing,
@@ -16,12 +21,14 @@ import {
   trimmed,
 } from "../../../lib/form.js";
 
-export interface ProfileValues {
-  fullName: string;
-  pronouns: string;
-  headline: string;
-  location: string;
-}
+export const profileValuesSchema = z.object({
+  fullName: z.string(),
+  pronouns: z.string(),
+  headline: z.string(),
+  location: z.string(),
+});
+
+export type ProfileValues = z.infer<typeof profileValuesSchema>;
 
 const LABELS: Record<keyof ProfileValues, string> = {
   fullName: "Name",
@@ -94,12 +101,14 @@ export const CHANNEL_LABELS: Record<ContactChannelKind, string> = {
 // about rather than leaving to the resume screen to discover.
 export const EXTRACTABLE_KINDS: readonly ContactChannelKind[] = ["email", "phone"];
 
-export interface ChannelValues {
-  kind: ContactChannelKind;
-  label: string;
-  value: string;
-  isDefaultVisible: boolean;
-}
+export const channelValuesSchema = z.object({
+  kind: z.enum(CONTACT_CHANNEL_KINDS),
+  label: z.string(),
+  value: z.string(),
+  isDefaultVisible: z.boolean(),
+});
+
+export type ChannelValues = z.infer<typeof channelValuesSchema>;
 
 export function newChannelValues(): ChannelValues {
   return { kind: "email", label: "", value: "", isDefaultVisible: true };

@@ -1,15 +1,18 @@
 import { type TargetTerm, targetMatch, textOfPhrasing } from "@keepcv/core";
 import type { Resume, ResumeEntryPoint, ResumePatch, Store, Uuid } from "@keepcv/schema";
 import { resumePatchSchema } from "@keepcv/schema";
+import { z } from "zod";
 import { type Difference, differing, trimmed } from "../../../lib/form.js";
 
-export interface TargetValues {
-  company: string;
-  role: string;
-  url: string;
-  appliedOn: string;
-  jdText: string;
-}
+export const targetValuesSchema = z.object({
+  company: z.string(),
+  role: z.string(),
+  url: z.string(),
+  appliedOn: z.string(),
+  jdText: z.string(),
+});
+
+export type TargetValues = z.infer<typeof targetValuesSchema>;
 
 export type TargetErrors = Partial<Record<keyof TargetValues, string>>;
 

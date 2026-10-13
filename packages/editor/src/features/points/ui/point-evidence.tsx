@@ -8,6 +8,7 @@ import { SelectField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { useAddEvidence, useArchiveEvidence } from "../api/use-points.js";
 import {
   BLANK_EVIDENCE,
@@ -15,6 +16,7 @@ import {
   EVIDENCE_KIND_LABELS,
   EVIDENCE_PLACEHOLDERS,
   type EvidenceFormValues,
+  evidenceFormValuesSchema,
   evidenceOfPoint,
   hrefOf,
 } from "../model/evidence-form.js";
@@ -43,8 +45,6 @@ function Value({ evidence }: { evidence: Evidence }) {
   );
 }
 
-// Private, and structurally so: `ResumeDocument` has no field this could travel
-// in.
 export function PointEvidence({
   store,
   client,
@@ -56,9 +56,14 @@ export function PointEvidence({
 }) {
   const add = useAddEvidence(client);
   const archive = useArchiveEvidence(client);
-  const [values, setValues] = useState<EvidenceFormValues>(BLANK_EVIDENCE);
+  const recovery = useFormRecovery(
+    `keepcv.evidence-edit:${point.id}`,
+    evidenceFormValuesSchema,
+    BLANK_EVIDENCE,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(recovery.pending);
 
   const rows = evidenceOfPoint(store, point.id);
   const set = (patch: Partial<EvidenceFormValues>) => {
@@ -66,7 +71,7 @@ export function PointEvidence({
   };
 
   return (
-    <Panel collapsible defaultOpen={rows.length > 0}>
+    <Panel collapsible defaultOpen={rows.length > 0 || recovery.pending}>
       <PanelHeader title="Private evidence" aside={<Badge>Excluded from resumes</Badge>}>
         Keep supporting links and notes here. They are included in backups.
       </PanelHeader>
@@ -99,8 +104,6 @@ export function PointEvidence({
         {add.error === null ? null : <Failure error={add.error} />}
         {archive.error === null ? null : <Failure error={archive.error} />}
 
-        {/* Behind the control that names it, rather than three empty inputs open
-            under every point with the button that submits them below. */}
         {adding ? (
           <div className="space-y-3 rounded-lg border border-line bg-surface-sunken p-3">
             <div className="grid gap-3 sm:grid-cols-[8rem_1fr_1fr]">
@@ -142,17 +145,24 @@ export function PointEvidence({
                     return;
                   }
                   setErrors({});
-                  setValues(BLANK_EVIDENCE);
-                  setAdding(false);
-                  add.mutate(built.evidence);
+                  const sent = recovery.begin();
+                  if (sent === undefined) return;
+                  void add
+                    .mutateAsync(built.evidence)
+                    .then(() => {
+                      if (recovery.acknowledge(sent, BLANK_EVIDENCE)) setAdding(false);
+                    })
+                    .catch(() => undefined)
+                    .finally(recovery.finish);
                 }}
               >
                 Add evidence
               </Button>
               <Button
+                disabled={add.isPending}
                 onClick={() => {
                   setErrors({});
-                  setValues(BLANK_EVIDENCE);
+                  recovery.discard(BLANK_EVIDENCE);
                   setAdding(false);
                 }}
               >

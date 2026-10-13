@@ -141,7 +141,7 @@ artifacts as part of release validation.
 The entry accepts an optional `recoveryNamespace`, a stable opaque string the
 caller assigns to its connected store from a trusted connection context. It
 scopes all authored browser recovery: wording, template designs and resume
-settings. Imported ids may overlap across stores; switching stores requires
+settings and explicit-save forms. Imported ids may overlap across stores; switching stores requires
 unmounting and a fresh query cache, but does not remove pending recovery copies.
 Reopening the same namespace recovers only that store's edits, including after
 failed saves and sign-out. Theme and navigation preferences remain shared.
@@ -152,6 +152,21 @@ because their connected store cannot be established from their ids. They remain
 recoverable through the original standalone connection. Key encoding is
 internal; the caller supplies only the namespace. This scopes recovery rather
 than authorizing access by same-origin code.
+
+Explicit-save forms keep their raw inputs and original concurrency token through
+the same browser recovery helper. This covers all five Job target fields,
+Profile identity, Record creation/editing, Point creation and placement edits,
+metrics, Evidence, record links/fields, and contact creation/editing. Recovery restores inputs only; Save
+remains explicit. Validation, conflict, rate-limit, server and transport refusals,
+navigation and caller unmount never clear it. An acknowledged Save clears only
+its submitted copy; overlapping newer edits keep their input and advance to the
+acknowledged token. An explicit Revert, discard, or keeping the stored side of a
+conflict clears that form. Route Cancel leaves recovery available on return.
+A recovered copy already matching stored values may be reverted without another
+write. Unfinished forms do not feed store selectors, native backup or rendering.
+Browser storage refusal preserves visible input and cannot block a server save;
+recovery across remounts requires available browser storage. The unsaved-close
+listener exists only while a copy is pending and is removed on unmount.
 
 The entry also accepts an optional `dataPage: DataPagePresentation`: storage,
 backup, and restore descriptions plus `showTerminalInstructions`. The default
@@ -654,9 +669,9 @@ from. Identity fields stage and save as one patch, like the resume target and
 for the same reason - four fields that read as one line, with a `409` comparison
 shared with the other two forms.
 
-**Contact channels write as they are typed**, like a metric on a point: a channel
-is a row of a profile that already exists, so there is nothing to stage and
-nothing to roll back. The panel names email and phone when neither is there,
+**Contact channels use explicit Add and Save controls.** Their raw inputs stay
+in browser recovery until acknowledgment or explicit Cancel. A refused write
+keeps the form open. The panel names email and phone when neither is there,
 which is the finding the linter would otherwise raise on the preview screen,
 after the resume is built.
 

@@ -8,12 +8,15 @@ import { TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { useAddMetric, useArchiveMetric } from "../api/use-points.js";
-import { BLANK_METRIC, buildMetric, type MetricFormValues } from "../model/point-form.js";
+import {
+  BLANK_METRIC,
+  buildMetric,
+  type MetricFormValues,
+  metricFormValuesSchema,
+} from "../model/point-form.js";
 
-// Written straight away rather than staged with the rest of the screen: a
-// metric belongs to a point that already exists, and there is nothing to roll
-// back.
 export function PointMetrics({
   store,
   client,
@@ -25,9 +28,14 @@ export function PointMetrics({
 }) {
   const add = useAddMetric(client);
   const archive = useArchiveMetric(client);
-  const [values, setValues] = useState<MetricFormValues>(BLANK_METRIC);
+  const recovery = useFormRecovery(
+    `keepcv.metric-edit:${point.id}`,
+    metricFormValuesSchema,
+    BLANK_METRIC,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(recovery.pending);
 
   const rows = live(store.metrics).filter((metric) => metric.pointId === point.id);
   const set = (patch: Partial<MetricFormValues>) => {
@@ -35,7 +43,7 @@ export function PointMetrics({
   };
 
   return (
-    <Panel collapsible defaultOpen={rows.length > 0}>
+    <Panel collapsible defaultOpen={rows.length > 0 || recovery.pending}>
       <PanelHeader title="Metrics">
         Add numbers that show impact, such as time saved or revenue growth.
       </PanelHeader>
@@ -61,8 +69,6 @@ export function PointMetrics({
         {add.error === null ? null : <Failure error={add.error} />}
         {archive.error === null ? null : <Failure error={archive.error} />}
 
-        {/* Behind the control that names it, rather than four empty inputs open
-            under every point with the button that submits them below. */}
         {adding ? (
           <div className="space-y-3 rounded-lg border border-line bg-surface-sunken p-3">
             <div className="grid gap-3 sm:grid-cols-4">
@@ -114,17 +120,24 @@ export function PointMetrics({
                     return;
                   }
                   setErrors({});
-                  setValues(BLANK_METRIC);
-                  setAdding(false);
-                  add.mutate(built.metric);
+                  const sent = recovery.begin();
+                  if (sent === undefined) return;
+                  void add
+                    .mutateAsync(built.metric)
+                    .then(() => {
+                      if (recovery.acknowledge(sent, BLANK_METRIC)) setAdding(false);
+                    })
+                    .catch(() => undefined)
+                    .finally(recovery.finish);
                 }}
               >
                 Add metric
               </Button>
               <Button
+                disabled={add.isPending}
                 onClick={() => {
                   setErrors({});
-                  setValues(BLANK_METRIC);
+                  recovery.discard(BLANK_METRIC);
                   setAdding(false);
                 }}
               >

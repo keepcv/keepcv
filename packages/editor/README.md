@@ -42,8 +42,23 @@ Use a stable, opaque string identifying the connected store, chosen by the
 caller from its trusted connection context. Different stores need different
 namespaces even when imported ids match. Keep it stable while mounted; unmount
 and use a fresh query cache when switching stores. Pending wording, template
-designs and resume settings remain with their original namespace through
+designs, resume settings and explicit-save forms remain with their original namespace through
 sign-out and failed saves, and recover when that store is reopened.
+
+Job target (Company, Role, Posting, Applied on and Job description), Profile,
+Record, Point creation and placement, metrics, Evidence, record links/fields
+and contact forms retain unfinished values locally
+before validation or sending. Reopening the form restores its inputs for an
+explicit Save; it never sends them automatically. Refusals leave the inputs
+and recovery copy intact. Navigation and sign-out retain them; Revert, Cancel
+on sub-collection controls, or keeping the stored side of a conflict discard
+that form's copy explicitly. Record/Point route Cancel keeps recovery; use
+Revert to discard it. Only an acknowledged Save clears the submitted copy;
+newer edits survive an earlier acknowledgment. Recovered updates retain the
+original concurrency token so changed server values still require a comparison.
+Browser recovery is absent from native backups and rendered resumes. Browser
+storage must be available for recovery across remounts; a storage refusal never
+blocks a Save or removes visible input.
 
 Omitting the namespace retains standalone recovery, including existing
 unscoped edits. A supplied namespace never reads, migrates or removes those

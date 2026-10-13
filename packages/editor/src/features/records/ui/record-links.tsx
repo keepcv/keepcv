@@ -6,16 +6,16 @@ import { SelectField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { useAddRecordLink, useArchiveRecordLink } from "../api/use-records.js";
 import {
   BLANK_LINK,
   buildLink,
   LINK_KIND_OPTIONS,
   type LinkFormValues,
+  linkFormValuesSchema,
 } from "../model/record-parts.js";
 
-// Written as it is added rather than staged: a link belongs to a record that
-// already exists, so there is nothing to roll back.
 export function RecordLinks({
   store,
   client,
@@ -29,16 +29,21 @@ export function RecordLinks({
 }) {
   const add = useAddRecordLink(client);
   const archive = useArchiveRecordLink(client);
-  const [values, setValues] = useState<LinkFormValues>(BLANK_LINK);
+  const recovery = useFormRecovery(
+    `keepcv.record-link-edit:${recordId}`,
+    linkFormValuesSchema,
+    BLANK_LINK,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(recovery.pending);
 
   const set = (patch: Partial<LinkFormValues>) => {
     setValues((current) => ({ ...current, ...patch }));
   };
 
   return (
-    <Panel collapsible defaultOpen={links.length > 0}>
+    <Panel collapsible defaultOpen={links.length > 0 || recovery.pending}>
       <PanelHeader title="Links">
         Add links to the work, such as a project or publication.
       </PanelHeader>
@@ -75,9 +80,6 @@ export function RecordLinks({
         {add.error === null ? null : <Failure error={add.error} />}
         {archive.error === null ? null : <Failure error={archive.error} />}
 
-        {/* Behind the control that names it, rather than three empty inputs
-            sitting open under every record with the button that submits them
-            below. */}
         {adding ? (
           <div className="space-y-3 rounded-lg border border-line bg-surface-sunken p-3">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -119,17 +121,24 @@ export function RecordLinks({
                     return;
                   }
                   setErrors({});
-                  setValues(BLANK_LINK);
-                  setAdding(false);
-                  add.mutate(built.link);
+                  const sent = recovery.begin();
+                  if (sent === undefined) return;
+                  void add
+                    .mutateAsync(built.link)
+                    .then(() => {
+                      if (recovery.acknowledge(sent, BLANK_LINK)) setAdding(false);
+                    })
+                    .catch(() => undefined)
+                    .finally(recovery.finish);
                 }}
               >
                 Add link
               </Button>
               <Button
+                disabled={add.isPending}
                 onClick={() => {
                   setErrors({});
-                  setValues(BLANK_LINK);
+                  recovery.discard(BLANK_LINK);
                   setAdding(false);
                 }}
               >

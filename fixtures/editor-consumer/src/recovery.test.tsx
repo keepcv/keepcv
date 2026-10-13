@@ -36,6 +36,13 @@ it.each([
     values: ["12", "11"],
     savedValue: (store: Store) => String(store.resumes[0]?.templateConfig["fontSize"]),
   },
+  {
+    kind: "target",
+    label: "Company",
+    original: "",
+    values: ["First pending company", "Second pending company"],
+    savedValue: (store: Store) => store.resumes[0]?.targetCompany,
+  },
 ])(
   "recovers installed $kind edits only in their connected store",
   async ({ kind, label, original, values, savedValue }) => {
@@ -129,8 +136,9 @@ it.each([
           ? `/points/${pointId}/edit`
           : kind === "template"
             ? `/templates/${templateId}`
-            : `/resumes/${resumeId}?view=preview`;
-      const retryName = kind === "wording" ? "Retry saving wording" : "Retry saving";
+            : `/resumes/${resumeId}?view=${kind === "target" ? "target" : "preview"}`;
+      const retryName =
+        kind === "wording" ? "Retry saving wording" : kind === "target" ? "Save" : "Retry saving";
 
       async function open(index: number) {
         window.history.replaceState(null, "", path);
@@ -169,8 +177,20 @@ it.each([
         expect(screen.getByLabelText(label)).toHaveValue(original);
         expect(screen.queryByRole("button", { name: "Restore draft" })).not.toBeInTheDocument();
         fireEvent.change(screen.getByLabelText(label), { target: { value: values[index] } });
+        if (kind === "target") {
+          for (const [label, value] of Object.entries({
+            Role: "Unfinished role",
+            Posting: "https://example.test/job",
+            "Applied on": "2026-10-13",
+            "Job description": "Unfinished description",
+          }))
+            fireEvent.change(screen.getByLabelText(label), { target: { value } });
+        }
         if (kind === "wording") fireEvent.blur(screen.getByLabelText(label));
-        await screen.findByRole("button", { name: retryName });
+        if (kind === "target") {
+          fireEvent.click(screen.getByRole("button", { name: "Save" }));
+          await screen.findByText("Offline");
+        } else await screen.findByRole("button", { name: retryName });
         await leave(queries);
       }
       expect(window.localStorage.length).toBe(2);
@@ -181,6 +201,15 @@ it.each([
           fireEvent.click(screen.getByRole("button", { name: "Restore draft" }));
         }
         expect(screen.getByLabelText(label)).toHaveValue(values[index]);
+        if (kind === "target") {
+          for (const [label, value] of Object.entries({
+            Role: "Unfinished role",
+            Posting: "https://example.test/job",
+            "Applied on": "2026-10-13",
+            "Job description": "Unfinished description",
+          }))
+            expect(screen.getByLabelText(label)).toHaveValue(value);
+        }
         await saveRecovered();
         await waitFor(() => expect(window.localStorage.length).toBe(1 - index));
         await leave(queries);

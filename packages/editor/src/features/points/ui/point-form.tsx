@@ -16,6 +16,7 @@ import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { sentenceCase } from "../../../lib/label.js";
 import { DATE_HINT } from "../../../lib/partial-date.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { KIND_NAMES, toRecordRow } from "../../records/model/record-rows.js";
 import { useCreatePoint } from "../api/use-points.js";
 import {
@@ -23,6 +24,8 @@ import {
   buildPointSubmission,
   CONFIDENCE_HINTS,
   type PointFormValues,
+  type PointPlacementValues,
+  pointFormValuesSchema,
 } from "../model/point-form.js";
 
 export function MissingPoint() {
@@ -53,9 +56,9 @@ export function Placement({
   onChange,
 }: {
   store: Store;
-  values: PointFormValues;
+  values: PointPlacementValues;
   errors: FieldErrors;
-  onChange: (patch: Partial<PointFormValues>) => void;
+  onChange: (patch: Partial<PointPlacementValues>) => void;
 }) {
   return (
     <PanelBody className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +108,12 @@ export function PointForm({
 }) {
   const navigate = useNavigate();
   const create = useCreatePoint(client);
-  const [values, setValues] = useState<PointFormValues>(() => blankPointValues(recordId));
+  const recovery = useFormRecovery(
+    `keepcv.point-edit:new:${recordId ?? "unplaced"}`,
+    pointFormValuesSchema,
+    blankPointValues(recordId),
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const change = (patch: Partial<PointFormValues>) => {
@@ -120,8 +128,14 @@ export function PointForm({
     }
     setErrors({});
 
-    const saved = await create.mutateAsync({ point: built.point }).catch(() => undefined);
+    const sent = recovery.begin();
+    if (sent === undefined) return;
+    const saved = await create
+      .mutateAsync({ point: built.point })
+      .catch(() => undefined)
+      .finally(recovery.finish);
     if (saved === undefined) return;
+    recovery.acknowledge(sent, blankPointValues(recordId));
     void navigate({ to: "/points/$pointId/edit", params: { pointId: saved.id } });
   }
 
@@ -169,6 +183,12 @@ export function PointForm({
       </Panel>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          disabled={create.isPending}
+          onClick={() => recovery.discard(blankPointValues(recordId))}
+        >
+          Revert
+        </Button>
         <Button tone="primary" type="submit" disabled={create.isPending}>
           {create.isPending ? "Saving" : "Add point"}
         </Button>

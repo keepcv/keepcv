@@ -125,7 +125,7 @@ function Chosen({
     case "target":
       return (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <TargetScreen store={store} client={client} resume={resume} />
+          <TargetScreen key={resume.id} store={store} client={client} resume={resume} />
         </div>
       );
     case "preview":

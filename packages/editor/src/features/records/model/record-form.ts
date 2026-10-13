@@ -15,6 +15,7 @@ import {
   SKILL_PROFICIENCIES,
   WORK_MODES,
 } from "@keepcv/schema";
+import { z } from "zod";
 import {
   type Difference,
   differing,
@@ -23,9 +24,6 @@ import {
   trimmed,
 } from "../../../lib/form.js";
 
-// The columns a kind carries beyond the shared ones. `record-form.test.ts`
-// checks this covers each kind's schema exactly, so a column added to the model
-// cannot stay unreachable from the form.
 export interface ExtraField {
   name: string;
   label: string;
@@ -64,19 +62,19 @@ export const EXTRA_FIELDS: Record<CareerRecordKind, readonly ExtraField[]> = {
   custom_entry: [{ name: "customSectionId", label: "Section" }],
 };
 
-export interface RecordFormValues {
-  kind: CareerRecordKind;
-  title: string;
-  subtitle: string;
-  // A name rather than an id: the submit creates the organisation when the name
-  // is one the store has not heard of.
-  organisation: string;
-  startedOn: string;
-  endedOn: string;
-  isCurrent: boolean;
-  location: string;
-  extras: Record<string, string>;
-}
+export const recordFormValuesSchema = z.object({
+  kind: z.enum(CAREER_RECORD_KINDS),
+  title: z.string(),
+  subtitle: z.string(),
+  organisation: z.string(),
+  startedOn: z.string(),
+  endedOn: z.string(),
+  isCurrent: z.boolean(),
+  location: z.string(),
+  extras: z.record(z.string(), z.string()),
+});
+
+export type RecordFormValues = z.infer<typeof recordFormValuesSchema>;
 
 export interface RecordSubmission {
   record: CareerRecordInput;

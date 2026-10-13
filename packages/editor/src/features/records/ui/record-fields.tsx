@@ -6,11 +6,13 @@ import { SelectField, TextField } from "../../../components/ui/field.js";
 import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
 import type { ApiClient } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { useAddRecordField, useArchiveRecordField } from "../api/use-records.js";
 import {
   BLANK_FIELD,
   buildField,
   type RecordFieldFormValues,
+  recordFieldFormValuesSchema,
   VALUE_KIND_OPTIONS,
 } from "../model/record-parts.js";
 
@@ -27,16 +29,21 @@ export function RecordFields({
 }) {
   const add = useAddRecordField(client);
   const archive = useArchiveRecordField(client);
-  const [values, setValues] = useState<RecordFieldFormValues>(BLANK_FIELD);
+  const recovery = useFormRecovery(
+    `keepcv.record-field-edit:${recordId}`,
+    recordFieldFormValuesSchema,
+    BLANK_FIELD,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(recovery.pending);
 
   const set = (patch: Partial<RecordFieldFormValues>) => {
     setValues((current) => ({ ...current, ...patch }));
   };
 
   return (
-    <Panel collapsible defaultOpen={fields.length > 0}>
+    <Panel collapsible defaultOpen={fields.length > 0 || recovery.pending}>
       <PanelHeader title="Extra fields">
         Add details such as a credential ID, grade, or DOI.
       </PanelHeader>
@@ -66,9 +73,6 @@ export function RecordFields({
         {add.error === null ? null : <Failure error={add.error} />}
         {archive.error === null ? null : <Failure error={archive.error} />}
 
-        {/* Behind the control that names it, rather than three empty inputs
-            sitting open under every record with the button that submits them
-            below. */}
         {adding ? (
           <div className="space-y-3 rounded-lg border border-line bg-surface-sunken p-3">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -112,17 +116,24 @@ export function RecordFields({
                     return;
                   }
                   setErrors({});
-                  setValues(BLANK_FIELD);
-                  setAdding(false);
-                  add.mutate(plan);
+                  const sent = recovery.begin();
+                  if (sent === undefined) return;
+                  void add
+                    .mutateAsync(plan)
+                    .then(() => {
+                      if (recovery.acknowledge(sent, BLANK_FIELD)) setAdding(false);
+                    })
+                    .catch(() => undefined)
+                    .finally(recovery.finish);
                 }}
               >
                 Add field
               </Button>
               <Button
+                disabled={add.isPending}
                 onClick={() => {
                   setErrors({});
-                  setValues(BLANK_FIELD);
+                  recovery.discard(BLANK_FIELD);
                   setAdding(false);
                 }}
               >

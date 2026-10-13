@@ -8,7 +8,13 @@ import type {
   Store,
   Uuid,
 } from "@keepcv/schema";
-import { metricInputSchema, pointInputSchema, pointPatchSchema } from "@keepcv/schema";
+import {
+  metricInputSchema,
+  POINT_CONFIDENCES,
+  pointInputSchema,
+  pointPatchSchema,
+} from "@keepcv/schema";
+import { z } from "zod";
 import { type FieldErrors, fieldErrors } from "../../../lib/form.js";
 import { bodyOf } from "../../phrasings/model/editor.js";
 
@@ -18,12 +24,17 @@ export const CONFIDENCE_HINTS: Record<PointConfidence, string> = {
   unverified: "Not yet checked.",
 };
 
-export interface PointFormValues {
-  text: string;
-  recordId: string;
-  confidence: PointConfidence;
-  occurredOn: string;
-}
+export const pointFormValuesSchema = z.object({
+  text: z.string(),
+  recordId: z.string(),
+  confidence: z.enum(POINT_CONFIDENCES),
+  occurredOn: z.string(),
+});
+
+export const pointPlacementValuesSchema = pointFormValuesSchema.omit({ text: true });
+export type PointPlacementValues = z.infer<typeof pointPlacementValuesSchema>;
+
+export type PointFormValues = z.infer<typeof pointFormValuesSchema>;
 
 export function blankPointValues(recordId?: Uuid): PointFormValues {
   return { text: "", recordId: recordId ?? "", confidence: "unverified", occurredOn: "" };
@@ -38,7 +49,7 @@ export function pointValuesOf(store: Store, point: Point): PointFormValues {
   };
 }
 
-function columns(values: PointFormValues) {
+function columns(values: PointPlacementValues) {
   return {
     recordId: values.recordId === "" ? null : values.recordId,
     confidence: values.confidence,
@@ -70,18 +81,19 @@ export function buildPointSubmission(
 }
 
 export function buildPointPatch(
-  values: PointFormValues,
+  values: PointPlacementValues,
 ): { patch: PointPatch } | { errors: FieldErrors } {
   const parsed = pointPatchSchema.safeParse(columns(values));
   return parsed.success ? { patch: parsed.data } : { errors: fieldErrors(parsed.error) };
 }
 
-export interface MetricFormValues {
-  label: string;
-  value: string;
-  unit: string;
-  baseline: string;
-}
+export const metricFormValuesSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  unit: z.string(),
+  baseline: z.string(),
+});
+export type MetricFormValues = z.infer<typeof metricFormValuesSchema>;
 
 export const BLANK_METRIC: MetricFormValues = { label: "", value: "", unit: "", baseline: "" };
 

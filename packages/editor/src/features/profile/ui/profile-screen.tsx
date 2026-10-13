@@ -17,6 +17,7 @@ import { DragGrip, ReorderControls } from "../../../components/ui/reorder.js";
 import { type ApiClient, isProblem } from "../../../lib/api.js";
 import type { FieldErrors } from "../../../lib/form.js";
 import { type Reorder, useReorder } from "../../../lib/order.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
 import { SummaryEditor } from "../../phrasings/ui/summary-editor.js";
 import {
   useCreateChannel,
@@ -31,6 +32,7 @@ import {
   type ChannelValues,
   channelRows,
   channelValuesOf,
+  channelValuesSchema,
   EXTRACTABLE_KINDS,
   isChanged,
   missingExtractable,
@@ -39,6 +41,7 @@ import {
   type ProfileValues,
   profileDifferences,
   profileValuesOf,
+  profileValuesSchema,
 } from "../model/profile-form.js";
 
 const KIND_OPTIONS = CONTACT_CHANNEL_KINDS.map((kind) => ({
@@ -48,11 +51,18 @@ const KIND_OPTIONS = CONTACT_CHANNEL_KINDS.map((kind) => ({
 
 function Identity({ profile, client }: { profile: Profile; client: ApiClient }) {
   const update = useUpdateProfile(client);
-  const [values, setValues] = useState<ProfileValues>(() => profileValuesOf(profile));
+  const recovery = useFormRecovery(
+    `keepcv.profile-edit:${profile.id}`,
+    profileValuesSchema,
+    profileValuesOf(profile),
+    profile.updatedAt,
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [conflict, setConflict] = useState<Profile | undefined>(undefined);
 
   const changed = isChanged(values, profile);
+  const unfinished = changed || recovery.pending;
   const set = (next: Partial<ProfileValues>) => {
     setValues((current) => ({ ...current, ...next }));
   };
@@ -65,14 +75,21 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
       return;
     }
     setErrors({});
+    const sent = recovery.begin();
+    if (sent === undefined) return;
     await update
-      .mutateAsync({ profile: basedOn ?? profile, patch: built.patch })
+      .mutateAsync({
+        profile: basedOn ?? { ...profile, updatedAt: sent.expectedUpdatedAt ?? profile.updatedAt },
+        patch: built.patch,
+      })
+      .then((saved) => recovery.acknowledge(sent, profileValuesOf(saved), saved.updatedAt))
       .catch((error: unknown) => {
         if (isProblem(error) && error.problem.status === 409) {
           const current = profileSchema.safeParse(error.problem.current);
           if (current.success) setConflict(current.data);
         }
-      });
+      })
+      .finally(recovery.finish);
   }
 
   return (
@@ -82,7 +99,7 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
           title="The profile changed while you were editing it"
           rows={profileDifferences(values, conflict)}
           onKeepTheirs={() => {
-            setValues(profileValuesOf(conflict));
+            recovery.discard(profileValuesOf(conflict), conflict.updatedAt);
             setConflict(undefined);
           }}
           onKeepMine={() => {
@@ -96,7 +113,7 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
       <Panel>
         <PanelHeader
           title="Personal details"
-          aside={changed ? <Badge tone="warning">Not saved yet</Badge> : undefined}
+          aside={unfinished ? <Badge tone="warning">Not saved yet</Badge> : undefined}
         >
           These details appear in your resume headers.
         </PanelHeader>
@@ -153,9 +170,11 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
               {update.isPending ? "Saving" : "Save"}
             </Button>
             <Button
-              disabled={!changed}
+              disabled={!unfinished || update.isPending}
               onClick={() => {
-                setValues(profileValuesOf(profile));
+                recovery.discard(profileValuesOf(profile), profile.updatedAt);
+                setConflict(undefined);
+                update.reset();
                 setErrors({});
               }}
             >
@@ -168,9 +187,6 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
   );
 }
 
-// Written as it is typed, like a metric on a point: a channel is a row of the
-// profile that already exists, so there is nothing to stage and nothing to roll
-// back.
 function ChannelFields({
   values,
   errors,
@@ -236,7 +252,14 @@ function ChannelRow({
 }) {
   const update = useUpdateChannel(client);
   const setArchived = useSetChannelArchived(client);
-  const [values, setValues] = useState<ChannelValues | undefined>(undefined);
+  const recovery = useFormRecovery(
+    `keepcv.contact-edit:${channel.id}`,
+    channelValuesSchema,
+    channelValuesOf(channel),
+    channel.updatedAt,
+  );
+  const { values, setValues } = recovery;
+  const [editing, setEditing] = useState(recovery.pending);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
@@ -257,11 +280,14 @@ function ChannelRow({
             <>
               <ReorderControls order={order} row={channel} subject={channel.value} />
               <Button
+                disabled={update.isPending}
                 onClick={() => {
-                  setValues(values === undefined ? channelValuesOf(channel) : undefined);
+                  if (editing || !recovery.pending)
+                    recovery.discard(channelValuesOf(channel), channel.updatedAt);
+                  setEditing(!editing);
                 }}
               >
-                {values === undefined ? "Edit" : "Cancel"}
+                {editing ? "Cancel" : "Edit"}
               </Button>
             </>
           )}
@@ -280,13 +306,13 @@ function ChannelRow({
       {setArchived.error === null ? null : <Failure error={setArchived.error} />}
       {update.error === null ? null : <Failure error={update.error} />}
 
-      {values === undefined ? null : (
+      {!editing ? null : (
         <div className="mt-3 space-y-3 border-t border-line-subtle pt-3">
           <ChannelFields
             values={values}
             errors={errors}
             onChange={(patch) => {
-              setValues((current) => (current === undefined ? current : { ...current, ...patch }));
+              setValues((current) => ({ ...current, ...patch }));
             }}
           />
           <Button
@@ -298,16 +324,24 @@ function ChannelRow({
                 return;
               }
               setErrors({});
-              update.mutate({
-                channel,
-                patch: {
-                  kind: values.kind,
-                  label: values.label.trim() === "" ? null : values.label.trim(),
-                  value: values.value.trim(),
-                  isDefaultVisible: values.isDefaultVisible,
-                },
-              });
-              setValues(undefined);
+              const sent = recovery.begin();
+              if (sent === undefined) return;
+              void update
+                .mutateAsync({
+                  channel: { ...channel, updatedAt: sent.expectedUpdatedAt ?? channel.updatedAt },
+                  patch: {
+                    kind: values.kind,
+                    label: values.label.trim() === "" ? null : values.label.trim(),
+                    value: values.value.trim(),
+                    isDefaultVisible: values.isDefaultVisible,
+                  },
+                })
+                .then((saved) => {
+                  if (recovery.acknowledge(sent, channelValuesOf(saved), saved.updatedAt))
+                    setEditing(false);
+                })
+                .catch(() => undefined)
+                .finally(recovery.finish);
             }}
           >
             Save
@@ -321,10 +355,15 @@ function ChannelRow({
 function Contacts({ store, client }: { store: Store; client: ApiClient }) {
   const create = useCreateChannel(client);
   const update = useUpdateChannel(client);
-  const [values, setValues] = useState<ChannelValues>(newChannelValues);
+  const recovery = useFormRecovery(
+    `keepcv.contact-edit:new:${store.profile.id}`,
+    channelValuesSchema,
+    newChannelValues(),
+  );
+  const { values, setValues } = recovery;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [showArchived, setShowArchived] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(recovery.pending);
 
   const rows = channelRows(store, showArchived);
   const missing = missingExtractable(store);
@@ -397,26 +436,29 @@ function Contacts({ store, client }: { store: Store; client: ApiClient }) {
                   return;
                 }
                 setErrors({});
-                create.mutate(built.input, {
-                  onSuccess: () => {
-                    setValues(newChannelValues());
-                    setAdding(false);
-                  },
-                });
+                const sent = recovery.begin();
+                if (sent === undefined) return;
+                void create
+                  .mutateAsync(built.input)
+                  .then(() => {
+                    if (recovery.acknowledge(sent, newChannelValues())) setAdding(false);
+                  })
+                  .catch(() => undefined)
+                  .finally(recovery.finish);
               }}
             >
               {create.isPending ? "Adding" : "Add contact"}
             </Button>
-            {rows.length === 0 ? null : (
-              <Button
-                tone="ghost"
-                onClick={() => {
-                  setAdding(false);
-                }}
-              >
-                Cancel
-              </Button>
-            )}
+            <Button
+              tone="ghost"
+              disabled={create.isPending}
+              onClick={() => {
+                recovery.discard(newChannelValues());
+                setAdding(false);
+              }}
+            >
+              Cancel
+            </Button>
           </>
         ) : (
           <Button
@@ -440,7 +482,7 @@ export function ProfileScreen({ store, client }: { store: Store; client: ApiClie
         Your name, introduction, and contact details are shared across resumes.
       </PageHeader>
 
-      <Identity profile={store.profile} client={client} />
+      <Identity key={store.profile.id} profile={store.profile} client={client} />
       <SummaryEditor
         store={store}
         client={client}
