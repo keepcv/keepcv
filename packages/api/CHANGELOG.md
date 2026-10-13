@@ -1,5 +1,11 @@
 # @keepcv/api
 
+## 0.2.1
+
+### Patch Changes
+
+- Update packaged metadata for the database development dependency.
+
 ## 0.2.0
 
 ### Minor Changes

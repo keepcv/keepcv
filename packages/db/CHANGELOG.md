@@ -1,5 +1,11 @@
 # @keepcv/db
 
+## 0.2.2
+
+### Patch Changes
+
+- 3252841: Handle idle PostgreSQL pool errors without unhandled process errors or raw diagnostics. Keep checked-out disconnects within the store lifecycle, dispose of refused connections, and let later operations reconnect without replaying ambiguous transactions.
+
 ## 0.2.1
 
 ### Patch Changes
