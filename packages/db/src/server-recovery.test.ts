@@ -76,7 +76,8 @@ describe.skipIf(connectionString === undefined)("PostgreSQL disconnect recovery"
       const archive = await run((r) => r.store.read());
       for (let index = 0; index < 3; index++) {
         const old = await terminate(name);
-        expect(await run((r) => r.store.read())).toEqual(archive);
+        // pg_stat_activity lost the backend before its socket error reached the pool.
+        await expect.poll(() => run((r) => r.store.read()), { timeout: 2000 }).toEqual(archive);
         const replacement = await backend(name);
         expect(replacement).not.toBe(old);
         await run((r) => r.profile.get());

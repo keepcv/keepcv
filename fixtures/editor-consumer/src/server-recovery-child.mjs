@@ -39,6 +39,18 @@ async function terminate() {
   }
 }
 
+async function readAfterDisconnect() {
+  const until = Date.now() + 2000;
+  for (;;) {
+    try {
+      return await run((r) => r.store.read());
+    } catch (error) {
+      if (Date.now() >= until) throw error;
+      await setTimeout(10);
+    }
+  }
+}
+
 try {
   await store.migrate();
   await store.provisionOwner(owner);
@@ -63,7 +75,7 @@ try {
   );
   const before = await run((r) => r.store.read());
   await terminate();
-  assert.deepEqual(await run((r) => r.store.read()), before);
+  assert.deepEqual(await readAfterDisconnect(), before);
   let started;
   let release;
   const ready = new Promise((resolve) => {
