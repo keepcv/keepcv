@@ -34,6 +34,7 @@ export {
 } from "./ordering/sort-key.js";
 export {
   type AppendedVersion,
+  type CancellationSignal,
   CareerRecordKindMismatchError,
   type CareerRecordRepository,
   CONSTRAINT_KINDS,
@@ -59,6 +60,7 @@ export {
   type TagRepository,
   type TemplateRepository,
   type UnitOfWork,
+  type UnitOfWorkOptions,
 } from "./ports/repositories.js";
 export { canonicaliseRichText } from "./richtext/canonicalise.js";
 export { projectPlainText } from "./richtext/plain-text.js";

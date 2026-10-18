@@ -24,8 +24,10 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, jsonBody } from "./collection.js";
 
@@ -164,35 +166,39 @@ const readDocument = createRoute({
 });
 
 export function resumeRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: ResumeRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.resumes));
+  const on = async <T>(c: Context, work: (of: ResumeRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.resumes));
 
-  const readResume = async (id: Uuid) => await on(async (of) => await of.get(id));
-  const readSection = async (id: Uuid) => await on(async (of) => await of.getSection(id));
-  const readEntry = async (id: Uuid) => await on(async (of) => await of.getEntry(id));
-  const readEntryPoint = async (id: Uuid) => await on(async (of) => await of.getEntryPoint(id));
+  const readResume = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
+  const readSection = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getSection(id));
+  const readEntry = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getEntry(id));
+  const readEntryPoint = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getEntryPoint(id));
 
   return router()
     .openapi(resumes.list, async (c) => {
       const { archived } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.list({ includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(resumes.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.create(input)), 201);
+      return c.json(await on(c, async (of) => await of.create(input)), 201);
     })
     .openapi(resumes.read, async (c) => {
-      return c.json(await readResume(c.req.valid("param").id), 200);
+      return c.json(await readResume(c, c.req.valid("param").id), 200);
     })
     .openapi(resumes.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-        async () => await readResume(id),
+        async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+        async () => await readResume(c, id),
       );
       return c.json(updated, 200);
     })
@@ -200,8 +206,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-        async () => await readResume(id),
+        async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+        async () => await readResume(c, id),
       );
       return c.json(archived, 200);
     })
@@ -209,8 +215,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-        async () => await readResume(id),
+        async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+        async () => await readResume(c, id),
       );
       return c.json(restored, 200);
     })
@@ -218,23 +224,24 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     .openapi(sections.list, async (c) => {
       const { archived, resumeId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listSections({ resumeId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(sections.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.addSection(input)), 201);
+      return c.json(await on(c, async (of) => await of.addSection(input)), 201);
     })
     .openapi(sections.read, async (c) => {
-      return c.json(await readSection(c.req.valid("param").id), 200);
+      return c.json(await readSection(c, c.req.valid("param").id), 200);
     })
     .openapi(sections.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateSection(id, patch, expectedUpdatedAt)),
-        async () => await readSection(id),
+        async () => await on(c, async (of) => await of.updateSection(id, patch, expectedUpdatedAt)),
+        async () => await readSection(c, id),
       );
       return c.json(updated, 200);
     })
@@ -242,8 +249,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveSection(id, expectedUpdatedAt)),
-        async () => await readSection(id),
+        async () => await on(c, async (of) => await of.archiveSection(id, expectedUpdatedAt)),
+        async () => await readSection(c, id),
       );
       return c.json(archived, 200);
     })
@@ -251,8 +258,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreSection(id, expectedUpdatedAt)),
-        async () => await readSection(id),
+        async () => await on(c, async (of) => await of.restoreSection(id, expectedUpdatedAt)),
+        async () => await readSection(c, id),
       );
       return c.json(restored, 200);
     })
@@ -260,6 +267,7 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     .openapi(entries.list, async (c) => {
       const { archived, resumeId, resumeSectionId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) =>
           await of.listEntries({
             resumeId,
@@ -271,17 +279,17 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(entries.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.addEntry(input)), 201);
+      return c.json(await on(c, async (of) => await of.addEntry(input)), 201);
     })
     .openapi(entries.read, async (c) => {
-      return c.json(await readEntry(c.req.valid("param").id), 200);
+      return c.json(await readEntry(c, c.req.valid("param").id), 200);
     })
     .openapi(entries.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateEntry(id, patch, expectedUpdatedAt)),
-        async () => await readEntry(id),
+        async () => await on(c, async (of) => await of.updateEntry(id, patch, expectedUpdatedAt)),
+        async () => await readEntry(c, id),
       );
       return c.json(updated, 200);
     })
@@ -289,8 +297,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveEntry(id, expectedUpdatedAt)),
-        async () => await readEntry(id),
+        async () => await on(c, async (of) => await of.archiveEntry(id, expectedUpdatedAt)),
+        async () => await readEntry(c, id),
       );
       return c.json(archived, 200);
     })
@@ -298,8 +306,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreEntry(id, expectedUpdatedAt)),
-        async () => await readEntry(id),
+        async () => await on(c, async (of) => await of.restoreEntry(id, expectedUpdatedAt)),
+        async () => await readEntry(c, id),
       );
       return c.json(restored, 200);
     })
@@ -307,6 +315,7 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     .openapi(entryPoints.list, async (c) => {
       const { archived, resumeId, resumeEntryId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) =>
           await of.listEntryPoints({
             resumeId,
@@ -318,17 +327,18 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(entryPoints.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.addEntryPoint(input)), 201);
+      return c.json(await on(c, async (of) => await of.addEntryPoint(input)), 201);
     })
     .openapi(entryPoints.read, async (c) => {
-      return c.json(await readEntryPoint(c.req.valid("param").id), 200);
+      return c.json(await readEntryPoint(c, c.req.valid("param").id), 200);
     })
     .openapi(entryPoints.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateEntryPoint(id, patch, expectedUpdatedAt)),
-        async () => await readEntryPoint(id),
+        async () =>
+          await on(c, async (of) => await of.updateEntryPoint(id, patch, expectedUpdatedAt)),
+        async () => await readEntryPoint(c, id),
       );
       return c.json(updated, 200);
     })
@@ -336,8 +346,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveEntryPoint(id, expectedUpdatedAt)),
-        async () => await readEntryPoint(id),
+        async () => await on(c, async (of) => await of.archiveEntryPoint(id, expectedUpdatedAt)),
+        async () => await readEntryPoint(c, id),
       );
       return c.json(archived, 200);
     })
@@ -345,8 +355,8 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreEntryPoint(id, expectedUpdatedAt)),
-        async () => await readEntryPoint(id),
+        async () => await on(c, async (of) => await of.restoreEntryPoint(id, expectedUpdatedAt)),
+        async () => await readEntryPoint(c, id),
       );
       return c.json(restored, 200);
     })
@@ -354,7 +364,7 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     .openapi(readDocument, async (c) => {
       const { id } = c.req.valid("param");
       const { locale } = c.req.valid("query");
-      const store = await unitOfWork.run(async (r) => await r.store.readCurrent());
+      const store = await forRequest(unitOfWork, c).run(async (r) => await r.store.readCurrent());
       const document = compile(store, id, {
         generatedAt: new Date().toISOString(),
         ...(locale === undefined ? {} : { locale }),
@@ -366,7 +376,7 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const into = c.req.valid("json");
 
-      const started = await unitOfWork.run(async (r) => {
+      const started = await forRequest(unitOfWork, c).run(async (r) => {
         const plan = derivePlan(await r.store.readCurrent(), id, into);
         if (plan === undefined) throw new NotFoundError("resume", id);
 
@@ -388,7 +398,7 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(listContactChannels, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await on(async (of) => {
+      const items = await on(c, async (of) => {
         await of.get(id);
         return await of.listContactChannels({ resumeId: id });
       });
@@ -398,13 +408,13 @@ export function resumeRoutes(unitOfWork: UnitOfWork) {
       const { id, contactChannelId } = c.req.valid("param");
       const { isVisible } = c.req.valid("json");
       return c.json(
-        await on(async (of) => await of.setContactChannel(id, contactChannelId, isVisible)),
+        await on(c, async (of) => await of.setContactChannel(id, contactChannelId, isVisible)),
         200,
       );
     })
     .openapi(clearContactChannel, async (c) => {
       const { id, contactChannelId } = c.req.valid("param");
-      await on(async (of) => {
+      await on(c, async (of) => {
         await of.clearContactChannel(id, contactChannelId);
       });
       return c.body(null, 204);

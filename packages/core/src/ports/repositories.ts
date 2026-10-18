@@ -535,5 +535,16 @@ export interface Repositories {
 // The only way to reach a repository: a partial failure mid-point leaves a
 // point with no text, so there is no non-transactional path.
 export interface UnitOfWork {
-  run<T>(work: (repositories: Repositories) => Promise<T>): Promise<T>;
+  run<T>(work: (repositories: Repositories) => Promise<T>, options?: UnitOfWorkOptions): Promise<T>;
+}
+
+export interface CancellationSignal {
+  readonly aborted: boolean;
+  readonly reason: unknown;
+  addEventListener(type: "abort", listener: () => void, options?: { once?: boolean }): void;
+  removeEventListener(type: "abort", listener: () => void): void;
+}
+
+export interface UnitOfWorkOptions {
+  signal?: CancellationSignal | undefined;
 }

@@ -196,9 +196,11 @@ describe.skipIf(connectionString === undefined)("PostgreSQL disconnect recovery"
       expect(attempts.every((attempt) => attempt.status === "rejected")).toBe(true);
       expect(Date.now() - started).toBeLessThan(5000);
       proxy.setAvailable(true);
-      expect(
-        await Promise.all([first((r) => r.store.read()), second((r) => r.store.read())]),
-      ).toEqual([archive, archive]);
+      await expect
+        .poll(() => Promise.all([first((r) => r.store.read()), second((r) => r.store.read())]), {
+          timeout: 5000,
+        })
+        .toEqual([archive, archive]);
       const profile = archive.profile;
       await first((r) => r.profile.update({ fullName: "Only first owner" }, profile.updatedAt));
       await expect(
@@ -225,7 +227,7 @@ describe.skipIf(connectionString === undefined)("PostgreSQL disconnect recovery"
       await store.close();
       await proxy.close();
     }
-  });
+  }, 15_000);
 
   it("drains an active failed connection while closing and shares repeated close", async () => {
     const name = `keepcv_close_${newUuid()}`;

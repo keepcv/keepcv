@@ -9,8 +9,10 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, basedOn, collectionRoutes, idParam, jsonBody } from "./collection.js";
 
@@ -136,32 +138,33 @@ const untagPoint = createRoute({
 });
 
 export function tagRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: TagRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.tags));
+  const on = async <T>(c: Context, work: (of: TagRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.tags));
 
-  const read = async (id: Uuid) => await on(async (of) => await of.get(id));
+  const read = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
 
   return router()
     .openapi(tags.list, async (c) => {
       const { archived } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.list({ includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(tags.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.create(input)), 201);
+      return c.json(await on(c, async (of) => await of.create(input)), 201);
     })
     .openapi(tags.read, async (c) => {
-      return c.json(await read(c.req.valid("param").id), 200);
+      return c.json(await read(c, c.req.valid("param").id), 200);
     })
     .openapi(tags.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-        async () => await read(id),
+        async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+        async () => await read(c, id),
       );
       return c.json(updated, 200);
     })
@@ -169,8 +172,8 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-        async () => await read(id),
+        async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+        async () => await read(c, id),
       );
       return c.json(archived, 200);
     })
@@ -178,8 +181,8 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-        async () => await read(id),
+        async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+        async () => await read(c, id),
       );
       return c.json(restored, 200);
     })
@@ -187,15 +190,15 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { intoTagId, expectedUpdatedAt } = c.req.valid("json");
       const merged = await mutate(
-        async () => await on(async (of) => await of.merge(id, intoTagId, expectedUpdatedAt)),
-        async () => await read(id),
+        async () => await on(c, async (of) => await of.merge(id, intoTagId, expectedUpdatedAt)),
+        async () => await read(c, id),
       );
       return c.json(merged, 200);
     })
 
     .openapi(listRecordTags, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await unitOfWork.run(async (r) => {
+      const items = await forRequest(unitOfWork, c).run(async (r) => {
         await r.records.get(id);
         return await r.tags.listRecordTags({ recordId: id });
       });
@@ -203,11 +206,11 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(tagRecord, async (c) => {
       const { id, tagId } = c.req.valid("param");
-      return c.json(await on(async (of) => await of.tagRecord(id, tagId)), 200);
+      return c.json(await on(c, async (of) => await of.tagRecord(id, tagId)), 200);
     })
     .openapi(untagRecord, async (c) => {
       const { id, tagId } = c.req.valid("param");
-      await on(async (of) => {
+      await on(c, async (of) => {
         await of.untagRecord(id, tagId);
       });
       return c.body(null, 204);
@@ -215,7 +218,7 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
 
     .openapi(listPointTags, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await unitOfWork.run(async (r) => {
+      const items = await forRequest(unitOfWork, c).run(async (r) => {
         await r.points.get(id);
         return await r.tags.listPointTags({ pointId: id });
       });
@@ -223,11 +226,11 @@ export function tagRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(tagPoint, async (c) => {
       const { id, tagId } = c.req.valid("param");
-      return c.json(await on(async (of) => await of.tagPoint(id, tagId)), 200);
+      return c.json(await on(c, async (of) => await of.tagPoint(id, tagId)), 200);
     })
     .openapi(untagPoint, async (c) => {
       const { id, tagId } = c.req.valid("param");
-      await on(async (of) => {
+      await on(c, async (of) => {
         await of.untagPoint(id, tagId);
       });
       return c.body(null, 204);

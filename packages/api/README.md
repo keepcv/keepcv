@@ -47,6 +47,16 @@ const api = createApi({
 // or hand it straight to a runtime that speaks Request and Response.
 ```
 
+Every content transaction receives the incoming Request's `signal`, including
+native import and writes that plan multiple rows. The host connects transport
+disconnects and operation deadlines to that Request; aborting a separate client
+promise does not establish server cancellation. The supplied unit-of-work
+implementation controls interruption and cleanup. The PostgreSQL adapter stops
+the checked-out query and rolls back before COMMIT where possible. Once COMMIT
+has been dispatched, cancellation cannot promise rollback; re-read after an
+ambiguous disconnect before deciding whether to retry. Lifecycle and erasure
+calls made separately on the store never inherit a Request signal.
+
 The typed client resolves the route types inside this package, so a consumer
 does not re-infer them:
 

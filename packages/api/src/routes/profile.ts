@@ -8,7 +8,9 @@ import {
   profileSchema,
   type Uuid,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, jsonBody, patchBody } from "./collection.js";
 
@@ -50,21 +52,22 @@ const channels = collectionRoutes({
 });
 
 export function profileRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: ProfileRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.profile));
+  const on = async <T>(c: Context, work: (of: ProfileRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.profile));
 
-  const readProfile = async () => await on(async (of) => await of.get());
-  const readChannel = async (id: Uuid) => await on(async (of) => await of.getContactChannel(id));
+  const readProfile = async (c: Context) => await on(c, async (of) => await of.get());
+  const readChannel = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getContactChannel(id));
 
   return router()
     .openapi(getProfile, async (c) => {
-      return c.json(await readProfile(), 200);
+      return c.json(await readProfile(c), 200);
     })
     .openapi(patchProfile, async (c) => {
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(patch, expectedUpdatedAt)),
-        readProfile,
+        async () => await on(c, async (of) => await of.update(patch, expectedUpdatedAt)),
+        async () => await readProfile(c),
       );
       return c.json(updated, 200);
     })
@@ -72,24 +75,25 @@ export function profileRoutes(unitOfWork: UnitOfWork) {
     .openapi(channels.list, async (c) => {
       const { archived } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listContactChannels({ includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(channels.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createContactChannel(input)), 201);
+      return c.json(await on(c, async (of) => await of.createContactChannel(input)), 201);
     })
     .openapi(channels.read, async (c) => {
-      return c.json(await readChannel(c.req.valid("param").id), 200);
+      return c.json(await readChannel(c, c.req.valid("param").id), 200);
     })
     .openapi(channels.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
         async () =>
-          await on(async (of) => await of.updateContactChannel(id, patch, expectedUpdatedAt)),
-        async () => await readChannel(id),
+          await on(c, async (of) => await of.updateContactChannel(id, patch, expectedUpdatedAt)),
+        async () => await readChannel(c, id),
       );
       return c.json(updated, 200);
     })
@@ -97,8 +101,9 @@ export function profileRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveContactChannel(id, expectedUpdatedAt)),
-        async () => await readChannel(id),
+        async () =>
+          await on(c, async (of) => await of.archiveContactChannel(id, expectedUpdatedAt)),
+        async () => await readChannel(c, id),
       );
       return c.json(archived, 200);
     })
@@ -106,8 +111,9 @@ export function profileRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreContactChannel(id, expectedUpdatedAt)),
-        async () => await readChannel(id),
+        async () =>
+          await on(c, async (of) => await of.restoreContactChannel(id, expectedUpdatedAt)),
+        async () => await readChannel(c, id),
       );
       return c.json(restored, 200);
     });

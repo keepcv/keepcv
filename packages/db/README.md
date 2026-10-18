@@ -44,6 +44,67 @@ Omit `dataDir` for an in-memory store, which is what the tests use.
 `openServerStore({ connectionString })` returns the same thing over a
 node-postgres pool, minus `ensureLocalOwner`.
 
+### Cancelling a unit
+
+```ts
+await runAsOwner(ownerId, () =>
+  store.unitOfWork.run(async (repositories) => {
+    await repositories.store.load(archive);
+  }, { signal: request.signal }),
+);
+```
+
+`UnitOfWorkOptions` and its structural `CancellationSignal` type are exported
+by `@keepcv/core`. Native Node and browser `AbortSignal` objects satisfy the
+contract. Options are optional; existing callers retain their defaults. Pass a
+deadline signal or a signal combining a deadline and transport disconnect when
+the whole operation should stop. A statement timeout alone limits each SQL
+statement, not an entire callback.
+
+An already-aborted unit runs no callback or authored statement. On server
+PostgreSQL, cancellation removes queued acquisition waits, interrupts connection
+startup, prevents subsequent statements and requests cancellation of the actual
+checked-out backend. Cleanup rolls back the unit before disposing of its client.
+A control connection authenticates as the configured database identity and calls
+`pg_cancel_backend` for that backend; it is outside the work pool's `max` and is
+closed after the request. Its acquisition uses the configured nonzero connection
+timeout, or five seconds; its statement and response limits are five seconds.
+If cancellation transport fails, the work connection is closed. A disconnected
+or unacknowledged cleanup cannot establish that server work has stopped.
+
+During work, the first observed callback error or cancellation wins. Cancellation
+rejects with `signal.reason`. Rollback failure cannot replace that error. A
+callback is never replayed. It may continue non-database work after cancellation,
+but later statements on its expired unit are refused. Cancellation cannot
+preempt synchronous JavaScript; callbacks doing long computation must yield.
+
+Once COMMIT is dispatched to the driver, abort is ignored for that unit. A confirmed commit succeeds;
+a lost reply rejects and may still mean the write committed. Re-read before
+retrying authored work. An abort error does not prove rollback if the connection
+or cleanup was lost. After the unit settles, a late abort cannot cancel later
+work on a reused connection.
+
+Each `run` starts its own transaction. A nested call does not join the outer
+unit or inherit its signal; pass the same signal explicitly to cancel both and
+allow enough pool slots. Catching cancellation inside a callback cannot make
+the cancelled transaction commit. Migrate, provision, erase and close retain
+their explicit lifecycle and do not inherit a request signal.
+
+PGlite observes the signal before entry, before the callback and before commit.
+It does not interrupt an in-process statement or pending caller code, so its
+rollback waits for the callback to settle.
+
+### Large native archives
+
+`repositories.store.load(archive)` retains its empty-store requirement and
+restores native ids, all historical Revisions, canonical phrasings and current
+Revision pointers. Every INSERT is bounded by the actual emitted parameter count
+at PostgreSQL's 65,535-parameter limit, or PGlite 0.5.4's effective 32,767
+limit, including the derived usage index. All
+batches and tables stay in the same owner-scoped transaction. A later failure
+leaves the original empty profile and no partially imported data. No native
+format or database migration is needed.
+
 ### Owner lifecycle
 
 Use `await store.provisionOwner(ownerId)` with a stable UUID when provisioning
@@ -185,6 +246,15 @@ owner isolation, migration locking, provisioning recovery and shutdown. Release
 validation exercises idle and active disconnects in an isolated process using
 the installed tarball and requires empty default diagnostics. In CI the
 server URL is required, so these tests cannot silently skip that coverage.
+
+The [installed reliability fixture](../../fixtures/editor-consumer/src/postgresql-reliability.test.ts)
+is also a public-entry reproducer: it creates and exports 2000 and 3000 Points
+with three Revisions each, imports each archive concurrently for two owners,
+checks all ids and pointers, and interrupts an API Request at an observed
+PostgreSQL lock barrier. `pnpm release:check` installs the packed packages into
+a fresh consumer outside the checkout and runs it with `DATABASE_URL`. The
+source suites additionally test every loader table at its parameter boundary,
+later-batch rollback, callback cancellation and COMMIT acknowledgment races.
 
 ## Licence
 

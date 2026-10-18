@@ -1,4 +1,4 @@
-import { ConstraintViolationError, newUuid, type Repositories } from "@keepcv/core";
+import { ConstraintViolationError, newUuid, type UnitOfWork } from "@keepcv/core";
 import type {
   CareerRecordInput,
   CareerRecordKind,
@@ -314,7 +314,7 @@ export function entryPointInput(
   } as ResumeEntryPointInput;
 }
 
-export type Run = <T>(work: (repositories: Repositories) => Promise<T>) => Promise<T>;
+export type Run = UnitOfWork["run"];
 
 export interface Composed {
   resumeId: Uuid;
@@ -361,8 +361,8 @@ export function eachDriver(suite: (driver: Driver) => void): void {
     let current: Run;
 
     function asOwner(ownerId: Uuid): Run {
-      return async (work) =>
-        await runAsOwner(ownerId, async () => await store.unitOfWork.run(work));
+      return async (work, options) =>
+        await runAsOwner(ownerId, async () => await store.unitOfWork.run(work, options));
     }
 
     async function mintOwner(): Promise<Run> {
@@ -388,7 +388,7 @@ export function eachDriver(suite: (driver: Driver) => void): void {
     });
 
     suite({
-      run: async (work) => await current(work),
+      run: async (work, options) => await current(work, options),
       otherOwner: mintOwner,
       store: () => store,
     });

@@ -27,8 +27,10 @@ import {
   versionRefSchema,
   versionTriggerSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { ExportChangedError, mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 import { applyCompositionPlan } from "./composition-plan.js";
@@ -205,18 +207,20 @@ async function applyPlan(repositories: Repositories, plan: RestorePlan): Promise
 }
 
 export function versionRoutes(unitOfWork: UnitOfWork) {
-  const readSnapshot = async (id: Uuid) =>
-    await unitOfWork.run(async (r) => await r.versions.getSnapshot(id));
+  const readSnapshot = async (c: Context, id: Uuid) =>
+    await forRequest(unitOfWork, c).run(async (r) => await r.versions.getSnapshot(id));
 
   return router()
     .openapi(listVersions, async (c) => {
       const { resumeId } = c.req.valid("query");
-      const items = await unitOfWork.run(async (r) => await r.versions.list({ resumeId }));
+      const items = await forRequest(unitOfWork, c).run(
+        async (r) => await r.versions.list({ resumeId }),
+      );
       return c.json({ items }, 200);
     })
     .openapi(captureVersion, async (c) => {
       const input = c.req.valid("json");
-      const appended = await unitOfWork.run(async (r) => {
+      const appended = await forRequest(unitOfWork, c).run(async (r) => {
         const store = await r.store.readCurrent();
         const manifest = captureManifest(store, input.resumeId);
         if (manifest === undefined) throw new NotFoundError("resume", input.resumeId);
@@ -234,7 +238,7 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(diffVersions, async (c) => {
       const { a, b } = c.req.valid("query");
-      const diff = await unitOfWork.run(async (r) => {
+      const diff = await forRequest(unitOfWork, c).run(async (r) => {
         const left = await r.versions.get(a);
         const right = await r.versions.get(b);
         const revisions = await revisionsFor(r, [left.manifest, right.manifest]);
@@ -244,12 +248,15 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(readVersion, async (c) => {
       const { id } = c.req.valid("param");
-      return c.json(await unitOfWork.run(async (r) => await r.versions.get(id)), 200);
+      return c.json(
+        await forRequest(unitOfWork, c).run(async (r) => await r.versions.get(id)),
+        200,
+      );
     })
     .openapi(readVersionDocument, async (c) => {
       const { id } = c.req.valid("param");
       const { locale } = c.req.valid("query");
-      const document = await unitOfWork.run(async (r) => {
+      const document = await forRequest(unitOfWork, c).run(async (r) => {
         const version = await r.versions.get(id);
         const revisions = await revisionsFor(r, [version.manifest]);
         return renderManifest(version.manifest, revisions, {
@@ -263,7 +270,7 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { id: appendedId } = c.req.valid("json");
 
-      const restored = await unitOfWork.run(async (r) => {
+      const restored = await forRequest(unitOfWork, c).run(async (r) => {
         const version = await r.versions.get(id);
         const revisions = await revisionsFor(r, [version.manifest]);
         const plan = restorePlan(
@@ -294,7 +301,7 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
 
     .openapi(snapshots.list, async (c) => {
       const { archived, resumeId } = c.req.valid("query");
-      const items = await unitOfWork.run(
+      const items = await forRequest(unitOfWork, c).run(
         async (r) =>
           await r.versions.listSnapshots({ resumeId, includeArchived: archived === "include" }),
       );
@@ -302,20 +309,23 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(snapshots.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await unitOfWork.run(async (r) => await r.versions.star(input)), 201);
+      return c.json(
+        await forRequest(unitOfWork, c).run(async (r) => await r.versions.star(input)),
+        201,
+      );
     })
     .openapi(snapshots.read, async (c) => {
-      return c.json(await readSnapshot(c.req.valid("param").id), 200);
+      return c.json(await readSnapshot(c, c.req.valid("param").id), 200);
     })
     .openapi(snapshots.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
         async () =>
-          await unitOfWork.run(
+          await forRequest(unitOfWork, c).run(
             async (r) => await r.versions.updateSnapshot(id, patch, expectedUpdatedAt),
           ),
-        async () => await readSnapshot(id),
+        async () => await readSnapshot(c, id),
       );
       return c.json(updated, 200);
     })
@@ -324,10 +334,10 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
       const { expectedUpdatedAt } = c.req.valid("json");
       const unstarred = await mutate(
         async () =>
-          await unitOfWork.run(
+          await forRequest(unitOfWork, c).run(
             async (r) => await r.versions.archiveSnapshot(id, expectedUpdatedAt),
           ),
-        async () => await readSnapshot(id),
+        async () => await readSnapshot(c, id),
       );
       return c.json(unstarred, 200);
     })
@@ -336,17 +346,17 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
         async () =>
-          await unitOfWork.run(
+          await forRequest(unitOfWork, c).run(
             async (r) => await r.versions.restoreSnapshot(id, expectedUpdatedAt),
           ),
-        async () => await readSnapshot(id),
+        async () => await readSnapshot(c, id),
       );
       return c.json(restored, 200);
     })
 
     .openapi(pointUsage, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await unitOfWork.run(async (r) => {
+      const items = await forRequest(unitOfWork, c).run(async (r) => {
         await r.points.get(id);
         return await r.versions.usage("point", id);
       });
@@ -354,7 +364,7 @@ export function versionRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(recordUsage, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await unitOfWork.run(async (r) => {
+      const items = await forRequest(unitOfWork, c).run(async (r) => {
         await r.records.get(id);
         return await r.versions.usage("record", id);
       });

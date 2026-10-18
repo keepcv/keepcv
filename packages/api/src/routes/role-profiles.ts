@@ -15,8 +15,10 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 import { applyCompositionPlan } from "./composition-plan.js";
@@ -93,32 +95,33 @@ const applyProfile = createRoute({
 });
 
 export function roleProfileRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: RoleProfileRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.roleProfiles));
+  const on = async <T>(c: Context, work: (of: RoleProfileRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.roleProfiles));
 
-  const read = async (id: Uuid) => await on(async (of) => await of.get(id));
+  const read = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
 
   return (
     router()
       .openapi(profiles.list, async (c) => {
         const { archived } = c.req.valid("query");
         const items = await on(
+          c,
           async (of) => await of.list({ includeArchived: archived === "include" }),
         );
         return c.json({ items }, 200);
       })
       .openapi(profiles.create, async (c) => {
-        return c.json(await on(async (of) => await of.create(c.req.valid("json"))), 201);
+        return c.json(await on(c, async (of) => await of.create(c.req.valid("json"))), 201);
       })
       .openapi(profiles.read, async (c) => {
-        return c.json(await read(c.req.valid("param").id), 200);
+        return c.json(await read(c, c.req.valid("param").id), 200);
       })
       .openapi(profiles.update, async (c) => {
         const { id } = c.req.valid("param");
         const { patch, expectedUpdatedAt } = c.req.valid("json");
         const updated = await mutate(
-          async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-          async () => await read(id),
+          async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+          async () => await read(c, id),
         );
         return c.json(updated, 200);
       })
@@ -126,8 +129,8 @@ export function roleProfileRoutes(unitOfWork: UnitOfWork) {
         const { id } = c.req.valid("param");
         const { expectedUpdatedAt } = c.req.valid("json");
         const archived = await mutate(
-          async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-          async () => await read(id),
+          async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+          async () => await read(c, id),
         );
         return c.json(archived, 200);
       })
@@ -135,15 +138,15 @@ export function roleProfileRoutes(unitOfWork: UnitOfWork) {
         const { id } = c.req.valid("param");
         const { expectedUpdatedAt } = c.req.valid("json");
         const restored = await mutate(
-          async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-          async () => await read(id),
+          async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+          async () => await read(c, id),
         );
         return c.json(restored, 200);
       })
 
       .openapi(listTags, async (c) => {
         const { id } = c.req.valid("param");
-        const items = await on(async (of) => {
+        const items = await on(c, async (of) => {
           await of.get(id);
           return await of.listTags({ roleProfileId: id });
         });
@@ -151,11 +154,11 @@ export function roleProfileRoutes(unitOfWork: UnitOfWork) {
       })
       .openapi(addTag, async (c) => {
         const { id, tagId } = c.req.valid("param");
-        return c.json(await on(async (of) => await of.addTag(id, tagId)), 200);
+        return c.json(await on(c, async (of) => await of.addTag(id, tagId)), 200);
       })
       .openapi(removeTag, async (c) => {
         const { id, tagId } = c.req.valid("param");
-        await on(async (of) => {
+        await on(c, async (of) => {
           await of.removeTag(id, tagId);
         });
         return c.body(null, 204);
@@ -168,7 +171,7 @@ export function roleProfileRoutes(unitOfWork: UnitOfWork) {
         const { id } = c.req.valid("param");
         const { resumeId } = c.req.valid("json");
 
-        const applied = await unitOfWork.run(async (r) => {
+        const applied = await forRequest(unitOfWork, c).run(async (r) => {
           await r.roleProfiles.get(id);
           const plan = roleProfilePlan(await r.store.readCurrent(), resumeId, id);
           if (plan === undefined) throw new NotFoundError("resume", resumeId);
