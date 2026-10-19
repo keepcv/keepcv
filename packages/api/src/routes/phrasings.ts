@@ -12,8 +12,10 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes, idParam, jsonBody } from "./collection.js";
 
@@ -75,33 +77,34 @@ const listRevisions = createRoute({
 });
 
 export function phrasingRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: PhrasingRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.phrasings));
+  const on = async <T>(c: Context, work: (of: PhrasingRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.phrasings));
 
-  const readSet = async (id: Uuid) => await on(async (of) => await of.getSet(id));
-  const readPhrasing = async (id: Uuid) => await on(async (of) => await of.get(id));
+  const readSet = async (c: Context, id: Uuid) => await on(c, async (of) => await of.getSet(id));
+  const readPhrasing = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
 
   return router()
     .openapi(sets.list, async (c) => {
       const { archived } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listSets({ includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(sets.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createSet(input)), 201);
+      return c.json(await on(c, async (of) => await of.createSet(input)), 201);
     })
     .openapi(sets.read, async (c) => {
-      return c.json(await readSet(c.req.valid("param").id), 200);
+      return c.json(await readSet(c, c.req.valid("param").id), 200);
     })
     .openapi(sets.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateSet(id, patch, expectedUpdatedAt)),
-        async () => await readSet(id),
+        async () => await on(c, async (of) => await of.updateSet(id, patch, expectedUpdatedAt)),
+        async () => await readSet(c, id),
       );
       return c.json(updated, 200);
     })
@@ -109,8 +112,8 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveSet(id, expectedUpdatedAt)),
-        async () => await readSet(id),
+        async () => await on(c, async (of) => await of.archiveSet(id, expectedUpdatedAt)),
+        async () => await readSet(c, id),
       );
       return c.json(archived, 200);
     })
@@ -118,8 +121,8 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreSet(id, expectedUpdatedAt)),
-        async () => await readSet(id),
+        async () => await on(c, async (of) => await of.restoreSet(id, expectedUpdatedAt)),
+        async () => await readSet(c, id),
       );
       return c.json(restored, 200);
     })
@@ -127,23 +130,24 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
     .openapi(phrasings.list, async (c) => {
       const { archived, phrasingSetId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.list({ phrasingSetId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(phrasings.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.create(input)), 201);
+      return c.json(await on(c, async (of) => await of.create(input)), 201);
     })
     .openapi(phrasings.read, async (c) => {
-      return c.json(await readPhrasing(c.req.valid("param").id), 200);
+      return c.json(await readPhrasing(c, c.req.valid("param").id), 200);
     })
     .openapi(phrasings.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-        async () => await readPhrasing(id),
+        async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+        async () => await readPhrasing(c, id),
       );
       return c.json(updated, 200);
     })
@@ -151,8 +155,8 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-        async () => await readPhrasing(id),
+        async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+        async () => await readPhrasing(c, id),
       );
       return c.json(archived, 200);
     })
@@ -160,8 +164,8 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-        async () => await readPhrasing(id),
+        async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+        async () => await readPhrasing(c, id),
       );
       return c.json(restored, 200);
     })
@@ -169,11 +173,11 @@ export function phrasingRoutes(unitOfWork: UnitOfWork) {
     .openapi(addRevision, async (c) => {
       const { id } = c.req.valid("param");
       const { body } = c.req.valid("json");
-      return c.json(await on(async (of) => await of.addRevision(id, body)), 201);
+      return c.json(await on(c, async (of) => await of.addRevision(id, body)), 201);
     })
     .openapi(listRevisions, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await on(async (of) => {
+      const items = await on(c, async (of) => {
         await of.get(id);
         return await of.listRevisions({ phrasingId: id });
       });

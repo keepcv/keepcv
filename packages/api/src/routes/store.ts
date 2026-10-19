@@ -9,6 +9,7 @@ import {
   timestampSchema,
 } from "@keepcv/schema";
 import { z } from "zod";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 
 // Named rather than defaulted: `?format=jsonresume` has to fail rather than
@@ -72,10 +73,13 @@ const importStore = createRoute({
 export function storeRoutes(unitOfWork: UnitOfWork) {
   return router()
     .openapi(readStore, async (c) => {
-      return c.json(await unitOfWork.run(async (r) => await r.store.readCurrent()), 200);
+      return c.json(
+        await forRequest(unitOfWork, c).run(async (r) => await r.store.readCurrent()),
+        200,
+      );
     })
     .openapi(exportStore, async (c) => {
-      const store = await unitOfWork.run(async (r) => await r.store.read());
+      const store = await forRequest(unitOfWork, c).run(async (r) => await r.store.read());
       // The envelope belongs to the file: the store does not know when it was
       // written out.
       const document: ExportDocument = {
@@ -87,7 +91,7 @@ export function storeRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(importStore, async (c) => {
       const document = migrateDocument(c.req.valid("json"));
-      await unitOfWork.run(async (r) => {
+      await forRequest(unitOfWork, c).run(async (r) => {
         await r.store.load(document.store);
       });
       return c.body(null, 204);

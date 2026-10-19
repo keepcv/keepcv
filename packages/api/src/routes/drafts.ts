@@ -1,6 +1,8 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { DraftRepository, UnitOfWork } from "@keepcv/core";
 import { draftInputSchema, draftSchema, draftTargetSchema } from "@keepcv/schema";
+import type { Context } from "hono";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { jsonBody } from "./collection.js";
 
@@ -37,18 +39,18 @@ const discard = createRoute({
 });
 
 export function draftRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: DraftRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.drafts));
+  const on = async <T>(c: Context, work: (of: DraftRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.drafts));
 
   return router()
     .openapi(save, async (c) => {
       const target = c.req.valid("param");
       const { body } = c.req.valid("json");
-      return c.json(await on(async (of) => await of.save(target, body)), 200);
+      return c.json(await on(c, async (of) => await of.save(target, body)), 200);
     })
     .openapi(discard, async (c) => {
       const target = c.req.valid("param");
-      await on(async (of) => {
+      await on(c, async (of) => {
         await of.discard(target);
       });
       return c.body(null, 204);

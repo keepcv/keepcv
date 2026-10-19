@@ -15,8 +15,10 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { z } from "zod";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 import { archivedQuery, collectionRoutes } from "./collection.js";
 
@@ -107,17 +109,20 @@ const unlinkRecord = createRoute({
 });
 
 export function pointRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: PointRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.points));
+  const on = async <T>(c: Context, work: (of: PointRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.points));
 
-  const readPoint = async (id: Uuid) => await on(async (of) => await of.get(id));
-  const readMetric = async (id: Uuid) => await on(async (of) => await of.getMetric(id));
-  const readEvidence = async (id: Uuid) => await on(async (of) => await of.getEvidence(id));
+  const readPoint = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
+  const readMetric = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getMetric(id));
+  const readEvidence = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getEvidence(id));
 
   return router()
     .openapi(points.list, async (c) => {
       const { archived, recordId, confidence, tag } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) =>
           await of.list({
             recordId,
@@ -130,17 +135,17 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(points.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.create(input)), 201);
+      return c.json(await on(c, async (of) => await of.create(input)), 201);
     })
     .openapi(points.read, async (c) => {
-      return c.json(await readPoint(c.req.valid("param").id), 200);
+      return c.json(await readPoint(c, c.req.valid("param").id), 200);
     })
     .openapi(points.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-        async () => await readPoint(id),
+        async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+        async () => await readPoint(c, id),
       );
       return c.json(updated, 200);
     })
@@ -148,8 +153,8 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-        async () => await readPoint(id),
+        async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+        async () => await readPoint(c, id),
       );
       return c.json(archived, 200);
     })
@@ -157,15 +162,15 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-        async () => await readPoint(id),
+        async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+        async () => await readPoint(c, id),
       );
       return c.json(restored, 200);
     })
 
     .openapi(listRecords, async (c) => {
       const { id } = c.req.valid("param");
-      const items = await on(async (of) => {
+      const items = await on(c, async (of) => {
         await of.get(id);
         return await of.listRecordLinks({ pointId: id });
       });
@@ -173,11 +178,11 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
     })
     .openapi(linkRecord, async (c) => {
       const { id, recordId } = c.req.valid("param");
-      return c.json(await on(async (of) => await of.linkRecord(id, recordId)), 200);
+      return c.json(await on(c, async (of) => await of.linkRecord(id, recordId)), 200);
     })
     .openapi(unlinkRecord, async (c) => {
       const { id, recordId } = c.req.valid("param");
-      await on(async (of) => {
+      await on(c, async (of) => {
         await of.unlinkRecord(id, recordId);
       });
       return c.body(null, 204);
@@ -186,23 +191,24 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
     .openapi(metrics.list, async (c) => {
       const { archived, pointId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listMetrics({ pointId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(metrics.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createMetric(input)), 201);
+      return c.json(await on(c, async (of) => await of.createMetric(input)), 201);
     })
     .openapi(metrics.read, async (c) => {
-      return c.json(await readMetric(c.req.valid("param").id), 200);
+      return c.json(await readMetric(c, c.req.valid("param").id), 200);
     })
     .openapi(metrics.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateMetric(id, patch, expectedUpdatedAt)),
-        async () => await readMetric(id),
+        async () => await on(c, async (of) => await of.updateMetric(id, patch, expectedUpdatedAt)),
+        async () => await readMetric(c, id),
       );
       return c.json(updated, 200);
     })
@@ -210,8 +216,8 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveMetric(id, expectedUpdatedAt)),
-        async () => await readMetric(id),
+        async () => await on(c, async (of) => await of.archiveMetric(id, expectedUpdatedAt)),
+        async () => await readMetric(c, id),
       );
       return c.json(archived, 200);
     })
@@ -219,8 +225,8 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreMetric(id, expectedUpdatedAt)),
-        async () => await readMetric(id),
+        async () => await on(c, async (of) => await of.restoreMetric(id, expectedUpdatedAt)),
+        async () => await readMetric(c, id),
       );
       return c.json(restored, 200);
     })
@@ -228,23 +234,25 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
     .openapi(evidence.list, async (c) => {
       const { archived, pointId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listEvidence({ pointId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(evidence.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createEvidence(input)), 201);
+      return c.json(await on(c, async (of) => await of.createEvidence(input)), 201);
     })
     .openapi(evidence.read, async (c) => {
-      return c.json(await readEvidence(c.req.valid("param").id), 200);
+      return c.json(await readEvidence(c, c.req.valid("param").id), 200);
     })
     .openapi(evidence.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateEvidence(id, patch, expectedUpdatedAt)),
-        async () => await readEvidence(id),
+        async () =>
+          await on(c, async (of) => await of.updateEvidence(id, patch, expectedUpdatedAt)),
+        async () => await readEvidence(c, id),
       );
       return c.json(updated, 200);
     })
@@ -252,8 +260,8 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveEvidence(id, expectedUpdatedAt)),
-        async () => await readEvidence(id),
+        async () => await on(c, async (of) => await of.archiveEvidence(id, expectedUpdatedAt)),
+        async () => await readEvidence(c, id),
       );
       return c.json(archived, 200);
     })
@@ -261,8 +269,8 @@ export function pointRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreEvidence(id, expectedUpdatedAt)),
-        async () => await readEvidence(id),
+        async () => await on(c, async (of) => await of.restoreEvidence(id, expectedUpdatedAt)),
+        async () => await readEvidence(c, id),
       );
       return c.json(restored, 200);
     });

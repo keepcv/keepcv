@@ -2,19 +2,27 @@ import { checkServerIdentity } from "node:tls";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import {
+  type CancellationSignal,
   type ConstraintKind,
   ConstraintViolationError,
   newUuid,
   type UnitOfWork,
 } from "@keepcv/core";
 import { type Uuid, uuidSchema } from "@keepcv/schema";
-import { eq } from "drizzle-orm";
+import { DrizzleQueryError, eq } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate as migrateNodePostgres } from "drizzle-orm/node-postgres/migrator";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { Pool, type PoolClient } from "pg";
 import { parseIntoClientConfig } from "pg-connection-string";
+import {
+  acquire,
+  CancellableClient,
+  cancellableTransaction,
+  checkCancellation,
+  connectionSlots,
+} from "./cancellation.js";
 import type { Database } from "./database.js";
 import { createRepositories } from "./repositories/index.js";
 import { owner, profile } from "./schema/index.js";
@@ -50,6 +58,7 @@ const CONSTRAINT_KIND_BY_SQLSTATE: Record<string, ConstraintKind | undefined> = 
 };
 
 function asDomainError(error: unknown): unknown {
+  if (error === null || typeof error !== "object") return error;
   const cause = (error as { cause?: { code?: string; constraint?: string } }).cause;
   const kind = CONSTRAINT_KIND_BY_SQLSTATE[cause?.code ?? ""];
   if (kind === undefined || cause?.constraint === undefined) {
@@ -60,11 +69,23 @@ function asDomainError(error: unknown): unknown {
 
 function unitOfWork(db: Database): UnitOfWork {
   return {
-    run: async (work) => {
+    run: async (work, options) => {
+      checkCancellation(options?.signal);
+      let failure: { error: unknown } | undefined;
       try {
-        return await db.transaction(async (tx) => await work(createRepositories(tx)));
+        return await db.transaction(async (tx) => {
+          try {
+            checkCancellation(options?.signal);
+            const result = await work(createRepositories(tx));
+            checkCancellation(options?.signal);
+            return result;
+          } catch (error) {
+            failure = { error };
+            throw error;
+          }
+        });
       } catch (error) {
-        throw asDomainError(error);
+        throw asDomainError(failure === undefined ? error : failure.error);
       }
     },
   };
@@ -153,8 +174,9 @@ function validateServerOptions(options: ServerStoreOptions): void {
 async function withServerConnection<T>(
   pool: Pool,
   work: (client: PoolClient) => Promise<T>,
+  signal?: CancellationSignal,
 ): Promise<T> {
-  const client = await pool.connect();
+  const client = await acquire(pool, signal);
   let disconnected: Error | undefined;
   let failed = true;
   const onError = (error: Error) => {
@@ -164,10 +186,14 @@ async function withServerConnection<T>(
   try {
     const result = await work(client);
     if (disconnected !== undefined) throw disconnected;
-    failed = false;
+    failed = signal?.aborted ?? false;
     return result;
   } catch (error) {
-    throw disconnected ?? error;
+    if (signal === undefined && disconnected !== undefined && error instanceof DrizzleQueryError) {
+      const code = (error.cause as { code?: string } | undefined)?.code;
+      if (code === undefined || code === "57P01" || code.startsWith("08")) throw disconnected;
+    }
+    throw error;
   } finally {
     client.release(failed);
     client.removeListener("error", onError);
@@ -187,6 +213,7 @@ export function openServerStore(options: ServerStoreOptions): Store {
       : { ...explicitSsl, rejectUnauthorized: true };
   const host = config.host || process.env["PGHOST"] || "localhost";
   const pool = new Pool({
+    Client: CancellableClient,
     ...limits,
     ...config,
     ...(ssl === undefined || ssl === false
@@ -201,17 +228,47 @@ export function openServerStore(options: ServerStoreOptions): Store {
   });
   // An idle backend disconnect otherwise becomes an unhandled pool error.
   pool.on("error", () => undefined);
+  const slot = connectionSlots(pool.options.max, pool.options.connectionTimeoutMillis ?? 0);
+  const connection = async <T>(
+    work: (client: PoolClient) => Promise<T>,
+    signal?: CancellationSignal,
+  ) => {
+    const release = await slot(signal);
+    try {
+      return await withServerConnection(pool, work, signal);
+    } finally {
+      release();
+    }
+  };
   const connected = <T>(work: (db: Database) => Promise<T>) =>
-    withServerConnection(pool, async (client) => await work(drizzleNodePostgres(client)));
+    connection(async (client) => await work(drizzleNodePostgres(client)));
   let closing: Promise<void> | undefined;
   return {
     unitOfWork: {
-      run: async (work) => await connected(async (db) => await unitOfWork(db).run(work)),
+      run: async (work, options) => {
+        const signal = options?.signal;
+        try {
+          return await connection(
+            async (client) =>
+              signal === undefined
+                ? await unitOfWork(drizzleNodePostgres(client)).run(work)
+                : await cancellableTransaction(
+                    pool,
+                    client,
+                    signal,
+                    async (db) => await work(createRepositories(db)),
+                  ),
+            signal,
+          );
+        } catch (error) {
+          throw asDomainError(error);
+        }
+      },
     },
 
     // Concurrent migrators collided on pg_type before this advisory lock.
     migrate: async () =>
-      await withServerConnection(pool, async (client) => {
+      await connection(async (client) => {
         await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
         try {
           await migrateNodePostgres(drizzleNodePostgres(client), {

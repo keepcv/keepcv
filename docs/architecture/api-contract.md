@@ -446,9 +446,44 @@ interface Repositories {
 }
 
 interface UnitOfWork {
-  run<T>(fn: (repos: Repositories) => Promise<T>): Promise<T>;
+  run<T>(fn: (repos: Repositories) => Promise<T>, options?: UnitOfWorkOptions): Promise<T>;
+}
+
+interface UnitOfWorkOptions {
+  signal?: CancellationSignal | undefined;
 }
 ```
+
+`CancellationSignal` is the structural abort-event contract exported by core;
+native `AbortSignal` satisfies it without adding Node or DOM globals to core.
+Omitting options preserves ordinary units. The API explicitly passes each
+Request's signal to every content unit, including import and planned writes.
+The host must propagate transport disconnects or deadlines to that Request.
+Separate units remain separate transactions, even when called from another
+unit. There is no ambient cancellation inheritance; pass the same signal when
+both units should cancel, and allow enough pool slots for nested acquisitions.
+
+On server PostgreSQL, abort before acquisition runs no callback. Queued slot
+waits and connection startup can be cancelled. During work, abort prevents
+further statements, cancels the checked-out backend through a separate bounded
+control connection, and rolls the transaction back. Pending caller code is not
+replayed or forcibly stopped; its later database calls are refused after the
+unit closes. Synchronous caller code must yield for an abort event to run.
+The adapter waits for cancellation and transaction cleanup before disposing of
+that connection. Its listener cannot target a connection reused by another unit.
+
+The first observed callback failure or cancellation during work is retained.
+A failed rollback does not replace it; constraint failures still become domain
+errors. Once COMMIT is dispatched, cancellation stops taking effect. An
+acknowledged commit returns success even if the signal aborted during its reply.
+A lost acknowledgment rejects with a database/connection error and can mean the
+work committed. Neither cancellation nor a disconnect proves rollback when
+cleanup cannot be acknowledged. Re-read before deciding whether to retry.
+
+PGlite checks cancellation before transaction entry, before the callback and
+before commit. Its in-process statements and pending caller code are not
+preempted; rollback waits for that callback. Owner provisioning, permanent
+erasure, migration and shutdown do not inherit content-request cancellation.
 
 Rules:
 
@@ -510,6 +545,15 @@ raises `StoreNotEmptyError` otherwise. Merging into a store that already holds
 something is `POST /v1/intake`, where the user has reviewed every row first;
 guessing which side of a clash to keep is exactly the unforgivable behaviour that
 review exists to prevent.
+
+Every native-loader INSERT, including the derived content-reference index,
+is split when its emitted statement exceeds PostgreSQL's 65,535-parameter
+budget on the server, or PGlite 0.5.4's effective 32,767-parameter budget.
+The emitted parameter array is counted, including expressions or fixed
+parameters, rather than assuming a row width. All batches, pointer restoration,
+profile replacement and tables remain inside the caller's single owner-scoped
+unit. A later failure rolls back earlier batches too. No archive size policy,
+identifier, historical revision, format or schema changes with batching.
 
 The envelope is not the repository's business: `schemaVersion` and `exportedAt`
 belong to the file, so the caller wraps a `Store` in an `ExportDocument` on the

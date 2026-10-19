@@ -8,7 +8,6 @@ import {
 } from "@keepcv/core";
 import type { Archive, CareerRecord, Store, Timestamp, Uuid } from "@keepcv/schema";
 import { and, eq } from "drizzle-orm";
-import type { PgInsertValue, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
@@ -43,6 +42,7 @@ import {
   tag,
   template,
 } from "../schema/index.js";
+import { insertAll } from "./insert-all.js";
 import { owned } from "./owned-row.js";
 import { manifestHashOf } from "./resume-version.js";
 
@@ -54,8 +54,6 @@ interface Standard {
   updatedAt: Timestamp;
   archivedAt: Timestamp | null;
 }
-
-// The owner comes from ambient scope, never from the document.
 function standardRow(entity: Standard, ownerId: Uuid) {
   return {
     id: entity.id,
@@ -65,8 +63,6 @@ function standardRow(entity: Standard, ownerId: Uuid) {
     archivedAt: entity.archivedAt === null ? null : new Date(entity.archivedAt),
   };
 }
-
-// So a record row carries the same key set whatever its kind is.
 const kindColumns = {
   employmentType: null,
   mode: null,
@@ -90,13 +86,6 @@ export function createStoreRepository(
   db: Database,
   repositories: Omit<Repositories, "store">,
 ): StoreRepository {
-  // Drizzle refuses an insert with no rows, and most collections are empty.
-  async function insertAll<T extends PgTable>(table: T, values: PgInsertValue<T>[]): Promise<void> {
-    if (values.length > 0) {
-      await db.insert(table).values(values);
-    }
-  }
-
   async function readStore(currentOnly = false): Promise<Store> {
     return {
       profile: await repositories.profile.get(),
@@ -108,8 +97,6 @@ export function createStoreRepository(
       recordFields: await repositories.records.listFields(everything),
       phrasingSets: await repositories.phrasings.listSets(everything),
       phrasings: await repositories.phrasings.list(everything),
-      // The export takes every revision: dropping a superseded wording is a
-      // delete. The boot payload takes the current ones.
       phrasingRevisions: await repositories.phrasings.listRevisions({ currentOnly }),
       points: await repositories.points.list(everything),
       pointRecordLinks: await repositories.points.listRecordLinks(),
@@ -130,11 +117,10 @@ export function createStoreRepository(
       templates: await repositories.templates.list(everything),
     };
   }
-
-  // Each of the three references the next, so the pointers back are filled once
-  // every row exists. Before the profile and the records, which point at a set.
+  // phrasing_current_revision_fk and phrasing_set_canonical_fk form a cycle.
   async function loadPhrasings(store: Store, ownerId: Uuid): Promise<void> {
     await insertAll(
+      db,
       phrasingSet,
       store.phrasingSets.map((row) => ({
         ...row,
@@ -143,6 +129,7 @@ export function createStoreRepository(
       })),
     );
     await insertAll(
+      db,
       phrasing,
       store.phrasings.map((row) => ({
         ...row,
@@ -150,8 +137,8 @@ export function createStoreRepository(
         currentRevisionId: null,
       })),
     );
-    // Derived again rather than trusted, or a hand-edited file makes I8 false.
     await insertAll(
+      db,
       phrasingRevision,
       store.phrasingRevisions.map((row) => ({
         id: row.id,
@@ -175,34 +162,33 @@ export function createStoreRepository(
         .where(and(owned(phrasingSet), eq(phrasingSet.id, row.id)));
     }
   }
-
-  // Last: a point references a record and a phrasing set, and is referenced by
-  // its metrics and evidence.
   async function loadPoints(store: Store, ownerId: Uuid): Promise<void> {
     await insertAll(
+      db,
       point,
       store.points.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
     );
     await insertAll(
+      db,
       pointRecordLink,
       store.pointRecordLinks.map((row) => ({ ...row, ownerId })),
     );
     await insertAll(
+      db,
       metric,
       store.metrics.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
     );
     await insertAll(
+      db,
       evidence,
       store.evidence.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
     );
     await insertAll(
+      db,
       pointTag,
       store.pointTags.map((row) => ({ ...row, ownerId })),
     );
   }
-
-  // History is in the archive and not in the boot payload: it grows without
-  // bound.
   async function readArchive(): Promise<Archive> {
     return {
       ...(await readStore()),
@@ -210,8 +196,6 @@ export function createStoreRepository(
       resumeSnapshots: await repositories.versions.listSnapshots(everything),
     };
   }
-
-  // Reading the whole store covers a collection added to the format later.
   async function requireEmpty(): Promise<void> {
     const current = await readArchive();
     for (const [collection, value] of Object.entries(current)) {
@@ -236,24 +220,23 @@ export function createStoreRepository(
       const ownerId = currentOwnerId();
 
       await loadPhrasings(store, ownerId);
-
-      // Created with the owner, so it is overwritten rather than inserted.
       await db
         .update(profile)
         .set({ ...store.profile, ...standardRow(store.profile, ownerId) })
         .where(owned(profile));
 
       await insertAll(
+        db,
         contactChannel,
         store.contactChannels.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         organisation,
         store.organisations.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
-      // Derived again rather than trusted, or a hand-edited file makes I17
-      // false.
       await insertAll(
+        db,
         tag,
         store.tags.map((row) => ({
           ...row,
@@ -261,72 +244,80 @@ export function createStoreRepository(
           slug: tagSlug(row.label),
         })),
       );
-      // Before the records, which is the only table that references one.
       await insertAll(
+        db,
         customSection,
         store.customSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         record,
         store.records.map((row) => toRecordRow(row, ownerId)),
       );
       await insertAll(
+        db,
         recordLink,
         store.recordLinks.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         recordField,
         store.recordFields.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         recordTag,
         store.recordTags.map((row) => ({ ...row, ownerId })),
       );
-      // After the tags, which is the only table either references.
       await insertAll(
+        db,
         savedFilter,
         store.savedFilters.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         roleProfile,
         store.roleProfiles.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         roleProfileTag,
         store.roleProfileTags.map((row) => ({ ...row, ownerId })),
       );
 
       await loadPoints(store, ownerId);
-
-      // Before the resumes, which name one.
       await insertAll(
+        db,
         template,
         store.templates.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         resume,
         store.resumes.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         resumeSection,
         store.resumeSections.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         resumeEntry,
         store.resumeEntries.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         resumeEntryPoint,
         store.resumeEntryPoints.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
       );
       await insertAll(
+        db,
         resumeContactChannel,
         store.resumeContactChannels.map((row) => ({ ...row, ownerId })),
       );
-
-      // Derived again rather than trusted, so a hand-edited manifest cannot
-      // claim a hash it does not have.
       await insertAll(
+        db,
         resumeVersion,
         archive.resumeVersions.map((row) => ({
           id: row.id,
@@ -341,6 +332,7 @@ export function createStoreRepository(
         })),
       );
       await insertAll(
+        db,
         resumeSnapshot,
         archive.resumeSnapshots.map((row) => ({
           ...row,
@@ -348,9 +340,8 @@ export function createStoreRepository(
           starredAt: new Date(row.starredAt),
         })),
       );
-      // Rebuilt rather than exported: a derived index in a file is a second
-      // copy of the manifests that could arrive disagreeing with them.
       await insertAll(
+        db,
         resumeContentRef,
         archive.resumeVersions.flatMap((row) =>
           manifestRefs(row.manifest).map((ref) => ({
@@ -360,9 +351,8 @@ export function createStoreRepository(
           })),
         ),
       );
-
-      // Last: a draft names a row above, and the repository checks it is there.
       await insertAll(
+        db,
         draft,
         store.drafts.map((row) => ({
           ...row,

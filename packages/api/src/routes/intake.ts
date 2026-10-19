@@ -3,6 +3,7 @@ import type { ImportPlan, Repositories, UnitOfWork } from "@keepcv/core";
 import { importPlan } from "@keepcv/core";
 import { intakeDecisionsSchema, intakeSchema } from "@keepcv/schema";
 import { z } from "zod";
+import { forRequest } from "../request-unit-of-work.js";
 import { jsonResponse, problemResponse, router, sessionRequired } from "../router.js";
 
 const applied = z
@@ -70,7 +71,7 @@ export function intakeRoutes(unitOfWork: UnitOfWork) {
   return router().openapi(applyIntake, async (c) => {
     const { intake, decisions } = c.req.valid("json");
 
-    const counted = await unitOfWork.run(async (r) => {
+    const counted = await forRequest(unitOfWork, c).run(async (r) => {
       const store = await r.store.readCurrent();
       const plan = importPlan(store, intake, decisions);
       await write(r, plan);

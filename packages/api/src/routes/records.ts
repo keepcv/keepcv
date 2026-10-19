@@ -13,7 +13,9 @@ import {
   type Uuid,
   uuidSchema,
 } from "@keepcv/schema";
+import type { Context } from "hono";
 import { mutate } from "../problems.js";
+import { forRequest } from "../request-unit-of-work.js";
 import { router } from "../router.js";
 import { archivedQuery, collectionRoutes } from "./collection.js";
 
@@ -53,34 +55,36 @@ const fields = collectionRoutes({
 });
 
 export function recordRoutes(unitOfWork: UnitOfWork) {
-  const on = async <T>(work: (of: CareerRecordRepository) => Promise<T>): Promise<T> =>
-    await unitOfWork.run(async (r) => await work(r.records));
+  const on = async <T>(c: Context, work: (of: CareerRecordRepository) => Promise<T>): Promise<T> =>
+    await forRequest(unitOfWork, c).run(async (r) => await work(r.records));
 
-  const readRecord = async (id: Uuid) => await on(async (of) => await of.get(id));
-  const readLink = async (id: Uuid) => await on(async (of) => await of.getLink(id));
-  const readField = async (id: Uuid) => await on(async (of) => await of.getField(id));
+  const readRecord = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));
+  const readLink = async (c: Context, id: Uuid) => await on(c, async (of) => await of.getLink(id));
+  const readField = async (c: Context, id: Uuid) =>
+    await on(c, async (of) => await of.getField(id));
 
   return router()
     .openapi(records.list, async (c) => {
       const { archived, kind, tag } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.list({ kind, tagId: tag, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(records.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.create(input)), 201);
+      return c.json(await on(c, async (of) => await of.create(input)), 201);
     })
     .openapi(records.read, async (c) => {
-      return c.json(await readRecord(c.req.valid("param").id), 200);
+      return c.json(await readRecord(c, c.req.valid("param").id), 200);
     })
     .openapi(records.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.update(id, patch, expectedUpdatedAt)),
-        async () => await readRecord(id),
+        async () => await on(c, async (of) => await of.update(id, patch, expectedUpdatedAt)),
+        async () => await readRecord(c, id),
       );
       return c.json(updated, 200);
     })
@@ -88,8 +92,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archive(id, expectedUpdatedAt)),
-        async () => await readRecord(id),
+        async () => await on(c, async (of) => await of.archive(id, expectedUpdatedAt)),
+        async () => await readRecord(c, id),
       );
       return c.json(archived, 200);
     })
@@ -97,8 +101,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restore(id, expectedUpdatedAt)),
-        async () => await readRecord(id),
+        async () => await on(c, async (of) => await of.restore(id, expectedUpdatedAt)),
+        async () => await readRecord(c, id),
       );
       return c.json(restored, 200);
     })
@@ -106,23 +110,24 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
     .openapi(links.list, async (c) => {
       const { archived, recordId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listLinks({ recordId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(links.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createLink(input)), 201);
+      return c.json(await on(c, async (of) => await of.createLink(input)), 201);
     })
     .openapi(links.read, async (c) => {
-      return c.json(await readLink(c.req.valid("param").id), 200);
+      return c.json(await readLink(c, c.req.valid("param").id), 200);
     })
     .openapi(links.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateLink(id, patch, expectedUpdatedAt)),
-        async () => await readLink(id),
+        async () => await on(c, async (of) => await of.updateLink(id, patch, expectedUpdatedAt)),
+        async () => await readLink(c, id),
       );
       return c.json(updated, 200);
     })
@@ -130,8 +135,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveLink(id, expectedUpdatedAt)),
-        async () => await readLink(id),
+        async () => await on(c, async (of) => await of.archiveLink(id, expectedUpdatedAt)),
+        async () => await readLink(c, id),
       );
       return c.json(archived, 200);
     })
@@ -139,8 +144,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreLink(id, expectedUpdatedAt)),
-        async () => await readLink(id),
+        async () => await on(c, async (of) => await of.restoreLink(id, expectedUpdatedAt)),
+        async () => await readLink(c, id),
       );
       return c.json(restored, 200);
     })
@@ -148,23 +153,24 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
     .openapi(fields.list, async (c) => {
       const { archived, recordId } = c.req.valid("query");
       const items = await on(
+        c,
         async (of) => await of.listFields({ recordId, includeArchived: archived === "include" }),
       );
       return c.json({ items }, 200);
     })
     .openapi(fields.create, async (c) => {
       const input = c.req.valid("json");
-      return c.json(await on(async (of) => await of.createField(input)), 201);
+      return c.json(await on(c, async (of) => await of.createField(input)), 201);
     })
     .openapi(fields.read, async (c) => {
-      return c.json(await readField(c.req.valid("param").id), 200);
+      return c.json(await readField(c, c.req.valid("param").id), 200);
     })
     .openapi(fields.update, async (c) => {
       const { id } = c.req.valid("param");
       const { patch, expectedUpdatedAt } = c.req.valid("json");
       const updated = await mutate(
-        async () => await on(async (of) => await of.updateField(id, patch, expectedUpdatedAt)),
-        async () => await readField(id),
+        async () => await on(c, async (of) => await of.updateField(id, patch, expectedUpdatedAt)),
+        async () => await readField(c, id),
       );
       return c.json(updated, 200);
     })
@@ -172,8 +178,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const archived = await mutate(
-        async () => await on(async (of) => await of.archiveField(id, expectedUpdatedAt)),
-        async () => await readField(id),
+        async () => await on(c, async (of) => await of.archiveField(id, expectedUpdatedAt)),
+        async () => await readField(c, id),
       );
       return c.json(archived, 200);
     })
@@ -181,8 +187,8 @@ export function recordRoutes(unitOfWork: UnitOfWork) {
       const { id } = c.req.valid("param");
       const { expectedUpdatedAt } = c.req.valid("json");
       const restored = await mutate(
-        async () => await on(async (of) => await of.restoreField(id, expectedUpdatedAt)),
-        async () => await readField(id),
+        async () => await on(c, async (of) => await of.restoreField(id, expectedUpdatedAt)),
+        async () => await readField(c, id),
       );
       return c.json(restored, 200);
     });
