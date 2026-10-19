@@ -81,6 +81,22 @@ describe.skipIf(connectionString === undefined)(
       ).rows;
     }
 
+    it("authenticates a fresh signalled connection with the configured credentials", async () => {
+      await fixture(async ({ run }) => {
+        const controller = new AbortController();
+        let calls = 0;
+        const result = await run(
+          (r) => {
+            calls++;
+            return r.profile.get();
+          },
+          { signal: controller.signal },
+        );
+        expect(result.fullName).toBeNull();
+        expect(calls).toBe(1);
+      });
+    });
+
     it("rejects an already-aborted unit without acquisition or callback work", async () => {
       await fixture(async ({ run, name }) => {
         const controller = new AbortController();

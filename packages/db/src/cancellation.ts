@@ -11,7 +11,12 @@ export class CancellableClient extends Client {
   constructor(config?: ClientConfig) {
     const signal = acquiring.getStore();
     const socket = signal === undefined ? undefined : new Socket();
-    super(socket === undefined ? config : { ...config, stream: () => socket });
+    // pg-pool makes password non-enumerable, so spreading alone loses it.
+    super(
+      socket === undefined
+        ? config
+        : { ...config, password: config?.password, stream: () => socket },
+    );
     if (signal !== undefined && socket !== undefined) {
       const abort = () => socket.destroy(new Error("Connection acquisition cancelled"));
       const cleanup = () => signal.removeEventListener("abort", abort);
@@ -112,6 +117,7 @@ export async function cancellableTransaction<T>(
     }
     const control = new Client({
       ...pool.options,
+      password: pool.options.password,
       connectionTimeoutMillis: pool.options.connectionTimeoutMillis || 5000,
       query_timeout: 5000,
       statement_timeout: 5000,
