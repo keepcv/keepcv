@@ -1,5 +1,14 @@
 # @keepcv/editor
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [11a9291]
+  - @keepcv/core@0.2.0
+  - @keepcv/api@0.3.0
+  - @keepcv/interop@0.1.5
+
 ## 0.4.1
 
 ### Patch Changes
