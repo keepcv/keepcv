@@ -1,5 +1,14 @@
 # @keepcv/interop
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [ce781cd]
+- Updated dependencies [ce781cd]
+  - @keepcv/schema@0.2.0
+  - @keepcv/core@0.3.0
+
 ## 0.1.5
 
 ### Patch Changes
