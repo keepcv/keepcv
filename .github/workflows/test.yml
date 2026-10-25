@@ -96,8 +96,13 @@ jobs:
           test -z "$(git status --porcelain packages/db/migrations)" ||
             { git status --porcelain packages/db/migrations; exit 1; }
 
-      - name: Test
-        run: pnpm test
+      - name: Test databases
+        run: pnpm --filter @keepcv/db test --maxWorkers=2
+        env:
+          DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv
+
+      - name: Test remaining packages
+        run: pnpm exec turbo run test --filter='!@keepcv/db' --concurrency=2
         env:
           DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv
 
