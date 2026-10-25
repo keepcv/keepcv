@@ -20,44 +20,20 @@ env:
   DO_NOT_TRACK: 1
 
 jobs:
-  test:
-    name: Lint, typecheck and test
+  checks:
+    name: Lint and typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
       release-version: ${{ steps.release.outputs.version }}
-
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: keepcv
-          POSTGRES_DB: keepcv
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Enable pnpm
-        run: corepack enable
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: ./.github/actions/setup
         with:
-          node-version-file: .node-version
           cache: ${{ github.event_name == 'pull_request' && 'pnpm' || '' }}
-          package-manager-cache: false
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
 
       - name: Check the change is described
         if: github.event_name == 'pull_request'
@@ -96,10 +72,69 @@ jobs:
           test -z "$(git status --porcelain packages/db/migrations)" ||
             { git status --porcelain packages/db/migrations; exit 1; }
 
-      - name: Test databases
+      - name: Test release guards
+        run: pnpm test:release
+
+  databases:
+    name: PostgreSQL and PGlite tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: keepcv
+          POSTGRES_DB: keepcv
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache: ${{ github.event_name == 'pull_request' && 'pnpm' || '' }}
+
+      - name: Build database dependencies
+        run: pnpm --filter @keepcv/db... build
+      - name: Test both database drivers
         run: pnpm --filter @keepcv/db test --maxWorkers=2
         env:
           DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv
+
+  applications:
+    name: Application tests and release packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: keepcv
+          POSTGRES_DB: keepcv
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache: ${{ github.event_name == 'pull_request' && 'pnpm' || '' }}
 
       - name: Test remaining packages
         run: pnpm exec turbo run test --filter='!@keepcv/db' --concurrency=2
@@ -112,9 +147,6 @@ jobs:
           DATABASE_URL: postgres://postgres:keepcv@localhost:5432/keepcv
           REUSE_PUBLISHED_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
 
-      - name: Test release guards
-        run: pnpm test:release
-
       - name: Save verified release artifacts
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -124,3 +156,21 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+
+  test:
+    name: Lint, typecheck and test
+    if: always()
+    needs: [checks, databases, applications]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release-version: ${{ needs.checks.outputs.release-version }}
+    steps:
+      - name: Require every validation job to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          if [ "$RESULTS" != 'success,success,success' ]; then
+            echo "Validation jobs did not all succeed: $RESULTS" >&2
+            exit 1
+          fi
