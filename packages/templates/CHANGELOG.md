@@ -1,5 +1,35 @@
 # @keepcv/templates
 
+## 0.2.0
+
+### Minor Changes
+
+- ce781cd: Add versioned Default and HTML template definitions, a bounded data-binding
+  language, checked HTML/CSS/local assets and a source-file builder with selected
+  resume data discovery. Ship Studio, Signal and Folio system templates, including
+  two creative layouts. Keep system templates read-only and owned copies editable.
+
+  Render HTML previews and exports in cancellable browser workers. Preserve legacy
+  templates and pinned history, migrate native archives to v2 without rewriting
+  manifests, and retain unavailable future types for source recovery and backups.
+
+  Ignore initial blank iframe loads before printing and keep the print frame
+  script-free.
+
+- ce781cd: Create reusable templates with a visual builder, explicit saving, undo/redo,
+  recovery and sample or real-resume previews. Add six read-only system designs
+  while preserving original templates for existing resumes and history.
+
+  Simplify resume Design around the paper, stage template choices before Apply,
+  preserve fit settings across template changes, and keep PDF export in the
+  workspace header with other formats in a separate dialog. Fix preview margins
+  and add zoom and page navigation.
+
+### Patch Changes
+
+- Updated dependencies [ce781cd]
+  - @keepcv/schema@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes

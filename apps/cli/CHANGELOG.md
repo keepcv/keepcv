@@ -1,5 +1,19 @@
 # @keepcv/cli
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [ce781cd]
+- Updated dependencies [ce781cd]
+  - @keepcv/schema@0.2.0
+  - @keepcv/api@0.4.0
+  - @keepcv/render@0.2.0
+  - @keepcv/core@0.3.0
+  - @keepcv/ats-lint@0.1.4
+  - @keepcv/db@0.3.1
+  - @keepcv/interop@0.1.6
+
 ## 0.1.7
 
 ### Patch Changes
