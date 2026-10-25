@@ -136,6 +136,9 @@ jobs:
         with:
           cache: ${{ github.event_name == 'pull_request' && 'pnpm' || '' }}
 
+      - name: Build launcher and web assets
+        run: pnpm build
+
       - name: Test remaining packages
         run: pnpm exec turbo run test --filter='!@keepcv/db' --concurrency=2
         env:
