@@ -1,4 +1,4 @@
-import { customSectionSchema } from "@keepcv/schema";
+import { customSectionSchema, templateSchema } from "@keepcv/schema";
 import { describe, expect, it } from "vitest";
 import { newUuid } from "../identity/uuid.js";
 import {
@@ -44,6 +44,26 @@ function aComposedStore() {
 }
 
 describe("captureManifest", () => {
+  it("pins a complete typed template while later edits change its source", () => {
+    const { store, resume } = aComposedStore();
+    const template = templateSchema.parse({
+      ...standard(),
+      name: "HTML",
+      spec: {
+        type: "html",
+        version: 1,
+        payload: { files: { "index.html": { content: "ORIGINAL" } } },
+      },
+    });
+    store.templates.push(template);
+    resume.templateId = template.id;
+    const manifest = captureManifest(store, resume.id);
+    if (manifest === undefined) throw new Error("The resume exists");
+    const before = renderManifest(manifest, store.phrasingRevisions, { generatedAt: AT });
+    template.spec = { type: "html", version: 1, payload: { changed: true } };
+    expect(renderManifest(manifest, store.phrasingRevisions, { generatedAt: AT })).toEqual(before);
+    expect(JSON.stringify(before.meta.templateSpec)).toContain("ORIGINAL");
+  });
   it("answers with nothing for a resume that is not in the store", () => {
     expect(captureManifest(emptyStore(), newUuid())).toBeUndefined();
   });

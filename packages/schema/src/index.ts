@@ -85,6 +85,7 @@ export {
   type ResumeDocument,
   resumeDocumentSchema,
 } from "./document/resume-document.js";
+export { type TemplateData, templateDataSchema } from "./document/template-data.js";
 export {
   CAREER_RECORD_KINDS,
   type CareerRecord,
@@ -351,6 +352,7 @@ export {
   type StoredTemplate,
   type StoredTemplateInput,
   type StoredTemplatePatch,
+  type StoredTemplateSpec,
   type TemplateFile,
   type TemplateSpec,
   templateFileSchema,
@@ -359,6 +361,20 @@ export {
   templateSchema,
   templateSpecSchema,
 } from "./entities/template.js";
+export { cssIsLocal } from "./entities/template-css.js";
+export {
+  type HtmlTemplatePayload,
+  htmlTemplatePayloadSchema,
+  htmlTemplateSourceSchema,
+  isTemplateDefinition,
+  isTemplatePath,
+  type TemplateDefinition,
+  type TemplateSourceFile,
+  templateDefinitionSchema,
+  templatePathSchema,
+  templateSourceFileSchema,
+  templateTextBytes,
+} from "./entities/template-definition.js";
 export { EXPORT_JSON_SCHEMA_FILE, exportJsonSchema } from "./json-schema.js";
 export {
   type ContentHash,

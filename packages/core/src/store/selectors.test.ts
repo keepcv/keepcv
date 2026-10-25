@@ -15,6 +15,7 @@ import {
   recordsWithTag,
   resumesUsingPhrasing,
   resumesUsingPoint,
+  resumesUsingTemplate,
   tagForLabel,
   tagsOfPoint,
   tagsOfRecord,
@@ -44,6 +45,14 @@ describe("live and archived", () => {
     expect(live(rows)).toHaveLength(1);
     expect(live(rows)[0]?.archivedAt).toBeNull();
   });
+});
+
+it("reports the live resumes sharing a template without including archived or unrelated ones", () => {
+  const store = emptyStore();
+  const shared = aResume(store, "Shared", { templateId: "modern-v1" });
+  aResume(store, "Archived", { templateId: "modern-v1", archivedAt: EPOCH });
+  aResume(store, "Unrelated", { templateId: "classic-v1" });
+  expect(resumesUsingTemplate(store, "modern-v1")).toEqual([shared]);
 });
 
 describe("a record's points", () => {

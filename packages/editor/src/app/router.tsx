@@ -21,7 +21,10 @@ import { SectionList } from "../features/sections/ui/section-list.js";
 import { Overview } from "../features/store/ui/overview.js";
 import { TAG_FILTERS } from "../features/tags/model/tag-rows.js";
 import { TagList } from "../features/tags/ui/tag-list.js";
-import { TemplateEditorScreen } from "../features/templates/ui/template-editor.js";
+import {
+  NewTemplateScreen,
+  TemplateEditorScreen,
+} from "../features/templates/ui/template-editor.js";
 import { TemplateList } from "../features/templates/ui/template-list.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
@@ -218,7 +221,11 @@ const roleProfilesRoute = createRoute({
 const templatesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/templates",
-  validateSearch: z.object({ archived: z.enum(ARCHIVED_FILTERS).default("exclude") }),
+  validateSearch: z.object({
+    archived: z.enum(ARCHIVED_FILTERS).default("exclude"),
+    q: z.string().default(""),
+    collection: z.enum(["system", "mine"]).optional(),
+  }),
   component: function TemplatesScreen() {
     const { api } = templatesRoute.useRouteContext();
     return (
@@ -226,6 +233,31 @@ const templatesRoute = createRoute({
         store={useStore(api)}
         client={api}
         archived={templatesRoute.useSearch().archived}
+        query={templatesRoute.useSearch().q}
+        collection={templatesRoute.useSearch().collection}
+      />
+    );
+  },
+});
+
+const newTemplateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/templates/new",
+  validateSearch: z.object({
+    basedOn: z.string().optional(),
+    from: uuidSchema.optional(),
+    import: z.boolean().default(false),
+  }),
+  component: function NewTemplatePage() {
+    const { api } = newTemplateRoute.useRouteContext();
+    const search = newTemplateRoute.useSearch();
+    return (
+      <NewTemplateScreen
+        store={useStore(api)}
+        client={api}
+        basedOn={search.basedOn}
+        fromResume={search.from}
+        importing={search.import}
       />
     );
   },
@@ -234,6 +266,7 @@ const templatesRoute = createRoute({
 const templateRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/templates/$templateId",
+  validateSearch: z.object({ from: uuidSchema.optional() }),
   component: function TemplateScreen() {
     const { api } = templateRoute.useRouteContext();
     return (
@@ -241,6 +274,7 @@ const templateRoute = createRoute({
         store={useStore(api)}
         client={api}
         templateId={templateRoute.useParams().templateId}
+        fromResume={templateRoute.useSearch().from}
       />
     );
   },
@@ -306,7 +340,10 @@ const resumeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/resumes/$resumeId",
   params: { parse: ({ resumeId }) => ({ resumeId: uuidSchema.parse(resumeId) }) },
-  validateSearch: z.object({ view: z.enum(RESUME_VIEWS).default("composition") }),
+  validateSearch: z.object({
+    view: z.enum(RESUME_VIEWS).default("composition"),
+    template: z.string().optional(),
+  }),
   component: function ResumeScreen() {
     const { api } = resumeRoute.useRouteContext();
     return (
@@ -316,6 +353,7 @@ const resumeRoute = createRoute({
         resumeId={resumeRoute.useParams().resumeId}
         view={resumeRoute.useSearch().view}
         asOf={new Date().toISOString()}
+        suggestedTemplateId={resumeRoute.useSearch().template}
       />
     );
   },
@@ -348,6 +386,7 @@ const routeTree = rootRoute.addChildren([
   sectionsRoute,
   roleProfilesRoute,
   templatesRoute,
+  newTemplateRoute,
   templateRoute,
   resumesRoute,
   resumeRoute,

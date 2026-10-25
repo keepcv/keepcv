@@ -60,7 +60,7 @@ Foundation
 The record store comes before points because points attach to records that
 must already exist. Tagging comes after points so it is built once, across
 records and points together, rather than twice. The ATS linter comes before
-any future template builder.
+the template builder's rendered-file checks.
 
 ---
 
@@ -262,10 +262,12 @@ iframe of its own at the size it will print at.
 **Templates are data, and the user can write one.** One renderer and one
 stylesheet builder are driven by a `TemplateSpec` - values for a catalogue of
 knobs, plus optional CSS of your own - and `fromSpec` turns a spec into a
-`Template`. `ats-single-column` and `ats-left-heading` are two specs held in
-code; anything else is a `template` row, edited on a screen of its own with a
-live preview, offered to every resume beside the shipped two, and saved out as a
-file another store reads back. The knobs are split so a resume adjusts only what
+`Template`. Six active system designs are read-only specs held in code. Original
+system ids remain resolvable for current uses and history. Owned templates are
+created, copied or imported into a visual builder, with explicit saving, scoped
+recovery, undo/redo, sample or real-resume previews and file download/import.
+Page defaults, typography, custom accent and content spacing are declared controls.
+The knobs are split so a resume adjusts only what
 makes it fit - page size, typeface, sizes, margins - and the design itself
 belongs to the template, which is what lets each one's compliance notes be
 derived rather than claimed.
@@ -291,7 +293,10 @@ bounded to an inflection, and a weighting for what the store already files work
 under. There is no model and no service call; see
 `application-structure.md` #8.
 
-What remains is **further shipped designs**, which are now specs rather than code.
+The template library and the resume's chooser share the same visual selection
+flow. A candidate is previewed before Apply, and fit overrides survive a swap
+unless explicitly reset. Design shows paper first, with optional fit and checks;
+PDF export is a workspace action, and other formats have a separate dialog.
 
 ### Export
 
@@ -597,3 +602,16 @@ Restated because they will be requested: no job application tracking, no job
 boards, no interview preparation, no recruiter-facing products, no AI writing
 features, no LinkedIn scraping, no mobile apps, and no claims of certification
 against named commercial ATS products.
+
+### HTML template authoring
+
+Default (visual) and HTML are distinct types, separate from system/user ownership.
+The HTML builder edits local HTML/CSS/partial/asset files, discovers selected data,
+previews and explicitly saves complete definitions with draft recovery and undo.
+Studio and Signal demonstrate creative layouts; Folio is an editorial comparison.
+The bounded binding language has no JavaScript or host loader. Checked markup,
+CSS and resources render with CSP and script-free preview isolation. Render
+workers cancel stale or timed-out jobs. Technical failures block rendering;
+readability advice does not block export. Arbitrary HTML has no measured flow
+page budget. Native backups and captured history retain complete source bundles,
+and unknown future types remain portable with an explicit unavailable state.

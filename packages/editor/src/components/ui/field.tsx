@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { cn } from "../../lib/cn.js";
 
 const CONTROL =
@@ -165,6 +165,7 @@ export function RangeField({
   max,
   step,
   unit,
+  precise = false,
   ...common
 }: Common & {
   value: number;
@@ -173,9 +174,11 @@ export function RangeField({
   max: number;
   step: number;
   unit: string;
+  precise?: boolean;
 }) {
   const controlId = useId();
   const describedBy = `${controlId}-note`;
+  const [typed, setTyped] = useState<string | null>(null);
 
   return (
     <Wrapper {...common} controlId={controlId} describedBy={describedBy}>
@@ -193,10 +196,43 @@ export function RangeField({
           aria-describedby={describedBy}
           className="h-4 flex-1 cursor-pointer accent-brand"
         />
-        <span className="w-12 shrink-0 text-right text-xs tabular-nums text-text-muted">
-          {value}
-          {unit}
-        </span>
+        {precise ? (
+          <>
+            <input
+              type="number"
+              aria-label={`${common.label}, exact value`}
+              min={min}
+              max={max}
+              step={step}
+              value={typed ?? value}
+              className="w-20 rounded border border-line bg-surface px-2 py-1 text-sm tabular-nums text-text"
+              onChange={(event) => {
+                setTyped(event.target.value);
+                const number = event.target.valueAsNumber;
+                if (Number.isFinite(number) && number >= min && number <= max) onChange(number);
+              }}
+              onBlur={() => {
+                const number = Number(typed);
+                if (typed !== null && typed !== "" && Number.isFinite(number))
+                  onChange(
+                    Number(
+                      Math.min(
+                        max,
+                        Math.max(min, Math.round((number - min) / step) * step + min),
+                      ).toFixed(6),
+                    ),
+                  );
+                setTyped(null);
+              }}
+            />
+            <span className="text-xs text-text-subtle">{unit}</span>
+          </>
+        ) : (
+          <span className="w-12 shrink-0 text-right text-xs tabular-nums text-text-muted">
+            {value}
+            {unit}
+          </span>
+        )}
       </div>
     </Wrapper>
   );

@@ -135,10 +135,84 @@ eachDriver(({ run, otherOwner }) => {
       const exported = await run(async (r) => await r.store.read());
       const design = exported.templates[0];
       if (design === undefined) throw new Error("the fixture must contain a design");
+      if (!("extraCss" in design.spec)) throw new Error("expected a visual template fixture");
       design.spec.extraCss = '.kc-name { background: image-set("https://example.test/a" 1x); }';
       const other = await otherOwner();
       await other(async (r) => await r.store.load(exported));
       expect(await other(async (r) => await r.store.read())).toEqual(exported);
+    });
+
+    it("keeps unknown typed source and v1 history unchanged through migration and archive import", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const design = exported.templates[0];
+      if (design === undefined) throw new Error("The archive contains a template");
+      const history = JSON.stringify(exported.resumeVersions);
+      design.spec = {
+        type: "latex",
+        version: 3,
+        payload: {
+          entry: "main.tex",
+          files: {
+            "main.tex": { encoding: "utf8", content: "SOURCE" },
+            "design.cls": { encoding: "utf8", content: "CLASS" },
+          },
+        },
+      };
+      const reopened = migrateDocument({
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        store: exported,
+      });
+      expect(JSON.stringify(reopened.store.resumeVersions)).toBe(history);
+      const other = await otherOwner();
+      await other(async (r) => await r.store.load(reopened.store));
+      expect(await other(async (r) => await r.store.read())).toEqual(exported);
+    });
+
+    it("round trips every HTML source and asset byte without a database migration", async () => {
+      await fill(run);
+      const exported = await run(async (r) => await r.store.read());
+      const design = exported.templates[0];
+      if (design === undefined) throw new Error("The archive contains a template");
+      design.spec = {
+        type: "html",
+        version: 1,
+        payload: {
+          documentVersions: [1],
+          entry: "index.html",
+          styles: ["theme.css"],
+          page: { size: "letter", marginMm: 8 },
+          files: {
+            "index.html": {
+              mediaType: "text/html",
+              encoding: "utf8",
+              content: "<h1>{{ resume.header.fullName }}</h1>",
+            },
+            "theme.css": { mediaType: "text/css", encoding: "utf8", content: "h1{color:navy}" },
+            "assets/icon.png": {
+              mediaType: "image/png",
+              encoding: "base64",
+              content: "iVBORw0KGgo=",
+            },
+          },
+        },
+      };
+      const other = await otherOwner();
+      await other(
+        async (r) =>
+          await r.store.load(
+            migrateDocument({
+              schemaVersion: CURRENT_SCHEMA_VERSION,
+              exportedAt: new Date().toISOString(),
+              store: exported,
+            }).store,
+          ),
+      );
+      expect(await other(async (r) => await r.store.read())).toEqual(exported);
+      expect((await other(async (r) => await r.store.readCurrent())).templates).toEqual(
+        exported.templates,
+      );
     });
 
     it("does not depend on the order the rows arrive in", async () => {

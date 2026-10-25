@@ -972,13 +972,14 @@ spec jsonb not null   -- { settings: Record<string, string|number>, extraCss: st
 would put one fact in two places and a store restored into an older build would
 carry a design that build cannot render. A resume's `template_id` names either.
 
-**`spec` is loose on purpose.** `settings` is values for the knobs the renderer
-declares, which is the same vocabulary a resume overrides through
-`template_config`, so the renderer's field list is the one statement of what a
-knob is and what range it takes - `configFor` refuses anything outside it. A
-typed column here would be that vocabulary written down twice, and adding a knob
-would need a migration. `extraCss` is refused by the schema if it would fetch or
-if it contains `</style` (template-model.md #5).
+**`spec` holds one complete definition.** Existing settings/extraCss values stay
+readable as Default v1. New writes use a type/version/payload envelope. The shared
+schema bounds JSON, and installed type handlers validate their payload. HTML
+bundles contain source and assets inside this JSONB value; they need no extra
+column, table or SQL migration. A separate type column would duplicate a fact.
+Native import retains unsupported definitions without executing them. Ordinary
+writes require an installed validator; rendering a typed definition without a
+handler refuses explicitly. Template-model.md #8 specifies the contract.
 
 **`template_name_unique` covers archived rows**, like every other uniqueness
 index here, so the screens name the clash rather than letting the store answer
@@ -1080,7 +1081,9 @@ old template is old code.
 shipped design or a `template` row (#8.2). It is not a uuid column because the
 shipped ones are not rows, and it is not a foreign key because a store must
 survive being opened by a build that does not have the design it names - which is
-why resolving falls back rather than refusing.
+why an unknown legacy system id retains the missing-design fallback. An owned
+typed definition with no installed handler instead reports an explicit error;
+its source remains available for backup and recovery.
 
 **`page_limit` is a column rather than a template setting.** How long a resume
 may be is a fact about the application, so it has to survive swapping the

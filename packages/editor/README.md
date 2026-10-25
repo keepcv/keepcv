@@ -115,3 +115,9 @@ refusal to restore over existing content, scoped edit recovery, and configurable
 unexpected-error reporting.
 
 MIT.
+
+The template library offers Default (visual) and HTML builders. HTML editing uses
+a lazy code workspace, local files/assets, a selected-data explorer and explicit
+save with scoped recovery. Preview/export use a packaged worker and a script-free
+iframe. The library's system definitions are read-only; copied and imported
+templates belong to the connected user. See [the template guide](../../docs/TEMPLATES.md).

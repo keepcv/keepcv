@@ -1,6 +1,7 @@
+import { resumesUsingTemplate } from "@keepcv/core";
 import type { Store, StoredTemplate } from "@keepcv/schema";
 import type { Template } from "@keepcv/templates";
-import { TEMPLATES, templateOf } from "@keepcv/templates";
+import { definitionOf, TEMPLATES, templateById, templateOf } from "@keepcv/templates";
 import type { ArchivedFilter } from "../../../lib/archived.js";
 
 export interface TemplateRow {
@@ -13,17 +14,46 @@ export interface TemplateRow {
   row: StoredTemplate | undefined;
 }
 
-function usedBy(store: Store, id: string): number {
-  return store.resumes.filter((resume) => resume.templateId === id && resume.archivedAt === null)
-    .length;
+export function availableTemplate(row: StoredTemplate): Template {
+  try {
+    return templateOf(row);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Template unavailable.";
+    return {
+      id: row.id,
+      name: row.name,
+      type: definitionOf(row.spec).type,
+      definition: definitionOf(row.spec),
+      version: String(definitionOf(row.spec).version),
+      documentVersions: [],
+      fields: [],
+      defaultConfig: {},
+      complianceNotes: [message],
+      styles: () => "",
+      render: () => {
+        throw new Error(message);
+      },
+    };
+  }
 }
 
-// Built-in first and always: they are in every build, so a store with no
-// templates of its own still has something for a resume to name.
+function usedBy(store: Store, id: string): number {
+  return resumesUsingTemplate(store, id).length;
+}
+
 export function templateRows(store: Store, archived: ArchivedFilter): TemplateRow[] {
-  const built = TEMPLATES.map((template) => ({
+  const legacy = store.resumes.flatMap((resume) => {
+    const template = templateById(resume.templateId ?? undefined);
+    return template === undefined || TEMPLATES.some((row) => row.id === template.id)
+      ? []
+      : [template];
+  });
+  const designs = [
+    ...new Map([...TEMPLATES, ...legacy].map((template) => [template.id, template])).values(),
+  ];
+  const built = designs.map((template) => ({
     id: template.id,
-    name: template.name,
+    name: TEMPLATES.includes(template) ? template.name : `${template.name} (original)`,
     isBuiltIn: true,
     isArchived: false,
     usedBy: usedBy(store, template.id),
@@ -43,7 +73,7 @@ export function templateRows(store: Store, archived: ArchivedFilter): TemplateRo
       isBuiltIn: false,
       isArchived: row.archivedAt !== null,
       usedBy: usedBy(store, row.id),
-      template: templateOf(row),
+      template: availableTemplate(row),
       row,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -51,17 +81,23 @@ export function templateRows(store: Store, archived: ArchivedFilter): TemplateRo
   return archived === "only" ? mine : [...built, ...mine];
 }
 
-// An archived design is offered only to the resume already printing with it: a
-// select holding a value no option carries reads as some other design entirely.
-export function pickableTemplates(
-  store: Store,
-  keep: string | null,
-): { id: string; name: string }[] {
-  return templateRows(store, "include")
-    .filter((row) => !row.isArchived || row.id === keep)
-    .map(({ id, name, isArchived }) => ({ id, name: isArchived ? `${name} (archived)` : name }));
-}
-
 export function templateNamed(store: Store, id: string | null): string | undefined {
   return templateRows(store, "include").find((row) => row.id === id)?.name;
+}
+
+export function templateRowFor(store: Store, id: string): TemplateRow | undefined {
+  const row = templateRows(store, "include").find((row) => row.id === id);
+  if (row !== undefined) return row;
+  const template = templateById(id);
+  return template === undefined
+    ? undefined
+    : {
+        id,
+        name: `${template.name} (original)`,
+        isBuiltIn: true,
+        isArchived: false,
+        usedBy: usedBy(store, id),
+        template,
+        row: undefined,
+      };
 }

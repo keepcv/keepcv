@@ -706,3 +706,14 @@ landing page; no session in password mode is the sign-in screen; no user in prox
 mode is a message saying the upstream let the request through without naming one,
 which is a misconfiguration rather than something to retry. The router never
 mounts in any of the three.
+
+### Template type validation
+
+Template create/update schemas accept legacy visual specs or versioned
+`{type, version, payload}` definitions. `createApi` optionally accepts an installed
+`templateTypes` catalog; its validators refine ordinary template writes and report
+422 problems. Built-ins support Default and HTML. Unsupported type/version
+writes are refused, while native archive import preserves bounded unknown JSON
+without executing it. Owner scope and optimistic concurrency remain unchanged.
+System definitions are shipped code/data and have no writable collection rows.
+Native export writes archive v2; v1 imports retain embedded historical shapes.

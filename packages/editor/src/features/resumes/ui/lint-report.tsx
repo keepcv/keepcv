@@ -2,7 +2,9 @@ import type { LintSeverity, LintTier } from "@keepcv/ats-lint";
 import { lint } from "@keepcv/ats-lint";
 import { renderHtml } from "@keepcv/render";
 import type { ResumeDocument } from "@keepcv/schema";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { isHtmlTemplate, renderTemplate } from "../../templates/model/render-template.js";
 
 const VERDICT: Record<LintTier, { tone: string; says: string }> = {
   clean: {
@@ -25,7 +27,55 @@ const SEVERITY: Record<LintSeverity, { label: string; tone: string }> = {
 
 // The heading and the box come from the group this sits in.
 export function LintPanel({ document }: { document: ResumeDocument }) {
-  const report = useMemo(() => lint({ document, html: renderHtml(document) }), [document]);
+  const htmlType = isHtmlTemplate(document);
+  const [rendered, setRendered] = useState<{
+    document: ResumeDocument;
+    html?: string;
+    problem?: string;
+  }>();
+  useEffect(() => {
+    if (!htmlType) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void renderTemplate(document, controller.signal).then(
+        (html) => {
+          if (!controller.signal.aborted) setRendered({ document, html });
+        },
+        (error) => {
+          if (!controller.signal.aborted)
+            setRendered({
+              document,
+              problem: error instanceof Error ? error.message : "Template unavailable.",
+            });
+        },
+      );
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [document, htmlType]);
+  const result = useMemo(() => {
+    try {
+      const html = htmlType
+        ? rendered?.document === document
+          ? rendered.html
+          : undefined
+        : renderHtml(document);
+      return html === undefined ? undefined : lint({ document, html });
+    } catch {
+      return undefined;
+    }
+  }, [document, rendered, htmlType]);
+  if (result === undefined)
+    return (
+      <p className="text-xs text-text-muted">
+        {rendered?.document === document && rendered.problem !== undefined
+          ? rendered.problem
+          : "Readability checks require a current, successfully rendered template."}
+      </p>
+    );
+  const report = result;
   const verdict = VERDICT[report.tier];
 
   return (

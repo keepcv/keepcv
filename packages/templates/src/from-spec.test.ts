@@ -36,6 +36,31 @@ describe("a template built from a design", () => {
     expect(made({ bullet: "sparkles" }).defaultConfig["bullet"]).toBe("dash");
   });
 
+  it("uses a custom accent ahead of a preset and falls back for invalid CSS values", () => {
+    const custom = made({ accent: "forest", accentColor: "#284766" });
+    expect(custom.styles(custom.defaultConfig)).toContain("color: #284766;");
+    expect(custom.styles({ ...custom.defaultConfig, accentColor: "#ffffff" })).toContain(
+      "color: #284766;",
+    );
+    const invalid = made({ accent: "forest", accentColor: "red; display: none" });
+    expect(invalid.defaultConfig["accentColor"]).toBe("");
+    expect(invalid.styles(invalid.defaultConfig)).toContain("color: #1f4d38;");
+    expect(invalid.styles(invalid.defaultConfig)).not.toContain("display: none");
+  });
+
+  it("renders heading size and entry and point spacing from the saved design", () => {
+    const custom = made({ headingSize: 1.2, entryGap: 9, pointGap: 3 });
+    const css = custom.styles(custom.defaultConfig);
+    expect(css).toContain("font-size: 1.2em;");
+    expect(css).toContain(".kc-entry { margin-top: 9pt;");
+    expect(css).toContain(".kc-points li { margin-top: 3pt;");
+    expect(made({ entryGap: 999, pointGap: -2, headingSize: 9 }).defaultConfig).toMatchObject({
+      entryGap: 5,
+      pointGap: 1.5,
+      headingSize: 0.9,
+    });
+  });
+
   it("says so in the notes when the design carries CSS of its own", () => {
     const plain = fromSpec("a", "A", BLANK_SPEC);
     const extra = fromSpec("b", "B", { settings: {}, extraCss: ".kc-name { color: #333; }" });

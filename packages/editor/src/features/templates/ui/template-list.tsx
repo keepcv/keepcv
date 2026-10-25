@@ -1,221 +1,91 @@
-import { newUuid } from "@keepcv/core";
-import type { Store, TemplateFile, TemplateSpec } from "@keepcv/schema";
+import type { Store } from "@keepcv/schema";
+import { TEMPLATES } from "@keepcv/templates";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button, ButtonLink } from "../../../components/ui/button.js";
 import { SelectField, TextField } from "../../../components/ui/field.js";
-import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
-import { Panel, PanelBody, PanelHeader } from "../../../components/ui/panel.js";
+import { PageBody, PageHeader } from "../../../components/ui/page.js";
 import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
-import { counted } from "../../../lib/label.js";
-import { useCreateTemplate, useSetTemplateArchived } from "../api/use-templates.js";
-import { readDesign } from "../model/design-file.js";
+import { useSetTemplateArchived } from "../api/use-templates.js";
+import { describeTemplate } from "../model/preview.js";
 import { type TemplateRow, templateRows } from "../model/template-rows.js";
 import { TemplateThumbnail } from "./thumbnail.js";
 
-// A built-in has no row, so its design is read back off the template it built.
-function specOf(row: TemplateRow): TemplateSpec {
-  return row.row?.spec ?? { settings: { ...row.template.defaultConfig }, extraCss: "" };
-}
-
-// `template_name_unique` covers archived rows, so the clash is named here
-// rather than left to the store to refuse.
-function NewDesign({
-  store,
-  client,
-  rows,
-  onDone,
-  basedOnId,
-}: {
-  store: Store;
-  client: ApiClient;
-  rows: TemplateRow[];
-  onDone: () => void;
-  basedOnId: string;
-}) {
-  const create = useCreateTemplate(client);
-  const navigate = useNavigate();
-  const fileId = useId();
-  const [name, setName] = useState("");
-  const [basedOn, setBasedOn] = useState(basedOnId);
-  const [loaded, setLoaded] = useState<TemplateFile | undefined>(undefined);
-  const [problem, setProblem] = useState<string | undefined>(undefined);
-
-  const clash = store.templates.some((row) => row.name === name.trim());
-  const from = rows.find((row) => row.id === basedOn);
-  const spec = loaded?.spec ?? (from === undefined ? undefined : specOf(from));
-
-  const start = () => {
-    if (spec === undefined) return;
-    const id = newUuid();
-    create.mutate(
-      { id, name: name.trim(), spec },
-      {
-        onSuccess: () => {
-          onDone();
-          void navigate({ to: "/templates/$templateId", params: { templateId: id } });
-        },
-      },
-    );
-  };
-
-  const read = (file: File) => {
-    setProblem(undefined);
-    void file.text().then((body) => {
-      const answer = readDesign(body);
-      if ("problem" in answer) {
-        setProblem(answer.problem);
-        return;
-      }
-      setLoaded(answer.design);
-      // Only when nothing has been typed: a name the user chose outranks the
-      // one the file was saved under.
-      setName((typed) => (typed.trim() === "" ? answer.design.name : typed));
-    });
-  };
-
-  return (
-    <Panel>
-      <PanelHeader title="New design">
-        Copy a template or load a saved design file, then customize it.
-      </PanelHeader>
-      <PanelBody className="max-w-xl space-y-3">
-        <TextField
-          label="Name"
-          value={name}
-          placeholder="Navy headings"
-          onChange={setName}
-          error={clash ? "A design of yours is already called that." : undefined}
-        />
-
-        {loaded === undefined ? (
-          <>
-            <SelectField
-              label="Based on"
-              options={rows.map((row) => ({ value: row.id, label: row.name }))}
-              value={basedOn}
-              onChange={setBasedOn}
-            />
-            <div className="space-y-1">
-              <label htmlFor={fileId} className="block text-xs font-medium text-text-muted">
-                Or load one from a file
-              </label>
-              <input
-                id={fileId}
-                type="file"
-                accept=".json,application/json"
-                className="block w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:text-on-brand"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file !== undefined) read(file);
-                }}
-              />
-              {problem === undefined ? null : (
-                <p className="text-xs text-critical-text">{problem}</p>
-              )}
-            </div>
-          </>
-        ) : (
-          <p className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-            <span>
-              Read from a file, saved as <span className="text-text">{loaded.name}</span>.
-            </span>
-            <Button
-              size="sm"
-              tone="ghost"
-              onClick={() => {
-                setLoaded(undefined);
-              }}
-            >
-              Use one from here instead
-            </Button>
-          </p>
-        )}
-
-        <div className="flex gap-2">
-          <Button
-            tone="primary"
-            icon="confirm"
-            disabled={name.trim() === "" || clash || spec === undefined || create.isPending}
-            onClick={start}
-          >
-            {create.isPending ? "Creating" : "Create design"}
-          </Button>
-          <Button tone="ghost" onClick={onDone} disabled={create.isPending}>
-            Cancel
-          </Button>
-        </div>
-        {create.error === null ? null : <Failure error={create.error} />}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function Row({
-  row,
-  client,
-  onCustomize,
-}: {
-  row: TemplateRow;
-  client: ApiClient;
-  onCustomize: () => void;
-}) {
-  const setArchived = useSetTemplateArchived(client);
+function Card({ row, client }: { row: TemplateRow; client: ApiClient }) {
+  const archived = useSetTemplateArchived(client);
   const held = row.row;
-
   return (
-    <li className="flex flex-wrap items-start gap-4 border-t border-line-subtle p-3 first:border-t-0">
-      <TemplateThumbnail template={row.template} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-2">
-          {held === undefined ? (
-            <span className="text-sm font-medium text-text">{row.name}</span>
-          ) : (
-            <Link
-              to="/templates/$templateId"
-              params={{ templateId: row.id }}
-              className="text-sm font-medium text-text underline-offset-2 hover:underline"
-            >
-              {row.name}
-            </Link>
-          )}
-          {row.isBuiltIn ? <Badge>Built in</Badge> : null}
+    <li className="flex min-w-0 flex-col rounded-xl border border-line bg-surface shadow-card">
+      <Link
+        to="/templates/$templateId"
+        params={{ templateId: row.id }}
+        aria-label={row.name}
+        className="flex flex-1 items-start gap-4 rounded-t-xl p-4 transition-colors hover:bg-surface-hover"
+      >
+        <TemplateThumbnail template={row.template} large />
+        <div className="min-w-0 space-y-2">
+          <h3 className="text-sm font-semibold text-text">{row.name}</h3>
+          <Badge>{row.isBuiltIn ? "System" : "My template"}</Badge>
+          <Badge>
+            {row.template.type === "html"
+              ? "HTML"
+              : row.template.type === "default" || row.template.type === undefined
+                ? "Default"
+                : row.template.type}
+          </Badge>
           {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
+          <p className="text-xs leading-relaxed text-text-muted">{describeTemplate(row)}</p>
+          {row.usedBy === 0 ? null : (
+            <p className="text-xs text-text-subtle">
+              Used by {String(row.usedBy)} {row.usedBy === 1 ? "resume" : "resumes"}
+            </p>
+          )}
         </div>
-        <p className="mt-0.5 text-xs tabular-nums text-text-subtle">
-          {row.usedBy === 0 ? "On no resume yet" : `On ${counted(row.usedBy, "resume", "resumes")}`}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
+      </Link>
+      <div className="flex flex-wrap items-center gap-2 border-t border-line-subtle p-3">
         {row.isArchived ? null : (
           <ButtonLink
             size="sm"
             to="/resumes"
             search={{ archived: "exclude", create: true, template: row.id }}
           >
-            Use template
+            Create resume
           </ButtonLink>
         )}
         {row.isBuiltIn ? (
-          <Button size="sm" onClick={onCustomize}>
-            Customize copy
-          </Button>
-        ) : null}
+          <ButtonLink size="sm" tone="ghost" to="/templates/new" search={{ basedOn: row.id }}>
+            Make a copy
+          </ButtonLink>
+        ) : (
+          <ButtonLink
+            size="sm"
+            tone="ghost"
+            to="/templates/$templateId"
+            params={{ templateId: row.id }}
+          >
+            Edit template
+          </ButtonLink>
+        )}
         {held === undefined ? null : (
           <Button
             size="sm"
+            tone="ghost"
             icon={row.isArchived ? "restore" : "archive"}
-            label={row.isArchived ? "Put this design back" : "Archive this design"}
-            onClick={() => {
-              setArchived.mutate({ template: held, archived: !row.isArchived });
-            }}
+            label={row.isArchived ? "Restore this template" : "Archive this template"}
+            pending={archived.isPending}
+            onClick={() => archived.mutate({ template: held, archived: !row.isArchived })}
           />
         )}
       </div>
+      {archived.error === null ? null : (
+        <div className="p-3">
+          <Failure error={archived.error} />
+        </div>
+      )}
     </li>
   );
 }
@@ -224,83 +94,156 @@ export function TemplateList({
   store,
   client,
   archived,
+  query = "",
+  collection,
 }: {
   store: Store;
   client: ApiClient;
   archived: ArchivedFilter;
+  query?: string;
+  collection?: "system" | "mine" | undefined;
 }) {
-  const [starting, setStarting] = useState<string | null>(null);
-  const rows = templateRows(store, archived);
-  const startable = templateRows(store, "exclude");
-
+  const navigate = useNavigate();
+  const [type, setType] = useState("all");
+  const active = collection ?? (archived === "only" ? "mine" : "system");
+  const all = templateRows(store, "include");
+  const system = all.filter(
+    (row) => row.isBuiltIn && TEMPLATES.some((template) => template.id === row.id),
+  );
+  const mine = templateRows(store, archived).filter((row) => !row.isBuiltIn);
+  const matches = (row: TemplateRow) =>
+    `${row.name} ${describeTemplate(row)}`.toLowerCase().includes(query.toLowerCase());
+  const shown = (active === "system" ? system : mine)
+    .filter(matches)
+    .filter((row) => type === "all" || (row.template.type ?? "default") === type);
+  const originals = all.filter(
+    (row) =>
+      row.isBuiltIn && row.usedBy > 0 && !TEMPLATES.some((template) => template.id === row.id),
+  );
   return (
-    <PageBody>
+    <PageBody width="full">
       <PageHeader
         title="Templates"
         icon="template"
         actions={
-          starting !== null ? null : (
-            <Button
-              tone="primary"
-              icon="add"
-              expanded={false}
-              onClick={() => {
-                setStarting(startable[0]?.id ?? "");
-              }}
-            >
-              New design
-            </Button>
-          )
+          <>
+            <ButtonLink to="/templates/new" search={{ import: true }}>
+              Import template
+            </ButtonLink>
+            <ButtonLink tone="primary" icon="add" to="/templates/new">
+              Create template
+            </ButtonLink>
+          </>
         }
       >
-        Templates control layout and style. Use one for a resume or customize a copy.
+        Choose a system template or build your own reusable design.
       </PageHeader>
-
-      {starting !== null ? (
-        <NewDesign
-          key={starting}
-          store={store}
-          client={client}
-          rows={startable}
-          basedOnId={starting}
-          onDone={() => {
-            setStarting(null);
-          }}
+      <div className="w-52">
+        <SelectField
+          label="Template type"
+          value={type}
+          onChange={setType}
+          options={[
+            { value: "all", label: "All types" },
+            ...Array.from(new Set(all.map((row) => row.template.type ?? "default"))).map(
+              (value) => ({
+                value,
+                label: value === "default" ? "Default (visual)" : value.toUpperCase(),
+              }),
+            ),
+          ]}
         />
-      ) : null}
-
-      <Toolbar count={counted(rows.length, "design", "designs")}>
-        <Segmented label="Archived">
-          {ARCHIVED_FILTERS.map((option) => (
-            <Segment
-              key={option}
-              to="/templates"
-              search={{ archived: option }}
-              active={archived === option}
-            >
-              {ARCHIVED_LABELS[option]}
-            </Segment>
-          ))}
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <Segmented label="Template collection">
+          <Segment
+            to="/templates"
+            search={{ archived, collection: "system", q: query }}
+            active={active === "system"}
+          >{`System templates (${String(system.length)})`}</Segment>
+          <Segment
+            to="/templates"
+            search={{ archived, collection: "mine", q: query }}
+            active={active === "mine"}
+          >{`My templates (${String(mine.length)})`}</Segment>
         </Segmented>
-      </Toolbar>
-
-      {rows.length === 0 ? (
-        <Empty title="Nothing archived here" spot="permanent">
-          An archived design stays on every resume that already printed with it.
+        <div className="w-full max-w-sm">
+          <TextField
+            label="Find a template"
+            placeholder="Name, serif, compact..."
+            value={query}
+            onChange={(q) => {
+              void navigate({
+                to: "/templates",
+                search: { archived, collection: active, q },
+                replace: true,
+              });
+            }}
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-text-muted">
+          {active === "system"
+            ? "Provided by the app. Preview a template, or make an editable copy."
+            : "Your reusable templates. Changes are saved explicitly in the builder."}
+        </p>
+        {active === "mine" ? (
+          <Segmented label="My templates, archived">
+            {ARCHIVED_FILTERS.map((option) => (
+              <Segment
+                key={option}
+                to="/templates"
+                search={{ archived: option, collection: "mine", q: query }}
+                active={archived === option}
+              >
+                {ARCHIVED_LABELS[option]}
+              </Segment>
+            ))}
+          </Segmented>
+        ) : null}
+      </div>
+      {shown.length === 0 ? (
+        <Empty
+          title={
+            query !== ""
+              ? "No matching templates"
+              : archived === "only"
+                ? "No archived templates"
+                : "Make a template your own"
+          }
+          spot="compose"
+        >
+          {query !== ""
+            ? "Try another name or style."
+            : "Create a template from scratch, or make a copy of a system template. Your saved templates appear here."}
         </Empty>
       ) : (
-        <ul className="rounded-xl border border-line bg-surface shadow-card">
-          {rows.map((row) => (
-            <Row
-              key={row.id}
-              row={row}
-              client={client}
-              onCustomize={() => {
-                setStarting(row.id);
-              }}
-            />
+        <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          {shown.map((row) => (
+            <Card key={row.id} row={row} client={client} />
           ))}
         </ul>
+      )}
+      {active !== "system" || originals.length === 0 ? null : (
+        <details className="text-sm text-text-muted">
+          <summary className="cursor-pointer">
+            Original templates in use ({String(originals.length)})
+          </summary>
+          <ul className="mt-3 flex flex-wrap gap-3">
+            {originals.map((row) => (
+              <li key={row.id}>
+                <Link
+                  to="/templates/$templateId"
+                  params={{ templateId: row.id }}
+                  className="underline underline-offset-2"
+                >
+                  {row.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </PageBody>
   );

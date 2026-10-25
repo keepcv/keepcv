@@ -1,5 +1,6 @@
 import { createClient } from "@keepcv/api";
 import { compile } from "@keepcv/core";
+import { BLANK_SPEC, visualSpecOf } from "@keepcv/templates";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -59,6 +60,11 @@ function press(name: string): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+function chooseFormat(format: string): void {
+  press("Other formats");
+  type("File format", format);
+}
+
 // A file input holds a FileList rather than a value, which is why this is not
 // `type`. What follows is read asynchronously, so callers wait on the screen.
 function load(label: string, contents: unknown): void {
@@ -85,6 +91,7 @@ const EPOCH_ISO = "2026-01-01T00:00:00.000Z";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  window.localStorage.clear();
 });
 
 describe("the app", () => {
@@ -1410,7 +1417,8 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
     await printed();
-    expect(screen.getByLabelText("Template")).toHaveValue("ats-single-column");
+    expect(screen.getByText("Single column (original)")).toBeInTheDocument();
+    press("Fit and checks");
     expect(patched(server)).toHaveLength(0);
 
     type("Body size", "9");
@@ -1426,25 +1434,26 @@ describe("a resume and its template", () => {
     // each would go out on its own and race the other's `updatedAt`.
     expect(patched(server).at(-1)).toEqual({
       expectedUpdatedAt: expect.any(String),
-      patch: { templateId: "ats-single-column", templateConfig: { fontSize: 12 } },
+      patch: { templateConfig: { fontSize: 12 } },
     });
   });
 
-  // An override is a difference from the old design's defaults, so carrying it
-  // across would mean something else against the new one.
-  it("switches template and drops the settings held against the old one", async () => {
+  it("switches template only after applying the preview", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
     await printed();
-    type("Template", "ats-left-heading");
+    press("Change template");
+    fireEvent.click(screen.getByRole("radio", { name: "Left headings" }));
+    expect(patched(server)).toHaveLength(0);
+    press("Apply to this resume");
 
     await waitFor(() => {
       expect(patched(server)).toHaveLength(1);
     });
     expect(patched(server).at(-1)).toEqual({
       expectedUpdatedAt: expect.any(String),
-      patch: { templateId: "ats-left-heading", templateConfig: {} },
+      patch: { templateId: "left-headings-v2" },
     });
   });
 
@@ -1456,6 +1465,7 @@ describe("a resume and its template", () => {
 
     await printed();
 
+    press("Fit and checks");
     expect(await screen.findByLabelText("Body size")).toBeInTheDocument();
     expect(screen.getByLabelText("Page margin")).toBeInTheDocument();
     expect(screen.queryByLabelText("Section headings")).not.toBeInTheDocument();
@@ -1469,8 +1479,9 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
     await printed();
+    press("Fit and checks");
     expect(screen.getByLabelText("Page limit")).toHaveValue("");
-    expect(screen.getByText(/^This is 1 page long\.$/)).toBeInTheDocument();
+    expect(screen.getByText("1 page")).toBeInTheDocument();
 
     type("Page limit", "1");
 
@@ -1481,7 +1492,7 @@ describe("a resume and its template", () => {
       expectedUpdatedAt: expect.any(String),
       patch: { pageLimit: 1 },
     });
-    expect(await screen.findByText(/within the 1 page you asked for/)).toBeInTheDocument();
+    expect(screen.queryByText("Over page limit")).not.toBeInTheDocument();
   });
 
   it("writes the resume locally and records the exported version", async () => {
@@ -1505,9 +1516,10 @@ describe("a resume and its template", () => {
 
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
     await printed();
+    chooseFormat("html");
     press("Download HTML");
 
-    expect(names).toEqual(["ada-lovelace-staff-engineer-2026.html"]);
+    await waitFor(() => expect(names).toEqual(["ada-lovelace-staff-engineer-2026.html"]));
     const file = written[0];
     if (file === undefined) throw new Error("the download wrote a file");
 
@@ -1552,10 +1564,11 @@ describe("a resume and its template", () => {
 
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
     await printed();
+    chooseFormat("site");
     press("Download personal page");
 
     // What every static host looks for, and not the name the resume takes.
-    expect(names).toEqual(["index.html"]);
+    await waitFor(() => expect(names).toEqual(["index.html"]));
     const file = written[0];
     if (file === undefined) throw new Error("the download wrote a file");
 
@@ -1591,8 +1604,8 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
     await printed();
 
-    // Counted against this resume, and read before the file is written.
-    expect(screen.getByText(/things? do(es)? not fit that format/)).toBeInTheDocument();
+    chooseFormat("jsonresume");
+    expect(screen.getByText("This format changes or omits:")).toBeInTheDocument();
 
     press("Download JSON Resume");
 
@@ -1634,11 +1647,10 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
     await printed();
 
-    // JSON Resume drops metrics and a custom section; a Typst file this resume
-    // fits entirely, and saying so is the point of counting per format.
-    expect(screen.getByText(/not fit that format/)).toBeInTheDocument();
+    chooseFormat("jsonresume");
+    expect(screen.getByText("This format changes or omits:")).toBeInTheDocument();
     type("File format", "typst");
-    expect(screen.getByText("Everything in this resume fits that format.")).toBeInTheDocument();
+    expect(screen.queryByText("This format changes or omits:")).not.toBeInTheDocument();
 
     press("Download Typst source");
 
@@ -1665,14 +1677,23 @@ describe("a resume and its template", () => {
     mount(server.answer, `/resumes/${resume.id}?view=preview`);
 
     await printed();
-    press("Print or save as PDF");
+    press("Export PDF");
 
-    const sent = window.document.querySelector<HTMLIFrameElement>('iframe[aria-hidden="true"]');
-    expect(sent?.srcdoc).toContain("Cut p95 latency from 800ms to 120ms");
+    await waitFor(() =>
+      expect(
+        window.document.querySelector<HTMLIFrameElement>('iframe[aria-hidden="true"]')?.srcdoc,
+      ).toContain("Cut p95 latency from 800ms to 120ms"),
+    );
+    window.document.querySelector('iframe[aria-hidden="true"]')?.remove();
   });
 
-  const lintPanel = async () =>
-    await screen.findByRole("region", { name: "Checks and page limit" });
+  const lintPanel = async () => {
+    fireEvent.click(await screen.findByRole("button", { name: "Fit and checks" }));
+    const heading = await screen.findByRole("heading", { name: "Readability checks" });
+    const panel = heading.closest("details");
+    if (panel === null) throw new Error("Checks have an expandable panel");
+    return panel;
+  };
 
   it("reads the file back the way a machine would, and says so", async () => {
     const { server, resume } = aResumeToPrint();
@@ -1696,23 +1717,19 @@ describe("a resume and its template", () => {
   });
 
   it("says what the template does rather than claiming a certification", async () => {
-    const { server, resume } = aResumeToPrint();
-    mount(server.answer, `/resumes/${resume.id}?view=preview`);
-
-    expect(await screen.findByRole("region", { name: "Appearance" })).toHaveTextContent(
-      /never images or table cells/,
-    );
+    const { server } = aResumeToPrint();
+    mount(server.answer, "/templates/ats-single-column");
+    expect(await screen.findByText(/never images or table cells/)).toBeInTheDocument();
   });
 
-  // Beside the composition the preview is feedback on what was just placed, and
-  // a panel of export and template controls opens over the thing it changes.
-  it("offers export and template settings on the preview but not on the composition", async () => {
+  it("keeps export available without opening design controls in Content", async () => {
     const { server, resume } = aResumeToPrint();
     mount(server.answer, `/resumes/${resume.id}?view=composition`);
 
     await printed();
     expect(screen.queryByRole("button", { name: /Template and export/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Print or save as PDF" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Body size")).not.toBeInTheDocument();
   });
 
   const POSTING = "We use Kubernetes and Terraform. Kubernetes above all.";
@@ -1811,168 +1828,159 @@ describe("a resume and its template", () => {
   });
 });
 
-describe("designs of your own", () => {
+describe("the template library and builder", () => {
   const sent = (server: ReturnType<typeof storeServer>, method: string): unknown[] =>
     server.calls.filter((call) => call.method === method).map((call) => call.body);
-  const posted = (server: ReturnType<typeof storeServer>) => sent(server, "POST");
-  const patchedBodies = (server: ReturnType<typeof storeServer>) => sent(server, "PATCH");
 
-  // The shipped ones are in every build rather than in the store, so a store
-  // that holds none of its own still has something for a resume to name.
-  it("lists the shipped designs beside yours", async () => {
+  it("separates the nine system templates from editable user templates", async () => {
     const store = emptyStore();
     addTemplate(store, "Navy headings", { settings: { accent: "navy" } });
     mount(() => jsonOf(store), "/templates");
-
-    expect(await screen.findByText("Single column")).toBeInTheDocument();
-    expect(screen.getByText("Left headings")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Navy headings" })).toBeInTheDocument();
-    expect(screen.getAllByText("Built in")).toHaveLength(2);
-    expect(screen.getByText("3 designs")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Single column" })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getAllByText("System", { exact: true })).toHaveLength(
+      9,
+    );
+    expect(screen.queryByRole("link", { name: "Navy headings" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "My templates (1)" }));
+    expect(await screen.findByRole("link", { name: "Navy headings" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit template" })).toBeInTheDocument();
   });
 
-  it("starts one from a design that already exists", async () => {
-    const server = storeServer(emptyStore());
-    mount(server.answer, "/templates");
-
-    await screen.findByText("Single column");
-    press("New design");
-    type("Name", "Navy headings");
-    type("Based on", "ats-left-heading");
-    press("Create design");
-
-    await waitFor(() => {
-      expect(posted(server)).toHaveLength(1);
-    });
-    expect(posted(server).at(-1)).toMatchObject({
+  it("opens a system template read-only and saves customization as a user copy", async () => {
+    const store = emptyStore();
+    const server = storeServer(store);
+    mount(server.answer, "/templates/left-headings-v2");
+    expect(await screen.findByText("System - read-only")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save template" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Extra CSS")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "Make a copy" }));
+    expect(await screen.findByLabelText("Template name")).toHaveValue("Left headings copy");
+    type("Template name", "Navy headings");
+    type("Accent", "navy");
+    type("Name size, exact value", "2.1");
+    fireEvent.blur(screen.getByLabelText("Name size, exact value"));
+    expect(sent(server, "POST")).toHaveLength(0);
+    press("Save template");
+    await waitFor(() => expect(store.templates).toHaveLength(1));
+    expect(sent(server, "POST")[0]).toMatchObject({
       name: "Navy headings",
-      spec: { settings: { headingPlace: "beside" }, extraCss: "" },
+      spec: {
+        type: "default",
+        version: 1,
+        payload: {
+          settings: { headingPlace: "beside", accent: "navy", nameSize: 2.1 },
+          extraCss: "",
+        },
+      },
     });
+    expect(sent(server, "PATCH")).toHaveLength(0);
   });
 
-  // The file is read in the tab and the store is asked to write a design, so a
-  // design travels between two stores without either one reaching the other.
-  it("starts one from a design saved out as a file", async () => {
+  it("imports a reusable template file into an editable unsaved draft", async () => {
     const server = storeServer(emptyStore());
-    mount(server.answer, "/templates");
-
-    await screen.findByText("Single column");
-    press("New design");
-    load("Or load one from a file", {
+    mount(server.answer, "/templates/new?import=true");
+    await screen.findByLabelText("Template file");
+    load("Template file", {
       name: "Navy headings",
       spec: { settings: { accent: "navy" }, extraCss: ".kc-name { letter-spacing: 0; }" },
     });
-
-    // The name comes off the file, so a design that was named once stays named.
-    expect(await screen.findByLabelText<HTMLInputElement>("Name")).toHaveValue("Navy headings");
-    press("Create design");
-
-    await waitFor(() => {
-      expect(posted(server)).toHaveLength(1);
-    });
-    expect(posted(server).at(-1)).toMatchObject({
+    await waitFor(() =>
+      expect(screen.getByLabelText("Template name")).toHaveValue("Navy headings"),
+    );
+    expect(sent(server, "POST")).toHaveLength(0);
+    press("Save template");
+    await waitFor(() => expect(sent(server, "POST")).toHaveLength(1));
+    expect(sent(server, "POST")[0]).toMatchObject({
       name: "Navy headings",
-      spec: { settings: { accent: "navy" } },
+      spec: { type: "default", version: 1, payload: { settings: { accent: "navy" } } },
     });
   });
 
-  it("turns away a file that is not a design, and writes nothing", async () => {
+  it("turns away a file that is not a template without creating anything", async () => {
     const server = storeServer(emptyStore());
-    mount(server.answer, "/templates");
-
-    await screen.findByText("Single column");
-    press("New design");
-    load("Or load one from a file", { basics: { name: "Ada" } });
-
-    expect(await screen.findByText(/is not a design/)).toBeInTheDocument();
-    expect(posted(server)).toHaveLength(0);
+    mount(server.answer, "/templates/new?import=true");
+    await screen.findByLabelText("Template file");
+    load("Template file", { basics: { name: "Ada" } });
+    expect(await screen.findByText(/is not a template/)).toBeInTheDocument();
+    expect(sent(server, "POST")).toHaveLength(0);
   });
 
-  // `template_name_unique` covers archived rows, so the clash is named here
-  // rather than left to the store to refuse after the form has been filled in.
-  it("says so before writing when the name is already taken", async () => {
+  it("checks names including archived templates before sending", async () => {
     const store = emptyStore();
-    addTemplate(store, "Navy headings");
+    addTemplate(store, "Navy headings", {}, { archivedAt: EPOCH_ISO });
     const server = storeServer(store);
-    mount(server.answer, "/templates");
-
-    await screen.findByText("Single column");
-    press("New design");
-    type("Name", "Navy headings");
-
-    expect(
-      await screen.findByText("A design of yours is already called that."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create design/ })).toBeDisabled();
+    mount(server.answer, "/templates/new");
+    await screen.findByLabelText("Template name");
+    type("Template name", "Navy headings");
+    expect(screen.getByText("A template of yours already has that name.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save template" })).toBeDisabled();
+    expect(sent(server, "POST")).toHaveLength(0);
   });
 
-  it("writes a design knob as it is moved, once the moving stops", async () => {
+  it("keeps template experiments local until Save and supports undo after saving", async () => {
     const store = emptyStore();
     const template = addTemplate(store, "Navy headings");
     const server = storeServer(store);
     mount(server.answer, `/templates/${template.id}`);
-
-    await screen.findByRole("heading", { name: "Navy headings" });
+    await screen.findByLabelText("Accent");
     type("Accent", "navy");
     type("Accent", "forest");
-
-    await waitFor(
-      () => {
-        expect(patchedBodies(server)).toHaveLength(1);
+    expect(sent(server, "PATCH")).toHaveLength(0);
+    press("Save template");
+    await waitFor(() => expect(sent(server, "PATCH")).toHaveLength(1));
+    expect(sent(server, "PATCH")[0]).toMatchObject({
+      patch: {
+        name: "Navy headings",
+        spec: {
+          type: "default",
+          version: 1,
+          payload: { settings: { accent: "forest" }, extraCss: "" },
+        },
       },
-      { timeout: 2000 },
-    );
-    expect(patchedBodies(server).at(-1)).toEqual({
-      expectedUpdatedAt: expect.any(String),
-      patch: { spec: { settings: { accent: "forest" }, extraCss: "" } },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo" })).not.toBeDisabled());
+    press("Undo");
+    expect(screen.getByLabelText("Accent")).toHaveValue("navy");
+    expect(visualSpecOf(store.templates[0]?.spec ?? BLANK_SPEC).settings["accent"]).toBe("forest");
+    press("Redo");
+    expect(screen.getByLabelText("Accent")).toHaveValue("forest");
   });
 
-  // A stylesheet that fetches is a resume that prints differently offline, so
-  // the refusal is the schema's rather than a lint after the fact.
-  it("refuses CSS that would fetch, and writes nothing while it is wrong", async () => {
+  it("retains refused CSS, blocks saving and allows source recovery", async () => {
     const store = emptyStore();
     const template = addTemplate(store, "Navy headings");
     const server = storeServer(store);
     mount(server.answer, `/templates/${template.id}`);
-
-    await screen.findByRole("heading", { name: "Navy headings" });
+    await screen.findByLabelText("Extra CSS");
     type("Extra CSS", "@import url(https://fonts.example.test/a.css);");
-
     expect(await screen.findByText(/may not fetch anything/)).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    expect(patchedBodies(server)).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Save template" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download template file" })).toBeEnabled();
+    expect(sent(server, "PATCH")).toHaveLength(0);
   });
 
-  // A select holding a value no option carries reads as a resume printing
-  // through some other design, and moving off it cannot be undone.
-  it("keeps offering an archived design to the resume still printing with it", async () => {
+  it("keeps the current archived template available in the visual chooser", async () => {
     const store = aFilledStore();
     const resume = store.resumes[0];
     const template = addTemplate(store, "Navy headings", {}, { archivedAt: EPOCH_ISO });
-    if (resume === undefined) throw new Error("the filled store holds a resume");
+    if (resume === undefined) throw new Error("The fixture holds a resume");
     resume.templateId = template.id;
     mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
-
-    const picker = await screen.findByLabelText<HTMLSelectElement>("Template");
-    expect(picker.value).toBe(template.id);
-    expect([...picker.options].map((option) => option.text)).toContain("Navy headings (archived)");
+    fireEvent.click(await screen.findByRole("button", { name: "Change template" }));
+    expect(screen.getByRole("radio", { name: "Navy headings" })).toBeChecked();
   });
 
-  it("offers a design of yours to a resume, and links through to it", async () => {
+  it("makes shared editing scope visible from the resume's secondary actions", async () => {
     const store = aFilledStore();
     const resume = store.resumes[0];
     const template = addTemplate(store, "Navy headings");
-    if (resume === undefined) throw new Error("the filled store holds a resume");
+    if (resume === undefined) throw new Error("The fixture holds a resume");
     resume.templateId = template.id;
     mount(() => jsonOf(store), `/resumes/${resume.id}?view=preview`);
-
-    const picker = await screen.findByLabelText<HTMLSelectElement>("Template");
-    expect([...picker.options].map((option) => option.text)).toContain("Navy headings");
-    expect(picker.value).toBe(template.id);
-    expect(screen.getByRole("link", { name: "Edit shared design" })).toHaveAttribute(
+    fireEvent.click(await screen.findByRole("button", { name: "Fit and checks" }));
+    expect(screen.getByRole("link", { name: /Edit reusable template/ })).toHaveAttribute(
       "href",
-      `/templates/${template.id}`,
+      `/templates/${template.id}?from=${resume.id}`,
     );
   });
 });
@@ -2451,7 +2459,9 @@ describe("sending an old version", () => {
     await screen.findByText("#1");
     press("Export");
 
-    expect(await screen.findByRole("button", { name: "Download HTML" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Export PDF" })).toHaveLength(2),
+    );
     expect(screen.getByText(/Version #1, in the words it pinned/)).toBeInTheDocument();
     // Nothing was restored: the composition is exactly what it was.
     expect(server.calls.some((call) => call.path.endsWith("/restore"))).toBe(false);

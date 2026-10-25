@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { standardFields } from "./standard-fields.js";
 import { cssIsLocal } from "./template-css.js";
+import { templateDefinitionSchema } from "./template-definition.js";
 
 const CLOSES_STYLE = /<\/style/i;
 
@@ -18,7 +19,7 @@ export const extraCssSchema = z
 export const templateSpecSchema = z
   .object({
     settings: z.record(z.string(), z.union([z.string(), z.number()])),
-    extraCss: z.string().max(4000),
+    extraCss: z.string(),
   })
   .meta({ id: "TemplateSpec", title: "Template design" });
 
@@ -26,7 +27,7 @@ export const templateSchema = z
   .object({
     ...standardFields,
     name: z.string().min(1),
-    spec: templateSpecSchema,
+    spec: z.union([templateDefinitionSchema, templateSpecSchema]),
   })
   .meta({ id: "Template", title: "Template" });
 
@@ -36,7 +37,12 @@ export const templateInputSchema = templateSchema
     updatedAt: true,
     archivedAt: true,
   })
-  .extend({ spec: templateSpecSchema.extend({ extraCss: extraCssSchema }) });
+  .extend({
+    spec: z.union([
+      templateDefinitionSchema,
+      templateSpecSchema.extend({ extraCss: extraCssSchema }),
+    ]),
+  });
 
 export const templatePatchSchema = templateInputSchema.omit({ id: true }).partial();
 
@@ -46,6 +52,7 @@ export const templateFileSchema = z.object({
 });
 
 export type TemplateSpec = z.infer<typeof templateSpecSchema>;
+export type StoredTemplateSpec = StoredTemplate["spec"];
 export type TemplateFile = z.infer<typeof templateFileSchema>;
 export type StoredTemplate = z.infer<typeof templateSchema>;
 export type StoredTemplateInput = z.infer<typeof templateInputSchema>;

@@ -62,7 +62,7 @@ const aDate = (value: string): DocumentField => ({
 
 describe("linting a resume the way a machine reads it", () => {
   // A rule firing on any shipped template fires on every resume made with it.
-  it.each(TEMPLATES.map((template) => template.id))(
+  it.each(TEMPLATES.filter((template) => template.type !== "html").map((template) => template.id))(
     "finds nothing wrong with the file %s writes",
     (id) => {
       const document = { ...RESUME, meta: { ...RESUME.meta, templateId: id } };

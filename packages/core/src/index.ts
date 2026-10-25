@@ -115,6 +115,7 @@ export {
   recordsWithTag,
   resumesUsingPhrasing,
   resumesUsingPoint,
+  resumesUsingTemplate,
   type StoreOverview,
   sectionHeading,
   type TagUsage,

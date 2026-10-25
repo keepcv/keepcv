@@ -38,3 +38,11 @@ decided when the resume is composed, not here.
 
 `@keepcv/core` compiles the document; this package only renders one, so it runs
 in Node and in the browser alike.
+
+`renderHtml(document, templateTypes)` optionally resolves a caller-installed
+trusted template catalog. Built-in HTML definitions use checked markup, CSS and
+bundled assets with the same CSP as Default exports. Typed definitions without
+a renderer fail explicitly. Browser callers can run this pure bounded renderer
+in a worker for cancellation; the editor does so for HTML preview and export.
+Arbitrary HTML has no accurate flow page estimate. Other format writers keep
+their own declared layouts rather than reproducing authored HTML/CSS.

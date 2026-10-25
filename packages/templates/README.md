@@ -24,7 +24,7 @@ pnpm add @keepcv/templates
 import { configFor, resolveTemplate, TEMPLATES } from "@keepcv/templates";
 
 // A document names the template it was composed for. An id this build does not
-// have falls back rather than refusing to render.
+// have falls back; an unsupported typed definition reports an error.
 const { template, config } = resolveTemplate(document);
 
 <style>{template.styles(config)}</style>;
@@ -83,3 +83,25 @@ what any named product accepts.
 ## Licence
 
 MIT - see [LICENSE](LICENSE).
+
+## Authored template types
+
+Default (visual) and HTML use versioned definitions in template.spec. Legacy
+visual specs remain readable. `definitionOf` wraps one for a new write;
+`visualSpecOf` decodes a Default definition. `fromDefinition` constructs the
+installed renderer, while `validateTemplate` checks source for ordinary writes.
+Both accept an optional trusted `TemplateType[]` catalog. Type identifiers are
+strings, so a consumer can install a handler without widening a shared enum.
+
+HTML templates contain local fragment/CSS/partial/asset files. They use a bounded
+Liquid-like binding language over `templateDataSchema`, derived from the selected
+ResumeDocument. It exposes ordered sections, entries, points, fields, links,
+groups and safe metadata; no store or host APIs. HTML/CSS/resource policy is
+independent of advisory readability checks. Unknown native definitions remain
+portable and refuse rendering until a handler is installed.
+
+`HTML_TEMPLATES` contains Studio, Signal and Folio. The first two demonstrate
+creative poster/contact-sheet layouts. Default designs use ATS conformance;
+HTML samples have separate technical, coverage and hostile-input tests. Arbitrary
+HTML does not claim accurate flow pagination. Read the
+[authoring guide](../../docs/TEMPLATES.md) for syntax, files and limits.

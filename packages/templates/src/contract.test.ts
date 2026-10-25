@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { atsSingleColumn } from "./built-in.js";
 import { configFor } from "./contract.js";
 import { FIXTURE_DOCUMENT } from "./fixture.js";
-import { DEFAULT_TEMPLATE_ID, resolveTemplate, templateById } from "./registry.js";
+import { DEFAULT_TEMPLATE_ID, resolveTemplate, TEMPLATES, templateById } from "./registry.js";
 
 describe("a stored configuration", () => {
   it("takes the declared default for a key it does not hold", () => {
@@ -36,6 +36,14 @@ describe("a stored configuration", () => {
 });
 
 describe("resolving the template a document names", () => {
+  it("offers nine system designs while preserving historical ids and the missing-id fallback", () => {
+    expect(TEMPLATES).toHaveLength(9);
+    expect(new Set(TEMPLATES.map((template) => template.id)).size).toBe(9);
+    expect(TEMPLATES.some((template) => template.id === "ats-single-column")).toBe(false);
+    expect(resolveTemplate(FIXTURE_DOCUMENT).template.id).toBe("ats-single-column");
+    expect(templateById("ats-left-heading")?.defaultConfig["headingAlign"]).toBe("right");
+    expect(templateById("left-headings-v2")?.defaultConfig["headingAlign"]).toBe("left");
+  });
   it("takes the one it names, configured as it says", () => {
     const { template, config } = resolveTemplate({
       ...FIXTURE_DOCUMENT,

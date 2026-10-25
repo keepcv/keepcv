@@ -23,9 +23,7 @@ export function Dialog({
 
   useEffect(() => {
     const held = document.activeElement;
-    // Only when nothing inside has claimed focus already. The close button is
-    // the first focusable in the panel, so focusing it unconditionally stole
-    // focus back from the palette's own field and swallowed what was typed.
+    // Focusing Close unconditionally swallowed typing in the palette's field.
     if (panel.current?.contains(held) !== true) {
       panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     }
@@ -34,8 +32,6 @@ export function Dialog({
     };
   }, []);
 
-  // On the document, like the menu's: a handler on the scrim makes it an
-  // interactive static element, and closing has to work from inside the panel.
   useEffect(() => {
     const onDown = (event: MouseEvent): void => {
       if (event.target instanceof Node && panel.current?.contains(event.target) !== true) {
@@ -50,6 +46,7 @@ export function Dialog({
 
   function onKeyDown(event: React.KeyboardEvent): void {
     if (event.key === "Escape") {
+      event.stopPropagation();
       onClose();
       return;
     }
@@ -65,7 +62,12 @@ export function Dialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-950/50 p-4 pt-[10vh] backdrop-blur-sm">
+    <div
+      className={cn(
+        "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-950/50 p-4 backdrop-blur-sm",
+        size !== "full" && "pt-[10vh]",
+      )}
+    >
       <div
         ref={panel}
         role="dialog"
@@ -77,10 +79,11 @@ export function Dialog({
           "w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
           size === "md" && "max-w-lg",
           size === "lg" && "max-w-3xl",
-          size === "full" && "max-w-5xl",
+          size === "full" &&
+            "flex h-[min(54rem,calc(100dvh-2rem))] min-h-0 max-w-5xl flex-col overflow-hidden",
         )}
       >
-        <header className="flex items-center justify-between gap-4 border-b border-line-subtle px-4 py-3">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line-subtle px-4 py-3">
           <h2 id={labelId} className="text-sm font-semibold text-text">
             {title}
           </h2>

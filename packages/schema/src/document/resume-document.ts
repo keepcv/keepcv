@@ -2,7 +2,7 @@ import { z } from "zod";
 import { contactChannelKindSchema } from "../entities/contact-channel.js";
 import { recordFieldValueKindSchema } from "../entities/record-field.js";
 import { sectionKindSchema, sectionLayoutSchema } from "../entities/resume.js";
-import { templateSpecSchema } from "../entities/template.js";
+import { templateSchema } from "../entities/template.js";
 import { richTextSchema } from "../primitives/rich-text.js";
 
 export const RESUME_DOCUMENT_SCHEMA_VERSION = 1;
@@ -131,7 +131,7 @@ export const documentMetaSchema = z
     // A template the user wrote is editable, so a document that only named one
     // would re-render once it was edited and a version would stop saying what
     // was sent. Built-in templates are resolved by id and carry nothing here.
-    templateSpec: templateSpecSchema.optional(),
+    templateSpec: templateSchema.shape.spec.optional(),
   })
   .meta({ id: "DocumentMeta", title: "Document metadata" });
 

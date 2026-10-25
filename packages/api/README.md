@@ -149,3 +149,8 @@ reporter for callers using the mapper directly.
 ## Licence
 
 MIT
+
+`createApi` accepts an optional `templateTypes` catalog of trusted validators
+from @keepcv/templates. Ordinary template writes validate the installed type and
+payload; native import preserves bounded unavailable definitions without running
+them. Built-in validators cover Default and HTML.

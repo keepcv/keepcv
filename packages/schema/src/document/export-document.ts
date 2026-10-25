@@ -25,7 +25,7 @@ import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { templateSchema } from "../entities/template.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 // `import(export(store)) == store` is a tested property, so a table missing
 // from here or from `archiveSchema` below is data the format silently drops.

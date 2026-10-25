@@ -1,11 +1,13 @@
 import { newUuid } from "@keepcv/core";
 import type { Resume, Store } from "@keepcv/schema";
+import { uuidSchema } from "@keepcv/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import { Empty, Failure } from "../../../app/states.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { Button } from "../../../components/ui/button.js";
-import { SelectField, TextField } from "../../../components/ui/field.js";
+import { TextField } from "../../../components/ui/field.js";
 import { Meta } from "../../../components/ui/meta.js";
 import { NameBox } from "../../../components/ui/name-box.js";
 import { PageBody, PageHeader, Toolbar } from "../../../components/ui/page.js";
@@ -14,7 +16,10 @@ import { Segment, Segmented } from "../../../components/ui/segmented.js";
 import type { ApiClient } from "../../../lib/api.js";
 import { ARCHIVED_FILTERS, ARCHIVED_LABELS, type ArchivedFilter } from "../../../lib/archived.js";
 import { counted } from "../../../lib/label.js";
-import { pickableTemplates } from "../../templates/model/template-rows.js";
+import { useFormRecovery } from "../../../lib/use-form-recovery.js";
+import { templateRowFor, templateRows } from "../../templates/model/template-rows.js";
+import { TemplateChooser } from "../../templates/ui/template-chooser.js";
+import { TemplateThumbnail } from "../../templates/ui/thumbnail.js";
 import { useCreateResume, useDeriveResume } from "../api/use-resumes.js";
 import { type ResumeRow, resumeRows } from "../model/resume-rows.js";
 
@@ -108,6 +113,8 @@ function Row({
   );
 }
 
+const newResumeSchema = z.object({ id: uuidSchema, name: z.string(), templateId: z.string() });
+
 function NewResume({
   client,
   store,
@@ -121,35 +128,50 @@ function NewResume({
 }) {
   const create = useCreateResume(client);
   const navigate = useNavigate();
-  const [typed, setTyped] = useState("");
-  const templates = pickableTemplates(store, null);
-  const [templateId, setTemplateId] = useState(
-    templates.find((option) => option.id === template)?.id ?? templates[0]?.id ?? "",
+  const [initial] = useState(() => ({
+    id: newUuid(),
+    name: "",
+    templateId:
+      templateRows(store, "exclude").find((row) => row.id === template)?.id ??
+      templateRows(store, "exclude")[0]?.id ??
+      "",
+  }));
+  const form = useFormRecovery(
+    `keepcv.resume-new:${template ?? "default"}`,
+    newResumeSchema,
+    initial,
   );
-
+  const [choosing, setChoosing] = useState(false);
+  const selected = templateRowFor(store, form.values.templateId);
   const start = () => {
-    const id = newUuid();
+    const sent = form.begin();
+    if (sent === undefined) return;
     create.mutate(
       {
-        id,
-        name: typed.trim(),
+        id: sent.values.id,
+        name: sent.values.name.trim(),
         targetCompany: null,
         targetRole: null,
         targetUrl: null,
         targetJdText: null,
         appliedOn: null,
-        templateId: templateId || null,
+        templateId: sent.values.templateId,
         templateConfig: {},
         pageLimit: null,
       },
       {
-        onSuccess: () => {
-          void navigate({ to: "/resumes/$resumeId", params: { resumeId: id }, search: {} });
+        onSuccess: (stored) => {
+          form.acknowledge(
+            sent,
+            { id: stored.id, name: stored.name, templateId: stored.templateId ?? "" },
+            stored.updatedAt,
+          );
+          void navigate({ to: "/resumes/$resumeId", params: { resumeId: stored.id }, search: {} });
         },
+        onSettled: form.finish,
       },
     );
   };
-
   return (
     <Panel>
       <PanelHeader title="New resume">
@@ -157,39 +179,87 @@ function NewResume({
       </PanelHeader>
       <PanelBody>
         <form
-          className="max-w-xl space-y-3"
+          className="max-w-xl space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (typed.trim() !== "" && !create.isPending) start();
+            if (
+              form.values.name.trim() !== "" &&
+              selected !== undefined &&
+              selected.template.documentVersions.length > 0
+            )
+              start();
           }}
         >
-          <TextField
-            label="Resume name"
-            value={typed}
-            placeholder="e.g. Backend engineer - Acme"
-            onChange={setTyped}
-          />
-          <SelectField
-            label="Template"
-            value={templateId}
-            onChange={setTemplateId}
-            options={templates.map((option) => ({ value: option.id, label: option.name }))}
-          />
-          {create.error === null ? null : <Failure error={create.error} />}
-          <div className="flex gap-2">
-            <Button tone="primary" type="submit" disabled={typed.trim() === "" || create.isPending}>
-              {create.isPending ? "Creating" : "Create resume"}
-            </Button>
-            <Button onClick={onCancel} disabled={create.isPending}>
-              Cancel
-            </Button>
-          </div>
+          <fieldset disabled={create.isPending} className="space-y-4">
+            <TextField
+              label="Resume name"
+              value={form.values.name}
+              placeholder="e.g. Backend engineer - Acme"
+              onChange={(name) => form.setValues((current) => ({ ...current, name }))}
+            />
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line p-3">
+              {selected === undefined ? (
+                <span className="text-sm text-text-muted">Choose a template</span>
+              ) : (
+                <>
+                  <TemplateThumbnail template={selected.template} />
+                  <div>
+                    <p className="text-sm font-medium text-text">{selected.name}</p>
+                    <Badge>{selected.isBuiltIn ? "System template" : "My template"}</Badge>
+                  </div>
+                </>
+              )}
+              <Button className="ml-auto" onClick={() => setChoosing(true)}>
+                Change template
+              </Button>
+            </div>
+            {create.error === null ? null : <Failure error={create.error} />}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                tone="primary"
+                type="submit"
+                pending={create.isPending}
+                disabled={
+                  form.values.name.trim() === "" ||
+                  selected === undefined ||
+                  selected.template.documentVersions.length === 0
+                }
+              >
+                Create resume
+              </Button>
+              <Button tone="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+              {form.pending ? (
+                <Button
+                  tone="ghost"
+                  onClick={() => {
+                    form.discard(initial);
+                    onCancel();
+                  }}
+                >
+                  Discard draft
+                </Button>
+              ) : null}
+            </div>
+          </fieldset>
         </form>
+        {choosing ? (
+          <TemplateChooser
+            store={store}
+            currentId={form.values.templateId}
+            actionLabel="Use this template"
+            onClose={() => setChoosing(false)}
+            onChoose={(templateId) => {
+              form.setValues((current) => ({ ...current, templateId }));
+              setChoosing(false);
+            }}
+          />
+        ) : null}
       </PanelBody>
     </Panel>
   );
 }
-
 export function ResumeList({
   store,
   client,

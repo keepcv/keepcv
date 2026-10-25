@@ -43,7 +43,7 @@ describe("the shared fixture", () => {
   });
 });
 
-for (const template of TEMPLATES) {
+for (const template of TEMPLATES.filter((template) => template.type !== "html")) {
   describe(template.id, () => {
     isATemplate(template);
   });
