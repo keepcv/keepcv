@@ -11,7 +11,7 @@ import { cn } from "../../../lib/cn.js";
 import { templateRowFor } from "../../templates/model/template-rows.js";
 import { Control } from "../../templates/ui/control.js";
 import { TemplateChooser } from "../../templates/ui/template-chooser.js";
-import { TemplateData } from "../../templates/ui/template-data.js";
+import { TemplateDataDisclosure } from "../../templates/ui/template-data.js";
 import type { ResumeSettings } from "../api/use-resume-settings.js";
 import { LintPanel } from "./lint-report.js";
 import { PaperPreview } from "./paper-preview.js";
@@ -93,12 +93,7 @@ function FitControls({
           <LintPanel document={settings.document} />
         </PanelBody>
       </Panel>
-      <details className="text-xs text-text-muted">
-        <summary className="cursor-pointer">Template data</summary>
-        <div className="mt-3">
-          <TemplateData document={settings.document} />
-        </div>
-      </details>
+      <TemplateDataDisclosure document={settings.document} label="Template data" />
       <details className="text-xs text-text-muted">
         <summary className="cursor-pointer">Template actions</summary>
         <div className="mt-3 flex flex-wrap gap-2">

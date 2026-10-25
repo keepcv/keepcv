@@ -191,3 +191,26 @@ export function TemplateData({
     </div>
   );
 }
+
+export function TemplateDataDisclosure({
+  document,
+  label,
+}: {
+  document: ResumeDocument;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="shrink-0 text-xs text-text-muted"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="cursor-pointer">{label}</summary>
+      {open ? (
+        <div className="mt-3 max-h-72 overflow-auto">
+          <TemplateData document={document} />
+        </div>
+      ) : null}
+    </details>
+  );
+}

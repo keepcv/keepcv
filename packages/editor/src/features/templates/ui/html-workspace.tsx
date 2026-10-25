@@ -165,20 +165,22 @@ export function HtmlWorkspace({
           Resume data
         </Button>
       </fieldset>
-      <div hidden={tab !== "data"}>
-        <TemplateData
-          document={document}
-          onInsert={(text) => {
-            if (file?.mediaType !== "text/html") {
-              setProblem("Select an HTML source file before inserting a binding.");
+      {tab === "data" ? (
+        <div>
+          <TemplateData
+            document={document}
+            onInsert={(text) => {
+              if (file?.mediaType !== "text/html") {
+                setProblem("Select an HTML source file before inserting a binding.");
+                setTab("code");
+                return;
+              }
+              setInsert({ text, key: ++sequence.current });
               setTab("code");
-              return;
-            }
-            setInsert({ text, key: ++sequence.current });
-            setTab("code");
-          }}
-        />
-      </div>
+            }}
+          />
+        </div>
+      ) : null}
       <div hidden={tab !== "code"} className="space-y-3">
         <SelectField
           label="Bundle file"

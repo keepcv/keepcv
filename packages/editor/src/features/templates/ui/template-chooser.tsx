@@ -9,7 +9,7 @@ import { PaperPreview } from "../../resumes/ui/paper-preview.js";
 import { describeTemplate, previewWithTemplate } from "../model/preview.js";
 import { SAMPLE_DOCUMENT } from "../model/sample.js";
 import { type TemplateRow, templateRows } from "../model/template-rows.js";
-import { TemplateData } from "./template-data.js";
+import { TemplateDataDisclosure } from "./template-data.js";
 import { TemplateThumbnail } from "./thumbnail.js";
 
 function Choices({
@@ -85,12 +85,7 @@ function Candidate({
         <Badge>{row.isBuiltIn ? "System - read-only" : "My template"}</Badge>
       </div>
       <PaperPreview document={document} />
-      <details className="shrink-0 text-xs text-text-muted">
-        <summary className="cursor-pointer">Available template data</summary>
-        <div className="mt-3 max-h-72 overflow-auto">
-          <TemplateData document={document} />
-        </div>
-      </details>
+      <TemplateDataDisclosure document={document} label="Available template data" />
     </>
   );
 }

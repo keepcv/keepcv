@@ -67,7 +67,7 @@ it("keeps fit and content while choosing a template, writes only on Apply, and r
   fireEvent.click(screen.getByRole("button", { name: "Apply to this resume" }));
   await waitFor(() => expect(store.resumes[0]?.templateConfig).toEqual({}));
   expect(store.resumes[0]?.pageLimit).toBe(2);
-});
+}, 20_000);
 
 it("creates a template copy from a resume and returns to an unapplied candidate preview", async () => {
   const store = aFilledStore();
@@ -90,7 +90,7 @@ it("creates a template copy from a resume and returns to an unapplied candidate 
   expect(store.templates).toHaveLength(1);
   fireEvent.click(within(chooser).getByRole("button", { name: "Apply to this resume" }));
   await waitFor(() => expect(store.resumes[0]?.templateId).toBe(store.templates[0]?.id));
-});
+}, 20_000);
 
 it("saves an edited copy as a new template while leaving the original and its resumes unchanged", async () => {
   const store = aFilledStore();

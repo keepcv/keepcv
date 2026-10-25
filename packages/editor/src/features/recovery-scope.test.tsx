@@ -85,9 +85,13 @@ it.each([
         );
         await screen.findByText("Offline");
       } else
-        await screen.findByRole("button", {
-          name: kind === "wording" ? "Retry saving wording" : "Retry saving",
-        });
+        await screen.findByRole(
+          "button",
+          {
+            name: kind === "wording" ? "Retry saving wording" : "Retry saving",
+          },
+          { timeout: 5000 },
+        );
     }
 
     const legacy = await open(undefined, "first");

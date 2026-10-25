@@ -1,5 +1,6 @@
 import { createClient } from "@keepcv/api";
 import { isTemplateDefinition } from "@keepcv/schema";
+import { FIXTURE_DOCUMENT } from "@keepcv/templates";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -7,6 +8,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { buildRouter } from "../app/router.js";
 import { addTemplate, emptyStore } from "../store.harness.js";
 import { storeServer } from "../store-server.harness.js";
+import { TemplateDataDisclosure } from "./templates/ui/template-data.js";
 
 vi.mock("./templates/ui/source-editor.js", () => ({
   default: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
@@ -103,4 +105,11 @@ it("retains unsupported template definitions in a usable library and offers sour
   expect(screen.getByRole("button", { name: "Download template file" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Save template" })).toBeDisabled();
   expect(row.spec.payload["files"]).toEqual({ "main.tex": "SOURCE" });
+});
+
+it("mounts the data explorer only when its disclosure is opened", async () => {
+  render(<TemplateDataDisclosure document={FIXTURE_DOCUMENT} label="Available template data" />);
+  expect(screen.queryByLabelText("Find a template field")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText("Available template data"));
+  expect(await screen.findByLabelText("Find a template field")).toBeInTheDocument();
 });
