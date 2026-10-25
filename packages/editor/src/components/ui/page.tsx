@@ -73,14 +73,14 @@ export function PageHeader({
               <Icon name={icon} size="lg" />
             </span>
           )}
-          {title}
+          <span className="min-w-0 [overflow-wrap:anywhere]">{title}</span>
         </h1>
         {children === undefined ? null : (
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-muted">{children}</p>
         )}
       </div>
       {actions === undefined ? null : (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">{actions}</div>
       )}
     </header>
   );

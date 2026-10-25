@@ -66,6 +66,8 @@ it.each([
           signOut={() => mounted.unmount()}
         />,
       );
+      if (kind === "resume")
+        fireEvent.click(await screen.findByRole("button", { name: "Fit and checks" }));
       const input = await screen.findByLabelText(label);
       return { queries, input, ...mounted };
     }
@@ -77,13 +79,19 @@ it.each([
     async function edit(value: string | undefined) {
       fireEvent.change(screen.getByLabelText(label), { target: { value } });
       if (kind === "wording") fireEvent.blur(screen.getByLabelText(label));
-      if (kind === "target") {
-        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      if (kind === "target" || kind === "template") {
+        fireEvent.click(
+          screen.getByRole("button", { name: kind === "template" ? "Save template" : "Save" }),
+        );
         await screen.findByText("Offline");
       } else
-        await screen.findByRole("button", {
-          name: kind === "wording" ? "Retry saving wording" : "Retry saving",
-        });
+        await screen.findByRole(
+          "button",
+          {
+            name: kind === "wording" ? "Retry saving wording" : "Retry saving",
+          },
+          { timeout: 5000 },
+        );
     }
 
     const legacy = await open(undefined, "first");
@@ -117,7 +125,7 @@ it.each([
         fireEvent.blur(reopened.input);
       } else {
         const retry = await screen.findByRole("button", {
-          name: kind === "target" ? "Save" : "Retry saving",
+          name: kind === "template" ? "Save template" : kind === "target" ? "Save" : "Retry saving",
         });
         refuse = false;
         fireEvent.click(retry);

@@ -8,16 +8,12 @@ interface Size {
   height: number;
 }
 
-// What the element laid out, which for the page inside the frame is bigger than
-// the box holding it.
 const contentSize = (of: HTMLElement): Size => ({
   width: of.scrollWidth,
   height: of.scrollHeight,
 });
 
-// What the element was given. `scrollWidth` here would answer with the page it
-// is holding, and the page would then be measured against itself and never
-// scale.
+// `scrollWidth` measures the page against itself and prevents scaling.
 const boxSize = (of: HTMLElement): Size => ({ width: of.clientWidth, height: of.clientHeight });
 
 function useSize(element: HTMLElement | null, read: (of: HTMLElement) => Size): Size {
@@ -45,9 +41,6 @@ function useSize(element: HTMLElement | null, read: (of: HTMLElement) => Size): 
 
 const BLOCKISH = new Set(["block", "flex", "grid", "list-item", "table"]);
 
-// A page's content height, stated by the template as a CSS length and resolved
-// by laying it out - so the host converts no units and knows no template's
-// class names.
 function usableHeight(inside: Document, into: HTMLElement): number {
   const probe = inside.createElement("div");
   probe.style.cssText =
@@ -65,8 +58,6 @@ function keysUnder(element: Element): string[] {
   });
 }
 
-// An element marked `break-inside: avoid` is taken whole; anything else with
-// block-level children is descended into, so a section breaks between entries.
 function blocksIn(element: Element, counter: { next: number }): FlowBlock[] {
   const style = getComputedStyle(element);
   const atomic = style.breakInside === "avoid";
@@ -78,7 +69,6 @@ function blocksIn(element: Element, counter: { next: number }): FlowBlock[] {
     const nested = children.flatMap((child) => blocksIn(child, counter));
     const key = element.getAttribute("data-key");
     const first = nested[0];
-    // A container is on the page its first block landed on.
     if (key !== null && first !== undefined) {
       nested[0] = { ...first, covers: [key, ...first.covers] };
     }
@@ -101,8 +91,7 @@ function blocksIn(element: Element, counter: { next: number }): FlowBlock[] {
 
 const EMPTY: Pagination = { pages: 1, pageOf: {}, breaks: [] };
 
-// `origin` is where the flow starts inside the frame, which is what the caller
-// draws the boundaries from: the offsets in `breaks` are relative to it.
+// Break offsets are relative to `origin` inside the frame.
 interface Measured {
   pagination: Pagination;
   origin: number;
@@ -110,7 +99,6 @@ interface Measured {
 
 function measure(inside: Document, host: HTMLElement): Measured {
   const counter = { next: 0 };
-  // The stylesheet is a child of the mount too, and it lays nothing out.
   const rendered = [...host.children].filter((child) => getComputedStyle(child).display !== "none");
   const blocks = rendered.flatMap((child) => blocksIn(child, counter));
   const first = blocks[0];
@@ -134,19 +122,22 @@ function same(a: Pagination, b: Pagination): boolean {
   );
 }
 
-// A template's stylesheet carries `@page` and physical units, so it needs a
-// document of its own rather than a block inside one that already has resets.
+// `@page` and physical units need a document isolated from app styles.
 export function TemplateFrame({
   title,
   styles,
   overflowsFrom,
   onPaginate,
+  zoom,
+  page = 1,
   children,
 }: {
   title: string;
   styles: string;
   overflowsFrom?: number | undefined;
   onPaginate?: ((pagination: Pagination) => void) | undefined;
+  zoom?: number | undefined;
+  page?: number;
   children: ReactNode;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
@@ -160,11 +151,8 @@ export function TemplateFrame({
     if (inside === null || inside === undefined) return;
     inside.documentElement.style.overflow = "hidden";
     inside.body.style.margin = "0";
-    // The template's document gets a container of its own, so a probe appended
-    // beside it is never a node React has to reconcile.
+    // Measurement probes must stay outside the portal's React tree.
     const mount = inside.createElement("div");
-    // Shrink-to-fit, so measuring the mount answers with the page the template
-    // laid out rather than with the width the frame currently happens to be.
     mount.style.display = "inline-block";
     inside.body.append(mount);
     setHost(mount);
@@ -173,14 +161,13 @@ export function TemplateFrame({
   const paper = useSize(host, contentSize);
   const available = useSize(room, boxSize).width;
   const measured = paper.width !== 0 && available !== 0;
-  const scale = measured ? Math.min(1, available / paper.width) : 1;
+  const scale = measured ? (zoom ?? Math.min(1, available / paper.width)) : 1;
 
   const report = useRef(onPaginate);
   report.current = onPaginate;
   const last = useRef<Pagination>(EMPTY);
 
-  // Re-measuring on every render is what catches a move that changed the order
-  // without changing the height; `same` is what stops that being a loop.
+  // Reordering can change page breaks without changing document height.
   const remeasure = useCallback(() => {
     const inside = frame.current?.contentDocument;
     if (inside === null || inside === undefined || host === null) return;
@@ -194,20 +181,29 @@ export function TemplateFrame({
 
   useEffect(remeasure);
 
+  const previousPage = useRef(page);
+  useEffect(() => {
+    if (page === previousPage.current || room === null) return;
+    previousPage.current = page;
+    room.querySelector(`[data-page="${String(page)}"]`)?.scrollIntoView({ block: "start" });
+  }, [page, room]);
+
   const from = overflowsFrom ?? Number.POSITIVE_INFINITY;
 
   return (
-    <div ref={setRoom} className="flex justify-center">
-      {/* Sized to what the page looks like after scaling, so it takes the room
-          it occupies rather than the room it would occupy unscaled. */}
+    <div
+      ref={setRoom}
+      className={`flex ${paper.width * scale > available ? "justify-start" : "justify-center"}`}
+    >
       <div
-        className="relative overflow-hidden shadow-sm ring-1 ring-paper-edge"
+        className="relative shrink-0 overflow-hidden shadow-sm ring-1 ring-paper-edge"
         style={
           measured
             ? { width: paper.width * scale, height: paper.height * scale }
             : { width: "100%", height: "60vh" }
         }
       >
+        <span data-page="1" className="absolute top-0" aria-hidden />
         <iframe
           ref={frame}
           title={title}
@@ -224,6 +220,7 @@ export function TemplateFrame({
           return (
             <div
               key={at}
+              data-page={page}
               aria-hidden
               className={`pointer-events-none absolute inset-x-0 border-t border-dashed ${
                 page > from ? "border-caution" : "border-line-strong"

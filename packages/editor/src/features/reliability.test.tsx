@@ -1,6 +1,7 @@
 import { createClient } from "@keepcv/api";
 import { deriveRevision } from "@keepcv/core";
 import type { RichText } from "@keepcv/schema";
+import { BLANK_SPEC, visualSpecOf } from "@keepcv/templates";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -76,7 +77,7 @@ it("keeps repeated imported job titles in independent radio groups", () => {
   expect(radios[1]).toBeChecked();
 });
 
-it("flushes template edits before navigation and preserves failed edits for retry", async () => {
+it("offers a deliberate save before leaving and preserves refused template edits", async () => {
   const store = aFilledStore();
   const template = addTemplate(store, "Save audit");
   const server = storeServer(store);
@@ -102,13 +103,17 @@ it("flushes template edits before navigation and preserves failed edits for retr
   await act(async () => {
     void router.navigate({ to: "/templates", search: { archived: "exclude" } });
   });
+  fireEvent.click(await screen.findByRole("button", { name: "Save and leave" }));
   expect(await screen.findByText("Unavailable")).toBeInTheDocument();
   expect(screen.getByLabelText("Extra CSS")).toHaveValue(css);
   expect(router.state.location.pathname).toBe(`/templates/${template.id}`);
   refuse = false;
-  fireEvent.click(screen.getByRole("button", { name: "Retry saving" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save and leave" }));
   await waitFor(() => {
-    expect(store.templates.find((row) => row.id === template.id)?.spec.extraCss).toBe(css);
+    expect(
+      visualSpecOf(store.templates.find((row) => row.id === template.id)?.spec ?? BLANK_SPEC)
+        .extraCss,
+    ).toBe(css);
   });
   await act(async () => {
     await router.navigate({ to: "/templates", search: { archived: "exclude" } });
@@ -116,7 +121,7 @@ it("flushes template edits before navigation and preserves failed edits for retr
   expect(router.state.location.pathname).toBe("/templates");
 }, 15_000);
 
-it("serializes settings changes against a slow save and sends the latest value", async () => {
+it("retains newer template changes during a slow save and uses the acknowledged token", async () => {
   const store = aFilledStore();
   const template = addTemplate(store, "Slow audit");
   const server = storeServer(store);
@@ -138,6 +143,7 @@ it("serializes settings changes against a slow save and sends the latest value",
   fireEvent.change(await screen.findByLabelText("Extra CSS"), {
     target: { value: ".kc-name { letter-spacing: 1px; }" },
   });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
   await waitFor(() => {
     expect(release).toBeDefined();
   });
@@ -147,8 +153,15 @@ it("serializes settings changes against a slow save and sends the latest value",
   await act(async () => {
     release?.();
   });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save template" })).not.toBeDisabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
   await waitFor(() => {
-    expect(store.templates.find((row) => row.id === template.id)?.spec.extraCss).toContain("2px");
+    expect(
+      visualSpecOf(store.templates.find((row) => row.id === template.id)?.spec ?? BLANK_SPEC)
+        .extraCss,
+    ).toContain("2px");
   });
   expect(server.calls.filter((call) => call.method === "PATCH")).toHaveLength(2);
   expect(screen.queryByRole("button", { name: "Retry saving" })).not.toBeInTheDocument();
@@ -161,8 +174,11 @@ it("exports the visible pending settings and deduplicates repeated exports", asy
   const server = storeServer(store);
   const blobs = downloads();
   mount(server.answer, `/resumes/${resume.id}?view=preview`);
+  fireEvent.click(await screen.findByRole("button", { name: "Fit and checks" }));
   fireEvent.change(await screen.findByLabelText("Body size"), { target: { value: "12" } });
+  fireEvent.click(screen.getByRole("button", { name: "Other formats" }));
   fireEvent.click(screen.getByRole("button", { name: "Download HTML" }));
+  await waitFor(() => expect(blobs).toHaveLength(1));
   expect(await blobs[0]?.text()).toContain("12pt");
   await screen.findByText("Export recorded in history");
   expect(server.versions[0]?.manifest.template.config["fontSize"]).toBe(12);
@@ -184,7 +200,9 @@ it("still downloads when export history is unavailable", async () => {
       init?.method === "POST" ? Promise.reject(new Error("Offline")) : server.answer(url, init),
     `/resumes/${store.resumes[0]?.id}?view=preview`,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Download HTML" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Other formats" }));
+  fireEvent.click(screen.getByRole("button", { name: "Download HTML" }));
+  await waitFor(() => expect(blobs).toHaveLength(1));
   expect(await blobs[0]?.text()).toContain("<!doctype html>");
   expect(await screen.findByText(/its version could not be saved/)).toBeInTheDocument();
   expect(server.versions).toHaveLength(0);
@@ -287,6 +305,7 @@ it("recovers a failed settings save after reopening the template", async () => {
   );
   const css = ".kc-name { letter-spacing: 3px; }";
   fireEvent.change(await screen.findByLabelText("Extra CSS"), { target: { value: css } });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
   await screen.findByRole("button", { name: "Retry saving" });
   await act(async () => {
     first.unmount();
@@ -297,8 +316,12 @@ it("recovers a failed settings save after reopening the template", async () => {
   expect(window.localStorage.getItem(`keepcv.template-edit:${template.id}`)).not.toBeNull();
   mount(server.answer, `/templates/${template.id}`);
   expect(await screen.findByLabelText("Extra CSS")).toHaveValue(css);
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
   await waitFor(() => {
-    expect(store.templates.find((row) => row.id === template.id)?.spec.extraCss).toBe(css);
+    expect(
+      visualSpecOf(store.templates.find((row) => row.id === template.id)?.spec ?? BLANK_SPEC)
+        .extraCss,
+    ).toBe(css);
   });
   expect(window.localStorage.getItem(`keepcv.template-edit:${template.id}`)).toBeNull();
 });

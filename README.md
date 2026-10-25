@@ -60,6 +60,8 @@ another directory with `--data-dir`. Stop the launcher with `Ctrl+C`.
 
 See the [launcher README](apps/cli/README.md) for its commands and sign-in modes.
 
+Create your own layouts with the [visual template builder](docs/TEMPLATES.md).
+
 ## Development
 
 From a checkout, use pnpm via corepack:

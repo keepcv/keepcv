@@ -62,7 +62,9 @@ function configsToTry(template: Template): TemplateConfig[] {
     const values =
       field.kind === "choice"
         ? field.options.map((option) => option.value)
-        : [field.min, field.max];
+        : field.kind === "color"
+          ? ["", "#123456"]
+          : [field.min, field.max];
     return values.map((value) => ({ ...template.defaultConfig, [field.key]: value }));
   });
 }

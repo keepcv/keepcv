@@ -7,6 +7,7 @@ const external = Object.keys({ ...manifest.dependencies, ...manifest.peerDepende
 
 export default defineConfig({
   base: "./",
+  define: { "process.env.NODE_ENV": JSON.stringify(process.env["NODE_ENV"] ?? "production") },
   plugins: [react(), tailwindcss()],
   build: {
     cssCodeSplit: true,

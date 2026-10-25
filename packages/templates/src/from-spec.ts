@@ -32,6 +32,8 @@ export function fromSpec(id: string, name: string, spec: TemplateSpec): Template
   const css = extraCssSchema.safeParse(spec.extraCss);
 
   return {
+    type: "default",
+    definition: { type: "default", version: 1, payload: spec },
     id,
     name,
     version: "1.0.0",

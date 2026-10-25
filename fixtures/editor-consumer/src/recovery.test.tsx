@@ -3,7 +3,13 @@ import { createApi, createClient, sessionTokenAuth } from "@keepcv/api";
 import { newUuid } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { Editor } from "@keepcv/editor";
-import { pointInputSchema, resumeInputSchema, type Store } from "@keepcv/schema";
+import {
+  isTemplateDefinition,
+  pointInputSchema,
+  resumeInputSchema,
+  type Store,
+  templateSpecSchema,
+} from "@keepcv/schema";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -27,7 +33,12 @@ it.each([
     label: "Extra CSS",
     original: "",
     values: [".kc-name { color: red; }", ".kc-name { color: blue; }"],
-    savedValue: (store: Store) => store.templates[0]?.spec.extraCss,
+    savedValue: (store: Store) => {
+      const spec = store.templates[0]?.spec;
+      return spec === undefined
+        ? undefined
+        : templateSpecSchema.parse(isTemplateDefinition(spec) ? spec.payload : spec).extraCss;
+    },
   },
   {
     kind: "resume",
@@ -138,7 +149,13 @@ it.each([
             ? `/templates/${templateId}`
             : `/resumes/${resumeId}?view=${kind === "target" ? "target" : "preview"}`;
       const retryName =
-        kind === "wording" ? "Retry saving wording" : kind === "target" ? "Save" : "Retry saving";
+        kind === "wording"
+          ? "Retry saving wording"
+          : kind === "template"
+            ? "Save template"
+            : kind === "target"
+              ? "Save"
+              : "Retry saving";
 
       async function open(index: number) {
         window.history.replaceState(null, "", path);
@@ -154,6 +171,8 @@ it.each([
             signOut={() => mounted.unmount()}
           />,
         );
+        if (kind === "resume")
+          fireEvent.click(await screen.findByRole("button", { name: "Fit and checks" }));
         await screen.findByLabelText(label);
         return queries;
       }
@@ -187,6 +206,10 @@ it.each([
             fireEvent.change(screen.getByLabelText(label), { target: { value } });
         }
         if (kind === "wording") fireEvent.blur(screen.getByLabelText(label));
+        if (kind === "template") {
+          fireEvent.click(screen.getByRole("button", { name: "Save template" }));
+          await screen.findByText("Offline");
+        }
         if (kind === "target") {
           fireEvent.click(screen.getByRole("button", { name: "Save" }));
           await screen.findByText("Offline");

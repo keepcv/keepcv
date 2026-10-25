@@ -208,7 +208,6 @@ export function Navigation({
           search={{ archived: "exclude" }}
           icon="template"
           label="Templates"
-          count={live(store.templates).length}
           collapsed={collapsed}
         />
       </Group>

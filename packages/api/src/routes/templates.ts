@@ -5,25 +5,33 @@ import {
   templateSchema,
   type Uuid,
 } from "@keepcv/schema";
+import { type TemplateType, validateTemplate } from "@keepcv/templates";
 import type { Context } from "hono";
 import { mutate } from "../problems.js";
 import { forRequest } from "../request-unit-of-work.js";
 import { router } from "../router.js";
 import { archivedQuery, collectionRoutes } from "./collection.js";
 
-// The shipped designs are in every build rather than in the store, so this
-// answers only the ones the user wrote.
-const routes = collectionRoutes({
-  path: "/v1/templates",
-  tag: "templates",
-  noun: "template",
-  dto: templateSchema,
-  input: templateInputSchema,
-  patch: templatePatchSchema,
-  query: archivedQuery,
-});
-
-export function templateRoutes(unitOfWork: UnitOfWork) {
+export function templateRoutes(unitOfWork: UnitOfWork, types?: readonly TemplateType[]) {
+  const spec = templateInputSchema.shape.spec.superRefine((value, context) => {
+    try {
+      validateTemplate(value, types);
+    } catch (error) {
+      context.addIssue({
+        code: "custom",
+        message: error instanceof Error ? error.message : "Invalid template.",
+      });
+    }
+  });
+  const routes = collectionRoutes({
+    path: "/v1/templates",
+    tag: "templates",
+    noun: "template",
+    dto: templateSchema,
+    input: templateInputSchema.extend({ spec }),
+    patch: templatePatchSchema.extend({ spec: spec.optional() }),
+    query: archivedQuery,
+  });
   const on = async <T>(c: Context, work: (of: TemplateRepository) => Promise<T>): Promise<T> =>
     await forRequest(unitOfWork, c).run(async (r) => await work(r.templates));
   const read = async (c: Context, id: Uuid) => await on(c, async (of) => await of.get(id));

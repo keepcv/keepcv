@@ -62,6 +62,9 @@ describe("migrations", () => {
 });
 
 describe("migrateDocument", () => {
+  it("upgrades the envelope of a version one archive without changing its store", () => {
+    expect(migrateDocument({ ...current, schemaVersion: 1 })).toEqual(current);
+  });
   it("returns a current document unchanged", () => {
     expect(migrateDocument(current)).toEqual(current);
   });

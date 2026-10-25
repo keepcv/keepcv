@@ -91,12 +91,13 @@ it("keeps optional point details collapsed and preserves an in-progress metric w
 it("opens resume creation from a template with that template selected", async () => {
   const store = emptyStore();
   const template = addTemplate(store, "Quiet headings");
-  const server = mount(store, "/templates");
+  const server = mount(store, "/templates?collection=mine");
   const title = await screen.findByRole("link", { name: template.name });
   const row = title.closest("li");
   if (row === null) throw new Error("Template must have a row");
-  fireEvent.click(within(row).getByRole("link", { name: "Use template" }));
-  expect(await screen.findByLabelText("Template")).toHaveValue(template.id);
+  fireEvent.click(within(row).getByRole("link", { name: "Create resume" }));
+  await screen.findByLabelText("Resume name");
+  expect(screen.getByText(template.name)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Resume name"), {
     target: { value: "Backend" },
   });
@@ -118,20 +119,21 @@ it("retains the resume form and template choice when creation is refused", async
   fireEvent.click(screen.getByRole("button", { name: "Create resume" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Try again.");
   expect(screen.getByLabelText("Resume name")).toHaveValue("Backend");
-  expect(screen.getByLabelText("Template")).toHaveValue(template.id);
+  expect(screen.getByText(template.name)).toBeInTheDocument();
   expect(window.location.pathname).toBe("/resumes");
   await waitFor(() => expect(store.resumes).toHaveLength(0));
 });
 
 it("retains a design form when creation is refused", async () => {
   const store = emptyStore();
-  mount(store, "/templates", undefined, true);
-  fireEvent.click(await screen.findByRole("button", { name: "New design" }));
-  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Quiet headings" } });
-  fireEvent.click(screen.getByRole("button", { name: "Create design" }));
+  mount(store, "/templates/new", undefined, true);
+  fireEvent.change(await screen.findByLabelText("Template name"), {
+    target: { value: "Quiet headings" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Try again.");
-  expect(screen.getByLabelText("Name")).toHaveValue("Quiet headings");
-  expect(window.location.pathname).toBe("/templates");
+  expect(screen.getByLabelText("Template name")).toHaveValue("Quiet headings");
+  expect(window.location.pathname).toBe("/templates/new");
   expect(store.templates).toHaveLength(0);
 });
 

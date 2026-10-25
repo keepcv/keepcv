@@ -153,8 +153,8 @@ It is an application frame - a collapsible navigation rail grouped
 into Store, Vocabulary, Resumes and System, a command palette on its header, and
 a sheet in place of the rail below `lg` - over the store overview, the profile,
 the record list, a record's detail and its form, the point list, the tag
-vocabulary, the custom-section headings, the role profiles, the template list and
-a design's editor, the resume list, a resume's composition, its compiled preview
+vocabulary, the custom-section headings, the role profiles, the template library and
+its visual builder, the resume list, a resume's composition, its Design view
 and its history, the backup screen, and search results. All of it is fed by one
 `GET /v1/store` on the root route's loader, and the preview is `compile()`
 running in the browser over that same payload. React, TanStack Router and Query,
@@ -179,8 +179,8 @@ do not restate that argument here, in code, or in a commit message.
 | Every ordered list drags **and** keys, through `useReorder`; sort keys compare by code unit, never by locale | `capabilities.md` #3, `data-model.md` #3.5 |
 | Text is never submitted: an 800ms debounce writes a `draft`, blur or thirty seconds idle appends a `phrasing_revision`. A draft found on open is offered, never restored | `application-structure.md` #6 |
 | `captureManifest` freezes a resume and `renderManifest` turns it into the document, so there is no second compiler. A restore puts back the selection, not the words, and never rewinds | `template-model.md` #7, `data-model.md` #9.2 |
-| A template is data: `fromSpec` over a `TemplateSpec`, `FIT_KNOBS` what a resume may move and `DESIGN_KNOBS` what it may not, settings declared as `fields` | `template-model.md` #5 |
-| Side by side is a grid, never a float, a coordinate or a column count - the lint rules refuse all three by name | `template-model.md` #5 |
+| Default templates use `fromSpec` and the FIT/DESIGN knobs; typed definitions install validators/renderers at the caller boundary, and HTML uses the bounded binding language | `template-model.md` #5 |
+| Default ATS layouts use grids; creative HTML may use other layout constructs and receives advisory readability findings separately from technical safety | `template-model.md` #5 |
 | The browser lays the page out and `@keepcv/core` counts it: `FlowBlock` geometry in, `paginate` and `lengthBudget` out. There is deliberately no pagination library | `template-model.md` #4 |
 | `lint({ document, html })` takes the rendered bytes rather than producing them, so the thing linted is the thing sent | `capabilities.md` #3 |
 | `lossOf(document, target)` is counted against this resume, and anything at zero is not in the list | `capabilities.md` #3 |

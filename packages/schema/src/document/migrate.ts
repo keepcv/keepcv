@@ -16,9 +16,14 @@ type Migration = {
   migrate: (document: Record<string, unknown>) => Record<string, unknown>;
 };
 
-// Ordered and contiguous, ending at CURRENT_SCHEMA_VERSION - asserted by test.
-// Empty until the format's first breaking change.
-export const migrations: Migration[] = [];
+export const migrations: Migration[] = [
+  {
+    from: 1,
+    to: 2,
+    description: "Accept versioned template definitions while preserving captured legacy specs.",
+    migrate: (document) => document,
+  },
+];
 
 const versioned = z.object({ schemaVersion: z.int() }).loose();
 

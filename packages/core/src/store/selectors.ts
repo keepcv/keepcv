@@ -31,6 +31,10 @@ export function archived<T extends Archivable>(rows: readonly T[]): T[] {
   return rows.filter((row) => row.archivedAt !== null);
 }
 
+export function resumesUsingTemplate(store: Store, templateId: string): Resume[] {
+  return live(store.resumes).filter((resume) => resume.templateId === templateId);
+}
+
 export function organisationOf(store: Store, entry: CareerRecord): Organisation | undefined {
   if (entry.organisationId === null) return undefined;
   return store.organisations.find((row) => row.id === entry.organisationId);

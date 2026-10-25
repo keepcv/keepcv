@@ -1,4 +1,4 @@
-import type { ResumeDocument } from "@keepcv/schema";
+import type { ResumeDocument, TemplateDefinition } from "@keepcv/schema";
 import type { ReactElement } from "react";
 
 export type ConfigValue = string | number;
@@ -11,6 +11,12 @@ export interface ConfigOption {
 }
 
 export type ConfigField =
+  | {
+      key: string;
+      label: string;
+      kind: "color";
+      default: string;
+    }
   | {
       key: string;
       label: string;
@@ -29,9 +35,9 @@ export type ConfigField =
       default: number;
     };
 
-// `styles` and `render` are handed the document and the config and nothing
-// else, which is what makes a template unable to fetch.
 export interface Template {
+  type?: string;
+  definition?: TemplateDefinition;
   id: string;
   name: string;
   version: string;
@@ -47,27 +53,25 @@ export function defaultsOf(fields: readonly ConfigField[]): TemplateConfig {
   return Object.fromEntries(fields.map((field) => [field.key, field.default]));
 }
 
-// A stored design moves the defaults rather than replacing the declarations, so
-// a value the knob no longer offers leaves the knob at what it does offer.
 export function withDefaults(
   fields: readonly ConfigField[],
   settings: Readonly<Record<string, unknown>>,
 ): ConfigField[] {
   return fields.map((field) => {
     const value = accepted(field, settings[field.key]);
-    if (field.kind === "choice") {
+    if (field.kind !== "number") {
       return typeof value === "string" ? { ...field, default: value } : field;
     }
     return typeof value === "number" ? { ...field, default: value } : field;
   });
 }
 
-// The keys a template reads, and the values each choice can take, derived from
-// the fields it declares so the two cannot drift.
 export type ConfigOf<F extends readonly ConfigField[]> = {
   [K in F[number] as K["key"]]: K extends { options: readonly ConfigOption[] }
     ? K["options"][number]["value"]
-    : number;
+    : K extends { kind: "color" }
+      ? string
+      : number;
 };
 
 export function configOf<F extends readonly ConfigField[]>(
@@ -78,6 +82,9 @@ export function configOf<F extends readonly ConfigField[]>(
 }
 
 function accepted(field: ConfigField, raw: unknown): ConfigValue | undefined {
+  if (field.kind === "color") {
+    return typeof raw === "string" && /^(?:#[0-9a-f]{6})?$/i.test(raw) ? raw : undefined;
+  }
   if (field.kind === "choice") {
     return typeof raw === "string" && field.options.some((option) => option.value === raw)
       ? raw
@@ -86,9 +93,6 @@ function accepted(field: ConfigField, raw: unknown): ConfigValue | undefined {
   return typeof raw === "number" && raw >= field.min && raw <= field.max ? raw : undefined;
 }
 
-// A stored config outlives the template version that wrote it: a key the
-// template has since dropped is ignored, one it has added takes its default,
-// and a value outside the declared range is refused rather than rendered.
 export function configFor(
   template: Template,
   stored: Readonly<Record<string, unknown>> | undefined,

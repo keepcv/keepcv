@@ -151,6 +151,7 @@ select {
   --color-focus: var(--focus);
 
   --color-paper: var(--paper);
+  --color-document-paper: #fff;
   --color-paper-edge: var(--paper-edge);
 
   --shadow-card: var(--shadow-card-value);

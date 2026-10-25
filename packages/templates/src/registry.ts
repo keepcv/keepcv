@@ -1,24 +1,46 @@
 import type { ResumeDocument, StoredTemplate } from "@keepcv/schema";
-import { atsLeftHeading, atsSingleColumn } from "./built-in.js";
+import {
+  atsLeftHeading,
+  atsSingleColumn,
+  classic,
+  compact,
+  editorial,
+  leftHeadings,
+  modern,
+  singleColumn,
+} from "./built-in.js";
 import { configFor, type Template, type TemplateConfig } from "./contract.js";
-import { fromSpec } from "./from-spec.js";
+import { HTML_TEMPLATES } from "./html/built-in.js";
+import { fromDefinition, TEMPLATE_TYPES, type TemplateType } from "./types.js";
 
-export const TEMPLATES: readonly Template[] = [atsSingleColumn, atsLeftHeading];
+export const TEMPLATES: readonly Template[] = [
+  singleColumn,
+  leftHeadings,
+  classic,
+  modern,
+  compact,
+  editorial,
+  ...HTML_TEMPLATES,
+];
 
 export const DEFAULT_TEMPLATE_ID = atsSingleColumn.id;
 
 export function templateById(id: string | undefined): Template | undefined {
-  return TEMPLATES.find((template) => template.id === id);
+  return [...TEMPLATES, atsSingleColumn, atsLeftHeading].find((template) => template.id === id);
 }
 
-export function templateOf(row: StoredTemplate): Template {
-  return fromSpec(row.id, row.name, row.spec);
+export function templateOf(
+  row: StoredTemplate,
+  types: readonly TemplateType[] = TEMPLATE_TYPES,
+): Template {
+  return fromDefinition(row.id, row.name, row.spec, types);
 }
 
-// The captured spec wins, or editing the row would rewrite what a version says
-// it printed. An unknown id falls back rather than refusing: a resume that will
-// not print is the one thing this product may not produce.
-export function resolveTemplate(document: ResumeDocument): {
+// Captured specs and legacy built-in ids must retain the design a version printed.
+export function resolveTemplate(
+  document: ResumeDocument,
+  types: readonly TemplateType[] = TEMPLATE_TYPES,
+): {
   template: Template;
   config: TemplateConfig;
 } {
@@ -26,7 +48,7 @@ export function resolveTemplate(document: ResumeDocument): {
   const template =
     templateSpec === undefined
       ? (templateById(templateId) ?? atsSingleColumn)
-      : fromSpec(templateId ?? "custom", templateName ?? "Custom", templateSpec);
+      : fromDefinition(templateId ?? "custom", templateName ?? "Custom", templateSpec, types);
 
   return { template, config: configFor(template, templateConfig) };
 }

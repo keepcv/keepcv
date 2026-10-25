@@ -1,5 +1,6 @@
 import type { UnitOfWork } from "@keepcv/core";
 import { PROBLEM_TYPES, type Problem, type Uuid } from "@keepcv/schema";
+import type { TemplateType } from "@keepcv/templates";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Authenticate } from "./auth.js";
 import { problemFor, UnauthorizedError, type UnexpectedErrorReporter } from "./problems.js";
@@ -24,6 +25,7 @@ export const OPENAPI_PATH = "/v1/openapi.json";
 
 export interface ApiOptions {
   unitOfWork: UnitOfWork;
+  templateTypes?: readonly TemplateType[];
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
   authenticate: Authenticate;
   reportUnexpectedError?: UnexpectedErrorReporter | null;
@@ -88,7 +90,7 @@ export function createApi(options: ApiOptions) {
     .route("/", customSectionRoutes(options.unitOfWork))
     .route("/", savedFilterRoutes(options.unitOfWork))
     .route("/", roleProfileRoutes(options.unitOfWork))
-    .route("/", templateRoutes(options.unitOfWork))
+    .route("/", templateRoutes(options.unitOfWork, options.templateTypes))
     .route("/", recordRoutes(options.unitOfWork))
     .route("/", pointRoutes(options.unitOfWork))
     .route("/", phrasingRoutes(options.unitOfWork))

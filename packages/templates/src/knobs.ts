@@ -1,9 +1,6 @@
 import { type ConfigField, type ConfigOf, configOf, type TemplateConfig } from "./contract.js";
 import { FONT_FAMILY_FIELD, PAGE_SIZE_FIELD } from "./paper.js";
 
-// What a resume adjusts to make itself fit. These are the fields a template
-// hands the preview panel, and the only keys a stored `templateConfig` may
-// move.
 export const FIT_KNOBS = [
   PAGE_SIZE_FIELD,
   FONT_FAMILY_FIELD,
@@ -49,9 +46,13 @@ export const FIT_KNOBS = [
   },
 ] as const satisfies readonly ConfigField[];
 
-// What the template is. A resume may not move these, which is what lets the
-// compliance notes below be derived rather than claimed.
 export const DESIGN_KNOBS = [
+  {
+    key: "accentColor",
+    label: "Custom accent",
+    kind: "color",
+    default: "",
+  },
   {
     key: "accent",
     label: "Accent",
@@ -157,6 +158,36 @@ export const DESIGN_KNOBS = [
     default: "trailing",
   },
   {
+    key: "headingSize",
+    label: "Heading size",
+    kind: "number",
+    min: 0.8,
+    max: 1.4,
+    step: 0.05,
+    unit: "x",
+    default: 0.9,
+  },
+  {
+    key: "entryGap",
+    label: "Space between entries",
+    kind: "number",
+    min: 2,
+    max: 14,
+    step: 0.5,
+    unit: "pt",
+    default: 5,
+  },
+  {
+    key: "pointGap",
+    label: "Space between points",
+    kind: "number",
+    min: 0,
+    max: 8,
+    step: 0.5,
+    unit: "pt",
+    default: 1.5,
+  },
+  {
     key: "bullet",
     label: "Point marker",
     kind: "choice",
@@ -171,8 +202,7 @@ export const DESIGN_KNOBS = [
 
 export const KNOBS: readonly ConfigField[] = [...FIT_KNOBS, ...DESIGN_KNOBS];
 
-// Two mapped types intersected rather than one over the concatenation: as a
-// single 17-member const tuple this ran the type-aware lint pass out of memory.
+// A concatenated knob tuple ran the type-aware lint pass out of memory.
 export type Design = ConfigOf<typeof FIT_KNOBS> & ConfigOf<typeof DESIGN_KNOBS>;
 
 export function designOf(config: TemplateConfig): Design {

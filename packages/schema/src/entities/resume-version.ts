@@ -11,7 +11,7 @@ import { recordFieldSchema } from "./record-field.js";
 import { recordLinkSchema } from "./record-link.js";
 import { sectionKindSchema, sectionLayoutSchema } from "./resume.js";
 import { standardFields } from "./standard-fields.js";
-import { templateSpecSchema } from "./template.js";
+import { templateSchema } from "./template.js";
 
 export const MANIFEST_SCHEMA_VERSION = 1;
 
@@ -81,7 +81,7 @@ export const manifestTemplateSchema = z
     config: z.record(z.string(), z.unknown()),
     // The whole design, for a template the user wrote: an id alone points at a
     // row they can edit, and editing it would rewrite what this version says.
-    spec: templateSpecSchema.nullable().default(null),
+    spec: templateSchema.shape.spec.nullable().default(null),
   })
   .meta({ id: "ManifestTemplate", title: "Pinned template" });
 

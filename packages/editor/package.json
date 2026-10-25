@@ -50,7 +50,15 @@
     "clsx": "catalog:",
     "lucide-react": "catalog:",
     "tailwind-merge": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
+    "@codemirror/commands": "catalog:",
+    "@codemirror/lang-html": "catalog:",
+    "@codemirror/lang-css": "catalog:",
+    "@codemirror/lang-liquid": "catalog:",
+    "@codemirror/autocomplete": "catalog:",
+    "@codemirror/language": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",

@@ -8,6 +8,19 @@
 
 ## 1. What this is
 
+Authored HTML templates use the same selected document through a bounded
+binding language. New stored definitions carry a type, version and payload;
+legacy visual specs remain accepted without rewriting captured history. HTML
+binding syntax is Liquid-like, not arbitrary Liquid or JavaScript: paths,
+literal values, array loops, conditions, local partials and a declared set of
+safe filters. Evaluation has no filesystem, network, runtime globals or
+user-defined functions. Parsing, work and output are bounded independently.
+
+Template types are installed at the caller boundary. Default uses the existing
+spec renderer; HTML supplies checked markup and CSS. Unknown definitions remain
+portable but cannot render without a handler. Creative HTML has a technical
+safety contract distinct from the Default templates' ATS conformance profile.
+
 `ResumeDocument` is the **only** thing a template, exporter, linter or
 portfolio renderer ever sees. It is:
 
@@ -272,8 +285,15 @@ manifest will key the same way, since the manifest carries the same order.
 
 ## 5. The template contract
 
+The visual design and ATS conformance rules below describe the Default type.
+HTML uses the same document/config/render interface with the separate technical
+policy in #8; its creative layouts can produce readability warnings and do not
+claim accurate flow pagination. System HTML samples preserve selected section,
+entry and point keys in their DOM order.
+
 ```ts
 type ConfigField =
+  | { key: string; label: string; kind: 'color'; default: string }
   | { key: string; label: string; kind: 'choice'; options: ConfigOption[]; default: string }
   | { key: string; label: string; kind: 'number';
       min: number; max: number; step: number; unit: string; default: number };
@@ -282,6 +302,8 @@ type Template = {
   id: string;
   name: string;
   version: string;
+  type?: string;
+  definition?: TemplateDefinition;
   documentVersions: number[];     // ResumeDocument schemaVersions supported
   fields: ConfigField[];
   defaultConfig: TemplateConfig;  // derived from the fields
@@ -337,7 +359,7 @@ whether the section heading sat above the section or in a column beside it, and
 whether the period sat at the right margin or ran on after the title. That is a
 vocabulary, not two programs. So there is one renderer and one stylesheet
 builder, `fromSpec(id, name, spec)` builds a `Template` from a `TemplateSpec`,
-and the shipped designs are two specs rather than two directories. A template
+and the shipped designs are specs rather than renderer directories. A template
 the user writes is the same kind of thing as a shipped one - which is what makes
 "create a template" a row rather than a fork.
 
@@ -347,9 +369,10 @@ The knobs live in one catalogue, split in two:
   gap. These are what a resume adjusts to make itself fit, so they are the
   `fields` a template hands the preview panel, with the spec's values as their
   defaults.
-- **`DESIGN_KNOBS`** - accent, name size, header alignment and rule, heading
-  placement, column width, case, alignment and rule, date arrangement, point
-  marker. These are what the template *is*. `fromSpec` layers them over whatever
+- **`DESIGN_KNOBS`** - preset and custom accent, name size, header alignment and
+  rule, heading placement, column width, size, case, alignment and rule, date
+  arrangement, entry spacing, point marker and point spacing.
+  These are what the template *is*. `fromSpec` layers them over whatever
   config arrives rather than under it, so a resume cannot move one.
 
 That split is what lets `complianceNotes` be **derived** from the spec rather
@@ -358,8 +381,29 @@ true of every resume a template prints only because no resume can move that
 knob; a note written by hand would go on being printed after the design stopped
 earning it.
 
+Color fields accept an empty string or a six-digit hexadecimal color. An empty
+custom accent uses the preset. Selecting a preset in the builder clears the
+custom accent. Unsupported stored colors fall back through the same declared
+settings validation; arbitrary CSS cannot enter through a color setting. New
+heading-size and spacing defaults reproduce the previous stylesheet's values.
+
+**System templates are read-only definitions, not owned rows.** The active
+catalogue contains Single column, Left headings, Classic, Modern, Compact and
+Editorial. New resumes explicitly choose an active id. Refreshed designs have
+new ids; the original `ats-single-column` and `ats-left-heading` remain
+resolvable. The fallback for missing and unknown ids remains the original Single
+column, so a historical document with no template id does not acquire the new
+default. Existing uses are marked Original, not silently upgraded. A system
+template is customized by creating an owned template row with a new UUID.
+
+**Preview and print use the same physical page box.** The page's screen padding
+must survive the document's general reset. The page rule therefore addresses
+the page within the document; its print counterpart removes that padding and
+uses `@page` margins. The preview measures the resulting usable height rather
+than assuming screen margins are present.
+
 **A design may carry CSS of its own, and it may not fetch.** `extraCss` is
-appended last so it wins. New design writes and design-file imports tokenize CSS,
+appended last so it wins. Template writes and template-file imports tokenize CSS,
 decode escapes and allow known local at-rules and functions only. `url()` must
 contain a `data:` address; resource functions such as `image-set()` and unknown
 constructs are refused. The string `</style` is refused too - React does not
@@ -518,3 +562,61 @@ side of the line and every formatting decision on the other.
 Because compile is pure and deterministic, the same manifest always produces
 the same document - which is what makes render output content-addressable and
 cacheable.
+
+## 8. Typed definitions and authored HTML
+
+`template.spec` accepts the legacy visual shape and a versioned envelope:
+`{ type: string, version: number, payload: Record<string, unknown> }`.
+Default v1 wraps TemplateSpec. HTML v1 contains documentVersions, entry, ordered
+styles, canonical files and page defaults. Source files contain HTML fragments
+or CSS; local assets contain base64 PNG/JPEG/WebP/WOFF2. The definition is the only
+stored type fact. No type column or source table repeats it.
+
+`TemplateType` handlers are trusted application code injected into the API's
+validator catalog and the renderer's catalog. They own payload validation and
+an optional HTML adapter; a future native renderer need not pretend to produce
+React markup. The type vocabulary is open. The editor currently authors Default
+and HTML; installing another renderer does not install its authoring controls.
+Unknown native definitions remain portable but render with an explicit error.
+Legacy absent/missing system ids retain their historical fallback.
+
+`templateDataSchema` derives header/sections from ResumeDocument and narrows
+metadata to generatedAt, resumeName and locale. It adds effective page size and
+margin. This same schema drives the field explorer and the renderer's cloned
+JSON scope. No template source/configuration, privileged object, private evidence
+or unselected data can enter it. Arrays carry composition order, and groups
+reference entries by key. This is a projection, not another compiler.
+
+The small binding interpreter supports paths/literals, escaped interpolation,
+assign, if/unless/elsif/else, for/else, local literal render and rich_text. Fixed
+filters cover defaults, joining, selection, size, case, slicing and group keys.
+No eval, JavaScript helper, host loader, dynamic partial name, prototype lookup
+or raw HTML filter is exposed. Rich text uses the existing AST and serializer.
+Source locations identify syntax, binding and policy failures.
+
+Bounds are 64 files, 512 KiB source, 1 MiB decoded assets, 2 MiB selected data,
+5 MiB output, nesting/partial depth 16 and 100,000 work units. Empty loops and
+string transformations consume work. Images have bounded dimensions, static formats and a combined four-megapixel
+budget; WOFF2 has a combined 8 MiB declared expanded-size budget. HTML and CSS parsers apply
+passive markup and local-resource policies to source and rendered output.
+
+Scripts/event handlers, forms, embedded documents, SVG, remote resource loads,
+metadata/navigation elements, unsupported URL CSS, animation and authored @page
+are refused. Document ids and matching references are prefixed. Creative grids,
+columns, transforms and decoration remain available, independently of ATS rules.
+Source is preserved for correction instead of being overwritten with normalized
+output. Technical failures stop rendering; readability findings remain advisory.
+
+HTML previews and browser export render through a packaged worker with a parent
+2.5 second deadline and stale-job cancellation. They use the same checked HTML
+and CSP as the Node renderer. The preview has no script permission and blocks
+link navigation. Workers provide cancellation, not an OS permission sandbox;
+the capability-free finite interpreter provides the language boundary. Static
+bounds do not promise a hard browser-process memory limit for every layout or
+native decoder. A future compiler must establish its own isolation protections.
+
+Native archive v2 declares typed source. Migration from v1 changes the archive
+envelope without rewriting historical manifests/documents or their hashes.
+Existing capture pins the entire owned definition, including files/assets.
+The renderer handles legacy shapes without converting them during history reads.
+See [the authoring guide](../TEMPLATES.md) for syntax and examples.

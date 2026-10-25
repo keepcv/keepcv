@@ -30,7 +30,8 @@ describe("a design as a file", () => {
   });
 
   it("turns away anything that is not a design", () => {
-    const notADesign = 'That is not a design. "Save it as a file" on a design writes one.';
+    const notADesign =
+      'That is not a template. "Download template file" in the builder writes one.';
 
     expect(readDesign("{")).toEqual({ problem: notADesign });
     expect(readDesign('{"basics":{"name":"Ada"}}')).toEqual({ problem: notADesign });

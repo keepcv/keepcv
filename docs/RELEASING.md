@@ -15,7 +15,10 @@ The workspace root and `@keepcv/web` are private.
    `verify` is the default and publishes nothing.
 3. The existing test workflow runs on that exact commit, including both database
    drivers, generated-file checks and an isolated install of the packed packages.
-   Release builds do not restore dependency or build caches.
+   Lint/types, database tests, and application/package validation run on separate
+   runners. One aggregate check requires all three to succeed; the application
+   job uploads the verified artifacts. Release builds do not restore dependency
+   or build caches.
 4. The verified tarballs, SHA-512 digests, commit and release notes are uploaded
    as a run artifact retained for 14 days. A separate job downloads that artifact
    and verifies its bytes, commit and branch version, including in `verify` mode.

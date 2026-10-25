@@ -2,8 +2,6 @@ import type { TemplateConfig } from "./contract.js";
 import { type Design, designOf } from "./knobs.js";
 import { pageRule, STACKS } from "./paper.js";
 
-// Keyed by what the knob offers, so a colour added to the picker without a
-// value here is a compile error.
 const ACCENTS: Record<Design["accent"], string> = {
   ink: "#101418",
   slate: "#334155",
@@ -12,7 +10,11 @@ const ACCENTS: Record<Design["accent"], string> = {
   forest: "#1f4d38",
 };
 
-// Grid, never a float or a coordinate - the lint rules refuse all three.
+export function accentOf(config: TemplateConfig): string {
+  const design = designOf(config);
+  return design.accentColor || ACCENTS[design.accent];
+}
+
 // `align-self`, or a stretched item reports its row's height to the paginator.
 function sectionRule(design: Design): string {
   if (design.headingPlace !== "beside") return ".kc-section { display: block; }";
@@ -53,7 +55,7 @@ function bulletRule(design: Design): string {
 
 export function stylesheet(config: TemplateConfig, extraCss: string): string {
   const design = designOf(config);
-  const accent = ACCENTS[design.accent];
+  const accent = accentOf(config);
   const centred = design.headerAlign === "centre";
 
   return `
@@ -68,7 +70,7 @@ ${pageRule(design.pageSize, design.margin)}
   widows: 2;
 }
 .kc-doc * { margin: 0; padding: 0; box-sizing: border-box; }
-.kc-doc a { color: inherit; text-decoration: underline; text-underline-offset: 1.5pt; }
+.kc-doc a { color: inherit; text-decoration: underline; text-underline-offset: 1.5pt; overflow-wrap: anywhere; }
 .kc-doc ul { list-style: none; }
 
 .kc-header {
@@ -97,7 +99,7 @@ ${pageRule(design.pageSize, design.margin)}
 .kc-section { margin-top: ${String(design.sectionGap)}pt; }
 ${sectionRule(design)}
 .kc-heading {
-  font-size: 0.9em;
+  font-size: ${String(design.headingSize)}em;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: ${design.headingCase === "upper" ? "uppercase" : "none"};
@@ -112,15 +114,16 @@ ${headingRule(design)}
 
 .kc-group { margin-top: 6pt; }
 .kc-group > .kc-entry { margin-top: 3pt; }
-.kc-entry { margin-top: 5pt; break-inside: avoid; }
+.kc-entry { margin-top: ${String(design.entryGap)}pt; break-inside: avoid; }
 .kc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 2em; }
 .kc-title { font-weight: 700; }
 .kc-meta { color: #374151; font-variant-numeric: tabular-nums; }
-.kc-row > .kc-meta { flex: none; }
+.kc-row > .kc-title { min-width: 0; }
+.kc-row > .kc-meta { flex: 0 1 auto; text-align: right; }
 .kc-sub { color: #374151; }
 
 .kc-points { margin-top: 2.5pt; }
-.kc-points li { margin-top: 1.5pt; }
+.kc-points li { margin-top: ${String(design.pointGap)}pt; }
 ${bulletRule(design)}
 .kc-metrics { color: #374151; }
 .kc-fields li, .kc-links { margin-top: 1.5pt; color: #374151; }

@@ -559,8 +559,10 @@ the choice is a column the preview follows it through the boot payload rather
 than through a second piece of state.
 
 **Only the overrides are stored.** A settings panel reads `template.fields` and
-writes back what differs from the template's own defaults, so a default that
-moves in a later version moves with it (template-model.md #5). The write is
+writes back what differs from the template's own defaults. A template switch
+preserves the existing overrides unless Use template defaults is explicitly
+chosen; the page limit is independent. Each field can be reset separately, or
+all fit overrides can be reset together. The write is
 debounced: each patch carries the row's `updatedAt`, and a slider that wrote per
 pixel would race its own answers into a conflict.
 
@@ -572,7 +574,7 @@ said what they are aiming at is a resume that nags for nothing.
 
 ### 5.7 Resume target
 
-The resume screen's second view, between composition and preview. Needs: the
+The resume screen's Job target view. Needs: the
 application's own facts - company, role, posting URL, applied date - and the
 posting text itself; then what the posting asks for and how much of it the
 resume answers.
@@ -1170,19 +1172,22 @@ preview renders both full width on its own tab and in half a workspace; keyed to
 the viewport it reserved a 15rem sidebar in both and left the page unreadable in
 the second.
 
-**What is about the resume is not in the resume, and it lives on the preview
-tab.** Export, the ATS findings, the page limit and the template's own settings
-are one column beside the paper, grouped as "Take it with you", "How it reads"
-and "How it looks", and it collapses so the page can have the whole pane. Wide
-enough for two columns, each scrolls on its own - reading down a resume must not
-carry the settings off the top.
+**Design starts with the document.** A compact current-template row offers
+Change template and Fit and checks. Fit controls are absent until requested;
+they contain resume-only settings, page limit, optional readability findings
+and secondary template actions. A narrow container switches between Preview
+and Controls instead of stacking independently scrolling panes.
 
-Beside the composition that column is **absent, not collapsed**. There the
-preview is feedback on what was just placed, and a panel of export and template
-controls opens over the thing it changes; every arrangement that keeps it - under
-the paper, or floating above it - is either invisible or in the way. The page
-count stays, because that is feedback. Changing the template is a click away on
-the tab whose job it is.
+Export PDF is a workspace header action in every view. Other formats opens a
+small format-specific dialog, with losses only for the selected format when
+nonzero. Template notes belong in the library detail. There is no permanent
+mixed export/settings column. Pending fit writes settle before exporting; a
+history-recording refusal does not prevent a file with already settled settings
+from being downloaded. The captured content hash still guards export history.
+
+Content retains a read-only paper preview where the container has room, without
+design controls. The same paper component provides fit-to-width, explicit zoom,
+measured page counts and page navigation in Content, Design and template previews.
 
 ### 10.5 What a control looks like is a claim about what it does
 
@@ -1255,11 +1260,10 @@ tells the eye which dash binds the period together. The parts are divided by a
 rule instead - `Meta` in `components/ui/`, used by the record list, the record
 detail and the resume list, so there is one answer rather than one per screen.
 
-**One action, one control, even when it could be offered per row.** The
-templates screen starts a new design from an existing one; the obvious shape is
-a copy button on each row, which is the mistake above before it is made. The
-thing being chosen is *which* design to start from, so it is a select inside the
-one `New design` form.
+**Template creation opens the tools directly.** Create template opens a blank
+builder. Make a copy on a template card opens that same builder with the source
+already chosen. Neither path requires a separate naming form before the person
+can inspect and customize the design; naming and saving happen in the builder.
 
 **Two controls doing one thing may not share a name.** The mobile navigation
 sheet had a scrim and a close button both labelled `Close the navigation`, which
@@ -1354,55 +1358,64 @@ what it used to say - which heading is a default, and that emptying the box give
 the kind's own heading back - is said inside the form, once it is open, where it
 is about to matter.
 
-### 10.9 The templates screen
+### 10.9 The template library and builder
 
-A design is a row, so it gets the same shape as every other owned collection: a
-browse screen with the archived filter and the count on the toolbar, and a
-detail screen for the one being edited. Two things are particular to it.
+The library separates System templates and My templates into labeled collections.
+Collection, search and the owned-template archive filter live in the URL. System
+cards open read-only previews; owned cards open the builder. Cards carry larger
+representative thumbnails, ownership and a short description of observable
+layout and typography. They are not screenshots; only a selected full preview
+lays a document out. Original system templates already in use remain reachable
+in a separate disclosure.
 
-The list shows the shipped designs alongside the user's, marked `Built in` and
-carrying no archive control - they are in every build rather than in the store,
-so there is nothing to archive and nothing to edit, but a picker that hid them
-would be lying about what a resume can name. Each row carries a thumbnail that
-is **the shape of the design, not a rendering of it**: a list of ten renderings
-would be ten iframes laying out ten resumes to fill a box an inch wide.
+Create template opens a fresh builder without requiring a name or a write first.
+Make a copy opens the same builder with the source spec and a suggested name.
+Import template reads a design file into an unsaved owned draft. File-read and
+validation failures retain the form. Neither a copy nor an import can overwrite
+a system definition. User-created templates retain archive and restore.
 
-**Starting a design is one control with two sources.** Both "copy the one I am
-looking at" and "load the one somebody sent me" answer the same question - which
-design does this start from - so they are two inputs to one form rather than two
-buttons, and the name, the clash check and the create path are written once. The
-form is a bounded block below the page header rather than a row inside it: a file
-input does not fit a narrow right-aligned strip. A file that is not a design is
-turned away with the reason, and a file whose stylesheet the schema refuses is
-turned away with the refusal's own message, because a design edited by hand needs
-to be told what to take out.
+The builder groups page defaults, typography/color, header, section headings,
+and entries/points. Controls read the shared field declarations; numeric knobs
+also allow exact entry. Heading width appears only for side headings. A custom
+accent with less than 4.5:1 contrast against white receives an advisory. CSS is
+optional, collapsed and validated; invalid CSS stays editable, is omitted from
+the preview, and disables saving. Template-file download preserves source for recovery.
 
-The archived filter has one exception on the resume's picker: a design the
-resume is already printing with stays in the list, marked, even once archived. A
-select holding a value no option carries reads as a resume using some other
-design, and moving off it is a click with no way back.
+Reusable templates use explicit Save template. Changes stay in scoped browser
+recovery until acknowledgement or discard, and neither navigation nor unmount
+publishes them. Navigation offers Save and leave, Keep draft and leave, or Keep
+editing. Save failures keep the draft and expose Retry saving. Name and spec save
+together against the retained concurrency token. A legacy spec-only recovery
+copy migrates to an explicit-save draft; it is not silently sent. Save as new
+creates a separate owned row and leaves the original users unchanged. Newer
+edits during an acknowledged save retain their values and the acknowledged token.
 
-The editor is the resume workspace's shape - controls on the left, the preview on
-the right, each scrolling on its own - over `FIXTURE_DOCUMENT` rather than over
-one of the user's resumes. That is the same fixture `isATemplate` runs against,
-so what the editor shows is what the conformance suite checks. Writes are
-debounced exactly as the resume's own settings are, and a spec whose `extraCss`
-the schema would refuse is not sent at all: the message appears under the box and
-the debounce declines to fire.
+The builder shows a template's live resume usage, with names available to
+inspect. Session undo/redo also works after saving. Reset controls resets settings
+and retains CSS; Discard changes returns to the stored copy. Ctrl-S/Cmd-S saves.
+Ctrl-Z/Cmd-Z and redo shortcuts operate on builder history outside native form
+controls, where native editing remains intact.
 
-Template and preview settings keep a browser recovery copy, serialize writes,
-and retain pending values until acknowledgement. Navigation flushes the latest
-values before leaving. Failed or invalid saves leave the user on the editor,
-with an error and retry control; a tab close with outstanding changes prompts.
-Recovered settings are shown on reopen and saved when valid. The preview,
-findings and downloads all use the visible pending settings.
+Preview content starts with a realistic sample and can instead compile any live
+resume from the cached store. Comprehensive fixture content remains an optional
+source. The builder always previews template defaults without a source resume's
+fit overrides and never patches that resume. Narrow containers switch between
+Edit template and Preview while preserving both states. Download template file
+writes the visible name and spec without resume content, including when a
+server save was refused. It uses the same file writer as the import round trip.
 
-Each live template offers Use template, opening the new-resume form with that
-template selected. Built-in designs also offer Customize copy, opening the
-design form based on that row. New resumes ask for a name and template, then
-open Content only after the create succeeds. A refused create keeps the form,
-its values, and a visible error. Design and resume-copy creation follow the
-same acknowledgement rule.
+A shared visual chooser serves new and existing resumes. Choosing a card changes
+only the candidate preview. Use this template selects a new resume's starting
+choice; Apply to this resume updates an existing resume. Cancel does neither.
+Existing fit overrides are retained unless Use template defaults is checked.
+Archived owned templates are offered only when already selected by this resume.
+
+Creating a copy from a resume carries a validated return-resume id. Saving the
+new template returns to that resume with the new candidate selected in the
+chooser; it still requires Apply. Cancel leaves the resume unchanged. Editing an
+existing reusable template is a secondary action naming its usage count. System
+templates instead offer Make a copy. Resume creation also retains unfinished
+name and template input until acknowledged creation or explicit discard.
 
 ### 10.10 Progressive disclosure and task-oriented copy
 
@@ -1419,10 +1432,11 @@ CSS validation opens its panel when needed. Summary controls work with touch
 and keyboard and remain visible without hover.
 
 Composition pickers open from an Add control; the first section picker starts
-open on an empty resume. Views read Content, Job target, Preview and export,
-and History; existing URL values remain unchanged. Preview keeps exports and
-template choice visible, with other formats, checks, font and spacing, and
-template notes expandable.
+open on an empty resume. Views read Content, Design, Job target and History;
+existing URL values remain
+unchanged. Design starts with the paper and a compact template chooser. Fit and
+checks open on request. Export stays in the workspace header; alternative
+formats and template details have separate surfaces.
 
 A compact content reference explains records, points, wordings, sections and
 templates with examples. It is collapsed on Overview, Records, the point editor
@@ -1440,3 +1454,28 @@ Dropdowns share semantic tokens for controls and options. Browsers supporting
 customizable native selects use `appearance: base-select` with bounded, themed
 option lists; other browsers retain native controls and the active color scheme.
 Keyboard selection, type-ahead, focus, and touch interaction stay native.
+
+### HTML template authoring and preview
+
+The library identifies ownership and type separately and filters by type. Default
+keeps visual controls; HTML opens a lazy CodeMirror file workspace. Entry, partial
+and stylesheet files are local bundle members. File add/rename/remove and asset
+import participate in explicit save, scoped draft recovery and session undo.
+Removing/renaming source never overwrites the saved definition until Save.
+Builder history retains at most fifty whole edit states; text editing also has
+its own native code-editor undo history.
+
+The schema-derived Resume data view searches presentation fields, reports
+optionality and current values, exposes selected JSON and copies/inserts escaped
+bindings, loops or rich-text tags. It uses the preview's selected resume and page
+configuration. The chooser and resume Design controls expose that same view.
+The data schema excludes source, credentials and private/unselected store data.
+
+HTML preview/export jobs run in a packaged worker with a parent deadline and
+abort on replacement. Stale output is removed; errors retain source and offer a
+retry. Checked HTML is loaded in a script-free sandboxed iframe with the same
+CSP as downloaded HTML. The print frame also denies scripts and waits for the
+actual srcdoc load, skipping the initial blank document. The host measures its extent for zoom, but does not run
+flow pagination or report a page-limit fit verdict for arbitrary HTML. Readability
+checks consume checked rendered bytes and remain independent of technical safety.
+Unsupported types leave the library and resume template-switch controls usable.
