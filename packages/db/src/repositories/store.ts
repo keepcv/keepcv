@@ -11,6 +11,8 @@ import { and, eq } from "drizzle-orm";
 import type { Database } from "../database.js";
 import { currentOwnerId } from "../owner-scope.js";
 import {
+  agentAttachment,
+  agentConversation,
   contactChannel,
   customSection,
   draft,
@@ -89,6 +91,7 @@ export function createStoreRepository(
   async function readStore(currentOnly = false): Promise<Store> {
     return {
       profile: await repositories.profile.get(),
+      agentConversations: await repositories.agent.list(true),
       contactChannels: await repositories.profile.listContactChannels(everything),
       organisations: await repositories.organisations.list(everything),
       customSections: await repositories.customSections.list(everything),
@@ -190,8 +193,11 @@ export function createStoreRepository(
     );
   }
   async function readArchive(): Promise<Archive> {
+    const { agentConversations, ...current } = await readStore();
     return {
-      ...(await readStore()),
+      ...current,
+      agentHistory: await repositories.agent.history(),
+      agentAttachments: await repositories.agent.attachments(),
       resumeVersions: await repositories.versions.list(),
       resumeSnapshots: await repositories.versions.listSnapshots(everything),
     };
@@ -219,6 +225,20 @@ export function createStoreRepository(
       await requireEmpty();
       const ownerId = currentOwnerId();
 
+      await insertAll(
+        db,
+        agentConversation,
+        archive.agentHistory.map((row) => ({
+          ...standardRow(row, ownerId),
+          title: row.title,
+          state: { messages: row.messages, actions: row.actions, run: row.run },
+        })),
+      );
+      await insertAll(
+        db,
+        agentAttachment,
+        archive.agentAttachments.map((row) => ({ ...row, ...standardRow(row, ownerId) })),
+      );
       await loadPhrasings(store, ownerId);
       await db
         .update(profile)

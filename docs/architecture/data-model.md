@@ -1444,3 +1444,20 @@ Not blocking; recorded so they are decided deliberately.
    thousands of moves within one scope.
 5. **Multi-profile local mode.** The schema supports it (`owner` is already the
    scope); the UI assumes one. Cheap to decide later.
+
+## Conversational assistance
+
+`agent_conversation` is an owner-scoped aggregate: title and standard columns,
+plus typed JSON messages, proposals, receipts and the latest run. History remains
+append-only through repository operations; accepting a proposal and recording
+its receipt occur in the same content transaction. Conversation updates use the
+existing concurrency token and row lock. `agent_attachment` stores immutable
+original bytes as base64 text with conversation ownership and detected type.
+Both tables have composite owner keys. Message references are validated against
+the conversation's owned attachments. Archiving retains history and originals.
+
+Current Store contains conversation metadata only. Archive adds agentHistory
+and agentAttachments, with the original encoded bytes. Import preserves historical
+status but grants and running tasks require process-local admission. Imported
+approvals never authorize execution. Archive version 3 adds empty collections
+when reading older files.

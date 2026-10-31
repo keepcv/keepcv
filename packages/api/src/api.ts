@@ -1,10 +1,11 @@
-import type { UnitOfWork } from "@keepcv/core";
+import type { AgentRuntime, UnitOfWork } from "@keepcv/core";
 import { PROBLEM_TYPES, type Problem, type Uuid } from "@keepcv/schema";
 import type { TemplateType } from "@keepcv/templates";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Authenticate } from "./auth.js";
 import { problemFor, UnauthorizedError, type UnexpectedErrorReporter } from "./problems.js";
 import { router } from "./router.js";
+import { agentRoutes } from "./routes/agent.js";
 import { customSectionRoutes } from "./routes/custom-sections.js";
 import { draftRoutes } from "./routes/drafts.js";
 import { intakeRoutes } from "./routes/intake.js";
@@ -24,6 +25,7 @@ import { versionRoutes } from "./routes/versions.js";
 export const OPENAPI_PATH = "/v1/openapi.json";
 
 export interface ApiOptions {
+  agent?: AgentRuntime;
   unitOfWork: UnitOfWork;
   templateTypes?: readonly TemplateType[];
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
@@ -54,6 +56,7 @@ export function createApi(options: ApiOptions) {
     if (ownerId === undefined) {
       throw new UnauthorizedError();
     }
+    c.set("ownerId", ownerId);
     await runAsOwner(ownerId, async () => {
       await next();
     });
@@ -85,6 +88,7 @@ export function createApi(options: ApiOptions) {
   // Chained, not mounted per statement: Hono accumulates route types only along
   // a chain, and the typed client is built from this return type.
   return app
+    .route("/", agentRoutes(options))
     .route("/", profileRoutes(options.unitOfWork))
     .route("/", organisationRoutes(options.unitOfWork))
     .route("/", customSectionRoutes(options.unitOfWork))

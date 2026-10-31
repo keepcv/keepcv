@@ -74,6 +74,15 @@ describe("the OpenAPI document", () => {
     };
 
     expect(Object.keys(document.paths).sort()).toEqual([
+      "/v1/agent/capabilities",
+      "/v1/agent/conversations",
+      "/v1/agent/conversations/{id}",
+      "/v1/agent/conversations/{id}/actions/{actionId}",
+      "/v1/agent/conversations/{id}/attachments",
+      "/v1/agent/conversations/{id}/attachments/{fileId}",
+      "/v1/agent/conversations/{id}/cancel",
+      "/v1/agent/conversations/{id}/grant",
+      "/v1/agent/conversations/{id}/turns",
       "/v1/contact-channels",
       "/v1/contact-channels/{id}",
       "/v1/contact-channels/{id}/restore",

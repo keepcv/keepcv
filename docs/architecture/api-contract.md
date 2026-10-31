@@ -717,3 +717,21 @@ writes are refused, while native archive import preserves bounded unknown JSON
 without executing it. Owner scope and optimistic concurrency remain unchanged.
 System definitions are shipped code/data and have no writable collection rows.
 Native export writes archive v2; v1 imports retain embedded historical shapes.
+
+## Conversational assistance
+
+createApi accepts an optional injected agent runtime. The API never discovers
+provider credentials. /v1/agent serves capabilities, owned conversations, turns,
+attachments, proposal decisions, cancellation and bounded task grants. All routes
+are authenticated and declared with shared Zod schemas. Turns stream application
+events; reconnect reads persisted state and never repeats inference automatically.
+Provider, model, credential, base URL and engine overrides are not accepted.
+
+Original attachments upload through a bounded authenticated endpoint and enter
+external processing only after explicit disclosure acknowledgment. Existing local
+resume import remains browser-parsed. No PDF extraction engine runs in the API.
+
+Provider failures are normalized from SDK error instances as well as response
+bodies; raw SDK request/error logging is disabled. Failover is allowed before
+text or application tool calls. Output limits, interrupted streams, exhausted
+tool steps and empty answers fail with retained partial text and receipts.

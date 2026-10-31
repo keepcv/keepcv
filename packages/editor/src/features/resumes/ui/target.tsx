@@ -204,7 +204,7 @@ export function TargetScreen({
             onChange={(jdText) => {
               set({ jdText });
             }}
-            rows={10}
+            rows={6}
             placeholder="Paste the posting."
             hint="Used for matching; excluded from the printed resume."
             error={errors.jdText}

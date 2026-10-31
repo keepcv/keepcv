@@ -146,7 +146,8 @@ export function Navigation({
 }) {
   return (
     <nav className="flex flex-col gap-1 text-sm" aria-label="Store">
-      <NavLink to="/" exact icon="overview" label="Overview" collapsed={collapsed} />
+      <NavLink to="/" exact icon="overview" label="Assistant" collapsed={collapsed} />
+      <NavLink to="/overview" exact icon="overview" label="Overview" collapsed={collapsed} />
 
       <Group title="Store" collapsed={collapsed}>
         <Kinds store={store} collapsed={collapsed} />

@@ -50,7 +50,8 @@
     "@keepcv/schema": "workspace:*",
     "hono": "catalog:",
     "zod": "catalog:",
-    "@keepcv/templates": "workspace:*"
+    "@keepcv/templates": "workspace:*",
+    "file-type": "catalog:"
   },
   "devDependencies": {
     "@keepcv/db": "workspace:*",

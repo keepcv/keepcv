@@ -3,14 +3,14 @@ import { Icon } from "../icon/icon.js";
 
 export function ContentGuide() {
   return (
-    <details className="group/guide rounded-lg border border-line bg-surface px-4 py-3 text-sm">
+    <details className="group/guide rounded-lg py-1 text-sm open:border open:border-line open:bg-surface open:p-4">
       <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-text-muted hover:text-text">
         <Icon name="info" size="sm" />
         How your content fits
         <Icon
           name="chevronDown"
           size="sm"
-          className="ml-auto transition-transform group-open/guide:rotate-180"
+          className="transition-transform group-open/guide:rotate-180"
         />
       </summary>
       <div className="mt-3 space-y-3 text-text-muted">

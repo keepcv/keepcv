@@ -37,7 +37,6 @@ import {
   isChanged,
   missingExtractable,
   newChannelValues,
-  PROFILE_HINTS,
   type ProfileValues,
   profileDifferences,
   profileValuesOf,
@@ -125,7 +124,6 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
               onChange={(fullName) => {
                 set({ fullName });
               }}
-              hint={PROFILE_HINTS.fullName}
               error={errors["fullName"]}
             />
             <TextField
@@ -135,7 +133,6 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
                 set({ pronouns });
               }}
               placeholder="optional"
-              hint={PROFILE_HINTS.pronouns}
               error={errors["pronouns"]}
             />
             <TextField
@@ -145,7 +142,6 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
                 set({ headline });
               }}
               placeholder="Staff engineer, distributed systems"
-              hint={PROFILE_HINTS.headline}
               error={errors["headline"]}
             />
             <TextField
@@ -155,7 +151,6 @@ function Identity({ profile, client }: { profile: Profile; client: ApiClient }) 
                 set({ location });
               }}
               placeholder="Bengaluru, India"
-              hint={PROFILE_HINTS.location}
               error={errors["location"]}
             />
           </div>

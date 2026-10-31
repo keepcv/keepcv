@@ -599,7 +599,7 @@ page. This produces a file; where it goes is the user's business.
 ## 4. Standing non-goals
 
 Restated because they will be requested: no job application tracking, no job
-boards, no interview preparation, no recruiter-facing products, no AI writing
+boards, no interview preparation, no recruiter-facing products, no unrelated AI writing
 features, no LinkedIn scraping, no mobile apps, and no claims of certification
 against named commercial ATS products.
 
@@ -615,3 +615,16 @@ workers cancel stale or timed-out jobs. Technical failures block rendering;
 readability advice does not block export. Arbitrary HTML has no measured flow
 page budget. Native backups and captured history retain complete source bundles,
 and unknown future types remain portable with an explicit unavailable state.
+
+### Conversational assistance
+
+The chat home and contextual panel explain KeepCV, retrieve owned career data,
+propose typed resource changes, accept/reject suggestions and apply authorized
+edits. Exact review remains for archive/restore and merges; permanent erasure and
+private Evidence have no agent tool. Known navigation destinations are UI intents.
+PDF, static raster images and ASCII/UTF-8 attachments use qualified model routes.
+Native hosted search and native document processing require explicit startup
+configuration; unsupported fallback cannot silently change processors or lose
+modalities. Original files, conversation history and receipts survive backup.
+Provider routing is modular and injected; no user-facing provider/model selector
+is exposed. All other standing non-goals remain.
