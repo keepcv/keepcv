@@ -263,6 +263,28 @@ export async function fill(run: Run): Promise<void> {
       restoredFromVersionId: null,
       manifest: second,
     });
+    const chat = await r.agent.create(newUuid(), "Saved career conversation");
+    chat.messages.push({
+      id: newUuid(),
+      role: "user",
+      text: "Keep my notes",
+      attachmentIds: [],
+      sources: [],
+      createdAt: chat.createdAt,
+      state: "complete",
+      navigation: null,
+    });
+    chat.archivedAt = chat.createdAt;
+    await r.agent.save(chat);
+    const chatFile = await r.agent.attach({
+      id: newUuid(),
+      conversationId: chat.id,
+      name: "notes.txt",
+      mediaType: "text/plain",
+      data: "bm90ZXM=",
+    });
+    await r.agent.archiveAttachment(chatFile.id, chatFile.updatedAt, true);
+
     // What a restore writes: the older manifest again, saying where it came
     // from.
     await r.versions.append({

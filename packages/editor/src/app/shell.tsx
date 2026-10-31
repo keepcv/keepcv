@@ -133,9 +133,6 @@ export function Shell({
                 setPalette(true);
               }}
             />
-            <span className="ml-auto lg:hidden">
-              <ThemeToggle choice={choice} choose={choose} />
-            </span>
           </div>
         </header>
 

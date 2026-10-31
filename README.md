@@ -92,3 +92,13 @@ threat model and how to report a vulnerability.
 ## Licence
 
 MIT - see [LICENSE](LICENSE).
+
+## Conversational assistance
+
+The application opens on the assistant; the store overview remains at /overview.
+Configure model access at startup with `keepcv serve --agent-config agent.json`.
+See [agent configuration](packages/agent/README.md) for model routes, credentials,
+hosted-search restrictions and supported attachments. Review changes before
+accepting them, or grant bounded edits to the resource currently open. Original
+files and conversation history are retained in native backups. Without model
+configuration, ordinary editing and export remain available.

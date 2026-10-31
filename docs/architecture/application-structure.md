@@ -1363,7 +1363,7 @@ is about to matter.
 The library separates System templates and My templates into labeled collections.
 Collection, search and the owned-template archive filter live in the URL. System
 cards open read-only previews; owned cards open the builder. Cards carry larger
-representative thumbnails, ownership and a short description of observable
+representative thumbnails, template type and a short description of observable
 layout and typography. They are not screenshots; only a selected full preview
 lays a document out. Original system templates already in use remain reachable
 in a separate disclosure.
@@ -1455,6 +1455,26 @@ customizable native selects use `appearance: base-select` with bounded, themed
 option lists; other browsers retain native controls and the active color scheme.
 Keyboard selection, type-ahead, focus, and touch interaction stay native.
 
+### 10.11 Quiet page chrome and contextual controls
+
+The mobile frame keeps theme selection in navigation so search has room.
+Page headings use unframed glyphs and panels use one outer border. Collapsed
+panels show their title; their explanation appears when opened. Content guidance
+is a compact disclosure rather than a full-width card. Existing authored content
+continues to open where the screen already requires it.
+
+Empty summaries and backup restoration in a populated store start collapsed.
+Profile labels and placeholders carry familiar field guidance without repeating
+it below every input. Template collection, type and search share one toolbar;
+cards identify template type without repeating the selected collection.
+
+Chat starts with the message and explicit data-sharing consent. Attachments,
+research, model-service details, task permissions and recovery expand on request.
+Selected files and active permissions open their controls. Unavailable chat shows
+one notice and a store link, with history and recovery still reachable. Completed
+proposals collapse without discarding their exact operations or receipt. The
+contextual assistant uses a bounded dialog and a quiet persistent trigger.
+
 ### HTML template authoring and preview
 
 The library identifies ownership and type separately and filters by type. Default
@@ -1479,3 +1499,17 @@ actual srcdoc load, skipping the initial blank document. The host measures its e
 flow pagination or report a page-limit fit verdict for arbitrary HTML. Readability
 checks consume checked rendered bytes and remain independent of technical safety.
 Unsupported types leave the library and resume template-switch controls usable.
+
+## Conversational assistance
+
+The authenticated root opens chat; /overview retains the store overview. One
+controller in the editor shell owns the conversation across page navigation.
+Page context is a validated path/resource hint, not authority. Chat reads current
+career data through core selectors; messages and attachment bytes load on demand.
+Review cards show exact proposals and affected data before acceptance. Bounded
+task grants permit ordinary edits; archive, restore and merges retain exact review.
+
+Agent batches settle from acknowledged receipts, without optimistic career-data
+patches. Re-read the store after a batch and wait for outstanding local mutations
+before reconciliation. Conversation and composer recovery are scoped to the
+connected store. Provider failure never blocks ordinary editing or export.

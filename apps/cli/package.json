@@ -49,7 +49,8 @@
     "@keepcv/db": "workspace:*",
     "@keepcv/interop": "workspace:*",
     "@keepcv/render": "workspace:*",
-    "@keepcv/schema": "workspace:*"
+    "@keepcv/schema": "workspace:*",
+    "@keepcv/agent": "workspace:*"
   },
   "devDependencies": {
     "@keepcv/web": "workspace:*",

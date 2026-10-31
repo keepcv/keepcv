@@ -8,12 +8,29 @@
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts", "src/**/*.harness.ts"],
   "references": [
-    { "path": "../../packages/schema" },
-    { "path": "../../packages/core" },
-    { "path": "../../packages/render" },
-    { "path": "../../packages/ats-lint" },
-    { "path": "../../packages/interop" },
-    { "path": "../../packages/db" },
-    { "path": "../../packages/api" }
+    {
+      "path": "../../packages/schema"
+    },
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/render"
+    },
+    {
+      "path": "../../packages/ats-lint"
+    },
+    {
+      "path": "../../packages/interop"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/api"
+    },
+    {
+      "path": "../../packages/agent"
+    }
   ]
 }

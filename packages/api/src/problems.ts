@@ -1,4 +1,5 @@
 import {
+  AgentRefusalError,
   CareerRecordKindMismatchError,
   ConcurrencyConflictError,
   type ConstraintKind,
@@ -85,6 +86,14 @@ export function problemFor(
   instance: string,
   reportUnexpectedError: UnexpectedErrorReporter | null = console.error,
 ): Problem {
+  if (error instanceof AgentRefusalError)
+    return {
+      type: "https://keepcv.app/problems/assistant-refused",
+      title: "Assistant request refused",
+      status: error.status,
+      detail: error.message,
+      instance,
+    };
   if (error instanceof ExportChangedError) {
     return {
       type: PROBLEM_TYPES.staleWrite,

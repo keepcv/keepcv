@@ -29,12 +29,11 @@ function Card({ row, client }: { row: TemplateRow; client: ApiClient }) {
         <TemplateThumbnail template={row.template} large />
         <div className="min-w-0 space-y-2">
           <h3 className="text-sm font-semibold text-text">{row.name}</h3>
-          <Badge>{row.isBuiltIn ? "System" : "My template"}</Badge>
           <Badge>
             {row.template.type === "html"
               ? "HTML"
               : row.template.type === "default" || row.template.type === undefined
-                ? "Default"
+                ? "Visual"
                 : row.template.type}
           </Badge>
           {row.isArchived ? <Badge tone="warning">Archived</Badge> : null}
@@ -138,22 +137,6 @@ export function TemplateList({
       >
         Choose a system template or build your own reusable design.
       </PageHeader>
-      <div className="w-52">
-        <SelectField
-          label="Template type"
-          value={type}
-          onChange={setType}
-          options={[
-            { value: "all", label: "All types" },
-            ...Array.from(new Set(all.map((row) => row.template.type ?? "default"))).map(
-              (value) => ({
-                value,
-                label: value === "default" ? "Default (visual)" : value.toUpperCase(),
-              }),
-            ),
-          ]}
-        />
-      </div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Segmented label="Template collection">
           <Segment
@@ -167,28 +150,41 @@ export function TemplateList({
             active={active === "mine"}
           >{`My templates (${String(mine.length)})`}</Segment>
         </Segmented>
-        <div className="w-full max-w-sm">
-          <TextField
-            label="Find a template"
-            placeholder="Name, serif, compact..."
-            value={query}
-            onChange={(q) => {
-              void navigate({
-                to: "/templates",
-                search: { archived, collection: active, q },
-                replace: true,
-              });
-            }}
-          />
+        <div className="grid w-full grid-cols-[7.5rem_minmax(0,1fr)] gap-3 sm:max-w-md sm:grid-cols-[9rem_minmax(0,1fr)]">
+          <div className="min-w-0">
+            <SelectField
+              label="Template type"
+              value={type}
+              onChange={setType}
+              options={[
+                { value: "all", label: "All types" },
+                ...Array.from(new Set(all.map((row) => row.template.type ?? "default"))).map(
+                  (value) => ({
+                    value,
+                    label: value === "default" ? "Default (visual)" : value.toUpperCase(),
+                  }),
+                ),
+              ]}
+            />
+          </div>
+          <div className="min-w-0">
+            <TextField
+              label="Find a template"
+              placeholder="Name, serif, compact..."
+              value={query}
+              onChange={(q) => {
+                void navigate({
+                  to: "/templates",
+                  search: { archived, collection: active, q },
+                  replace: true,
+                });
+              }}
+            />
+          </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-muted">
-          {active === "system"
-            ? "Provided by the app. Preview a template, or make an editable copy."
-            : "Your reusable templates. Changes are saved explicitly in the builder."}
-        </p>
-        {active === "mine" ? (
+      {active === "mine" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Segmented label="My templates, archived">
             {ARCHIVED_FILTERS.map((option) => (
               <Segment
@@ -201,8 +197,8 @@ export function TemplateList({
               </Segment>
             ))}
           </Segmented>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {shown.length === 0 ? (
         <Empty
           title={

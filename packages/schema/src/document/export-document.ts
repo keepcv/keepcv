@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  agentAttachmentSchema,
+  agentConversationSchema,
+  agentConversationSummarySchema,
+} from "../entities/agent.js";
 import { careerRecordSchema } from "../entities/career-record.js";
 import { contactChannelSchema } from "../entities/contact-channel.js";
 import { customSectionSchema } from "../entities/custom-section.js";
@@ -25,13 +30,14 @@ import { pointTagSchema, recordTagSchema, tagSchema } from "../entities/tag.js";
 import { templateSchema } from "../entities/template.js";
 import { timestampSchema } from "../primitives/timestamp.js";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 // `import(export(store)) == store` is a tested property, so a table missing
 // from here or from `archiveSchema` below is data the format silently drops.
 export const storeSchema = z
   .object({
     profile: profileSchema,
+    agentConversations: z.array(agentConversationSummarySchema).optional(),
     contactChannels: z.array(contactChannelSchema),
     organisations: z.array(organisationSchema),
     customSections: z.array(customSectionSchema),
@@ -67,7 +73,10 @@ export const storeSchema = z
 // The store plus its history. `resumeContentRef` is absent because it is
 // derived from the manifests and rebuilt on import.
 export const archiveSchema = storeSchema
+  .omit({ agentConversations: true })
   .extend({
+    agentHistory: z.array(agentConversationSchema).default([]),
+    agentAttachments: z.array(agentAttachmentSchema).default([]),
     resumeVersions: z.array(resumeVersionSchema),
     resumeSnapshots: z.array(resumeSnapshotSchema),
   })

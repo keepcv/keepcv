@@ -1,5 +1,6 @@
 import type { Repositories } from "@keepcv/core";
 import type { Database } from "../database.js";
+import { createAgentRepository } from "./agent.js";
 import { createCareerRecordRepository } from "./career-record.js";
 import { createCustomSectionRepository } from "./custom-section.js";
 import { createDraftRepository } from "./draft.js";
@@ -18,6 +19,7 @@ import { createTemplateRepository } from "./template.js";
 export function createRepositories(db: Database): Repositories {
   const phrasings = createPhrasingRepository(db);
   const repositories = {
+    agent: createAgentRepository(db),
     profile: createProfileRepository(db),
     organisations: createOrganisationRepository(db),
     customSections: createCustomSectionRepository(db),

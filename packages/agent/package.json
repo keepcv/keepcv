@@ -1,0 +1,60 @@
+{
+  "name": "@keepcv/agent",
+  "version": "0.1.0",
+  "description": "Typed conversational actions and configurable model transports for KeepCV.",
+  "keywords": [
+    "keepcv",
+    "hono",
+    "openapi",
+    "resume",
+    "cv"
+  ],
+  "license": "MIT",
+  "author": "nrautela",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keepcv/keepcv.git",
+    "directory": "packages/agent"
+  },
+  "bugs": {
+    "url": "https://github.com/keepcv/keepcv/issues"
+  },
+  "homepage": "https://github.com/keepcv/keepcv/tree/main/packages/agent",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@keepcv/core": "workspace:*",
+    "@keepcv/schema": "workspace:*",
+    "ai": "catalog:",
+    "@openrouter/ai-sdk-provider": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@keepcv/db": "workspace:*"
+  }
+}

@@ -2,6 +2,7 @@ import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import { AgentHome, AgentPanel, AgentProvider } from "../features/agent/ui/agent.js";
 import type { DataPagePresentation } from "../features/data/model/presentation.js";
 import { DataScreen } from "../features/data/ui/data-screen.js";
 import { ImportScreen } from "../features/import/ui/import-screen.js";
@@ -49,7 +50,10 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
     const { api, signOut, recoveryNamespace } = rootRoute.useRouteContext();
     return (
       <RecoveryNamespaceContext.Provider value={recoveryNamespace}>
-        <Shell key={recoveryNamespace} store={useStore(api)} onSignOut={signOut} />
+        <AgentProvider key={recoveryNamespace} api={api}>
+          <Shell store={useStore(api)} onSignOut={signOut} />
+          <AgentPanel />
+        </AgentProvider>
       </RecoveryNamespaceContext.Provider>
     );
   },
@@ -70,12 +74,14 @@ const searchSchema = z.object({
 
 const overviewRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/",
+  path: "/overview",
   component: function OverviewScreen() {
     const store = useStore(overviewRoute.useRouteContext().api);
     return <Overview store={store} asOf={new Date().toISOString()} />;
   },
 });
+
+const chatRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: AgentHome });
 
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -372,6 +378,7 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   overviewRoute,
+  chatRoute,
   profileRoute,
   dataRoute,
   importRoute,

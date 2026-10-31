@@ -16,7 +16,7 @@ export function Panel({
   collapsible?: boolean;
   defaultOpen?: boolean;
 }) {
-  const classes = cn("rounded-xl border border-line bg-surface shadow-card", className);
+  const classes = cn("rounded-xl border border-line bg-surface", className);
   if (collapsible) {
     return (
       <Collapsible.Provider value={true}>
@@ -52,7 +52,7 @@ export function PanelHeader({
         "flex items-start justify-between gap-4 px-4 py-3",
         collapsible
           ? "cursor-pointer list-none rounded-xl hover:bg-surface-hover group-open/panel:rounded-b-none group-open/panel:border-b group-open/panel:border-line-subtle"
-          : "border-b border-line-subtle",
+          : "",
       )}
     >
       <div className="min-w-0">
@@ -61,7 +61,14 @@ export function PanelHeader({
           {title}
         </h2>
         {children === undefined ? null : (
-          <p className="mt-0.5 text-xs text-text-muted">{children}</p>
+          <p
+            className={cn(
+              "mt-0.5 text-xs text-text-muted",
+              collapsible && "hidden group-open/panel:block",
+            )}
+          >
+            {children}
+          </p>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
