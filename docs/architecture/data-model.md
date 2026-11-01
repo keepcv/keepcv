@@ -1461,3 +1461,19 @@ and agentAttachments, with the original encoded bytes. Import preserves historic
 status but grants and running tasks require process-local admission. Imported
 approvals never authorize execution. Archive version 3 adds empty collections
 when reading older files.
+
+
+Temporary grants, proposal admissions, cancellation controllers and revoked-scope
+tombstones exist only in a runtime process, keyed by owner as well as resource
+IDs. They are absent from archive and import. Restart/import preserves history,
+receipts and original attachments but never resumes model work or active authority.
+A pending proposal needs a fresh authorized task to admit it again. A persisted
+running marker can delay a new task until its bounded lease expires or Stop is
+acknowledged; it does not restart work. A new runtime must revalidate current
+consumer authority because process-local revoked scopes do not survive restart.
+
+Multiple processes require consumer affinity for pending decisions/cancellation
+and current authorization in every process. A local cancel/revoke cannot signal
+another process; the consumer must coordinate its own authority invalidation.
+Rolling restarts drain or stop old work and require fresh proposal admission on
+new instances. No distributed transport, grant store or background resumer exists.

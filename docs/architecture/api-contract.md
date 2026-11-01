@@ -735,3 +735,65 @@ Provider failures are normalized from SDK error instances as well as response
 bodies; raw SDK request/error logging is disabled. Failover is allowed before
 text or application tool calls. Output limits, interrupted streams, exhausted
 tool steps and empty answers fail with retained partial text and receipts.
+
+
+### Consumer control of assistance
+
+createApi optionally accepts agentLimits and agentScope. agentScope(request,
+ownerId) resolves a trusted origin scope once per turn, grant or decision request;
+it is passed to the runtime, never accepted in JSON or sent to a provider. Existing
+consumers may omit it. Authentication remains the caller's injected boundary.
+Omitting the agent leaves authenticated conversation creation, attachment storage,
+history and export/import routes enabled; only runtime operations are unavailable.
+A consumer restricting storage must guard those requests or its unit of work too.
+
+GET /v1/agent/capabilities returns generation available separately from
+historyAvailable (true for these storage routes), disclosure and AgentLimits:
+maxFileBytes, maxTextFileBytes, maxTurnBytes, maxAttachments, maxTextCharacters.
+Defaults retain 16 MiB, 1 MiB, 32 MiB, five files and 32000 characters respectively.
+API and built-in runtime limits may be lowered at startup; the response reports
+the minimum and admission enforces it. Legacy custom runtimes may omit new limits.
+Attachment metadata includes decoded sizeBytes without the original data field.
+Limits apply to new uploads and generation selections, not historical downloads
+or exports. maxAttachments=0 disables generation selections without disabling
+attachment storage. External request/rate and total storage policies stay outside
+the reusable packages. Presentation configuration does not enforce authority.
+
+The built-in runtime's optional async authorize hook receives owner, conversation,
+trusted scope, signal, generate/read/propose/apply phase and known typed operations.
+It checks before history/attachment access, before and after model resource reads,
+before proposal admission, and inside the locked application transaction before
+each operation and receipt. Throw/rejection fails closed and invalidates current
+conversation authority. Model and unit-of-work wrappers remain supported; they
+alone do not govern pending admission, temporary grants or hosted calls. Built-in
+adapters also call optional ModelRequest.authorize before every external step.
+Custom models retain their required interface and should honor signal and invoke
+that callback before additional external calls. API storage reads and turn
+preflight use ordinary request authentication and the caller's unit of work;
+additional read restrictions belong at those boundaries.
+
+cancel(owner, conversation) invalidates active work, pending admissions and grants
+for that conversation. revoke(owner, scope) additionally refuses all future work
+in that scope for this runtime instance. Reauthorization uses a new scope. Refusal
+and revocation do not expose private policy errors. Cancellation stops waiting
+for an uncooperative model; its late reads/proposals fail. It cannot retract an
+already admitted external request or undo a committed change. The built-in unit
+of work checks the abort signal before commit; cancellation observed by that check
+rolls back edits and receipt together. Cancellation between the last check and
+COMMIT may lose the race. Consumers requiring stricter serialization must supply
+it at their own authority/transaction boundary. Cleanup retains interrupted history
+without further generation authority. Stale tokens and duplicate receipt replay
+remain governed by the existing locked atomic application transaction.
+
+The built-in adapter's optional usage observer receives bounded call and run
+completion events. Calls cover conversation tool steps, retries/failover, document
+analysis and native research. Each started step reports once, including failed or
+interrupted calls when counts exist. Only safe nonnegative provider token counts
+are reported; absent counts are null with unknown source, never synthesized zero.
+Run completion does not assert that every provider count was returned. Metadata
+contains configured routing labels, random call ID, optional turn ID, attempt,
+step, kind and outcome; it contains no prompt, response, file, tool payload,
+credential, raw error, cost or arbitrary provider metadata. Observer exceptions
+cannot affect authored state or replay inference. Async delivery is not awaited,
+is not durable across crashes and has no exactly-once accounting guarantee.
+Custom models own their usage reporting. Consumers own accounting and enforcement.

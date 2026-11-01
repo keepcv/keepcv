@@ -139,14 +139,33 @@ export function Navigation({
   store,
   collapsed = false,
   onSignOut,
+  assistant = true,
+  home = "assistant",
 }: {
   store: Store;
+  assistant?: boolean;
+  home?: "assistant" | "overview";
   collapsed?: boolean;
   onSignOut?: (() => void) | undefined;
 }) {
   return (
     <nav className="flex flex-col gap-1 text-sm" aria-label="Store">
-      <NavLink to="/" exact icon="overview" label="Assistant" collapsed={collapsed} />
+      {assistant ? (
+        <NavLink
+          to={home === "overview" ? "/assistant" : "/"}
+          exact
+          icon="overview"
+          label="Assistant"
+          collapsed={collapsed}
+        />
+      ) : null}
+      <NavLink
+        to="/conversations"
+        exact
+        icon="history"
+        label="Conversations"
+        collapsed={collapsed}
+      />
       <NavLink to="/overview" exact icon="overview" label="Overview" collapsed={collapsed} />
 
       <Group title="Store" collapsed={collapsed}>

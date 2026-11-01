@@ -1502,7 +1502,15 @@ Unsupported types leave the library and resume template-switch controls usable.
 
 ## Conversational assistance
 
-The authenticated root opens chat; /overview retains the store overview. One
+By default the authenticated root opens chat; /overview retains the store overview.
+The exported Editor accepts assistant (default true) and home (default assistant).
+Choosing home=overview redirects / to /overview and keeps generation at /assistant.
+Setting assistant=false always redirects / to /overview, redirects /assistant to
+/conversations, and hides assistant navigation, the contextual panel, composer,
+suggestions and task controls. /conversations and its navigation remain available
+in both configurations for saved messages, exact proposals, receipts and original
+attachment downloads, including archived content. These are presentation options;
+consumer authorization is enforced server-side. Options are chosen before mount. One
 controller in the editor shell owns the conversation across page navigation.
 Page context is a validated path/resource hint, not authority. Chat reads current
 career data through core selectors; messages and attachment bytes load on demand.
@@ -1513,3 +1521,44 @@ Agent batches settle from acknowledged receipts, without optimistic career-data
 patches. Re-read the store after a batch and wait for outstanding local mutations
 before reconciliation. Conversation and composer recovery are scoped to the
 connected store. Provider failure never blocks ordinary editing or export.
+
+
+Capabilities distinguish generation availability from history access and carry the
+effective API/runtime file, text and turn limits. The composer reflects those
+limits, checks selection before sending and retains input on refusal. Smaller
+limits never remove stored originals or gate ordinary export. The installed
+editor consumer tests exercise these public props and routes from packed entry
+points with server-side refusal and a custom model.
+
+
+### Conversation experience
+
+The conversation distinguishes user messages from KeepCV AI responses and labels
+interrupted output. Completed messages form an accessible, politely announced log;
+streaming fragments stay outside it to avoid announcing every token. A shared
+status/error surface remains visible in history as well as generation views.
+Stop awaits acknowledgment; it never claims committed changes were reversed.
+
+The transcript scrolls independently while the composer stays reachable; expanded
+composer controls have a bounded scroll area. New output follows the latest message
+until the user scrolls back; Jump to latest resumes following without moving focus.
+The composer preserves Enter for new lines and uses Ctrl/Cmd+Enter to send,
+including composition-input protection. Its visible permission label distinguishes
+review from temporary task edits. The contextual panel names the current page.
+Pending suggestions show readable operations and proposed field values before the
+exact raw payload/current-data disclosure. Saving a decision disables competing
+decisions and sends once; receipts remain authoritative. Request changes focuses
+a correction draft without overwriting existing input, changing the proposal or
+sending it. Messages can be copied; a failure gives a manual alternative. History
+can jump to the latest message or continue a selected conversation when generation
+is available. Assistant configuration still controls every generation entry.
+
+These choices apply Microsoft's evidence-based [HAX guidelines](https://www.microsoft.com/en-us/haxtoolkit/ai-guidelines/)
+for clear capabilities, correction and user control. [Fluent's agent guidance](https://fluent2.microsoft.design/responsible-AI)
+informs visible authority, meaningful status and explicit action consequences.
+[W3C ARIA23](https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA23) supplies the
+accessible sequential-log pattern. [NN/G's chat usability study](https://www.nngroup.com/articles/chat-ux/)
+supports distinguishable participants, interruption recovery and document access;
+its customer-service findings are applied selectively to this data-editing agent.
+No time estimate, confidence score, simulated reasoning, feedback telemetry or
+automatic retry is invented by the UI.

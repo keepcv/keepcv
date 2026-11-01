@@ -1,7 +1,7 @@
 # Releasing KeepCV
 
 Releases are published through GitHub Actions. The public packages are `@keepcv/cli`
-and `@keepcv/api`, `@keepcv/ats-lint`, `@keepcv/core`, `@keepcv/db`,
+and `@keepcv/agent`, `@keepcv/api`, `@keepcv/ats-lint`, `@keepcv/core`, `@keepcv/db`,
 `@keepcv/editor`, `@keepcv/interop`, `@keepcv/render`, `@keepcv/schema` and `@keepcv/templates`.
 The workspace root and `@keepcv/web` are private.
 
@@ -150,6 +150,9 @@ dependencies to the tarballs; third-party dependencies come from the registry.
 The temporary installation is removed after the check. It also installs the
 editor, builds an isolated browser consumer without Tailwind source scanning,
 checks the emitted stylesheet and DOCX worker, and runs its typed entry tests.
+The installed consumer also exercises configurable assistant presentation, direct
+navigation, retained conversations and original downloads using only public
+editor/API/runtime entry points and synthetic models.
 
 Packages contain JavaScript and TypeScript declarations, with no `.js.map` or
 `.d.ts.map` files. Build emission disables maps and each public manifest excludes

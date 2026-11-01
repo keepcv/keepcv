@@ -1,6 +1,11 @@
 import { careerRecordKindSchema, uuidSchema } from "@keepcv/schema";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  redirect,
+} from "@tanstack/react-router";
 import { z } from "zod";
 import { AgentHome, AgentPanel, AgentProvider } from "../features/agent/ui/agent.js";
 import type { DataPagePresentation } from "../features/data/model/presentation.js";
@@ -35,6 +40,8 @@ import { Shell } from "./shell.js";
 import { Failure, Skeleton } from "./states.js";
 
 export interface RouterContext {
+  assistant?: boolean | undefined;
+  home?: "assistant" | "overview" | undefined;
   queries: QueryClient;
   api: ApiClient;
   signOut: (() => void) | undefined;
@@ -47,12 +54,18 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
     await prefetchStore(context.queries, context.api);
   },
   component: function Frame() {
-    const { api, signOut, recoveryNamespace } = rootRoute.useRouteContext();
+    const {
+      api,
+      signOut,
+      recoveryNamespace,
+      assistant = true,
+      home = "assistant",
+    } = rootRoute.useRouteContext();
     return (
       <RecoveryNamespaceContext.Provider value={recoveryNamespace}>
-        <AgentProvider key={recoveryNamespace} api={api}>
-          <Shell store={useStore(api)} onSignOut={signOut} />
-          <AgentPanel />
+        <AgentProvider key={recoveryNamespace} api={api} enabled={assistant}>
+          <Shell store={useStore(api)} onSignOut={signOut} assistant={assistant} home={home} />
+          {assistant ? <AgentPanel /> : null}
         </AgentProvider>
       </RecoveryNamespaceContext.Provider>
     );
@@ -81,7 +94,28 @@ const overviewRoute = createRoute({
   },
 });
 
-const chatRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: AgentHome });
+const chatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  beforeLoad: ({ context }) => {
+    if (context.assistant === false || context.home === "overview")
+      throw redirect({ to: "/overview" });
+  },
+  component: AgentHome,
+});
+const assistantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/assistant",
+  beforeLoad: ({ context }) => {
+    if (context.assistant === false) throw redirect({ to: "/conversations" });
+  },
+  component: AgentHome,
+});
+const conversationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/conversations",
+  component: () => <AgentHome historyOnly />,
+});
 
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -379,6 +413,8 @@ const searchRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   overviewRoute,
   chatRoute,
+  assistantRoute,
+  conversationsRoute,
   profileRoute,
   dataRoute,
   importRoute,

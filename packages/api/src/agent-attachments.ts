@@ -1,5 +1,11 @@
 import { AgentRefusalError } from "@keepcv/core";
-import { type AgentAttachment, agentAttachmentSchema, type Uuid } from "@keepcv/schema";
+import {
+  type AgentAttachment,
+  type AgentLimits,
+  agentAttachmentSchema,
+  agentLimitsSchema,
+  type Uuid,
+} from "@keepcv/schema";
 import { fileTypeFromBuffer } from "file-type";
 
 export async function attachmentInput(
@@ -7,14 +13,17 @@ export async function attachmentInput(
   conversationId: Uuid,
   name: string,
   bytes: Uint8Array,
+  limits: AgentLimits = agentLimitsSchema.parse({}),
 ): Promise<Omit<AgentAttachment, "createdAt" | "updatedAt" | "archivedAt">> {
-  if (bytes.length === 0 || bytes.length > 16 * 1024 * 1024)
-    throw new AgentRefusalError("Choose a non-empty file of at most 16 MiB.", 413);
+  if (bytes.length === 0 || bytes.length > limits.maxFileBytes)
+    throw new AgentRefusalError("Choose a non-empty file within the configured upload limit.", 413);
   const detected = await fileTypeFromBuffer(bytes);
   let mediaType = detected?.mime;
   if (mediaType === undefined) {
-    if (bytes.length > 1024 * 1024 || bytes.includes(0))
-      throw new AgentRefusalError("Choose a UTF-8 text file of at most 1 MiB.");
+    if (bytes.length > limits.maxTextFileBytes || bytes.includes(0))
+      throw new AgentRefusalError(
+        "Choose a UTF-8 text file within the configured text-file limit.",
+      );
     try {
       new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     } catch {

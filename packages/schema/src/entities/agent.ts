@@ -560,3 +560,33 @@ export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentTurn = z.infer<typeof agentTurnSchema>;
 export type AgentSource = z.infer<typeof agentSourceSchema>;
 export type AgentGrant = z.infer<typeof agentGrantSchema>;
+
+export const agentLimitsSchema = z.object({
+  maxFileBytes: z
+    .int()
+    .min(1)
+    .max(16 * 1024 * 1024)
+    .default(16 * 1024 * 1024),
+  maxTextFileBytes: z
+    .int()
+    .min(1)
+    .max(1024 * 1024)
+    .default(1024 * 1024),
+  maxTurnBytes: z
+    .int()
+    .min(1)
+    .max(32 * 1024 * 1024)
+    .default(32 * 1024 * 1024),
+  maxAttachments: z.int().min(0).max(5).default(5),
+  maxTextCharacters: z.int().min(1).max(32000).default(32000),
+});
+export type AgentLimits = z.infer<typeof agentLimitsSchema>;
+export const agentCapabilitiesSchema = agentLimitsSchema.extend({
+  available: z.boolean(),
+  historyAvailable: z.boolean().default(true),
+  disclosure: z.string(),
+});
+
+export const agentAttachmentMetadataSchema = agentAttachmentSchema
+  .omit({ data: true })
+  .extend({ sizeBytes: z.int().min(0).optional() });

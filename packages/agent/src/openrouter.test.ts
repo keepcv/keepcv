@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { agentConfigSchema, createOpenRouterModel, providerError } from "./openrouter.js";
 import type { ModelRequest } from "./runtime.js";
+import type { AgentUsageEvent } from "./usage.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -23,7 +24,7 @@ function modelRequest(): ModelRequest {
   };
 }
 
-function streamReply(delta: unknown, finishReason = "stop") {
+function streamReply(delta: unknown, finishReason = "stop", usage?: unknown) {
   const chunk = (value: unknown, finish: string | null) => ({
     id: "synthetic",
     object: "chat.completion.chunk",
@@ -32,7 +33,7 @@ function streamReply(delta: unknown, finishReason = "stop") {
     choices: [{ index: 0, delta: value, finish_reason: finish }],
   });
   return new Response(
-    [chunk(delta, null), chunk({}, finishReason)]
+    [chunk(delta, null), { ...chunk({}, finishReason), ...(usage === undefined ? {} : { usage }) }]
       .map((value) => `data: ${JSON.stringify(value)}\n\n`)
       .join("") + "data: [DONE]\n\n",
     { headers: { "content-type": "text/event-stream" } },
@@ -142,6 +143,7 @@ it("retains truncated text as a failure without replaying on another model", asy
 });
 
 it("keeps hosted research on the exact public query and preserves citations", async () => {
+  const events: AgentUsageEvent[] = [];
   const nativeBodies: unknown[] = [];
   let step = 0;
   vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
@@ -152,6 +154,7 @@ it("keeps hosted research on the exact public query and preserves citations", as
     if (!body.stream) {
       nativeBodies.push(body);
       return Response.json({
+        usage: { prompt_tokens: 12, completion_tokens: 7, total_tokens: 19 },
         choices: [
           {
             message: {
@@ -196,12 +199,24 @@ it("keeps hosted research on the exact public query and preserves citations", as
       nativeSearchPolicyConfirmed: true,
     }),
     { OPENROUTER_API_KEY: "synthetic" },
+    (event) => {
+      events.push(event);
+    },
   );
   const answer = await model.generate({
     ...modelRequest(),
     publicResearchQuery: "Public resume question",
   });
   expect(answer.sources).toEqual([{ title: "Public source", url: "https://example.com/public" }]);
+  expect(events.filter((event) => event.event === "call")).toHaveLength(3);
+  expect(events.find((event) => event.event === "call" && event.kind === "research")).toMatchObject(
+    {
+      event: "call",
+      kind: "research",
+      usage: { source: "provider", totalTokens: 19 },
+    },
+  );
+  expect(events.at(-1)).toMatchObject({ event: "run", outcome: "complete" });
   expect(nativeBodies).toHaveLength(1);
   expect(JSON.stringify(nativeBodies)).not.toContain("Private career note");
   expect(JSON.stringify(nativeBodies)).toContain('"engine":"native"');
@@ -238,17 +253,22 @@ it("refuses missing credentials and unqualified hosted search at startup", () =>
 });
 
 it("sends PDF bytes only to the fixed inference endpoint and refuses incomplete findings", async () => {
-  const fetcher = vi
-    .fn<typeof fetch>()
-    .mockResolvedValue(
-      Response.json({ choices: [{ message: { content: "unfinished" }, finish_reason: "length" }] }),
-    );
+  const events: AgentUsageEvent[] = [];
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+    Response.json({
+      usage: { prompt_tokens: 50 },
+      choices: [{ message: { content: "unfinished" }, finish_reason: "length" }],
+    }),
+  );
   vi.stubGlobal("fetch", fetcher);
   const model = createOpenRouterModel(
     agentConfigSchema.parse({
       routes: [{ model: "qualified/pdf", providers: ["approved"], pdf: true }],
     }),
     { OPENROUTER_API_KEY: "synthetic" },
+    (event) => {
+      events.push(event);
+    },
   );
   const request: ModelRequest = {
     messages: [{ role: "user", content: "Read my resume" }],
@@ -282,4 +302,147 @@ it("sends PDF bytes only to the fixed inference endpoint and refuses incomplete 
   expect(body).toContain('"allow_fallbacks":false');
   expect(body).toContain('"engine":"native"');
   expect(body).toContain("data:application/pdf;base64,JVBERg==");
+  expect(events[0]).toMatchObject({
+    event: "call",
+    kind: "document",
+    outcome: "interrupted",
+    usage: { source: "provider", inputTokens: 50, outputTokens: null, totalTokens: null },
+  });
+  expect(events.at(-1)).toMatchObject({ event: "run", outcome: "interrupted" });
+});
+
+it("reports observed and unknown usage for every failover attempt without private content", async () => {
+  const events: AgentUsageEvent[] = [];
+  let calls = 0;
+  vi.stubGlobal("fetch", () =>
+    Promise.resolve(
+      ++calls === 1
+        ? Response.json(
+            { usage: { prompt_tokens: 4 }, error: { code: 503, message: "Secret provider error" } },
+            { status: 503 },
+          )
+        : streamReply({ content: "Private output" }, "stop", {
+            prompt_tokens: 8,
+            completion_tokens: 3,
+            total_tokens: 11,
+          }),
+    ),
+  );
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({
+      routes: [
+        { model: "qualified/primary", providers: ["approved"] },
+        { model: "qualified/backup", providers: ["approved"] },
+      ],
+    }),
+    { OPENROUTER_API_KEY: "secret credential" },
+    (event) => {
+      events.push(event);
+      throw new Error("Observer failed");
+    },
+  );
+  expect((await model.generate(modelRequest())).text).toBe("Private output");
+  expect(calls).toBe(2);
+  const reports = events.filter((event) => event.event === "call");
+  expect(reports).toHaveLength(2);
+  expect(reports[0]).toMatchObject({
+    attempt: 1,
+    step: 1,
+    outcome: "failed",
+    usage: { source: "provider", inputTokens: 4, outputTokens: null, totalTokens: null },
+  });
+  expect(reports[1]).toMatchObject({
+    attempt: 2,
+    step: 1,
+    model: "qualified/backup",
+    outcome: "complete",
+    usage: { source: "provider", inputTokens: 8, outputTokens: 3, totalTokens: 11 },
+  });
+  expect(JSON.stringify(events)).not.toMatch(/Private|Secret|secret|credential|messages|arguments/);
+});
+
+it.each([undefined, { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 }])(
+  "reports partial output with honest usage and isolates async observers",
+  async (usage) => {
+    const events: AgentUsageEvent[] = [];
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(streamReply({ content: "Partial" }, "length", usage)),
+    );
+    const model = createOpenRouterModel(
+      agentConfigSchema.parse({ routes: [{ model: "qualified/model", providers: ["approved"] }] }),
+      { OPENROUTER_API_KEY: "synthetic" },
+      (event) => {
+        events.push(event);
+        return Promise.reject(new Error("Observer failed"));
+      },
+    );
+    await expect(model.generate(modelRequest())).rejects.toMatchObject({ code: "incomplete" });
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      event: "call",
+      outcome: "interrupted",
+      usage:
+        usage === undefined
+          ? { source: "unknown", inputTokens: null, outputTokens: null, totalTokens: null }
+          : { source: "provider", totalTokens: 12 },
+    });
+    expect(events[1]).toMatchObject({ event: "run", outcome: "interrupted" });
+  },
+);
+
+it("revalidates before each external model step and never replays after a refused step", async () => {
+  const authorize = vi.fn(() => Promise.reject(new Error("Refused")));
+  const fetcher = vi.fn<typeof fetch>();
+  vi.stubGlobal("fetch", fetcher);
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({ routes: [{ model: "qualified/model", providers: ["approved"] }] }),
+    { OPENROUTER_API_KEY: "synthetic" },
+  );
+  await expect(model.generate({ ...modelRequest(), authorize })).rejects.toBeDefined();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("reports an interrupted in-flight stream without inventing missing usage", async () => {
+  const controller = new AbortController();
+  const events: AgentUsageEvent[] = [];
+  vi.stubGlobal("fetch", () =>
+    Promise.resolve(
+      new Response(
+        new ReadableStream({
+          start(stream) {
+            stream.enqueue(
+              new TextEncoder().encode(
+                'data: {"id":"synthetic","object":"chat.completion.chunk","created":1,"model":"qualified/model","choices":[{"index":0,"delta":{"content":"Partial"},"finish_reason":null}]}\n\n',
+              ),
+            );
+          },
+        }),
+        { headers: { "content-type": "text/event-stream" } },
+      ),
+    ),
+  );
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({ routes: [{ model: "qualified/model", providers: ["approved"] }] }),
+    { OPENROUTER_API_KEY: "synthetic" },
+    (event) => {
+      events.push(event);
+    },
+  );
+  await expect(
+    model.generate({
+      ...modelRequest(),
+      signal: controller.signal,
+      text: () => {
+        controller.abort();
+        return Promise.resolve();
+      },
+    }),
+  ).rejects.toBeDefined();
+  expect(events).toHaveLength(2);
+  expect(events[0]).toMatchObject({
+    event: "call",
+    outcome: "interrupted",
+    usage: { source: "unknown", totalTokens: null },
+  });
+  expect(events[1]).toMatchObject({ event: "run", outcome: "interrupted" });
 });

@@ -1,4 +1,4 @@
-import type { AgentConversation, AgentGrant, AgentTurn, Uuid } from "@keepcv/schema";
+import type { AgentConversation, AgentGrant, AgentLimits, AgentTurn, Uuid } from "@keepcv/schema";
 import type { CancellationSignal } from "./repositories.js";
 
 export class AgentRefusalError extends Error {
@@ -16,21 +16,27 @@ export interface AgentEvent {
 }
 
 export interface AgentRuntime {
-  capabilities: { available: boolean; disclosure: string; maxFileBytes: number };
+  capabilities: {
+    available: boolean;
+    disclosure: string;
+    maxFileBytes: number;
+  } & Partial<AgentLimits>;
   turn(
     ownerId: Uuid,
     conversationId: Uuid,
     input: AgentTurn,
     emit: (event: AgentEvent) => Promise<void>,
     signal: CancellationSignal,
+    scope?: string,
   ): Promise<void>;
   decide(
     ownerId: Uuid,
     conversationId: Uuid,
     actionId: Uuid,
     accept: boolean,
+    scope?: string,
   ): Promise<AgentConversation>;
-  grant(ownerId: Uuid, conversationId: Uuid, grant: AgentGrant | null): void;
+  grant(ownerId: Uuid, conversationId: Uuid, grant: AgentGrant | null, scope?: string): void;
   cancel(ownerId: Uuid, conversationId: Uuid): void;
   close(): void;
 }

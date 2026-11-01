@@ -2,10 +2,13 @@ import { createRoute } from "@hono/zod-openapi";
 import type { AgentRuntime, UnitOfWork } from "@keepcv/core";
 import { AgentRefusalError, ConcurrencyConflictError, NotFoundError } from "@keepcv/core";
 import {
-  agentAttachmentSchema,
+  type AgentLimits,
+  agentAttachmentMetadataSchema,
+  agentCapabilitiesSchema,
   agentConversationSchema,
   agentConversationSummarySchema,
   agentGrantSchema,
+  agentLimitsSchema,
   agentTurnSchema,
   timestampSchema,
   type Uuid,
@@ -31,10 +34,7 @@ const capabilities = createRoute({
   path: "/v1/agent/capabilities",
   responses: {
     ...sessionRequired,
-    200: jsonResponse(
-      z.object({ available: z.boolean(), disclosure: z.string(), maxFileBytes: z.number() }),
-      "Assistant availability",
-    ),
+    200: jsonResponse(agentCapabilitiesSchema, "Assistant availability"),
   },
 });
 const list = createRoute({
@@ -128,7 +128,7 @@ const files = createRoute({
   responses: {
     ...responses,
     200: jsonResponse(
-      z.object({ items: z.array(agentAttachmentSchema.omit({ data: true })) }),
+      z.object({ items: z.array(agentAttachmentMetadataSchema) }),
       "Attachment metadata",
     ),
   },
@@ -150,7 +150,7 @@ const upload = createRoute({
   responses: {
     ...responses,
     413: problemResponse("File exceeds upload budget"),
-    201: jsonResponse(agentAttachmentSchema.omit({ data: true }), "Original saved"),
+    201: jsonResponse(agentAttachmentMetadataSchema, "Original saved"),
   },
 });
 const archiveFile = createRoute({
@@ -164,10 +164,7 @@ const archiveFile = createRoute({
   },
   responses: {
     ...responses,
-    200: jsonResponse(
-      agentAttachmentSchema.omit({ data: true }),
-      "Attachment availability changed",
-    ),
+    200: jsonResponse(agentAttachmentMetadataSchema, "Attachment availability changed"),
   },
 });
 const download = createRoute({
@@ -186,9 +183,22 @@ const download = createRoute({
 export function agentRoutes(options: {
   unitOfWork: UnitOfWork;
   agent?: AgentRuntime;
+  agentLimits?: Partial<AgentLimits>;
+  agentScope?: (request: Request, ownerId: Uuid) => Promise<string | undefined>;
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
 }) {
   const unit = options.unitOfWork;
+  const configured = agentLimitsSchema.parse(options.agentLimits ?? {});
+  const limits = agentLimitsSchema.parse(
+    Object.fromEntries(
+      Object.entries(configured).map(([key, value]) => [
+        key,
+        Math.min(value, options.agent?.capabilities[key as keyof AgentLimits] ?? value),
+      ]),
+    ),
+  );
+  const scopeFor = async (request: Request, owner: Uuid) =>
+    await options.agentScope?.(request, owner);
   const runtime = () => {
     if (options.agent === undefined)
       throw new AgentRefusalError("The assistant is not configured.", 503);
@@ -198,14 +208,14 @@ export function agentRoutes(options: {
   app.use(
     `${base}/:id/attachments/:fileId`,
     bodyLimit({
-      maxSize: 17 * 1024 * 1024,
+      maxSize: limits.maxFileBytes + 1024 * 1024,
       onError: (c) =>
         c.json(
           {
             type: "about:blank",
             title: "Upload too large",
             status: 413,
-            detail: "Choose a file of at most 16 MiB.",
+            detail: "Choose a file within the configured upload limit.",
             instance: c.req.path,
           },
           413,
@@ -215,11 +225,13 @@ export function agentRoutes(options: {
   return app
     .openapi(capabilities, (c) =>
       c.json(
-        options.agent?.capabilities ?? {
-          available: false,
+        {
+          available: options.agent?.capabilities.available ?? false,
           disclosure:
+            options.agent?.capabilities.disclosure ??
             "The assistant is not configured. All ordinary editing and export remain available.",
-          maxFileBytes: 16 * 1024 * 1024,
+          historyAvailable: true,
+          ...limits,
         },
         200,
       ),
@@ -252,10 +264,37 @@ export function agentRoutes(options: {
     })
     .openapi(turn, async (c) => {
       const agent = runtime();
+      if (!agent.capabilities.available)
+        throw new AgentRefusalError("Generation is unavailable.", 503);
       const { id } = c.req.valid("param");
       const input = c.req.valid("json");
-      await unit.run(async (r) => await r.agent.get(id));
+      if (
+        input.text.length > limits.maxTextCharacters ||
+        input.attachmentIds.length > limits.maxAttachments
+      )
+        throw new AgentRefusalError("This request exceeds the configured turn limits.", 413);
+      await unit.run(async (r) => {
+        await r.agent.get(id);
+        const files = await r.agent.attachments(id);
+        const selected = input.attachmentIds.map((fileId) => {
+          const file = files.find((row) => row.id === fileId && row.archivedAt === null);
+          if (file === undefined) throw new NotFoundError("attachment", fileId);
+          const bytes = Buffer.byteLength(file.data, "base64");
+          if (
+            bytes > limits.maxFileBytes ||
+            (file.mediaType === "text/plain" && bytes > limits.maxTextFileBytes)
+          )
+            throw new AgentRefusalError("A selected file exceeds the configured file limit.", 413);
+          return bytes;
+        });
+        if (selected.reduce((sum, bytes) => sum + bytes, 0) > limits.maxTurnBytes)
+          throw new AgentRefusalError(
+            "The selected files exceed the configured turn byte limit.",
+            413,
+          );
+      });
       const owner = c.get("ownerId");
+      const scope = await scopeFor(c.req.raw, owner);
       return streamSSE(c, async (stream) => {
         const controller = new AbortController();
         stream.onAbort(() => controller.abort());
@@ -271,6 +310,7 @@ export function agentRoutes(options: {
                 await stream.writeSSE({ event: event.type, data: JSON.stringify(event) });
               },
               signal,
+              scope,
             ),
         );
       });
@@ -278,14 +318,25 @@ export function agentRoutes(options: {
     .openapi(decide, async (c) => {
       const { id, actionId } = c.req.valid("param");
       return c.json(
-        await runtime().decide(c.get("ownerId"), id, actionId, c.req.valid("json").accept),
+        await runtime().decide(
+          c.get("ownerId"),
+          id,
+          actionId,
+          c.req.valid("json").accept,
+          await scopeFor(c.req.raw, c.get("ownerId")),
+        ),
         200,
       );
     })
     .openapi(grant, async (c) => {
       const { id } = c.req.valid("param");
       await unit.run(async (r) => await r.agent.get(id));
-      runtime().grant(c.get("ownerId"), id, c.req.valid("json").grant);
+      runtime().grant(
+        c.get("ownerId"),
+        id,
+        c.req.valid("json").grant,
+        await scopeFor(c.req.raw, c.get("ownerId")),
+      );
       return c.json({ saved: true }, 200);
     })
     .openapi(cancel, async (c) => {
@@ -299,7 +350,15 @@ export function agentRoutes(options: {
         await r.agent.get(c.req.valid("param").id);
         return await r.agent.attachments(c.req.valid("param").id);
       });
-      return c.json({ items: rows.map(({ data, ...metadata }) => metadata) }, 200);
+      return c.json(
+        {
+          items: rows.map(({ data, ...metadata }) => ({
+            ...metadata,
+            sizeBytes: Buffer.byteLength(data, "base64"),
+          })),
+        },
+        200,
+      );
     })
     .openapi(upload, async (c) => {
       const { id, fileId } = c.req.valid("param");
@@ -309,13 +368,14 @@ export function agentRoutes(options: {
         id,
         file.name,
         new Uint8Array(await file.arrayBuffer()),
+        limits,
       );
       const saved = await unit.run(async (r) => {
         await r.agent.get(id);
         return await r.agent.attach(input);
       });
       const { data, ...metadata } = saved;
-      return c.json(metadata, 201);
+      return c.json({ ...metadata, sizeBytes: Buffer.byteLength(data, "base64") }, 201);
     })
     .openapi(archiveFile, async (c) => {
       const { id, fileId } = c.req.valid("param");
@@ -327,7 +387,7 @@ export function agentRoutes(options: {
         return await r.agent.archiveAttachment(fileId, input.expectedUpdatedAt, input.archived);
       });
       const { data, ...metadata } = saved;
-      return c.json(metadata, 200);
+      return c.json({ ...metadata, sizeBytes: Buffer.byteLength(data, "base64") }, 200);
     })
     .openapi(download, async (c) => {
       const { id, fileId } = c.req.valid("param");

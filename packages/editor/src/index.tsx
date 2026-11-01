@@ -9,6 +9,8 @@ export type { DataPagePresentation } from "./features/data/model/presentation.js
 
 export interface EditorProps {
   api: ApiClient;
+  assistant?: boolean;
+  home?: "assistant" | "overview";
   queries: QueryClient;
   signOut?: (() => void) | undefined;
   dataPage?: DataPagePresentation | undefined;
@@ -21,10 +23,12 @@ export function Editor({
   signOut,
   dataPage,
   recoveryNamespace,
+  assistant,
+  home,
 }: EditorProps): JSX.Element {
   const router = useMemo(
-    () => buildRouter({ api, queries, signOut, dataPage, recoveryNamespace }),
-    [api, queries, signOut, dataPage, recoveryNamespace],
+    () => buildRouter({ api, queries, signOut, dataPage, recoveryNamespace, assistant, home }),
+    [api, queries, signOut, dataPage, recoveryNamespace, assistant, home],
   );
   return (
     <QueryClientProvider client={queries}>

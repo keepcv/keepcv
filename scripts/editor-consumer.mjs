@@ -5,7 +5,7 @@ import { join } from "node:path";
 export async function prepareEditorConsumer(root, installed, tarballs) {
   await cp(join(root, "fixtures/editor-consumer"), installed, { recursive: true });
   const dependencies = {};
-  for (const name of ["api", "core", "db", "editor", "schema"]) {
+  for (const name of ["agent", "api", "core", "db", "editor", "schema"]) {
     dependencies[`@keepcv/${name}`] = tarballs[`@keepcv/${name}`];
   }
   for (const name of [

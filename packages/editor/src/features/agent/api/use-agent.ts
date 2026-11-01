@@ -2,7 +2,8 @@ import { newUuid } from "@keepcv/core";
 import {
   type AgentAction,
   type AgentConversation,
-  agentAttachmentSchema,
+  agentAttachmentMetadataSchema,
+  agentCapabilitiesSchema,
   agentConversationSchema,
   agentConversationSummarySchema,
   uuidSchema,
@@ -16,17 +17,13 @@ import { keepEdit, useRecoveryKey } from "../../../lib/edit-recovery.js";
 import { STORE_KEY } from "../../../lib/store-cache.js";
 import { type PendingFile, retainFiles } from "../model/files.js";
 
-const capabilitiesSchema = z.object({
-  available: z.boolean(),
-  disclosure: z.string(),
-  maxFileBytes: z.number(),
-});
+const capabilitiesSchema = agentCapabilitiesSchema;
 const eventSchema = z.object({
   type: z.enum(["text", "status", "error", "done"]),
   text: z.string(),
 });
-const fileMetadataSchema = agentAttachmentSchema.omit({ data: true });
-export function useAgentController(api: ApiClient) {
+const fileMetadataSchema = agentAttachmentMetadataSchema;
+export function useAgentController(api: ApiClient, enabled = true) {
   const queries = useQueryClient();
   const recoveryKey = useRecoveryKey("keepcv.chat.composer");
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -35,6 +32,9 @@ export function useAgentController(api: ApiClient) {
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [selectedAttachments, setSelectedAttachments] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [deciding, setDeciding] = useState<string | null>(null);
+  const decision = useRef(false);
   const [status, setStatus] = useState("");
   const [partial, setPartial] = useState("");
   const [error, setError] = useState("");
@@ -49,14 +49,16 @@ export function useAgentController(api: ApiClient) {
   const request = useRef<AbortController | null>(null);
   const capabilities = useQuery({
     queryKey: ["agent", "capabilities"],
-    enabled: path === "/" || open,
+    enabled:
+      path === "/conversations" || (enabled && (path === "/" || path === "/assistant" || open)),
     retry: false,
     queryFn: async () =>
       capabilitiesSchema.parse(await unwrap(await api.v1.agent.capabilities.$get())),
   });
   const conversations = useQuery({
     queryKey: ["agent", "conversations"],
-    enabled: path === "/" || open,
+    enabled:
+      path === "/conversations" || (enabled && (path === "/" || path === "/assistant" || open)),
     retry: false,
     queryFn: async () =>
       z
@@ -87,25 +89,27 @@ export function useAgentController(api: ApiClient) {
   useEffect(() => {
     setSelectedAttachments([]);
     setGrant(false);
-    if (grantScope !== null && id !== null)
+    if (enabled && capabilities.data?.available === true && grantScope !== null && id !== null)
       void api.v1.agent.conversations[":id"].grant
         .$put({ param: { id }, json: { grant: null } })
+        .then(unwrap)
         .catch(() =>
           setError(
             "Task access could not be revoked. Stop the conversation or wait for its permission to expire.",
           ),
         );
     return () => {
-      if (id !== null)
+      if (enabled && capabilities.data?.available === true && id !== null)
         void api.v1.agent.conversations[":id"].grant
           .$put({ param: { id }, json: { grant: null } })
+          .then(unwrap)
           .catch(() =>
             setError(
               "Task access could not be revoked. Stop the conversation or wait for its permission to expire.",
             ),
           );
     };
-  }, [api, id, grantScope]);
+  }, [api, id, grantScope, enabled, capabilities.data?.available]);
   useEffect(
     () => () => {
       request.current?.abort();
@@ -155,10 +159,31 @@ export function useAgentController(api: ApiClient) {
   async function send() {
     if (
       busy ||
+      decision.current ||
+      !enabled ||
+      capabilities.data?.available !== true ||
+      conversation.data?.archivedAt != null ||
       (!text.trim() && files.length === 0 && selectedAttachments.length === 0) ||
       !disclosed
     )
       return;
+    const limits = capabilitiesSchema.parse(capabilities.data);
+    const selected = uploaded.data?.filter((file) => selectedAttachments.includes(file.id)) ?? [];
+    const sizes = [
+      ...files.map((file) => file.file.size),
+      ...selected.map((file) => file.sizeBytes ?? 0),
+    ];
+    if (
+      text.length > limits.maxTextCharacters ||
+      files.length + selectedAttachments.length > limits.maxAttachments ||
+      sizes.some((size) => size > limits.maxFileBytes) ||
+      sizes.reduce((sum, bytes) => sum + bytes, 0) > limits.maxTurnBytes
+    ) {
+      setError(
+        "This request exceeds the configured file, text or turn limits. Your input is retained.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     setPartial("");
@@ -225,6 +250,10 @@ export function useAgentController(api: ApiClient) {
             const event = eventSchema.parse(JSON.parse(data.slice(6)));
             if (!acknowledged && event.type === "status") {
               acknowledged = true;
+              void queries.invalidateQueries({
+                queryKey: ["agent", "conversation", conversationId],
+              });
+              void queries.invalidateQueries({ queryKey: ["agent", "files", conversationId] });
               if (currentText.current === submittedText) changeText("");
               if (submittedFiles.length > 0 && currentFiles.current === submittedFiles)
                 changeFiles([]);
@@ -250,7 +279,9 @@ export function useAgentController(api: ApiClient) {
     }
   }
   async function decide(action: AgentAction, accept: boolean) {
-    if (id === null) return;
+    if (id === null || busy || decision.current || !enabled) return;
+    decision.current = true;
+    setDeciding(action.id);
     setError("");
     try {
       const next = agentConversationSchema.parse(
@@ -262,6 +293,11 @@ export function useAgentController(api: ApiClient) {
         ),
       );
       queries.setQueryData(["agent", "conversation", id], next);
+      setStatus(
+        accept
+          ? "Changes saved. The receipt is retained."
+          : "Suggestion rejected. Your data is unchanged.",
+      );
       await refresh();
     } catch (reason) {
       setError(
@@ -269,12 +305,22 @@ export function useAgentController(api: ApiClient) {
           ? reason.message
           : "The proposal was not applied. Refresh and review the current data.",
       );
+    } finally {
+      decision.current = false;
+      setDeciding(null);
     }
   }
   async function stop() {
-    if (id !== null) await api.v1.agent.conversations[":id"].cancel.$post({ param: { id } });
-    request.current?.abort();
-    setGrant(false);
+    setStopping(true);
+    try {
+      if (id !== null)
+        await unwrap(await api.v1.agent.conversations[":id"].cancel.$post({ param: { id } }));
+      request.current?.abort();
+      setGrant(false);
+      setStatus("Stop acknowledged. Completed edits remain saved.");
+    } finally {
+      setStopping(false);
+    }
   }
   async function authorize() {
     const resource = path.split("/")[1];
@@ -352,8 +398,16 @@ export function useAgentController(api: ApiClient) {
     }
   }
   return {
+    enabled,
+    canGenerate: enabled && capabilities.data?.available === true,
     id,
-    setId,
+    setId: (value: string | null) => {
+      setId(value);
+      setError("");
+      setStatus("");
+    },
+    deciding,
+    stopping,
     text,
     changeText,
     files,
@@ -363,6 +417,7 @@ export function useAgentController(api: ApiClient) {
     partial,
     error,
     setError,
+    setStatus,
     disclosed,
     setDisclosed,
     publicQuery,

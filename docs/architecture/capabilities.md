@@ -628,3 +628,14 @@ configuration; unsupported fallback cannot silently change processors or lose
 modalities. Original files, conversation history and receipts survive backup.
 Provider routing is modular and injected; no user-facing provider/model selector
 is exposed. All other standing non-goals remain.
+
+
+Embedding consumers can choose Overview as home and hide generation presentation
+while retaining conversations, attachment downloads, editing and export. Server
+hooks revalidate ongoing authority; consumer cancellation revokes originating scope
+admission and temporary grants without reversing committed changes. Limits are
+startup configuration reported to the editor. Built-in provider usage observers
+report bounded counts and completion without content or enforcement policy.
+Installed-package tests exercise those contracts. Authentication implementations,
+provider credentials, storage/rate accounting and deployment infrastructure remain
+consumer responsibilities. There is no private-resource tool registry.

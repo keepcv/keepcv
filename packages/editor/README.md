@@ -121,3 +121,32 @@ a lazy code workspace, local files/assets, a selected-data explorer and explicit
 save with scoped recovery. Preview/export use a packaged worker and a script-free
 iframe. The library's system definitions are read-only; copied and imported
 templates belong to the connected user. See [the template guide](../../docs/TEMPLATES.md).
+
+## Assistant presentation
+
+Existing consumers open the assistant at `/` and retain its navigation and
+contextual panel. To make Overview the home while keeping the assistant, pass
+`home="overview"`. The assistant then lives at `/assistant`. To hide generation
+presentation, use:
+
+```tsx
+<Editor api={api} queries={queries} assistant={false} home="overview" />;
+```
+
+`assistant={false}` sends `/` to `/overview` regardless of `home`; direct
+`/assistant` navigation opens `/conversations`. It hides the assistant navigation,
+contextual panel, composer, suggestions and task permission controls. Conversations
+remains in navigation and at `/conversations`, with saved messages, exact proposal
+history, receipts, original attachment downloads and archive/restore. This route
+is available with either presentation setting. Set these options before mounting;
+unmount, clear the query cache and revoke server authority when changing identity.
+
+These options are presentation only. Enforce authorization on the server through
+the injected runtime and API boundaries. Omitting the model runtime disables
+generation but leaves conversation creation and attachment storage routes enabled.
+Capabilities report generation `available` separately from `historyAvailable` and
+include the effective upload, text and turn limits. The composer uses those limits;
+the server remains authoritative. Smaller new limits do not hide saved originals.
+
+The installed editor consumer fixture demonstrates both settings using exported
+package entry points, a custom model, trusted request scope and server refusal.
