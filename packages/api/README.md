@@ -177,3 +177,13 @@ request/unit-of-work boundary. Editor configuration only changes presentation.
 Generation refusal or provider failure leaves ordinary editing and export usable.
 Authentication, provider credentials, deployment rate limiting and storage
 accounting belong to the embedding application.
+
+
+Stop is a local cancellation request. The built-in runtime returns a boolean
+confirming whether it held a controller; legacy void cancellation remains accepted
+but cannot confirm one. If no controller is confirmed and the owned conversation
+has an unexpired bounded running lease, POST cancel returns 409 with guidance to
+wait for expiry or stop the executing process. It still invalidates local task
+access; it never clears the stored lease. A 200 saved response does not promise
+completion or immediate lease release. Expired leases permit a fresh turn without
+restoring grants or proposal authority. Committed edits and receipts remain intact.

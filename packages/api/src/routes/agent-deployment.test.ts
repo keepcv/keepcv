@@ -1,6 +1,11 @@
 import { type AgentRuntime, newUuid } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
-import { agentCapabilitiesSchema, exportDocumentSchema, type Uuid } from "@keepcv/schema";
+import {
+  agentCapabilitiesSchema,
+  exportDocumentSchema,
+  timestampSchema,
+  type Uuid,
+} from "@keepcv/schema";
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { createApi } from "../api.js";
 
@@ -129,4 +134,83 @@ it("checks the lower runtime and API limits before work and passes only trusted 
     method: "PUT",
   });
   expect(grant.mock.calls[0]?.[3]).toBe(`trusted:${owner}`);
+});
+
+it.each([true, false, undefined])(
+  "reports unconfirmed Stop against an unexpired lease: %s",
+  async (local) => {
+    const id = newUuid();
+    const leaseUntil = new Date(Date.now() + 60000).toISOString();
+    const before = await runAsOwner(owner, () =>
+      store.unitOfWork.run(async (r) => {
+        const conversation = await r.agent.create(id, "Running");
+        conversation.run = {
+          id: newUuid(),
+          state: "running",
+          context: { path: "/" },
+          error: null,
+          leaseUntil: timestampSchema.parse(leaseUntil),
+        };
+        return await r.agent.save(conversation);
+      }),
+    );
+    const cancel = vi.fn<AgentRuntime["cancel"]>(() => local);
+    const runtime: AgentRuntime = {
+      capabilities: { available: true, disclosure: "Synthetic", maxFileBytes: 20 },
+      turn: () => Promise.resolve(),
+      grant: () => {},
+      decide: () => Promise.reject(new Error("Unused")),
+      cancel,
+      close: () => {},
+    };
+    const response = await app(runtime).request(`/v1/agent/conversations/${id}/cancel`, {
+      method: "POST",
+    });
+    expect(response.status).toBe(local === true ? 200 : 409);
+    if (local !== true)
+      expect(await response.json()).toMatchObject({
+        status: 409,
+        detail:
+          "No local task was confirmed stopped. Its running lease remains; wait for lease expiry or stop it in the process executing the task. Local task access was cleared.",
+      });
+    expect(cancel).toHaveBeenCalledWith(owner, id);
+    expect(await runAsOwner(owner, () => store.unitOfWork.run((r) => r.agent.get(id)))).toEqual(
+      before,
+    );
+  },
+);
+
+it("accepts Stop after lease expiry and checks ownership before invoking cancellation", async () => {
+  const id = newUuid();
+  await runAsOwner(owner, () =>
+    store.unitOfWork.run(async (r) => {
+      const conversation = await r.agent.create(id, "Expired");
+      conversation.run = {
+        id: newUuid(),
+        state: "running",
+        context: { path: "/" },
+        error: null,
+        leaseUntil: conversation.createdAt,
+      };
+      await r.agent.save(conversation);
+    }),
+  );
+  const cancel = vi.fn<AgentRuntime["cancel"]>(() => false);
+  const runtime: AgentRuntime = {
+    capabilities: { available: true, disclosure: "Synthetic", maxFileBytes: 20 },
+    turn: () => Promise.resolve(),
+    grant: () => {},
+    decide: () => Promise.reject(new Error("Unused")),
+    cancel,
+    close: () => {},
+  };
+  expect(
+    (await app(runtime).request(`/v1/agent/conversations/${id}/cancel`, { method: "POST" })).status,
+  ).toBe(200);
+  owner = newUuid();
+  await store.createOwner(owner);
+  expect(
+    (await app(runtime).request(`/v1/agent/conversations/${id}/cancel`, { method: "POST" })).status,
+  ).toBe(404);
+  expect(cancel).toHaveBeenCalledOnce();
 });

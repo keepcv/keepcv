@@ -2,6 +2,7 @@ import {
   AgentRefusalError,
   type AgentRuntime,
   ConcurrencyConflictError,
+  hasRunningAgentLease,
   NotFoundError,
   newUuid,
   type UnitOfWork,
@@ -108,6 +109,9 @@ async function whileActive<T>(work: () => Promise<T>, signal: AbortSignal): Prom
   }
 }
 
+const AUTHORITY_CAPACITY = 128;
+const REVIEW_WINDOW_MS = 30 * 60 * 1000;
+
 export function createAgent(options: {
   unitOfWork: UnitOfWork;
   model: AgentModel;
@@ -117,8 +121,17 @@ export function createAgent(options: {
   authorize?: (context: AgentAuthorization) => Promise<void>;
 }): AgentRuntime & { revoke(ownerId: Uuid, scope: string): void } {
   const limits = agentLimitsSchema.parse(options.limits ?? {});
+  const deadlineMs = z
+    .number()
+    .int()
+    .min(1)
+    .max(180000)
+    .parse(options.deadlineMs ?? 90000);
   const active = new Map<string, { controller: AbortController; scope: string | undefined }>();
-  const admitted = new Map<string, { controller: AbortController; scope: string | undefined }>();
+  const admitted = new Map<
+    string,
+    { controller: AbortController; scope: string | undefined; expires: number }
+  >();
   const grants = new Map<
     string,
     { grant: AgentGrant; expires: number; scope: string | undefined }
@@ -127,8 +140,44 @@ export function createAgent(options: {
   const keyOf = (owner: Uuid, conversation: Uuid) => `${owner}:${conversation}`;
   const stamp = () => new Date().toISOString() as Timestamp;
   const unit = options.unitOfWork;
+  const capabilities = { available: true, disclosure: options.disclosure, ...limits };
+  let closed: string | null = null;
+
+  function prune() {
+    const now = Date.now();
+    for (const [key, entry] of grants) if (entry.expires <= now) grants.delete(key);
+    for (const [key, entry] of admitted)
+      if (entry.expires <= now || entry.controller.signal.aborted) {
+        entry.controller.abort(
+          new AgentRefusalError(
+            "The review window expired. Start a fresh task and review the proposal again.",
+            409,
+          ),
+        );
+        admitted.delete(key);
+      }
+  }
+  const sweep = setInterval(prune, 60000);
+  sweep.unref();
+
+  function requireOpen() {
+    if (closed !== null) throw new AgentRefusalError(closed, 503);
+  }
+  function close(reason = "This runtime is closed. Create a fresh authorized runtime.") {
+    closed = reason;
+    capabilities.available = false;
+    clearInterval(sweep);
+    for (const entry of active.values()) entry.controller.abort();
+    for (const entry of admitted.values()) entry.controller.abort();
+    active.clear();
+    admitted.clear();
+    grants.clear();
+    revoked.clear();
+  }
 
   async function check(context: AgentAuthorization) {
+    prune();
+    requireOpen();
     context.signal.throwIfAborted();
     if (
       context.scope !== undefined &&
@@ -147,6 +196,8 @@ export function createAgent(options: {
         }
       throw new AgentRefusalError("Task authority was refused.", 403);
     }
+    prune();
+    requireOpen();
     context.signal.throwIfAborted();
     if (
       context.scope !== undefined &&
@@ -163,12 +214,30 @@ export function createAgent(options: {
     scope?: string,
     authorize?: () => void,
   ) {
+    prune();
     const key = keyOf(owner, conversationId);
-    const admission = admitted.get(`${key}:${actionId}`);
+    const actionKey = `${key}:${actionId}`;
+    const admission = admitted.get(actionKey);
     const signal = admission?.controller.signal ?? new AbortController().signal;
     const context = { ownerId: owner, conversationId, scope, signal };
     await check({ ...context, phase: "read" });
-    return await unit.run(
+    function requireAdmission() {
+      if (
+        admission === undefined ||
+        admitted.get(actionKey) !== admission ||
+        admission.scope !== scope
+      )
+        throw new AgentRefusalError(
+          "Start a fresh task and review a new proposal before applying it.",
+          409,
+        );
+    }
+    async function admitChanges(operations: AgentOperation[]) {
+      requireAdmission();
+      await check({ ...context, phase: "apply", operations });
+      requireAdmission();
+    }
+    const decided = await unit.run(
       async (r) => {
         const conversation = await r.agent.get(conversationId, true);
         if (conversation.archivedAt !== null)
@@ -176,20 +245,15 @@ export function createAgent(options: {
         const action = conversation.actions.find((row) => row.id === actionId);
         if (action === undefined) throw new NotFoundError("proposal", actionId);
         if (action.status !== "pending") return conversation;
-        if (admission === undefined || admission.scope !== scope)
-          throw new AgentRefusalError(
-            "Reopen this task and review a new proposal before applying it.",
-            409,
-          );
-        await check({ ...context, phase: "apply", operations: action.operations });
+        await admitChanges(action.operations);
         authorize?.();
         if (accept) {
           for (const operation of action.operations) {
-            await check({ ...context, phase: "apply", operations: [operation] });
+            await admitChanges([operation]);
             await applyOperation(r, operation);
           }
         }
-        await check({ ...context, phase: "apply", operations: action.operations });
+        await admitChanges(action.operations);
         authorize?.();
         action.status = accept ? "applied" : "rejected";
         action.receipt = accept ? `Applied ${stamp()}` : `Rejected ${stamp()}`;
@@ -197,23 +261,34 @@ export function createAgent(options: {
       },
       { signal },
     );
+    admitted.delete(actionKey);
+    return decided;
   }
 
   return {
-    capabilities: {
-      available: true,
-      disclosure: options.disclosure,
-      ...limits,
-    },
+    capabilities,
     decide,
     grant(owner, id, grant, scope) {
+      prune();
       const key = keyOf(owner, id);
-      if (grant === null) grants.delete(key);
-      else if (scope === undefined || !revoked.has(JSON.stringify([owner, scope])))
-        grants.set(key, { grant, expires: Date.now() + grant.expiresInSeconds * 1000, scope });
+      if (grant === null) {
+        grants.delete(key);
+        return;
+      }
+      requireOpen();
+      if (scope !== undefined && revoked.has(JSON.stringify([owner, scope])))
+        throw new AgentRefusalError("Task authority was revoked.", 403);
+      if (!grants.has(key) && grants.size >= AUTHORITY_CAPACITY)
+        throw new AgentRefusalError(
+          "Too many temporary grants. Revoke a grant or wait for expiry.",
+          503,
+        );
+      grants.set(key, { grant, expires: Date.now() + grant.expiresInSeconds * 1000, scope });
     },
     cancel(owner, id) {
-      active.get(keyOf(owner, id))?.controller.abort();
+      prune();
+      const task = active.get(keyOf(owner, id));
+      task?.controller.abort();
       for (const [key, entry] of admitted) {
         if (key.startsWith(`${keyOf(owner, id)}:`)) {
           entry.controller.abort();
@@ -221,9 +296,17 @@ export function createAgent(options: {
         }
       }
       grants.delete(keyOf(owner, id));
+      return task !== undefined;
     },
     revoke(owner, scope) {
-      revoked.add(JSON.stringify([owner, scope]));
+      prune();
+      if (closed !== null) return;
+      const scopeKey = JSON.stringify([owner, scope]);
+      if (!revoked.has(scopeKey) && revoked.size >= AUTHORITY_CAPACITY) {
+        close("Revocation capacity reached. Create a fresh runtime with current authorization.");
+        return;
+      }
+      revoked.add(scopeKey);
       for (const [key, entry] of active)
         if (key.startsWith(`${owner}:`) && entry.scope === scope) entry.controller.abort();
       for (const [key, entry] of admitted)
@@ -234,13 +317,10 @@ export function createAgent(options: {
       for (const [key, entry] of grants)
         if (key.startsWith(`${owner}:`) && entry.scope === scope) grants.delete(key);
     },
-    close() {
-      for (const entry of active.values()) entry.controller.abort();
-      for (const entry of admitted.values()) entry.controller.abort();
-      grants.clear();
-      admitted.clear();
-    },
+    close: () => close(),
     async turn(owner, conversationId, input, emit, signal, scope) {
+      requireOpen();
+      prune();
       const key = keyOf(owner, conversationId);
       if (active.has(key))
         throw new AgentRefusalError("This conversation already has a running task.", 409);
@@ -253,8 +333,9 @@ export function createAgent(options: {
       const abort = () => controller.abort();
       signal.addEventListener("abort", abort, { once: true });
       if (signal.aborted) controller.abort();
-      const timer = setTimeout(abort, options.deadlineMs ?? 90000);
+      const timer = setTimeout(abort, deadlineMs);
       active.set(key, { controller, scope });
+      const reviewExpires = Date.now() + REVIEW_WINDOW_MS;
       const context = { ownerId: owner, conversationId, scope, signal: controller.signal };
       let partial = "";
       let started = false;
@@ -269,14 +350,9 @@ export function createAgent(options: {
         const conversation = await unit.run(async (r) => {
           const current = await r.agent.get(conversationId, true);
           if (current.messages.some((message) => message.id === input.id)) return null;
-          if (
-            current.run?.state === "running" &&
-            current.run.leaseUntil !== undefined &&
-            Date.parse(current.run.leaseUntil) > Date.now() &&
-            Date.parse(current.run.leaseUntil) <= Date.now() + 180000
-          )
+          if (hasRunningAgentLease(current.run, Date.now()))
             throw new AgentRefusalError(
-              "This conversation has a running task. Stop it or wait for its deadline.",
+              "This conversation has a running lease. Stop it in the process executing the task or wait for lease expiry.",
               409,
             );
           if (current.archivedAt !== null)
@@ -299,9 +375,7 @@ export function createAgent(options: {
             context: input.context,
             state: "running",
             error: null,
-            leaseUntil: new Date(
-              Date.now() + (options.deadlineMs ?? 90000),
-            ).toISOString() as Timestamp,
+            leaseUntil: new Date(Date.now() + deadlineMs).toISOString() as Timestamp,
           };
           return await r.agent.save(current);
         });
@@ -430,16 +504,33 @@ export function createAgent(options: {
                   { signal: controller.signal },
                 );
                 await check({ ...context, phase: "propose", operations });
-                admitted.set(`${key}:${actionId}`, { controller, scope });
-                const existingAction = await unit.run(async (r) =>
-                  (await r.agent.get(conversationId)).actions.find(
-                    (action) => action.id === actionId,
-                  ),
+                const terminal = await unit.run(
+                  async (r) => {
+                    const action = (await r.agent.get(conversationId, true)).actions.find(
+                      (row) => row.id === actionId,
+                    );
+                    if (action !== undefined && action.status !== "pending")
+                      admitted.delete(`${key}:${actionId}`);
+                    if (action?.status === "applied")
+                      return `Applied proposal ${actionId}. Its existing receipt is retained.`;
+                    if (action?.status === "rejected")
+                      return `Proposal ${actionId} was rejected. Ask for revised instructions.`;
+                    await check({ ...context, phase: "propose", operations });
+                    if (!admitted.has(`${key}:${actionId}`) && admitted.size >= AUTHORITY_CAPACITY)
+                      throw new AgentRefusalError(
+                        "Too many proposals awaiting review. Decide a proposal or wait for its review window to expire, then request fresh review.",
+                        503,
+                      );
+                    admitted.set(`${key}:${actionId}`, {
+                      controller,
+                      scope,
+                      expires: reviewExpires,
+                    });
+                    return null;
+                  },
+                  { signal: controller.signal },
                 );
-                if (existingAction?.status === "applied")
-                  return `Applied proposal ${actionId}. Its existing receipt is retained.`;
-                if (existingAction?.status === "rejected")
-                  return `Proposal ${actionId} was rejected. Ask for revised instructions.`;
+                if (terminal !== null) return terminal;
                 await emit({ type: "status", text: "A proposed change is ready for review" });
                 const authority = grants.get(key);
                 const allowed =
@@ -458,11 +549,16 @@ export function createAgent(options: {
                 if (allowed) {
                   controller.signal.throwIfAborted();
                   authority.grant.writes--;
-                  await decide(owner, conversationId, actionId, true, scope, () => {
-                    controller.signal.throwIfAborted();
-                    if (grants.get(key) !== authority || authority.expires <= Date.now())
-                      throw new Error("Task edit permission expired or was revoked.");
-                  });
+                  try {
+                    await decide(owner, conversationId, actionId, true, scope, () => {
+                      controller.signal.throwIfAborted();
+                      if (grants.get(key) !== authority || authority.expires <= Date.now())
+                        throw new Error("Task edit permission expired or was revoked.");
+                    });
+                  } finally {
+                    if (authority.grant.writes === 0 && grants.get(key) === authority)
+                      grants.delete(key);
+                  }
                   return `Applied proposal ${actionId}. A durable receipt was saved.`;
                 }
                 return `Proposal ${actionId} is pending. The user must review it; do not claim it was applied.`;

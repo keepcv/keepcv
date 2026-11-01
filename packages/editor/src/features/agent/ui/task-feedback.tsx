@@ -23,9 +23,11 @@ export function TaskFeedback() {
             onClick={() => {
               void agent
                 .stop()
-                .catch(() =>
+                .catch((reason: unknown) =>
                   agent.setError(
-                    "Stop could not be acknowledged. Reopen the conversation to check its status.",
+                    reason instanceof Error
+                      ? reason.message
+                      : "Stop could not be acknowledged. Reopen the conversation to check its status.",
                   ),
                 );
             }}

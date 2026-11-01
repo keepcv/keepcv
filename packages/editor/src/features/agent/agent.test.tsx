@@ -278,3 +278,90 @@ it("keeps download errors visible in disabled history and copies existing AI res
   cleanup();
   queries.clear();
 });
+
+it("shows the lease refusal from Stop without claiming that a foreign task stopped", async () => {
+  const store = emptyStore();
+  const id = newUuid();
+  const chat = agentConversationSchema.parse({
+    id,
+    title: "Running",
+    createdAt: store.profile.createdAt,
+    updatedAt: store.profile.updatedAt,
+    archivedAt: null,
+    messages: [],
+    actions: [],
+    run: null,
+  });
+  let closeStream = () => {};
+  let turns = 0;
+  const detail =
+    "No local task was confirmed stopped. Its running lease remains; wait for lease expiry or stop it in the process executing the task. Local task access was cleared.";
+  vi.stubGlobal("fetch", (url: string | URL | Request, init?: RequestInit) => {
+    const request = new Request(url, init);
+    const path = new URL(request.url).pathname;
+    if (path === "/v1/store") return Promise.resolve(jsonOf(store));
+    if (path.endsWith("capabilities"))
+      return Promise.resolve(jsonOf({ available: true, disclosure: "Synthetic" }));
+    if (path === "/v1/agent/conversations")
+      return Promise.resolve(request.method === "POST" ? jsonOf(chat, 201) : jsonOf({ items: [] }));
+    if (path.endsWith("/attachments")) return Promise.resolve(jsonOf({ items: [] }));
+    if (path.endsWith("/cancel"))
+      return Promise.resolve(
+        jsonOf(
+          { type: "about:blank", title: "Conflict", status: 409, detail, instance: path },
+          409,
+        ),
+      );
+    if (path.endsWith("/turns")) {
+      turns++;
+      return Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'event: status\ndata: {"type":"status","text":"Reading"}\n\n',
+                ),
+              );
+              closeStream = () => controller.close();
+            },
+          }),
+          { headers: { "content-type": "text/event-stream" } },
+        ),
+      );
+    }
+    return Promise.resolve(jsonOf(chat));
+  });
+  window.history.replaceState(null, "", "/");
+  const queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const router = buildRouter({
+    queries,
+    api: createClient(window.location.origin),
+    signOut: undefined,
+  });
+  try {
+    render(
+      <QueryClientProvider client={queries}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(queries.getQueryData(["agent", "capabilities"])).toMatchObject({ available: true }),
+    );
+    fireEvent.change(await screen.findByRole("textbox", { name: "What would you like to do?" }), {
+      target: { value: "Review" },
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reading"));
+    fireEvent.click(screen.getByRole("button", { name: "Stop task" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(detail);
+    expect(screen.getByRole("status")).not.toHaveTextContent("Stop requested");
+    expect(turns).toBe(1);
+  } finally {
+    closeStream();
+    cleanup();
+    queries.clear();
+  }
+});

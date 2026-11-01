@@ -111,7 +111,8 @@ conversation's pending admissions and temporary grants. `agent.revoke(ownerId,
 scope)` does the same for all work and grants originating in that scope, and
 refuses future work in it for this runtime's lifetime. Use a new scope after
 reauthorization. Revocation is owner-scoped even when imported IDs match.
-`close()` stops active work and clears admissions/grants; discard that instance.
+`close()` is terminal: it stops active work, clears local authority and the sweep,
+and marks capabilities unavailable. Discard that instance; it cannot be reopened.
 Hook refusal also invalidates the current conversation's authority. No policy
 exception details enter authored messages.
 
@@ -134,8 +135,9 @@ Grants, proposal admissions, abort controllers and revoked-scope tombstones are
 process-local and absent from exports. Restart/import preserves messages, original
 files, proposal status and receipts, but never resumes authority or model work.
 Pending proposals require a fresh authorized task to admit them again. Persisted
-running status is historical; its bounded lease can delay a new task until expiry
-(or explicit Stop). A new process must revalidate scopes through consumer state;
+running status is historical; its bounded lease can delay a new task until expiry.
+Stop releases no persisted lease by itself. It signals local work so normal
+cleanup can finish, and cannot stop a controller held by another process. A new process must revalidate scopes through consumer state;
 it cannot rely on another process's in-memory revocation tombstones. Multiple
 processes need consumer routing/affinity for pending decisions and cancellation,
 and current authorization checks in each process. On a rolling restart, in-flight
@@ -175,3 +177,50 @@ throws/rejections are isolated and async observers are not awaited. Delivery is
 process-local and best effort, with no durable queue or exactly-once accounting
 guarantee across crashes. Consumers own durable recording, pricing and enforcement.
 Custom `AgentModel` implementations remain compatible and own their usage reporting.
+
+
+## Authority retention and Stop results
+
+Each runtime holds at most 128 pending admissions, 128 grants and 128 distinct
+owner/scope revocations. A pending review window lasts thirty minutes from the
+originating turn's start. Expired grants and expired/aborted admissions are removed
+at operation checks and by one unreferenced one-minute sweep, including while
+idle. A successful decision deletes its admission after transaction acknowledgment;
+applied/rejected receipts replay without local admission. Terminal proposals are
+never readmitted, and observing terminal status decided elsewhere drops cached
+admission too. Exhausted grants are removed after their final application
+attempt. Committed history, attachments and receipts are never pruned by this work.
+
+Admission/grant capacity refuses with 503 instead of evicting valid authority.
+A proposal can remain saved and pending when its admission is refused. Expired
+admissions refuse application with 409. To proceed, free capacity or wait for
+expiry, then start a fresh authorized task, have it propose the change again and
+review it. Cleanup itself never reauthorizes a pending proposal. Review expiry
+observed inside application rolls back content and receipt together; the existing
+race after the final check and before COMMIT is unchanged.
+
+Revocations never expire in a usable instance. A 129th distinct revoked owner/scope
+retires the entire runtime permanently, aborts its controllers, clears state and
+makes capabilities unavailable. All scopes remain refused there (503), including
+revocations whose records were reclaimed by terminal closure. Explicit close has
+the same terminal lifecycle. The consumer may construct a replacement using its
+current authorization state; no automatic rotation, grant restoration or resume
+occurs. A replacement cannot rely on a retired instance's in-memory tombstones.
+
+Built-in cancel returns true if it signalled a controller in this instance, false
+if it had none; either outcome clears this instance's conversation admissions and
+grants. The AgentRuntime port also permits legacy void cancellation, which gives
+no positive local confirmation. cancel does not read or rewrite stored run state.
+If the API sees no confirmed local controller and an unexpired bounded running
+lease, Stop returns 409 and explains that the lease remains until expiry or the
+executing process stops it. No other process's lease is cleared. Otherwise its
+200 saved response means only that cancellation was requested. Locally active
+work still needs to complete its interrupted-history cleanup; already admitted
+external calls or transactions may finish. Expired historical leases allow a new
+turn without restoring grants or proposal admissions. Stronger multi-process
+coordination belongs to the consumer.
+
+
+Direct deadlineMs configuration must be an integer between 1 and 180000 ms,
+defaulting to 90000. Invalid configuration is refused at startup so a live task
+cannot issue an out-of-bound lease that another runtime would ignore.

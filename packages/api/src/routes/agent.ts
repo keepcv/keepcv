@@ -1,6 +1,11 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AgentRuntime, UnitOfWork } from "@keepcv/core";
-import { AgentRefusalError, ConcurrencyConflictError, NotFoundError } from "@keepcv/core";
+import {
+  AgentRefusalError,
+  ConcurrencyConflictError,
+  hasRunningAgentLease,
+  NotFoundError,
+} from "@keepcv/core";
 import {
   type AgentLimits,
   agentAttachmentMetadataSchema,
@@ -118,7 +123,11 @@ const cancel = createRoute({
   request: { params },
   responses: {
     ...responses,
-    200: jsonResponse(z.object({ saved: z.boolean() }), "Cancellation requested"),
+    200: jsonResponse(
+      z.object({ saved: z.boolean() }),
+      "Local cancellation requested; committed changes remain",
+    ),
+    409: problemResponse("No local stop confirmed; running lease retained"),
   },
 });
 const files = createRoute({
@@ -341,8 +350,13 @@ export function agentRoutes(options: {
     })
     .openapi(cancel, async (c) => {
       const { id } = c.req.valid("param");
-      await unit.run(async (r) => await r.agent.get(id));
-      runtime().cancel(c.get("ownerId"), id);
+      const conversation = await unit.run(async (r) => await r.agent.get(id));
+      const local = runtime().cancel(c.get("ownerId"), id);
+      if (local !== true && hasRunningAgentLease(conversation.run, Date.now()))
+        throw new AgentRefusalError(
+          "No local task was confirmed stopped. Its running lease remains; wait for lease expiry or stop it in the process executing the task. Local task access was cleared.",
+          409,
+        );
       return c.json({ saved: true }, 200);
     })
     .openapi(files, async (c) => {

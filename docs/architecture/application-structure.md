@@ -1537,7 +1537,10 @@ The conversation distinguishes user messages from KeepCV AI responses and labels
 interrupted output. Completed messages form an accessible, politely announced log;
 streaming fragments stay outside it to avoid announcing every token. A shared
 status/error surface remains visible in history as well as generation views.
-Stop awaits acknowledgment; it never claims committed changes were reversed.
+Stop awaits its response and says that stopping was requested; it never claims
+completion, lease release or reversal of committed changes. A 409 for an unowned
+running lease remains visible with the server's expiry/executing-process guidance.
+The UI does not retry the turn or clear the persisted run to recover it.
 
 The transcript scrolls independently while the composer stays reachable; expanded
 composer controls have a bounded scroll area. New output follows the latest message

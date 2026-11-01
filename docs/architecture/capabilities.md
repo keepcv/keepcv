@@ -639,3 +639,10 @@ report bounded counts and completion without content or enforcement policy.
 Installed-package tests exercise those contracts. Authentication implementations,
 provider credentials, storage/rate accounting and deployment infrastructure remain
 consumer responsibilities. There is no private-resource tool registry.
+
+
+Runtime authority is bounded by expiry and capacity without pruning authored
+history. Decisions reclaim local admission after commit; receipt replay remains
+durable. Revocation capacity permanently retires the instance rather than
+forgetting revoked scopes. Stop reports an unowned running lease without clearing
+another process's execution; bounded lease expiry remains the recovery path.

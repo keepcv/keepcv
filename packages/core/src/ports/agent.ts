@@ -37,6 +37,12 @@ export interface AgentRuntime {
     scope?: string,
   ): Promise<AgentConversation>;
   grant(ownerId: Uuid, conversationId: Uuid, grant: AgentGrant | null, scope?: string): void;
-  cancel(ownerId: Uuid, conversationId: Uuid): void;
+  cancel(ownerId: Uuid, conversationId: Uuid): boolean | void;
   close(): void;
+}
+
+export function hasRunningAgentLease(run: AgentConversation["run"], now: number): boolean {
+  if (run?.state !== "running" || run.leaseUntil === undefined) return false;
+  const remaining = Date.parse(run.leaseUntil) - now;
+  return remaining > 0 && remaining <= 180000;
 }

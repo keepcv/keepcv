@@ -6,7 +6,7 @@ import {
 } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import type { Uuid } from "@keepcv/schema";
-import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { type AgentModel, createAgent, readableStore } from "./runtime.js";
 
 const store = openLocalStore();
@@ -18,6 +18,7 @@ const run = async <T>(work: (r: Repositories) => Promise<T>) =>
   await runAsOwner(owner, async () => await store.unitOfWork.run(work));
 beforeAll(async () => await store.migrate(), 60000);
 afterAll(async () => await store.close());
+afterEach(() => runtime.close());
 beforeEach(async () => {
   owner = newUuid();
   await store.createOwner(owner);
@@ -116,13 +117,18 @@ it("does not restart a retried turn or regain authority after restart", async ()
   const action = (await run(async (r) => await r.agent.get(conversationId))).actions[0];
   if (action === undefined) throw new Error("Missing proposal");
   runtime.close();
+  runtime = createAgent({
+    unitOfWork: store.unitOfWork,
+    model: { generate },
+    disclosure: "Synthetic provider",
+  });
   generate.mockImplementation(() =>
     Promise.resolve({ text: "New task", sources: [], navigation: null }),
   );
   await turn();
   await expect(
     runAsOwner(owner, async () => await runtime.decide(owner, conversationId, action.id, true)),
-  ).rejects.toThrow("Reopen this task");
+  ).rejects.toThrow("Start a fresh task");
 });
 
 it("limits task grants to the named resource and keeps archive behind review", async () => {

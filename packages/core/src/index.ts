@@ -33,7 +33,7 @@ export {
   SortKeyError,
 } from "./ordering/sort-key.js";
 export type { AgentEvent, AgentRuntime } from "./ports/agent.js";
-export { AgentRefusalError } from "./ports/agent.js";
+export { AgentRefusalError, hasRunningAgentLease } from "./ports/agent.js";
 export type { AgentRepository } from "./ports/repositories.js";
 export {
   type AppendedVersion,

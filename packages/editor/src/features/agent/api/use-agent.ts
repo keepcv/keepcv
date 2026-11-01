@@ -317,7 +317,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
         await unwrap(await api.v1.agent.conversations[":id"].cancel.$post({ param: { id } }));
       request.current?.abort();
       setGrant(false);
-      setStatus("Stop acknowledged. Completed edits remain saved.");
+      setStatus("Stop requested. Completed edits remain saved.");
     } finally {
       setStopping(false);
     }

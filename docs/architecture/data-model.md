@@ -1468,12 +1468,40 @@ tombstones exist only in a runtime process, keyed by owner as well as resource
 IDs. They are absent from archive and import. Restart/import preserves history,
 receipts and original attachments but never resumes model work or active authority.
 A pending proposal needs a fresh authorized task to admit it again. A persisted
-running marker can delay a new task until its bounded lease expires or Stop is
-acknowledged; it does not restart work. A new runtime must revalidate current
-consumer authority because process-local revoked scopes do not survive restart.
+running marker can delay a new task until its bounded lease expires; it does not
+restart work. Stop can signal a task only in the runtime that holds its controller.
+A runtime without that controller never clears the stored run or lease. A new
+runtime must revalidate current consumer authority because process-local revoked scopes do not survive restart.
 
 Multiple processes require consumer affinity for pending decisions/cancellation
 and current authorization in every process. A local cancel/revoke cannot signal
 another process; the consumer must coordinate its own authority invalidation.
 Rolling restarts drain or stop old work and require fresh proposal admission on
 new instances. No distributed transport, grant store or background resumer exists.
+
+
+Process-local authority has a ceiling of 128 pending proposal admissions, 128
+temporary grants and 128 distinct owner/scope revocation records per runtime.
+A task's pending review window lasts thirty minutes from turn admission. Decisions
+remove their admission only after a successful transaction acknowledgment; durable
+receipts answer replay without admission. Matching terminal proposals are never
+readmitted; observing a terminal proposal decided elsewhere also drops its cached
+admission. Pending history remains after admission expiry or capacity refusal;
+applying it needs a fresh authorized task to propose it again and a new review.
+
+Expired grants and expired/aborted admissions are reclaimed at operation checks
+and by one unreferenced one-minute sweep. Expiring review authority aborts its
+controller, including an application still waiting on authorization; the existing
+signal/transaction boundary protects content and receipt together. Exhausted
+grants are removed after their final automatic application attempt. These are
+memory/admission ceilings, independent of deployment accounting or storage limits.
+
+Revocation records never expire or get evicted in a usable runtime. Adding a
+129th distinct owner/scope permanently retires the whole instance: active and
+pending controllers abort, all local authority is cleared and generation becomes
+unavailable. No scope becomes usable in that retired instance. close is also
+terminal and clears the sweep/state; it cannot reopen the instance. A replacement
+runtime must use the consumer's current authorization state; it inherits no
+process-local authority or revocation history. This intentionally favors refusal
+over forgetting revocation. The consumer owns replacement and cross-process
+coordination; the runtime never rotates or resumes itself.

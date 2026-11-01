@@ -150,3 +150,10 @@ the server remains authoritative. Smaller new limits do not hide saved originals
 
 The installed editor consumer fixture demonstrates both settings using exported
 package entry points, a custom model, trusted request scope and server refusal.
+
+
+Stop reports a cancellation request rather than completion. If the server cannot
+confirm a local controller for an unexpired running lease, its 409 expiry guidance
+stays visible. The editor does not clear that lease or retry inference. Review
+admission can expire or reach capacity; the server's fresh-task/review guidance
+stays visible and existing conversation/receipt/file history remains accessible.

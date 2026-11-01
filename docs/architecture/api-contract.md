@@ -772,8 +772,10 @@ that callback before additional external calls. API storage reads and turn
 preflight use ordinary request authentication and the caller's unit of work;
 additional read restrictions belong at those boundaries.
 
-cancel(owner, conversation) invalidates active work, pending admissions and grants
-for that conversation. revoke(owner, scope) additionally refuses all future work
+cancel(owner, conversation) invalidates local pending admissions and grants and
+signals any active controller for that owned conversation. The built-in runtime
+returns true when a local controller was signalled and false otherwise; legacy
+custom runtimes may return void, which cannot confirm a local stop. revoke(owner, scope) additionally refuses all future work
 in that scope for this runtime instance. Reauthorization uses a new scope. Refusal
 and revocation do not expose private policy errors. Cancellation stops waiting
 for an uncooperative model; its late reads/proposals fail. It cannot retract an
@@ -797,3 +799,47 @@ credential, raw error, cost or arbitrary provider metadata. Observer exceptions
 cannot affect authored state or replay inference. Async delivery is not awaited,
 is not durable across crashes and has no exactly-once accounting guarantee.
 Custom models own their usage reporting. Consumers own accounting and enforcement.
+
+
+### Bounded authority and Stop recovery
+
+The built-in runtime retains at most 128 entries in each authority collection:
+pending proposals, temporary grants and revoked owner/scope pairs. A pending
+review window expires thirty minutes after its originating turn starts. Operation
+checks and a one-minute unreferenced sweep remove expired grants and expired or
+aborted admissions. Successful decisions remove admissions after commit returns;
+terminal receipts replay independently. Observing terminal status from another
+runtime also removes a cached admission. Expiry/capacity cleanup never changes
+proposal history or restores permission. Admission/grant capacity refuses with
+503; a proposal saved before admission refusal stays pending and needs fresh
+review. Expired admission refuses application with 409 until a fresh authorized
+task proposes it again. Authorization is still checked inside the application
+transaction and at each operation; expiry observed there rolls back content and
+receipt together. The existing final-check/COMMIT race remains.
+
+Revocations are not evicted or timed out. When a new distinct revocation would
+exceed 128 entries, the instance permanently closes, aborts local controllers and
+clears authority. Its capabilities become unavailable and new work/grants/decisions
+refuse with 503. close is terminal too. A consumer creates a replacement with
+current authorization checks; automatic replacement would forget revocation and
+is not provided. History/export access does not depend on these collections.
+
+POST /v1/agent/conversations/{id}/cancel checks ownership before calling cancel.
+A 200 saved response acknowledges a local cancellation request, not completion or
+lease release. If no local controller is confirmed and the stored running lease
+is still valid, it returns a 409 problem explaining that the lease remains and
+must expire or be stopped in its executing process. Local admissions/grants are
+still invalidated. This applies conservatively to legacy void cancellation too.
+The endpoint never rewrites the persisted run or clears another process's lease.
+Expired leases do not block new turns; stopping a locally active task permits its
+normal interrupted-history cleanup to finish before a subsequent turn. Both
+admission and Stop use the same pure bounded-lease predicate: a running lease with
+more than zero and at most 180000 ms remaining. Missing/expired or out-of-bound
+historical leases do not block indefinitely. Cancellation never reverses committed
+changes or receipts and cannot retract an already admitted external call.
+
+
+Direct createAgent deadlineMs is validated at startup as an integer from 1 to
+180000 ms (default 90000). This keeps every newly issued lease within the shared
+bounded-lease predicate; invalid caller configuration cannot create a live task
+whose lease another runtime would treat as out of bounds.
