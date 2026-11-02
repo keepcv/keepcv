@@ -1,5 +1,24 @@
 # @keepcv/schema
 
+## 0.3.0
+
+### Minor Changes
+
+- 9f5deba: Expose consumer-controlled assistant presentation, trusted authorization scopes,
+  ongoing authorization and cancellation, effective file/turn limits and bounded
+  provider usage reporting. Keep existing conversations, original attachments,
+  ordinary editing and export accessible when generation is disabled. Preserve
+  custom model compatibility and document process-local authority and commit races.
+
+  Improve the conversation experience with readable change previews, accessible
+  message/status feedback, keyboard submission, correction drafts, copy controls
+  and duplicate-decision protection.
+
+- 9f5deba: Add a conversational home and contextual assistant with configurable model routes,
+  reviewable resource changes, bounded edit permissions and native hosted research.
+  Retain conversations, receipts and original PDF, image and UTF-8 attachments in
+  native backups. Existing editing and export remain usable without a model service.
+
 ## 0.2.0
 
 ### Minor Changes

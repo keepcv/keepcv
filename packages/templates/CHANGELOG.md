@@ -1,5 +1,13 @@
 # @keepcv/templates
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [9f5deba]
+- Updated dependencies [9f5deba]
+  - @keepcv/schema@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

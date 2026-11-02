@@ -1,5 +1,22 @@
 # @keepcv/db
 
+## 0.4.0
+
+### Minor Changes
+
+- 9f5deba: Add a conversational home and contextual assistant with configurable model routes,
+  reviewable resource changes, bounded edit permissions and native hosted research.
+  Retain conversations, receipts and original PDF, image and UTF-8 attachments in
+  native backups. Existing editing and export remain usable without a model service.
+
+### Patch Changes
+
+- Updated dependencies [9f5deba]
+- Updated dependencies [9f5deba]
+- Updated dependencies [9f5deba]
+  - @keepcv/core@0.4.0
+  - @keepcv/schema@0.3.0
+
 ## 0.3.1
 
 ### Patch Changes

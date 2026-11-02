@@ -111,6 +111,11 @@ the editor's trusted publisher with the same values, revoke the token and remove
 its environment secret. Use `trusted` for releases containing only packages
 whose trusted publishers are configured.
 
+Launcher 0.2.0 introduces `@keepcv/agent@0.2.0`. Its first publication also
+requires `bootstrap` and `NPM_BOOTSTRAP_TOKEN` in the `npm` environment. After
+publication, configure the agent package's trusted publisher with the settings
+above, then revoke the token and remove the environment secret.
+
 ## Preparing later versions
 
 Use Node 24+ and the pnpm version pinned in `package.json`, on a clean branch:
