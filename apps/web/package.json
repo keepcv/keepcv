@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/web",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "description": "The KeepCV web app: the frame, records, points, resumes and search.",
   "license": "MIT",
