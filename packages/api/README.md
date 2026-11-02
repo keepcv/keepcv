@@ -154,3 +154,36 @@ MIT
 from @keepcv/templates. Ordinary template writes validate the installed type and
 payload; native import preserves bounded unavailable definitions without running
 them. Built-in validators cover Default and HTML.
+
+
+## Assistant deployment controls
+
+`createApi` accepts optional `agent`, `agentLimits` and `agentScope` settings.
+`agentScope(request, ownerId)` asynchronously derives a trusted authorization
+scope for turns, grants and proposal decisions; never derive it from untrusted
+request body claims. Runtime `authorize` revalidates current authority during work.
+See the runtime package's public authorization and cancellation contract.
+
+`agentLimits` lowers file bytes, text-file bytes, selected file bytes per turn,
+attachment count and message character limits. `/v1/agent/capabilities` reports
+the effective minimum of API and runtime limits, generation `available` and
+`historyAvailable`. File metadata includes decoded `sizeBytes`; original download
+bytes remain unchanged. Existing custom runtimes may omit the new limit fields.
+
+Omitting `agent` does not disable conversation creation, attachment storage,
+history or native export/import routes. Those remain authenticated owner-scoped
+storage operations. Enforce any additional storage authorization at the consumer's
+request/unit-of-work boundary. Editor configuration only changes presentation.
+Generation refusal or provider failure leaves ordinary editing and export usable.
+Authentication, provider credentials, deployment rate limiting and storage
+accounting belong to the embedding application.
+
+
+Stop is a local cancellation request. The built-in runtime returns a boolean
+confirming whether it held a controller; legacy void cancellation remains accepted
+but cannot confirm one. If no controller is confirmed and the owned conversation
+has an unexpired bounded running lease, POST cancel returns 409 with guidance to
+wait for expiry or stop the executing process. It still invalidates local task
+access; it never clears the stored lease. A 200 saved response does not promise
+completion or immediate lease release. Expired leases permit a fresh turn without
+restoring grants or proposal authority. Committed edits and receipts remain intact.

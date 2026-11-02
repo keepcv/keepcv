@@ -31,7 +31,7 @@ import {
 import { jsonOf, storeServer } from "../store-server.harness.js";
 import { buildRouter } from "./router.js";
 
-function mount(answer: (url: string, init?: RequestInit) => Response, path = "/"): void {
+function mount(answer: (url: string, init?: RequestInit) => Response, path = "/overview"): void {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string, init?: RequestInit) => Promise.resolve(answer(String(url), init))),
@@ -1307,7 +1307,9 @@ describe("a resume's history", () => {
     const { server, resumeId } = aVersionedResume();
     mount(server.answer, `/resumes/${resumeId}?view=history`);
 
-    expect(await screen.findByText("Versions are what a resume said")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Export this resume or save a version to start its history."),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Compare from")).not.toBeInTheDocument();
   });
 });
@@ -1837,9 +1839,7 @@ describe("the template library and builder", () => {
     addTemplate(store, "Navy headings", { settings: { accent: "navy" } });
     mount(() => jsonOf(store), "/templates");
     expect(await screen.findByRole("link", { name: "Single column" })).toBeInTheDocument();
-    expect(within(screen.getByRole("main")).getAllByText("System", { exact: true })).toHaveLength(
-      9,
-    );
+    expect(screen.getByRole("link", { name: "System templates (9)" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Navy headings" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: "My templates (1)" }));
     expect(await screen.findByRole("link", { name: "Navy headings" })).toBeInTheDocument();

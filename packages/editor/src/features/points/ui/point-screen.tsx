@@ -89,76 +89,77 @@ export function PointScreen({
 
       <ContentGuide />
 
-      <Panel collapsible defaultOpen={recovery.pending}>
-        <PanelHeader title="Record and confidence">
-          Link this point to a job or project and note how certain its claims are.
-        </PanelHeader>
-        <Placement
-          store={store}
-          values={values}
-          errors={errors}
-          onChange={(patch) => {
-            setValues((current) => ({ ...current, ...patch }));
-          }}
-        />
-        <div className="flex items-center gap-2 px-4 pb-3">
-          <Button
-            tone="primary"
-            disabled={update.isPending}
-            onClick={() => {
-              const built = buildPointPatch(values);
-              if ("errors" in built) {
-                setErrors(built.errors);
-                return;
-              }
-              setErrors({});
-              const sent = recovery.begin();
-              if (sent === undefined) return;
-              void update
-                .mutateAsync({
-                  point: { ...point, updatedAt: sent.expectedUpdatedAt ?? point.updatedAt },
-                  patch: built.patch,
-                })
-                .then((saved) =>
-                  recovery.acknowledge(
-                    sent,
-                    pointPlacementValuesSchema.parse(pointValuesOf(store, saved)),
-                    saved.updatedAt,
-                  ),
-                )
-                .catch(() => undefined)
-                .finally(recovery.finish);
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Panel collapsible defaultOpen={recovery.pending} className="lg:col-span-2">
+          <PanelHeader title="Record and confidence">
+            Link this point to a job or project and note how certain its claims are.
+          </PanelHeader>
+          <Placement
+            store={store}
+            values={values}
+            errors={errors}
+            onChange={(patch) => {
+              setValues((current) => ({ ...current, ...patch }));
             }}
-          >
-            {update.isPending ? "Saving" : "Save"}
-          </Button>
-          <Button
-            disabled={update.isPending}
-            onClick={() => {
-              recovery.discard(initial, point.updatedAt);
-              setErrors({});
-              update.reset();
-            }}
-          >
-            Revert
-          </Button>
-          {update.isSuccess && !update.isPending && !recovery.pending ? (
-            <span className="text-xs text-text-subtle">Saved</span>
-          ) : null}
-        </div>
-      </Panel>
+          />
+          <div className="flex items-center gap-2 px-4 pb-3">
+            <Button
+              tone="primary"
+              disabled={update.isPending}
+              onClick={() => {
+                const built = buildPointPatch(values);
+                if ("errors" in built) {
+                  setErrors(built.errors);
+                  return;
+                }
+                setErrors({});
+                const sent = recovery.begin();
+                if (sent === undefined) return;
+                void update
+                  .mutateAsync({
+                    point: { ...point, updatedAt: sent.expectedUpdatedAt ?? point.updatedAt },
+                    patch: built.patch,
+                  })
+                  .then((saved) =>
+                    recovery.acknowledge(
+                      sent,
+                      pointPlacementValuesSchema.parse(pointValuesOf(store, saved)),
+                      saved.updatedAt,
+                    ),
+                  )
+                  .catch(() => undefined)
+                  .finally(recovery.finish);
+              }}
+            >
+              {update.isPending ? "Saving" : "Save"}
+            </Button>
+            <Button
+              disabled={update.isPending}
+              onClick={() => {
+                recovery.discard(initial, point.updatedAt);
+                setErrors({});
+                update.reset();
+              }}
+            >
+              Revert
+            </Button>
+            {update.isSuccess && !update.isPending && !recovery.pending ? (
+              <span className="text-xs text-text-subtle">Saved</span>
+            ) : null}
+          </div>
+        </Panel>
 
-      <PointMetrics store={store} client={client} point={point} />
+        <PointMetrics store={store} client={client} point={point} />
 
-      <PointEvidence store={store} client={client} point={point} />
+        <PointEvidence store={store} client={client} point={point} />
 
-      <Panel collapsible>
-        <PanelHeader title="Tags">Use tags to find and select related work.</PanelHeader>
-        <PanelBody>
-          <TagPicker store={store} client={client} subject={{ kind: "point", id: point.id }} />
-        </PanelBody>
-      </Panel>
-
+        <Panel collapsible>
+          <PanelHeader title="Tags">Use tags to find and select related work.</PanelHeader>
+          <PanelBody>
+            <TagPicker store={store} client={client} subject={{ kind: "point", id: point.id }} />
+          </PanelBody>
+        </Panel>
+      </div>
       <ButtonLink to="/points" search={{ filter: "all" }}>
         Back to points
       </ButtonLink>

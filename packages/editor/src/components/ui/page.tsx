@@ -67,9 +67,9 @@ export function PageHeader({
     <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         {trail === undefined ? null : <Breadcrumb trail={trail} />}
-        <h1 className="mt-1 flex items-center gap-2.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-text">
+        <h1 className="mt-1 flex items-center gap-2.5 text-2xl font-semibold leading-tight tracking-[-0.02em] text-text">
           {icon === undefined ? null : (
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-surface text-text-muted shadow-card">
+            <span className="grid size-7 shrink-0 place-items-center text-text-subtle">
               <Icon name={icon} size="lg" />
             </span>
           )}

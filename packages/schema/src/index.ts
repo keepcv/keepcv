@@ -86,6 +86,7 @@ export {
   resumeDocumentSchema,
 } from "./document/resume-document.js";
 export { type TemplateData, templateDataSchema } from "./document/template-data.js";
+export * from "./entities/agent.js";
 export {
   CAREER_RECORD_KINDS,
   type CareerRecord,

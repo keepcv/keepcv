@@ -1,11 +1,11 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { problemSchema } from "@keepcv/schema";
+import { problemSchema, type Uuid } from "@keepcv/schema";
 import type { z } from "zod";
 
 // Thrown rather than answered here, so they reach `onError` and come back as
 // problem+json. Hono's default is a bare 400 with a text body.
 export function router() {
-  return new OpenAPIHono({
+  return new OpenAPIHono<{ Variables: { ownerId: Uuid } }>({
     defaultHook: (result) => {
       if (!result.success) {
         throw result.error;

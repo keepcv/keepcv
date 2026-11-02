@@ -34,6 +34,7 @@ const USAGE = `
     --host <address>          default ${DEFAULT_HOST}; off loopback needs --auth
     --origin <url>            public origin for password/proxy; required off loopback
     --data-dir <path>         default ${DEFAULT_DATA_DIR}
+    --agent-config <path>    startup model and hosted-search configuration
     --auth <mode>             ${AUTH_MODES.join(" | ")}, default token
     --proxy-header <name>     --auth proxy: the header the upstream sets
     --proxy-from <address>    --auth proxy: the only address it is read from,
@@ -260,7 +261,12 @@ async function restore(dataDir: string, from: string | undefined): Promise<numbe
 
 async function serveStore(
   dataDir: string,
-  values: { port?: string | undefined; host?: string | undefined; origin?: string | undefined },
+  values: {
+    port?: string | undefined;
+    host?: string | undefined;
+    origin?: string | undefined;
+    "agent-config"?: string | undefined;
+  },
   chosen: AuthSetting,
 ): Promise<number> {
   const port = values.port === undefined ? DEFAULT_PORT : Number(values.port);
@@ -275,6 +281,7 @@ async function serveStore(
     host: values.host ?? DEFAULT_HOST,
     auth: chosen,
     origin: values.origin,
+    agentConfig: values["agent-config"],
   });
   process.stdout.write(banner(running, dataDir));
 
@@ -305,6 +312,7 @@ function readArgs(argv: string[]) {
       host: { type: "string" },
       origin: { type: "string" },
       "data-dir": { type: "string" },
+      "agent-config": { type: "string" },
       auth: { type: "string" },
       "proxy-header": { type: "string" },
       "proxy-from": { type: "string" },

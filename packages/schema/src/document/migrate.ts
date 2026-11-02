@@ -23,6 +23,12 @@ export const migrations: Migration[] = [
     description: "Accept versioned template definitions while preserving captured legacy specs.",
     migrate: (document) => document,
   },
+  {
+    from: 2,
+    to: 3,
+    description: "Retain conversations and attachments in native backups.",
+    migrate: (document) => document,
+  },
 ];
 
 const versioned = z.object({ schemaVersion: z.int() }).loose();

@@ -88,7 +88,7 @@ function PutOneBack({
   const isEmpty = isEmptyStore(store);
 
   return (
-    <Panel>
+    <Panel collapsible defaultOpen={isEmpty || load.error !== null || unreadable !== undefined}>
       <PanelHeader title="Restore a backup">
         Restore is only available for an empty store.
       </PanelHeader>

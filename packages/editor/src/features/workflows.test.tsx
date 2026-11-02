@@ -56,7 +56,7 @@ afterEach(() => {
 it.each([emptyStore, aFilledStore])(
   "offers import on the overview with or without career content",
   async (makeStore) => {
-    mount(makeStore(), "/");
+    mount(makeStore(), "/overview");
     const main = await screen.findByRole("main");
     expect(await within(main).findByRole("link", { name: "Import resume" })).toHaveAttribute(
       "href",

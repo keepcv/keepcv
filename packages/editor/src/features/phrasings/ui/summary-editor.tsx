@@ -40,7 +40,7 @@ export function SummaryEditor({
     );
 
   return (
-    <Panel>
+    <Panel collapsible defaultOpen={start.error !== null || start.isPending}>
       <PanelHeader title={owner.kind === "profile" ? "Professional summary" : "Record summary"}>
         {owner.kind === "profile"
           ? "A short introduction at the top of your resumes."
@@ -49,7 +49,7 @@ export function SummaryEditor({
       <PanelBody className="space-y-3">
         {start.error === null ? null : <Failure error={start.error} />}
         <Button
-          tone="primary"
+          tone="secondary"
           disabled={start.isPending}
           onClick={() => {
             start.mutate({

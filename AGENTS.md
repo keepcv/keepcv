@@ -119,14 +119,14 @@ is built, and add it to the root `tsconfig.json` references then - an empty
 package is noise, and a sub-feature is either not started or complete.
 
 **What exists.** `packages/schema`, `core`, `db`, `api`, `templates`, `render`,
-`ats-lint`, `interop` and `editor`; `apps/cli` is the `keepcv` launcher with `serve`,
+`ats-lint`, `interop`, `agent` and `editor`; `apps/cli` is the `keepcv` launcher with `serve`,
 `render`, `status`, `backup`, `restore` and `set-password`; `apps/web` is the
 browser app. `apps/web` is the one workspace project **not** in the
 `tsconfig.json` references: it emits no declarations for anything to reference,
 so it is a `noEmit` project that Vite builds and `tsc` only checks.
 
-**The database holds 31 tables** - the record store, its vocabulary, its editor
-state, the composition a resume is, and its history - and the port has fourteen
+**The database holds 33 tables** - the record store, its vocabulary, its editor
+state, the composition a resume is, and its history - and the port has fifteen
 repositories. `resume_version` and `phrasing_revision` are append-only, each held
 that way by its own hand-written trigger. There is no `search_document` and there
 will not be one.
@@ -151,7 +151,7 @@ isolated editor consumer from tarballs outside the workspace.
 
 It is an application frame - a collapsible navigation rail grouped
 into Store, Vocabulary, Resumes and System, a command palette on its header, and
-a sheet in place of the rail below `lg` - over the store overview, the profile,
+a sheet in place of the rail below `lg` - over the assistant home, the store overview at /overview, the profile,
 the record list, a record's detail and its form, the point list, the tag
 vocabulary, the custom-section headings, the role profiles, the template library and
 its visual builder, the resume list, a resume's composition, its Design view

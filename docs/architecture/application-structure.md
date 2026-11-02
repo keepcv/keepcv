@@ -1363,7 +1363,7 @@ is about to matter.
 The library separates System templates and My templates into labeled collections.
 Collection, search and the owned-template archive filter live in the URL. System
 cards open read-only previews; owned cards open the builder. Cards carry larger
-representative thumbnails, ownership and a short description of observable
+representative thumbnails, template type and a short description of observable
 layout and typography. They are not screenshots; only a selected full preview
 lays a document out. Original system templates already in use remain reachable
 in a separate disclosure.
@@ -1455,6 +1455,26 @@ customizable native selects use `appearance: base-select` with bounded, themed
 option lists; other browsers retain native controls and the active color scheme.
 Keyboard selection, type-ahead, focus, and touch interaction stay native.
 
+### 10.11 Quiet page chrome and contextual controls
+
+The mobile frame keeps theme selection in navigation so search has room.
+Page headings use unframed glyphs and panels use one outer border. Collapsed
+panels show their title; their explanation appears when opened. Content guidance
+is a compact disclosure rather than a full-width card. Existing authored content
+continues to open where the screen already requires it.
+
+Empty summaries and backup restoration in a populated store start collapsed.
+Profile labels and placeholders carry familiar field guidance without repeating
+it below every input. Template collection, type and search share one toolbar;
+cards identify template type without repeating the selected collection.
+
+Chat starts with the message and explicit data-sharing consent. Attachments,
+research, model-service details, task permissions and recovery expand on request.
+Selected files and active permissions open their controls. Unavailable chat shows
+one notice and a store link, with history and recovery still reachable. Completed
+proposals collapse without discarding their exact operations or receipt. The
+contextual assistant uses a bounded dialog and a quiet persistent trigger.
+
 ### HTML template authoring and preview
 
 The library identifies ownership and type separately and filters by type. Default
@@ -1479,3 +1499,69 @@ actual srcdoc load, skipping the initial blank document. The host measures its e
 flow pagination or report a page-limit fit verdict for arbitrary HTML. Readability
 checks consume checked rendered bytes and remain independent of technical safety.
 Unsupported types leave the library and resume template-switch controls usable.
+
+## Conversational assistance
+
+By default the authenticated root opens chat; /overview retains the store overview.
+The exported Editor accepts assistant (default true) and home (default assistant).
+Choosing home=overview redirects / to /overview and keeps generation at /assistant.
+Setting assistant=false always redirects / to /overview, redirects /assistant to
+/conversations, and hides assistant navigation, the contextual panel, composer,
+suggestions and task controls. /conversations and its navigation remain available
+in both configurations for saved messages, exact proposals, receipts and original
+attachment downloads, including archived content. These are presentation options;
+consumer authorization is enforced server-side. Options are chosen before mount. One
+controller in the editor shell owns the conversation across page navigation.
+Page context is a validated path/resource hint, not authority. Chat reads current
+career data through core selectors; messages and attachment bytes load on demand.
+Review cards show exact proposals and affected data before acceptance. Bounded
+task grants permit ordinary edits; archive, restore and merges retain exact review.
+
+Agent batches settle from acknowledged receipts, without optimistic career-data
+patches. Re-read the store after a batch and wait for outstanding local mutations
+before reconciliation. Conversation and composer recovery are scoped to the
+connected store. Provider failure never blocks ordinary editing or export.
+
+
+Capabilities distinguish generation availability from history access and carry the
+effective API/runtime file, text and turn limits. The composer reflects those
+limits, checks selection before sending and retains input on refusal. Smaller
+limits never remove stored originals or gate ordinary export. The installed
+editor consumer tests exercise these public props and routes from packed entry
+points with server-side refusal and a custom model.
+
+
+### Conversation experience
+
+The conversation distinguishes user messages from KeepCV AI responses and labels
+interrupted output. Completed messages form an accessible, politely announced log;
+streaming fragments stay outside it to avoid announcing every token. A shared
+status/error surface remains visible in history as well as generation views.
+Stop awaits its response and says that stopping was requested; it never claims
+completion, lease release or reversal of committed changes. A 409 for an unowned
+running lease remains visible with the server's expiry/executing-process guidance.
+The UI does not retry the turn or clear the persisted run to recover it.
+
+The transcript scrolls independently while the composer stays reachable; expanded
+composer controls have a bounded scroll area. New output follows the latest message
+until the user scrolls back; Jump to latest resumes following without moving focus.
+The composer preserves Enter for new lines and uses Ctrl/Cmd+Enter to send,
+including composition-input protection. Its visible permission label distinguishes
+review from temporary task edits. The contextual panel names the current page.
+Pending suggestions show readable operations and proposed field values before the
+exact raw payload/current-data disclosure. Saving a decision disables competing
+decisions and sends once; receipts remain authoritative. Request changes focuses
+a correction draft without overwriting existing input, changing the proposal or
+sending it. Messages can be copied; a failure gives a manual alternative. History
+can jump to the latest message or continue a selected conversation when generation
+is available. Assistant configuration still controls every generation entry.
+
+These choices apply Microsoft's evidence-based [HAX guidelines](https://www.microsoft.com/en-us/haxtoolkit/ai-guidelines/)
+for clear capabilities, correction and user control. [Fluent's agent guidance](https://fluent2.microsoft.design/responsible-AI)
+informs visible authority, meaningful status and explicit action consequences.
+[W3C ARIA23](https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA23) supplies the
+accessible sequential-log pattern. [NN/G's chat usability study](https://www.nngroup.com/articles/chat-ux/)
+supports distinguishable participants, interruption recovery and document access;
+its customer-service findings are applied selectively to this data-editing agent.
+No time estimate, confidence score, simulated reasoning, feedback telemetry or
+automatic retry is invented by the UI.

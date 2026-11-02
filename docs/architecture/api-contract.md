@@ -717,3 +717,129 @@ writes are refused, while native archive import preserves bounded unknown JSON
 without executing it. Owner scope and optimistic concurrency remain unchanged.
 System definitions are shipped code/data and have no writable collection rows.
 Native export writes archive v2; v1 imports retain embedded historical shapes.
+
+## Conversational assistance
+
+createApi accepts an optional injected agent runtime. The API never discovers
+provider credentials. /v1/agent serves capabilities, owned conversations, turns,
+attachments, proposal decisions, cancellation and bounded task grants. All routes
+are authenticated and declared with shared Zod schemas. Turns stream application
+events; reconnect reads persisted state and never repeats inference automatically.
+Provider, model, credential, base URL and engine overrides are not accepted.
+
+Original attachments upload through a bounded authenticated endpoint and enter
+external processing only after explicit disclosure acknowledgment. Existing local
+resume import remains browser-parsed. No PDF extraction engine runs in the API.
+
+Provider failures are normalized from SDK error instances as well as response
+bodies; raw SDK request/error logging is disabled. Failover is allowed before
+text or application tool calls. Output limits, interrupted streams, exhausted
+tool steps and empty answers fail with retained partial text and receipts.
+
+
+### Consumer control of assistance
+
+createApi optionally accepts agentLimits and agentScope. agentScope(request,
+ownerId) resolves a trusted origin scope once per turn, grant or decision request;
+it is passed to the runtime, never accepted in JSON or sent to a provider. Existing
+consumers may omit it. Authentication remains the caller's injected boundary.
+Omitting the agent leaves authenticated conversation creation, attachment storage,
+history and export/import routes enabled; only runtime operations are unavailable.
+A consumer restricting storage must guard those requests or its unit of work too.
+
+GET /v1/agent/capabilities returns generation available separately from
+historyAvailable (true for these storage routes), disclosure and AgentLimits:
+maxFileBytes, maxTextFileBytes, maxTurnBytes, maxAttachments, maxTextCharacters.
+Defaults retain 16 MiB, 1 MiB, 32 MiB, five files and 32000 characters respectively.
+API and built-in runtime limits may be lowered at startup; the response reports
+the minimum and admission enforces it. Legacy custom runtimes may omit new limits.
+Attachment metadata includes decoded sizeBytes without the original data field.
+Limits apply to new uploads and generation selections, not historical downloads
+or exports. maxAttachments=0 disables generation selections without disabling
+attachment storage. External request/rate and total storage policies stay outside
+the reusable packages. Presentation configuration does not enforce authority.
+
+The built-in runtime's optional async authorize hook receives owner, conversation,
+trusted scope, signal, generate/read/propose/apply phase and known typed operations.
+It checks before history/attachment access, before and after model resource reads,
+before proposal admission, and inside the locked application transaction before
+each operation and receipt. Throw/rejection fails closed and invalidates current
+conversation authority. Model and unit-of-work wrappers remain supported; they
+alone do not govern pending admission, temporary grants or hosted calls. Built-in
+adapters also call optional ModelRequest.authorize before every external step.
+Custom models retain their required interface and should honor signal and invoke
+that callback before additional external calls. API storage reads and turn
+preflight use ordinary request authentication and the caller's unit of work;
+additional read restrictions belong at those boundaries.
+
+cancel(owner, conversation) invalidates local pending admissions and grants and
+signals any active controller for that owned conversation. The built-in runtime
+returns true when a local controller was signalled and false otherwise; legacy
+custom runtimes may return void, which cannot confirm a local stop. revoke(owner, scope) additionally refuses all future work
+in that scope for this runtime instance. Reauthorization uses a new scope. Refusal
+and revocation do not expose private policy errors. Cancellation stops waiting
+for an uncooperative model; its late reads/proposals fail. It cannot retract an
+already admitted external request or undo a committed change. The built-in unit
+of work checks the abort signal before commit; cancellation observed by that check
+rolls back edits and receipt together. Cancellation between the last check and
+COMMIT may lose the race. Consumers requiring stricter serialization must supply
+it at their own authority/transaction boundary. Cleanup retains interrupted history
+without further generation authority. Stale tokens and duplicate receipt replay
+remain governed by the existing locked atomic application transaction.
+
+The built-in adapter's optional usage observer receives bounded call and run
+completion events. Calls cover conversation tool steps, retries/failover, document
+analysis and native research. Each started step reports once, including failed or
+interrupted calls when counts exist. Only safe nonnegative provider token counts
+are reported; absent counts are null with unknown source, never synthesized zero.
+Run completion does not assert that every provider count was returned. Metadata
+contains configured routing labels, random call ID, optional turn ID, attempt,
+step, kind and outcome; it contains no prompt, response, file, tool payload,
+credential, raw error, cost or arbitrary provider metadata. Observer exceptions
+cannot affect authored state or replay inference. Async delivery is not awaited,
+is not durable across crashes and has no exactly-once accounting guarantee.
+Custom models own their usage reporting. Consumers own accounting and enforcement.
+
+
+### Bounded authority and Stop recovery
+
+The built-in runtime retains at most 128 entries in each authority collection:
+pending proposals, temporary grants and revoked owner/scope pairs. A pending
+review window expires thirty minutes after its originating turn starts. Operation
+checks and a one-minute unreferenced sweep remove expired grants and expired or
+aborted admissions. Successful decisions remove admissions after commit returns;
+terminal receipts replay independently. Observing terminal status from another
+runtime also removes a cached admission. Expiry/capacity cleanup never changes
+proposal history or restores permission. Admission/grant capacity refuses with
+503; a proposal saved before admission refusal stays pending and needs fresh
+review. Expired admission refuses application with 409 until a fresh authorized
+task proposes it again. Authorization is still checked inside the application
+transaction and at each operation; expiry observed there rolls back content and
+receipt together. The existing final-check/COMMIT race remains.
+
+Revocations are not evicted or timed out. When a new distinct revocation would
+exceed 128 entries, the instance permanently closes, aborts local controllers and
+clears authority. Its capabilities become unavailable and new work/grants/decisions
+refuse with 503. close is terminal too. A consumer creates a replacement with
+current authorization checks; automatic replacement would forget revocation and
+is not provided. History/export access does not depend on these collections.
+
+POST /v1/agent/conversations/{id}/cancel checks ownership before calling cancel.
+A 200 saved response acknowledges a local cancellation request, not completion or
+lease release. If no local controller is confirmed and the stored running lease
+is still valid, it returns a 409 problem explaining that the lease remains and
+must expire or be stopped in its executing process. Local admissions/grants are
+still invalidated. This applies conservatively to legacy void cancellation too.
+The endpoint never rewrites the persisted run or clears another process's lease.
+Expired leases do not block new turns; stopping a locally active task permits its
+normal interrupted-history cleanup to finish before a subsequent turn. Both
+admission and Stop use the same pure bounded-lease predicate: a running lease with
+more than zero and at most 180000 ms remaining. Missing/expired or out-of-bound
+historical leases do not block indefinitely. Cancellation never reverses committed
+changes or receipts and cannot retract an already admitted external call.
+
+
+Direct createAgent deadlineMs is validated at startup as an integer from 1 to
+180000 ms (default 90000). This keeps every newly issued lease within the shared
+bounded-lease predicate; invalid caller configuration cannot create a live task
+whose lease another runtime would treat as out of bounds.

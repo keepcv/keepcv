@@ -1,3 +1,4 @@
+export { agentAttachment, agentConversation } from "./agent.js";
 export { record } from "./career-record.js";
 export { contactChannel } from "./contact-channel.js";
 export { customSection } from "./custom-section.js";

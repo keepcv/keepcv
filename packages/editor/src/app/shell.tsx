@@ -37,7 +37,11 @@ function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
 export function Shell({
   store,
   onSignOut,
+  assistant = true,
+  home = "assistant",
 }: {
+  assistant?: boolean;
+  home?: "assistant" | "overview";
   store: Store;
   onSignOut?: (() => void) | undefined;
 }) {
@@ -91,7 +95,13 @@ export function Shell({
       >
         <Brand collapsed={collapsed} />
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <Navigation store={store} collapsed={collapsed} onSignOut={onSignOut} />
+          <Navigation
+            assistant={assistant}
+            home={home}
+            store={store}
+            collapsed={collapsed}
+            onSignOut={onSignOut}
+          />
         </div>
         {/* Both controls sit here in both states: the scheme used to be
             reachable only by widening the rail again. */}
@@ -133,9 +143,6 @@ export function Shell({
                 setPalette(true);
               }}
             />
-            <span className="ml-auto lg:hidden">
-              <ThemeToggle choice={choice} choose={choose} />
-            </span>
           </div>
         </header>
 
@@ -173,7 +180,7 @@ export function Shell({
               />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <Navigation store={store} onSignOut={onSignOut} />
+              <Navigation assistant={assistant} home={home} store={store} onSignOut={onSignOut} />
             </div>
             <ThemeToggle choice={choice} choose={choose} />
           </div>

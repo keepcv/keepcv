@@ -12,6 +12,9 @@ allowBuilds:
 # Packages reference these with "catalog:" instead of a literal range, so an
 # upgrade is a single-line change here and drift is impossible by construction.
 catalog:
+  ai: 7.0.159
+  "@openrouter/ai-sdk-provider": 3.1.0
+  file-type: ^21.0.0
   "@biomejs/biome": ^2.5.7
   "@changesets/cli": ^2.31.1
   "@electric-sql/pglite": ^0.5.4
@@ -77,6 +80,10 @@ minimumReleaseAgeExclude:
   - '@tanstack/react-router@1.170.29'
   - '@tanstack/router-core@1.171.24'
   - hono@4.13.13
+  - '@ai-sdk/gateway@4.0.132'
+  - '@ai-sdk/provider-utils@5.0.72'
+  - '@ai-sdk/provider@4.0.35'
+  - ai@7.0.159
 
 catalogs:
   yaml-legacy:

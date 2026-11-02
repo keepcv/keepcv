@@ -39,7 +39,7 @@ it("uses installed entry points for keyboard navigation, writes, cache and sign-
       requests.push(request.url);
       return api.fetch(request);
     });
-    window.history.replaceState(null, "", "/");
+    window.history.replaceState(null, "", "/overview");
     const signOut = vi.fn();
     render(
       <Editor

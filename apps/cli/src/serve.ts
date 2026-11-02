@@ -1,6 +1,8 @@
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
+import { agentConfigSchema, createAgent, createOpenRouterModel } from "@keepcv/agent";
 import { type AuthMode, createApi } from "@keepcv/api";
 import { runAsOwner } from "@keepcv/db";
 import { type AuthSetting, launcherAuth } from "./auth.js";
@@ -36,6 +38,7 @@ export const MIRROR_EVERY_MS = 5 * 60 * 1000;
 export async function startServer(options: {
   port: number;
   dataDir: string;
+  agentConfig?: string | undefined;
   host?: string;
   auth?: AuthSetting;
   origin?: string | undefined;
@@ -56,13 +59,28 @@ export async function startServer(options: {
   if (!isLoopback(host) && origin === undefined) {
     throw new Error("Binding off loopback needs --origin: the URL used to reach this store.");
   }
+  const configured =
+    options.agentConfig === undefined
+      ? undefined
+      : agentConfigSchema.parse(JSON.parse(await readFile(options.agentConfig, "utf8")));
+  const model = configured === undefined ? undefined : createOpenRouterModel(configured);
   const { store, ownerId } = await openStore(options.dataDir);
 
+  const agent =
+    configured === undefined || model === undefined
+      ? undefined
+      : createAgent({
+          unitOfWork: store.unitOfWork,
+          model,
+          deadlineMs: configured.deadlineMs,
+          disclosure: `Processed through OpenRouter and these approved inference destinations: ${configured.routes.flatMap((route) => route.providers).join(", ")}.`,
+        });
   const auth = launcherAuth(setting, ownerId);
   const api = createApi({
     unitOfWork: store.unitOfWork,
     runAsOwner,
     authenticate: auth.authenticate,
+    ...(agent === undefined ? {} : { agent }),
   });
 
   // Composed here, so `createApi` knows nothing about a filesystem, a cookie or
@@ -153,6 +171,7 @@ export async function startServer(options: {
     mirror: path,
     stop: async () => {
       clearInterval(ticking);
+      agent?.close();
       await new Promise<void>((resolve) => {
         server.close(() => {
           resolve();

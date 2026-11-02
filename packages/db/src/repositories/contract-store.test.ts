@@ -14,6 +14,8 @@ import { fill } from "./contract-store.harness.js";
 function reversed(store: Archive): Archive {
   return {
     profile: store.profile,
+    agentHistory: [...store.agentHistory].reverse(),
+    agentAttachments: [...store.agentAttachments].reverse(),
     contactChannels: [...store.contactChannels].reverse(),
     organisations: [...store.organisations].reverse(),
     customSections: [...store.customSections].reverse(),
@@ -293,9 +295,11 @@ eachDriver(({ run, otherOwner }) => {
       const current = await run(async (r) => await r.store.readCurrent());
 
       const pointsAt = new Set(exported.phrasings.map((entry) => entry.currentRevisionId));
-      const { resumeVersions, resumeSnapshots, ...store } = exported;
+      const { resumeVersions, resumeSnapshots, agentHistory, agentAttachments, ...store } =
+        exported;
       expect(current).toEqual({
         ...store,
+        agentConversations: agentHistory.map(({ messages, actions, run, ...summary }) => summary),
         phrasingRevisions: exported.phrasingRevisions.filter((entry) => pointsAt.has(entry.id)),
       });
       // History is the other difference, and it is absent rather than empty.

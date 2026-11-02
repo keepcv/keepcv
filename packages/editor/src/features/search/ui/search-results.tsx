@@ -64,7 +64,7 @@ export function SearchResults({ store, filters }: { store: Store; filters: Searc
         }
       >
         {filters.q.trim() === ""
-          ? "Matches on prefixes, so it answers while you are still typing."
+          ? "Find records and points by name or content."
           : `${String(rows.length)} for "${filters.q}"`}
       </PageHeader>
 
@@ -72,11 +72,11 @@ export function SearchResults({ store, filters }: { store: Store; filters: Searc
 
       {filters.q.trim() === "" ? (
         <Empty title="Type to search" spot="noResults">
-          Records and points together: what a thing is called beats what it is filed under.
+          Search your career records and reusable points.
         </Empty>
       ) : rows.length === 0 ? (
         <Empty title={`Nothing matches "${filters.q}"`} spot="noResults">
-          A second word narrows rather than widens.
+          Try fewer words or include archived content.
         </Empty>
       ) : (
         <ul className="rounded-xl border border-line bg-surface p-1 shadow-card">

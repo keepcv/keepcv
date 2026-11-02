@@ -19,7 +19,7 @@ export interface PaletteItem {
 }
 
 const DESTINATIONS: readonly PaletteItem[] = [
-  { key: "go:overview", group: "Go to", label: "Overview", icon: "overview", to: "/" },
+  { key: "go:overview", group: "Go to", label: "Overview", icon: "overview", to: "/overview" },
   {
     key: "go:records",
     group: "Go to",

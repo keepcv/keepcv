@@ -43,6 +43,8 @@ const current = {
     roleProfiles: [],
     roleProfileTags: [],
     templates: [],
+    agentHistory: [],
+    agentAttachments: [],
     resumeVersions: [],
     resumeSnapshots: [],
   },

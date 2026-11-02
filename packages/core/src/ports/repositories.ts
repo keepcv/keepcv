@@ -1,4 +1,7 @@
 import type {
+  AgentAttachment,
+  AgentConversation,
+  AgentConversationSummary,
   Archive,
   CareerRecord,
   CareerRecordInput,
@@ -515,7 +518,22 @@ export interface StoreRepository {
 
 // Every key of a `list` option bag is `| undefined` as well as optional: under
 // `exactOptionalPropertyTypes` those are different types.
+export interface AgentRepository {
+  list(includeArchived?: boolean): Promise<AgentConversationSummary[]>;
+  history(): Promise<AgentConversation[]>;
+  get(id: Uuid, lock?: boolean): Promise<AgentConversation>;
+  create(id: Uuid, title: string): Promise<AgentConversation>;
+  save(conversation: AgentConversation): Promise<AgentConversation>;
+  attachments(conversationId?: Uuid): Promise<AgentAttachment[]>;
+  attach(
+    input: Omit<AgentAttachment, "createdAt" | "updatedAt" | "archivedAt">,
+  ): Promise<AgentAttachment>;
+  archiveAttachment(id: Uuid, expected: Timestamp, archived: boolean): Promise<AgentAttachment>;
+  checkRevision(id: Uuid, expected: Uuid | null): Promise<void>;
+}
+
 export interface Repositories {
+  agent: AgentRepository;
   profile: ProfileRepository;
   organisations: OrganisationRepository;
   customSections: CustomSectionRepository;
