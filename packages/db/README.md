@@ -9,8 +9,7 @@ compiled to WebAssembly, running in-process with no Docker and no daemon -
 and on a server it is an ordinary PostgreSQL. One schema, one migration set, one set of
 queries, so there is no dialect drift to manage.
 
-> **Status: early development.** The public API is unstable and there is no
-> release yet. The whole record store is here - profile, organisations, records,
+> **Status: early development.** The public API is unstable. The whole record store is here - profile, organisations, records,
 > custom sections, points, phrasings, tags, drafts and the native export - the
 > composition a resume is, and its history: versions, snapshots, comparison,
 > restore and the usage index.

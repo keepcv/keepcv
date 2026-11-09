@@ -1,6 +1,6 @@
 # Capabilities and Delivery
 
-> What KeepCV will contain, the order it gets built in, and what "done" means.
+> Delivered capabilities, their build dependencies and the definition of complete.
 
 ---
 
@@ -41,20 +41,22 @@ delivers a whole behaviour, not by what fits one bullet.
 
 ## 2. Build order
 
-```
-Foundation
-  +-> Profile
-    +-> Career record store
-      +-> Points and phrasings            <- the differentiator
-        +-> Tagging and search
-          +-> Composition
-            +-> Render and templates
-              +-> Export
-                +-> Versions and snapshots
-                  +-> Import
-                  +-> ATS linter
-                  +-> Role profiles
-                  +-> Portfolio site
+```mermaid
+flowchart TD
+    accTitle: Capability build dependencies
+    accDescr: Foundation leads through composition, rendering, export and history. Import, ATS linting, role profiles and the portfolio build on that base.
+    Foundation --> Profile
+    Profile --> Records[Career record store]
+    Records --> Points[Points and phrasings]
+    Points --> Tags[Tagging and search]
+    Tags --> Composition
+    Composition --> Render[Render and templates]
+    Render --> Export
+    Export --> Versions[Versions and snapshots]
+    Versions --> Import
+    Versions --> ATS[ATS linter]
+    Versions --> Roles[Role profiles]
+    Versions --> Portfolio[Portfolio site]
 ```
 
 The record store comes before points because points attach to records that

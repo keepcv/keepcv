@@ -11,8 +11,7 @@ That is enforced rather than encouraged: the package builds with `"types": []`
 and no DOM library, so a `node:*` import or a reference to `process` is a
 compile error.
 
-> **Status: early development.** The public API is unstable and there is no
-> release yet.
+> **Status: early development.** The public API is unstable.
 
 ## Installation
 

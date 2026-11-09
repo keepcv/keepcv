@@ -39,45 +39,63 @@ Storage stays typed and kind-specific - `certification.expires_on` and
 to match the view would make queries lie.
 
 **P-E - Ordering is user-controlled and drag-and-drop driven.**
-Therefore ordering uses fractional keys, not integer positions. See #3.4.
+Therefore ordering uses fractional keys, not integer positions. See #3.5.
 
 ---
 
 ## 2. Entity map
 
+These diagrams group the main relationships. Every table is owner-scoped;
+the definitions below specify keys and cardinality. Record kinds and their
+typed fields are defined in #6.
+
+```mermaid
+flowchart TD
+    accTitle: Source records and private supporting content
+    accDescr: Records may name an organisation or custom section. Points have one primary record and secondary links; metrics and private evidence belong to points.
+    Organisation[Organisation] -. optional .-> Record[Record]
+    Custom[Custom section] -->|custom entry| Record
+    Record --> Link[Record link]
+    Record --> Field[Record field]
+    Record -->|primary parent| Point[Point]
+    Point --> Secondary[Point record link]
+    Secondary -. secondary parents .-> Record
+    Point --> Metric[Metric]
+    Point --> Evidence[Private evidence: never rendered]
 ```
-owner -+- profile -- contact_channel
-       |
-       +- organisation                     (companies, institutions, issuers, venues)
-       |
-       +- record -- organisation?
-       |     |     kind: experience | education | project | skill | certification
-       |     |         | publication | award | language | volunteering | speaking
-       |     |         | custom_entry -- custom_section
-       |     |
-       |     +- record_link     uniform links,  any kind
-       |     +- record_field    uniform extras, any kind
-       |
-       +- point --+- record                (primary parent)
-       |          +- point_record_link     (secondary parents, N:N)
-       |          +- metric
-       |          +- evidence              PRIVATE - never rendered
-       |
-       +- phrasing_set -- phrasing -- phrasing_revision    immutable, append-only
-       |     ^
-       |     +-- owned by: point, profile.summary, and any record's summary
-       |
-       +- tag --+- record_tag
-       |        +- point_tag
-       |
-       +- draft                            uncommitted editor state
-       |
-       +- resume --+- resume_contact_channel
-                   +- resume_section -- resume_entry -- resume_entry_point
-                   |        (mutable working composition)
-                   +- resume_version                    immutable manifest (jsonb)
-                   |     +- resume_content_ref          derived usage index
-                   +- resume_snapshot -- resume_version
+
+```mermaid
+flowchart TD
+    accTitle: Profile, wording, vocabulary and editor state
+    accDescr: Profile summaries, record summaries and points own phrasing sets. Each phrasing has append-only revisions. Tags attach to records and points; drafts persist outside history.
+    Owner[Owner] --> Profile[Profile]
+    Profile --> Contact[Contact channel]
+    Profile -->|summary| Set[Phrasing set]
+    Record[Record] -->|summary| Set
+    Point[Point] --> Set
+    Set --> Phrasing[Phrasing]
+    Phrasing --> Revision[Append-only phrasing revision]
+    Owner --> Tag[Tag]
+    Tag --> RecordTag[Record tag]
+    Tag --> PointTag[Point tag]
+    Owner --> Draft[Draft: uncommitted editor state]
+```
+
+```mermaid
+flowchart TD
+    accTitle: Resume selection and immutable history
+    accDescr: Mutable resume sections contain entries and selected points. Versions pin immutable manifests and revisions; snapshots name versions, and content references form a derived usage index.
+    Resume[Resume] --> Override[Resume contact channel]
+    Resume --> Section[Resume section]
+    Section --> Entry[Resume entry]
+    Entry --> Placement[Resume entry point]
+    Entry -. selects .-> Record[Record]
+    Placement -. selects .-> Point[Point]
+    Resume --> Version[Append-only version manifest]
+    Version -. pins .-> Revision[Phrasing revision]
+    Version --> Ref[Derived content reference index]
+    Resume --> Snapshot[Snapshot]
+    Snapshot -. names .-> Version
 ```
 
 **`point`, not `achievement`**. One primitive attaches to every

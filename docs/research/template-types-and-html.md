@@ -1,5 +1,8 @@
 # Template types and authored HTML: research
 
+> Historical research. Findings describe the dated investigation below; use
+> the [architecture specifications](../README.md#architecture) for current contracts.
+
 Researched 2026-10-25 against the current template-builder working tree, based
 on main `8e43845`. This is research for a proposed capability, not an inventory
 of implemented template types at the time of the initial audit. The updated

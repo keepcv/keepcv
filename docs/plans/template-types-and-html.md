@@ -1,5 +1,9 @@
 # Template types and HTML authoring
 
+> Historical implementation plan. Current behavior is specified in
+> [architecture](../README.md#architecture); user instructions are in the
+> [template guide](../TEMPLATES.md). Retained for scope and validation history.
+
 Implementation plan, updated 2026-10-25. The visual-builder overhaul is the
 starting point. Research and the security review preceded implementation.
 

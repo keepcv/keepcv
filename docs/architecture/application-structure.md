@@ -47,12 +47,23 @@ two identical ones and the repository port returns the DTO. Declaring every fiel
 twice with an identity mapping between them buys nothing and drifts the first
 time one side is edited.
 
-```
-PGlite/Postgres --row--> repository --entity--> domain service --DTO--> HTTP
-                                                                          |
-                                                                        DTO
-                                                                          v
-                                                    TanStack Query cache --> selector --> view model --> component
+```mermaid
+flowchart TB
+    accTitle: Representations across application boundaries
+    accDescr: Rows stay in the adapter. Repositories return entities or shared DTOs. HTTP sends DTOs to the browser cache; selectors and view models feed components.
+    subgraph Server[Server]
+        direction LR
+        DB[Database] -->|row| Repo[Repository]
+        Repo -->|entity or DTO| Domain[Domain service]
+        Domain -->|DTO| HTTP[HTTP]
+    end
+    Server -->|DTO| Browser
+    subgraph Browser[Browser]
+        direction LR
+        Cache[Query cache] --> Selector[Core selector]
+        Selector --> VM[Editor view model]
+        VM --> Component[Component]
+    end
 ```
 
 **The one deliberate exception:** `ResumeDocument` crosses every
@@ -708,22 +719,28 @@ unpick later.
 The single most consequential piece of interaction design in the product, and
 the reason phrasing revisions are immutable and append-only.
 
-```
-                  +--------------------------------------------+
-                  v                                            |
-   +--------+  focus   +---------+  content == current   +----------+
-   |  Idle  |--------->| Editing |---------------------->| Discarded|
-   +--------+          +---------+                       +----------+
-        ^                   |  keystroke -> debounce 800ms
-        |                   v
-        |            +------------+
-        |            | DraftSaved |   persisted to `draft`, not history
-        |            +------------+
-        |                   |  blur / retry / navigation / idle 30s
-        |                   v
-        |            +------------+
-        +------------| Committing |--> append phrasing_revision, move pointer,
-             success +------------+    delete draft
+```mermaid
+stateDiagram-v2
+    accTitle: Phrasing draft and revision lifecycle
+    accDescr: Typing saves a draft after 800 milliseconds. Settling commits changed wording; reopening offers recovery without automatically restoring it.
+    [*] --> Idle
+    Idle --> Editing: focus
+    Editing --> Discarded: content matches current
+    Discarded --> Idle
+    Editing --> DraftSaved: type / debounce 800ms
+    DraftSaved --> Editing: type
+    DraftSaved --> Committing: blur / idle 30s
+    Committing --> Idle: saved
+    Committing --> DraftSaved: refused
+    note right of DraftSaved
+        Persist draft outside history.
+        Retry or navigation also commits.
+    end note
+    note right of Committing
+        Append revision and move pointer.
+        Remove draft after acknowledgment.
+        Refusal retains recovery.
+    end note
 ```
 
 Rules that fall out of append-only revisions:
@@ -774,15 +791,18 @@ save.
 
 ## 7. The preview pipeline
 
-```
-composition change
-   +-> debounce 250ms
-      +-> core.compile(composition, store)  --> ResumeDocument   [pure, client-side]
-         +-> template.render(doc, config)   --> React element
-            +-> mount into isolated iframe
-               +-> measure the laid-out column  --> FlowBlock[]
-                  +-> core.paginate(blocks, usable)   --> page of every key
-                     +-> core.lengthBudget(doc, ...)  --> what is past the limit
+```mermaid
+flowchart TD
+    accTitle: Browser preview and measured page budget
+    accDescr: A composition change compiles locally, renders in an isolated frame, and supplies browser geometry to pure pagination and length-budget functions.
+    Change[Composition change] --> Debounce[Debounce 250ms]
+    Debounce --> Compile["core.compile(store, resumeId, options)"]
+    Compile --> Document[ResumeDocument]
+    Document --> Render[Template render]
+    Render --> Frame[Isolated iframe at print size]
+    Frame --> Geometry["Measure laid-out column: FlowBlock[]"]
+    Geometry --> Paginate["core.paginate(blocks, usable)"]
+    Paginate --> Budget["core.lengthBudget: content past the limit"]
 ```
 
 - **The preview iframe is style-isolated.** App CSS cannot reach it. If it

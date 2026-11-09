@@ -517,9 +517,16 @@ table - no template, exporter, or linter changes.
 
 ## 7. Compilation
 
-```
-store + resumeId  --captureManifest-->  manifest  --renderManifest-->  ResumeDocument
-resume_version.manifest ------------------^
+```mermaid
+flowchart LR
+    accTitle: One compiler for current and historical resumes
+    accDescr: Current composition is captured as a manifest. Current and stored manifests use the same renderer with pinned revisions and formatting options.
+    Store[Store and resumeId] -->|captureManifest| Manifest[Manifest]
+    Version[resume_version.manifest] --> Render[renderManifest]
+    Manifest --> Render
+    Revisions[Pinned revisions] --> Render
+    Options[generatedAt and locale] --> Render
+    Render --> Document[ResumeDocument]
 ```
 
 Two steps, not two paths. `captureManifest(store, resumeId)` resolves the
