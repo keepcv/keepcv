@@ -1,5 +1,8 @@
 # Security review for authored templates
 
+> Historical research. Findings describe the dated investigation below; use
+> the [architecture specifications](../README.md#architecture) for current contracts.
+
 Reviewed 2026-10-25. This supplements the
 [template-type research](template-types-and-html.md) and supplies requirements
 for the [implementation plan](../plans/template-types-and-html.md). This is a

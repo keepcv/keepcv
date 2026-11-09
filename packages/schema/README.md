@@ -9,8 +9,7 @@ form validation all derive from these definitions rather than restating them.
 It depends on nothing but Zod, and must never gain another dependency - it is
 imported by every other package, including ones that run in the browser.
 
-> **Status: early development.** The public API is unstable and there is no
-> release yet.
+> **Status: early development.** The public API is unstable.
 
 ## Installation
 

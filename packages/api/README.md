@@ -9,8 +9,7 @@ people run themselves is one whose client and server drift out of step, so the
 boundary between them is designed, versioned and stable - which
 framework-internal RPC would not be.
 
-> **Status: early development.** The public API is unstable and there is no
-> release yet. Today it serves the whole record store - the profile, contact
+> **Status: early development.** The public API is unstable. Today it serves the whole record store - the profile, contact
 > channels, organisations, custom sections, records, points, phrasings, tags,
 > drafts and everything hanging off them - the composition a resume is, its
 > history with version comparison and restore, and the boot payload and the

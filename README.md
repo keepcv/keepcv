@@ -16,20 +16,12 @@ release. Maintainers can follow the [release procedure](docs/RELEASING.md).
 
 ## The idea
 
-Most people keep their career history *inside* their resume file. That makes
-the resume simultaneously the document and the database, and the two roles
-conflict: a database should accumulate, a document must be short. The document
-always wins, so content gets destroyed.
+A resume file has to be short; career history needs room to grow. Keeping both
+in one file makes every trim a loss of history. KeepCV stores the history and
+lets each resume select what to show. Removing a resume leaves its source
+content intact, and multiple resumes share the same store.
 
-Every trim to fit one page is a permanent, unrecoverable delete.
-
-KeepCV separates them. The store holds everything, forever. A resume is a
-selection over the store plus a template. Deleting a resume loses nothing, and
-ten resumes share one copy of the truth.
-
-The hard part was never *fitting* - it is *choosing*, because the choice is
-destructive. So this is a tagging and prioritisation tool, not a typography
-tool.
+Tagging and prioritisation help you choose what fits each application.
 
 ## What makes it different
 
@@ -64,25 +56,9 @@ Create your own layouts with the [visual template builder](docs/TEMPLATES.md).
 
 ## Development
 
-From a checkout, use pnpm via corepack:
-
-```sh
-corepack enable
-pnpm install
-pnpm build
-node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
-```
-
-The scratch directory is ignored. Reuse it to keep development data between runs.
-
-Run the repository checks:
-
-```sh
-pnpm check
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how the project is organised and
-what "complete" means here.
+See [Contributing](CONTRIBUTING.md#getting-set-up) for setup, local development
+and checks. The [documentation index](docs/README.md) links product guides,
+package usage and architecture specifications.
 
 ## Security
 

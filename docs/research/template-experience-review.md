@@ -1,5 +1,8 @@
 # Templates and resumes: workflow review
 
+> Historical research. Findings describe the dated investigation below; use
+> the [architecture specifications](../README.md#architecture) for current contracts.
+
 Reviewed 2026-10-24 against latest `origin/main`, commit `8e43845`.
 
 This is a hands-on expert walkthrough and research synthesis, not a study with

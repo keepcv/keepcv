@@ -9,8 +9,7 @@ world: no fetching, no store access, no ambient CSS. That is what makes a
 template something a stranger can write and something the app can render inside
 a document of its own.
 
-> **Status: early development.** The public API is unstable and there is no
-> release yet.
+> **Status: early development.** The public API is unstable.
 
 ## Installation
 

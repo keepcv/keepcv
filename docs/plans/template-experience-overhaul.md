@@ -1,5 +1,9 @@
 # Template and resume experience overhaul
 
+> Historical implementation plan. Current behavior is specified in
+> [architecture](../README.md#architecture); user instructions are in the
+> [template guide](../TEMPLATES.md). Retained for scope and validation history.
+
 Status: implemented; final validation follows the acceptance tasks below.
 Baseline: latest main, `8e43845`. Prepared 2026-10-24.
 

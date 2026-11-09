@@ -62,55 +62,10 @@ than silently picking one.
 
 ## Commands
 
-```sh
-corepack enable && pnpm install    # Node 24+, pnpm via corepack
-
-pnpm check          # everything CI runs
-pnpm lint           # Biome: formatting + bulk linting
-pnpm lint:fix       # Biome, applying fixes
-pnpm lint:types     # ESLint: type-aware rules only
-pnpm typecheck      # tsc across packages, including tests
-pnpm test           # Vitest across packages
-pnpm build          # tsc -b
-pnpm changeset      # required for a change outside tests; see CONTRIBUTING.md
-```
-
-Run the whole thing on this machine - store, API and web app - against a
-throwaway data directory. It prints a URL with the launch token in the fragment;
-open that one, because the app has no other way to get a token:
-
-```sh
-pnpm build && node apps/cli/dist/index.js serve --data-dir ./.keepcv-scratch
-```
-
-The web app on its own, against a launcher already running on 4319:
-
-```sh
-pnpm --filter @keepcv/web dev
-```
-
-Single test file, or single test by name:
-
-```sh
-pnpm --filter @keepcv/core exec vitest run src/ordering/sort-key.test.ts
-pnpm --filter @keepcv/core exec vitest run -t "produces the first key"
-```
-
-Three generated artifacts fail CI when the committed copy has drifted. Re-emit
-in the same commit as the change, and read generated SQL before committing - a
-destructive migration step does not merge:
-
-```sh
-pnpm --filter @keepcv/schema schema:emit   # the published JSON Schema
-pnpm --filter @keepcv/db db:generate       # migrations, from the Drizzle schema
-```
-
-The repository contract suite runs against PGlite by default. Point it at a
-server PostgreSQL to run both, which is what CI does:
-
-```sh
-DATABASE_URL=postgres://... pnpm --filter @keepcv/db test
-```
+Use [Contributing](CONTRIBUTING.md#getting-set-up) for setup, commands, local
+launch, targeted tests and generated-artifact checks. Run `pnpm check` for the
+required repository checks. Changes outside tests need a changeset, or a
+deliberate empty one, as described there.
 
 ## Current state
 
@@ -131,17 +86,10 @@ repositories. `resume_version` and `phrasing_revision` are append-only, each hel
 that way by its own hand-written trigger. There is no `search_document` and there
 will not be one.
 
-**The API** serves `/v1/store`, `/v1/profile`, `/v1/export`, `/v1/import`,
-`/v1/intake`, `/v1/openapi.json`, eighteen owned collections, the nested routes
-for a point's secondary records, phrasing revisions, tag assignment, a resume's
-contact-channel overrides and drafts, plus `/v1/tags/{id}/merge`,
-`/v1/role-profiles/{id}/apply`, `GET /v1/resumes/{id}/document`,
-`POST /v1/resumes/{id}/derive`, the timeline at `/v1/resume-versions` and
-`/v1/resume-snapshots` with `diff`, `{id}/document` and `{id}/restore`, and
-`/v1/points/{id}/usage` and `/v1/records/{id}/usage`. `api-contract.md` #3 is the
-full list and the argument for every route that is deliberately absent.
-`createApi` takes the port, an owner scope and an `authenticate` function and
-knows nothing else - no driver, no token store, no port number.
+**The API** exposes the resource and timeline routes listed in
+[API Contract](docs/architecture/api-contract.md#3-resources). `createApi`
+receives its repository port, owner scope and authentication at the caller
+boundary; it owns no driver, token store or port number.
 
 **The editor** is published as `@keepcv/editor`, with an `Editor` entry taking
 the typed API client, QueryClient and optional sign-out callback. It ships
@@ -292,45 +240,12 @@ session already.
 
 ## Architecture
 
-### The layering
-
-One concept has four legitimate shapes, and conflating them is how this codebase
-would rot:
-
-```
-row (@keepcv/db) -> entity (@keepcv/core) -> DTO (@keepcv/schema) -> view model (apps/web)
-```
-
-Rows never leave `db`. Entities never cross the network. View models never travel
-upward. DTOs are not view models - formatting belongs in the UI. An entity type
-is written only where the domain shape actually differs from the wire shape;
-otherwise the DTO is both.
-
-The one deliberate exception is `ResumeDocument`, which crosses every layer
-unchanged. Duplicating it per layer would guarantee the preview and the exported
-file eventually disagree. It lives in `@keepcv/schema` beside the store shapes,
-and `compile()` in `@keepcv/core` is the only thing that produces one -
-formatting a date or a metric for a template is that function's job, not a
-renderer's.
-
-### Two boundaries that are enforced, not encouraged
-
-- **`@keepcv/core` performs no I/O.** No filesystem, no network, no drivers, no
-  Node built-ins. It runs unchanged in Node and the browser, which is what lets
-  the resume preview compile client-side from cached data while the server
-  compiles the same document for export. Enforced by the compiler, not by review
-  - see the `"types": []` note under "Toolchain constraints".
-- **`@keepcv/schema` depends on nothing but Zod.** It is the single source of
-  truth for every shared shape: TypeScript types, API validation, form
-  validation, the export format and the published JSON Schema all derive from it.
-
-### Rich domain, uniform presentation
-
-Storage stays typed and kind-specific (`certification.expires_on`,
-`skill.proficiency` are real queryable facts). Uniformity lives in
-`ResumeDocument`, produced by one **presenter per record kind** in `core`. Every
-entry - job, degree, project, talk - exposes the same slots, so templates never
-branch on record kind and adding a record kind touches no template.
+Read [Application Structure](docs/architecture/application-structure.md#1-the-four-representations)
+for rows, entities, DTOs, view models and their package boundaries.
+`@keepcv/core` performs no I/O; `@keepcv/schema` depends only on Zod.
+`ResumeDocument` crosses layers unchanged; kind-specific presenters in core
+produce its uniform slots. The [template model](docs/architecture/template-model.md)
+owns that contract and the compilation pipeline.
 
 ## Invariants that must not be violated
 
@@ -424,76 +339,21 @@ names, collapsing branches into ternaries, or golfing.
 
 ### Comment only when a comment is load-bearing
 
-**The default is no comment.** Most declarations need none.
+Default to no comment. Keep one only if removing it would cause the next reader
+to introduce a bug. It must name a constraint, an actual past failure, or a case
+the types cannot express. Explain what breaks; design rationale belongs in the
+architecture specs. "X rather than Y, so that Z" earns its place only when Z
+names an actionable failure or constraint, not a preference.
 
-**Apply the deletion test before writing one.** Delete it, and ask what the next
-reader does wrong. If they write a bug, keep the comment and name that bug. If
-they would merely not know why it is done this way, delete it - that is spec
-prose, and a copy in the code is the copy nobody updates.
-
-A comment earns its place by naming one of exactly three things:
-
-- **a constraint, by name** - `tag_slug_unique`, `noUncheckedIndexedAccess`,
-  `phrasing_revision_content_hash_unique`
-- **a failure that has actually happened** - not one that could
-- **a case the types cannot express** and the next edit would silently break
-
-**The test is the "Z", not the shape.** "X rather than Y, so that Z" is the form
-most comments here take, and it is fine when Z is something the next reader can
-act on: a failure that happened (`a typo in a test passed while writing to the
-wrong table`), a constraint (`record_field_key_unique` covers archived rows), or
-behaviour the types cannot state (`jsdom does not implement dataTransfer`). It is
-not fine when Z is why the design is nicer - readability, symmetry, "one
-vocabulary is one feature to read". That argument belongs in
-`docs/architecture/` and nowhere else. Applying this to the whole tree kept about
-four hundred comments and deleted about sixty, so the shape alone is not the
-thing to grep for.
-
-**No file paths and no section numbers in code.** Not `data-model.md #3.6`, not
-an ADR number, not a bare pointer of any kind. A pointer is not the argument, so
-it does not help the reader who needs the argument; it does rot the moment a
-section is renumbered, and nothing checks it. Someone who needs to know why a
-line exists reads `docs/architecture/`. If the answer to "should this be a
-comment?" is "no, but the section number is short", the answer is no.
-
-**One line. Two only if the case genuinely needs it.** Three is a spec section
-that has escaped into the code. Aim for zero comments in a file; one is normal; a
-file wanting three is telling you the naming is wrong or `docs/architecture/` is
-missing a paragraph.
-
-**A comment that survives says what breaks, not where it is written down.**
-Comment blocks wrap at 80 columns even though Biome's `lineWidth` is 100; Biome
-does not reflow them, so it is done by hand.
-
-A worked example, from this repository before the bar was applied:
-
-```ts
-// First-class rather than a string on each record, so two roles at one company
-// group under a single heading and a certification, a talk and a paper can share
-// one issuer identity (data-model.md #6). No sort key: organisations are listed
-// by name, never dragged.
-export const organisationSchema = z.object({ ... });
-```
-
-Three sentences of the spec copied, a pointer to where they were copied from, and
-one restating a field that is not there. It became:
-
-```ts
-export const organisationSchema = z.object({ ... });
-```
-
-Also:
-
-- Do not restate the code. If a comment paraphrases the line under it, delete it
-  and name things better instead.
-- Do not write JSDoc for self-evident signatures. Types already say it.
-- Do not leave section banners, `// eslint-disable` without a reason, or
-  scaffolding comments describing what you are about to write.
-- **A test comment names the failure the test guards, in one line**, or there is
-  no comment. The test name says what; the comment says what breaks without it.
-
-When you touch a file, the same bar applies to the comments already in it: an
-over-long or now-redundant one gets cut down, not preserved out of politeness.
+- Do not restate code, self-evident signatures or the design argument.
+- No file paths, section numbers, ADR numbers or bare pointers in code comments.
+- No section banners, scaffolding comments or unexplained `eslint-disable`.
+- Use one line; two only when necessary. Wrap comment blocks at 80 columns;
+  Biome's 100-column setting does not reflow them.
+- A test comment names the failure it guards in one line; the test name says
+  what it does.
+- Apply this bar to existing comments in every file you touch. Rename unclear
+  code before adding an explanation.
 
 ## Toolchain constraints
 
@@ -559,62 +419,7 @@ Several of these look like bugs. They are not - do not "fix" them.
 
 ## How work is organised
 
-Work lands **complete**: either it delivers behaviour someone can use end to end,
-or it does not merge. There is no half-built state on `main`. The Definition of
-Complete is in `capabilities.md` and mirrored in the PR template; rows that do
-not apply are deleted, not left unticked.
-
-`capabilities.md` is an inventory, not a work breakdown. Size a change by what
-makes a whole behaviour - often several of its bullets together, occasionally
-part of one. **Do not number features.** A numbering scheme reads as a plan with
-fixed boundaries, and the boundaries move as soon as you start building; name the
-work instead.
-
-Every feature answers: *which felt pain does this trace to?* and *what are the
-declared non-goals?* The second is where scope pressure gets absorbed - a good
-idea arriving mid-build becomes a new issue, not a bigger current one.
-
-`main` is the default branch; branch before committing.
-
-### Verify by trying to break it
-
-`pnpm check` proves the code compiles and the tests pass. It does not prove the
-tests would have caught anything.
-
-- **Break the thing a test guards, and watch it fail.** Remove the owner
-  predicate, the concurrency predicate, the kind check; run the suite; confirm
-  the *right* tests fail; restore. This has already found a real gap: records,
-  links and fields reached a fully green suite with no stale-write coverage at
-  all, and only breaking the predicate showed it.
-- **Assert the reason, not just the failure.** `rejects.toThrow()` on a
-  constraint test also passes when the insert fails for a typo. Name the
-  constraint (`error.cause.constraint`) or the error class.
-- **De-risk a tool-dependent step before building on it.** If drizzle-kit might
-  not round-trip a custom column type, generate twice and confirm the second run
-  reports no changes - before writing the repository that depends on it.
-- **Check the counts, not the colour.** A CI run reporting the same test count as
-  a local one means the second driver never ran.
-
-### Commits and pull requests stand alone
-
-A commit message and a PR description are read by someone who has only that one
-thing in front of them: a `git log` line months later, a reviewer opening a diff
-cold, a bisect landing mid-history.
-
-- **Keep them short.** A subject line and two or three short paragraphs: what
-  changed, why, and anything a reviewer would otherwise reconstruct from the
-  diff. No walkthrough of how the work went, no restatement of the diff, no
-  alternatives-considered section. A long description does not get read, which
-  makes the one load-bearing sentence in it invisible.
-- **No cross-references to other commits or PRs.** Not "as in the previous PR",
-  not "completes what #12 started". If context from elsewhere matters, restate it
-  in a sentence. A reader following a link has already lost the thread, and the
-  link rots the moment history is rewritten or a branch is squashed.
-- **No ADR numbers and no `PRODUCT.md`.** Both are gitignored, so the citation
-  resolves for nobody reading on GitHub. Give the conclusion and its reason in a
-  sentence; the full argument belongs in the ADR and in `docs/architecture/`.
-- **Describe this change and why, not the sequence it sits in.** Name what it
-  delivers in words - "content hashing", "the phrasing editor". Do not invent or
-  cite numbered feature identifiers; they imply an ordering that does not survive
-  contact with how the work actually splits.
-- **ASCII only**, as everywhere else.
+Follow [Contributing](CONTRIBUTING.md#features-ship-complete) for complete feature
+scope, verification, commits, pull requests and releases. The
+[Definition of Complete](docs/architecture/capabilities.md#1-definition-of-complete)
+is mirrored in the PR template; delete checklist rows that do not apply.
