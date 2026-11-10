@@ -277,3 +277,23 @@ it("restores original files and history without restoring temporary grants", asy
     receipt: null,
   });
 });
+
+it("retains observed sources and tool activity when a turn is interrupted", async () => {
+  generate.mockImplementation(async (request) => {
+    await request.tool?.("web_fetch", "Read an approved public page");
+    await request.source?.({
+      title: "Requested page",
+      url: "https://example.com/public",
+      provenance: "requested-url",
+      tool: "web_fetch",
+    });
+    throw new Error("Synthetic interruption");
+  });
+  await turn();
+  const saved = (await run((r) => r.agent.get(conversation))).messages.at(-1);
+  expect(saved).toMatchObject({
+    state: "interrupted",
+    sources: [{ url: "https://example.com/public", provenance: "requested-url" }],
+    toolCalls: [{ name: "web_fetch" }],
+  });
+});

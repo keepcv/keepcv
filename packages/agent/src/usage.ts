@@ -10,6 +10,17 @@ export interface AgentTokenUsage {
 export type AgentCompletion = "complete" | "failed" | "interrupted";
 export type AgentUsageEvent =
   | {
+      event: "external-tool";
+      runId?: string;
+      tool: "web_search" | "web_fetch";
+      engine: string;
+      admittedCalls: number;
+      callId: string;
+      requested: number | null;
+      executed: number | null;
+      outcome: AgentCompletion;
+    }
+  | {
       event: "call";
       runId?: string;
       callId: string;

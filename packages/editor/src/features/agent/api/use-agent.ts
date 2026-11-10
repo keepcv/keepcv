@@ -44,6 +44,9 @@ export function useAgentController(api: ApiClient, enabled = true) {
   const [disclosed, setDisclosed] = useState(false);
   const [grant, setGrant] = useState(false);
   const [publicQuery, setPublicQuery] = useState("");
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [publicUrls, setPublicUrls] = useState("");
+  const [urlDisclosure, setUrlDisclosure] = useState(false);
   const [sourcePath, setSourcePath] = useState<string | null>(null);
   const contextPath = sourcePath ?? path;
   const currentText = useRef(text);
@@ -223,7 +226,18 @@ export function useAgentController(api: ApiClient, enabled = true) {
                 : {}),
             },
             disclosure: true,
-            ...(publicQuery.trim() ? { publicResearchQuery: publicQuery.trim() } : {}),
+            webSearchEnabled: webSearchEnabled && capabilities.data?.webSearchAvailable === true,
+            ...(webSearchEnabled && capabilities.data?.webSearchAvailable === true && publicQuery
+              ? { publicResearchQuery: publicQuery }
+              : {}),
+            ...(publicUrls.trim() && urlDisclosure
+              ? {
+                  publicPages: {
+                    urls: publicUrls.split("\n").filter(Boolean),
+                    disclosure: true as const,
+                  },
+                }
+              : {}),
           },
         },
         { init: { signal: controller.signal } },
@@ -410,6 +424,10 @@ export function useAgentController(api: ApiClient, enabled = true) {
     id,
     setId: (value: string | null) => {
       setId(value);
+      setPublicQuery("");
+      setWebSearchEnabled(false);
+      setPublicUrls("");
+      setUrlDisclosure(false);
       setSourcePath(null);
       setError("");
       setStatus("");
@@ -425,6 +443,9 @@ export function useAgentController(api: ApiClient, enabled = true) {
       setGrant(false);
       setDisclosed(false);
       setPublicQuery("");
+      setWebSearchEnabled(false);
+      setPublicUrls("");
+      setUrlDisclosure(false);
     },
     sourcePath,
     contextPath,
@@ -444,6 +465,12 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setStatus,
     disclosed,
     setDisclosed,
+    publicUrls,
+    setPublicUrls,
+    urlDisclosure,
+    setUrlDisclosure,
+    webSearchEnabled,
+    setWebSearchEnabled,
     publicQuery,
     setPublicQuery,
     grant,

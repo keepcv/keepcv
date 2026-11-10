@@ -16,7 +16,7 @@ export function Composer() {
   const agent = useAgent();
   const fileInput = useRef<HTMLInputElement>(null);
   const [options, setOptions] = useState(false);
-  const expanded = options || agent.grant || Boolean(agent.publicQuery);
+  const expanded = options || agent.grant || Boolean(agent.publicQuery || agent.publicUrls);
   const disabled =
     agent.busy ||
     agent.deciding !== null ||
@@ -158,6 +158,46 @@ export function Composer() {
           </button>
         )}
       </div>
+      <div className="mt-2 flex items-center gap-3 px-1 text-xs text-text-muted">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-checked={agent.webSearchEnabled}
+            checked={agent.webSearchEnabled}
+            disabled={
+              agent.busy ||
+              !agent.canGenerate ||
+              agent.capabilities.data?.webSearchAvailable !== true
+            }
+            onChange={(event) => agent.setWebSearchEnabled(event.target.checked)}
+          />
+          Web search
+        </label>
+        <span>
+          {agent.capabilities.data?.webSearchAvailable !== true
+            ? "Unavailable"
+            : agent.webSearchEnabled
+              ? "On"
+              : "Off"}
+        </span>
+      </div>
+      {agent.webSearchEnabled ? (
+        <label className="mt-3 block px-1 text-xs text-text-muted">
+          <span className="font-medium text-text">Public search query</span>
+          <input
+            aria-label="Public search query"
+            value={agent.publicQuery}
+            maxLength={500}
+            onChange={(event) => agent.setPublicQuery(event.target.value)}
+            placeholder="Only this exact query may be sent to web search"
+            className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
+          />
+          <span className="mt-1 block">
+            Enter a public query to approve sharing it with the search service.
+          </span>
+        </label>
+      ) : null}
       <div
         id="agent-composer-help"
         className="mt-2 flex items-start justify-between gap-3 border-t border-line-subtle px-1 pt-2 text-[0.6875rem] leading-4 text-text-subtle"
@@ -208,14 +248,27 @@ export function Composer() {
             </p>
           </div>
           <label className="block">
-            <span className="font-medium text-text">Optional public research query</span>
-            <input
-              value={agent.publicQuery}
-              maxLength={500}
-              onChange={(event) => agent.setPublicQuery(event.target.value)}
-              placeholder="Only this exact query may be sent to web search"
+            <span className="font-medium text-text">
+              Approved public page URLs (one per line, up to four)
+            </span>
+            <textarea
+              value={agent.publicUrls}
+              maxLength={8192}
+              onChange={(event) => {
+                agent.setPublicUrls(event.target.value);
+                agent.setUrlDisclosure(false);
+              }}
               className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
             />
+          </label>
+          <label className="flex gap-2">
+            <input
+              type="checkbox"
+              checked={agent.urlDisclosure}
+              onChange={(event) => agent.setUrlDisclosure(event.target.checked)}
+            />
+            Share these exact public URLs with the configured model and fetch service. Search
+            results do not approve page reads.
           </label>
           <Button
             size="sm"
