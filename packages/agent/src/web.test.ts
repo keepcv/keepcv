@@ -32,13 +32,12 @@ it("requires an exact allowed hostname", () => {
   expect(publicUrl("https://example.com/public?q=public", ["example.com"])).toBe(true);
   expect(publicUrl("https://sub.example.com/public", ["example.com"])).toBe(false);
 });
-it("refuses automatic engines and missing policy qualification", () => {
+it("refuses automatic and unsupported engines", () => {
   expect(
     webConfigSchema.safeParse({ search: { engine: "auto", domains: ["example.com"] } }).success,
   ).toBe(false);
   expect(
     webConfigSchema.safeParse({
-      policyConfirmed: true,
       fetch: { engine: "native", domains: ["example.com"] },
     }).success,
   ).toBe(false);

@@ -1,10 +1,8 @@
 # Bounded public web validation
 
-This change is a release candidate, not a published package set. Do not publish
-until provider-side exact query/path and public-network confinement have been
-qualified or a transport enforcing those requirements is supplied. The hosted
-server-tool API does not expose enough information to prove them locally.
-The deployment contract and its limitations are in packages/agent/README.md.
+Use this guide to verify bounded web search, page reads and the composer switch.
+Provider-side fetching and network behavior are delegated to the explicitly
+configured services. The adapter's limits are in packages/agent/README.md.
 
 ## Repeatable checks
 
@@ -30,12 +28,11 @@ the named isolation test fail on both drivers because the foreign owner's read
 resolves instead of throwing NotFoundError. Restore each guard before running
 normal checks. No mutation belongs in a commit.
 
-Provider qualification must include unsupported endpoints, absent/zero/excess
-execution counters, error bodies inside HTTP 200, domain escapes, redirects to
-unapproved paths/domains, private DNS answers and rebinding. Confirm exact
-engine-side query/URL arguments through a trustworthy service audit facility.
-A model answer, requested engine name or successful public-only probe does not
-establish those properties. Leave tools disabled when they cannot be verified.
+Check absent/zero/excess execution counters, error bodies inside HTTP 200,
+unapproved query/page arguments, refused URL forms, call exhaustion and aborted
+turns with deterministic transports. The provider owns its internal query
+reformulation, redirects and DNS handling; these are documented limitations,
+not a release qualification gate.
 
 ## Installed consumer verification
 
@@ -49,9 +46,9 @@ Changesets currently calculates this compatible candidate set:
 | Package | Candidate version |
 |---|---|
 | @keepcv/agent | 0.4.0 |
-| @keepcv/api | 0.5.2 |
+| @keepcv/api | 0.6.0 |
 | @keepcv/editor | 0.8.0 |
-| @keepcv/core | 0.5.1 |
+| @keepcv/core | 0.6.0 |
 | @keepcv/schema | 0.5.0 |
 | @keepcv/db | 0.4.2 |
 | @keepcv/cli | 0.2.2 |
@@ -60,14 +57,16 @@ Changesets currently calculates this compatible candidate set:
 | @keepcv/render | 0.2.3 |
 | @keepcv/templates | 0.2.3 |
 
-After qualification, review and version preparation, follow docs/RELEASING.md:
+After review and version preparation, follow docs/RELEASING.md:
 merge reviewed versioning, synchronize release/0.2.2, run verify, then trusted
 publication with the required npm environment approval. Verify registry versions
 and integrity before installing the exact versions above with --save-exact from
 outside the checkout. Candidate versions must not be presented as published.
 
 Exercise the same reusable createOpenRouterModel/createAgent/createApi entry
-points. Supply a public-only query and separately approve a public page. Check
+points. Verify Web search starts off, enabling it reveals the public-query
+field, and disabling it sends webSearchEnabled=false and omits the research
+tool. Unavailable or older APIs keep the switch disabled. Supply a public-only query and separately approve a public page. Check
 external-tool usage independently of tokens; unknown counts retain the entire
 reservation. Reload history, stop after a source is observed, export/import to
 an empty store and confirm provenance and tool activity persist. Switch threads

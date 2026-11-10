@@ -29,6 +29,7 @@ eachDriver(({ run, otherOwner }) => {
       role: "user",
       text: "My notes",
       attachmentIds: [],
+      webSearchEnabled: false,
       publicPages: { urls: ["https://example.com/public"], disclosure: true },
       sources: [
         {

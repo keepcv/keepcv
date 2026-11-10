@@ -66,6 +66,15 @@ export async function startServer(options: {
   const model = configured === undefined ? undefined : createOpenRouterModel(configured);
   const { store, ownerId } = await openStore(options.dataDir);
 
+  const providers = [
+    ...(configured?.routes ?? []),
+    ...(configured?.research === undefined ? [] : [configured.research]),
+  ]
+    .flatMap((route) => route.providers)
+    .join(", ");
+  const webEngines = [configured?.web?.search?.engine, configured?.web?.fetch?.engine]
+    .filter(Boolean)
+    .join(", ");
   const agent =
     configured === undefined || model === undefined
       ? undefined
@@ -73,7 +82,7 @@ export async function startServer(options: {
           unitOfWork: store.unitOfWork,
           model,
           deadlineMs: configured.deadlineMs,
-          disclosure: `Processed through OpenRouter and these approved inference destinations: ${configured.routes.flatMap((route) => route.providers).join(", ")}.`,
+          disclosure: `Processed through OpenRouter and these approved inference destinations: ${providers}.${webEngines ? ` Public web tools use ${webEngines}.` : ""}`,
         });
   const auth = launcherAuth(setting, ownerId);
   const api = createApi({

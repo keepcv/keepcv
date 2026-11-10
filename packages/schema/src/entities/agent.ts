@@ -519,6 +519,7 @@ export const agentMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   text: z.string(),
   publicResearchQuery: z.string().max(500).optional(),
+  webSearchEnabled: z.boolean().optional(),
   publicPages: agentPublicPagesSchema.optional(),
   attachmentIds: z.array(uuidSchema),
   sources: z.array(agentSourceSchema),
@@ -553,6 +554,7 @@ export const agentAttachmentSchema = z.object({
 export const agentTurnSchema = z
   .object({
     publicResearchQuery: z.string().min(1).max(500).optional(),
+    webSearchEnabled: z.boolean().optional(),
     publicPages: agentPublicPagesSchema.optional(),
     id: uuidSchema,
     text: z.string().max(32000),
@@ -598,6 +600,7 @@ export const agentLimitsSchema = z.object({
 });
 export type AgentLimits = z.infer<typeof agentLimitsSchema>;
 export const agentCapabilitiesSchema = agentLimitsSchema.extend({
+  webSearchAvailable: z.boolean().default(false),
   available: z.boolean(),
   historyAvailable: z.boolean().default(true),
   disclosure: z.string(),

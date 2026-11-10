@@ -55,6 +55,7 @@ it("advertises enforced limits without removing providerless creation, attachmen
   );
   expect(capabilities).toMatchObject({
     available: false,
+    webSearchAvailable: false,
     historyAvailable: true,
     maxFileBytes: 20,
     maxTextFileBytes: 12,
@@ -93,7 +94,13 @@ it("checks the lower runtime and API limits before work and passes only trusted 
   const turn = vi.fn<AgentRuntime["turn"]>(() => Promise.resolve());
   const grant = vi.fn<AgentRuntime["grant"]>();
   const runtime: AgentRuntime = {
-    capabilities: { available: true, disclosure: "Synthetic", maxFileBytes: 18, maxAttachments: 1 },
+    capabilities: {
+      available: true,
+      webSearchAvailable: true,
+      disclosure: "Synthetic",
+      maxFileBytes: 18,
+      maxAttachments: 1,
+    },
     turn,
     grant,
     decide: () => Promise.reject(new Error("Unused")),
@@ -104,6 +111,7 @@ it("checks the lower runtime and API limits before work and passes only trusted 
   const id = newUuid();
   await api.request("/v1/agent/conversations", json({ id, title: "Task" }));
   expect(await (await api.request("/v1/agent/capabilities")).json()).toMatchObject({
+    webSearchAvailable: true,
     maxFileBytes: 18,
     maxAttachments: 1,
     maxTextCharacters: 10,

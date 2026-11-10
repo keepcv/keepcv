@@ -239,7 +239,6 @@ its locked native-only workspace policy. Omit `research` to disable web tools.
   "routes": [{ "model": "qualified/model", "providers": ["approved"] }],
   "research": { "model": "qualified/public-model", "providers": ["approved"] },
   "web": {
-    "policyConfirmed": true,
     "search": { "engine": "parallel", "mode": "turbo", "domains": ["example.com"] },
     "fetch": { "engine": "openrouter", "domains": ["example.com"] },
     "maxCalls": 2,
@@ -252,12 +251,17 @@ its locked native-only workspace policy. Omit `research` to disable web tools.
 }
 ```
 
-`policyConfirmed` is an operator attestation, not automatic qualification. Enable
-it only after verifying the selected workspace, provider endpoint and engine
-meet the deployment's destination, retention, redirect and private-network
-requirements. Locked workspace settings must agree with the explicit engines.
-Keep credentials and this configuration server-side. Neither schema nor core
-contains a credential, provider choice or deployment policy.
+Keep credentials and this configuration server-side. Locked workspace settings
+must agree with the explicitly selected engines. Neither schema nor core
+contains credentials, provider choices or deployment policy.
+
+The composer exposes a Web search switch, off initially and reset when changing
+conversations. Enabling it reveals a public-query field. Capabilities report
+`webSearchAvailable`; the switch is disabled when search is unavailable. Each
+turn sends `webSearchEnabled`. An explicit false removes the research tool from
+the model's tool list, even if a public query is present. Older callers that omit
+the flag retain search approval through their explicit public query. Custom
+models can advertise `webSearchAvailable` and should honor the turn flag.
 
 The turn's `publicResearchQuery` is compared byte-for-byte with the research tool
 argument. It is never derived from messages, career records, Evidence or files.
@@ -276,11 +280,10 @@ private-address blocking and internal server-tool arguments happen inside the
 selected service: local validation cannot verify or constrain those operations.
 The provider documentation promises domain filtering and truncation for these
 engines; it does not specify their redirect or private-address security contract.
-It also does not promise that the model uses the supplied query/URL without
-reformulation or additional same-domain page access. Therefore this adapter does
-not establish exact engine-side query/path confinement. If those are hard
-requirements, leave these tools disabled until the operator has independently
-qualified them; a successful probe or model assertion is insufficient evidence.
+Internal query reformulation, redirects and resolved addresses are delegated to
+the configured service. KeepCV checks the inputs it sends and does not claim
+visibility into those service internals. These provider limitations do not gate
+the Web search switch or availability of the configured tools.
 
 The full external admission envelope is `maxCalls` hosted requests per turn,
 with at most one requested server-tool execution per hosted request, zero

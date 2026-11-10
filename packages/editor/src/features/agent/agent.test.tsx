@@ -180,6 +180,7 @@ it("opens chat first, reviews an exact change and refreshes the ordinary editor"
   expect(screen.getByRole("link", { name: "/profile" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remove page context" }));
   expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
+  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
 });
 
 it("keeps download errors visible in disabled history and copies existing AI responses", async () => {
@@ -496,7 +497,7 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
     const pathname = new URL(request.url).pathname;
     if (pathname === "/v1/store") return jsonOf(store);
     if (pathname.endsWith("capabilities"))
-      return jsonOf({ available: true, disclosure: "Synthetic" });
+      return jsonOf({ available: true, webSearchAvailable: true, disclosure: "Synthetic" });
     if (pathname === "/v1/agent/conversations")
       return request.method === "POST" ? jsonOf(chat, 201) : jsonOf({ items: [] });
     if (pathname.endsWith("/attachments")) return jsonOf({ items: [] });
@@ -531,7 +532,9 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: "Conversation settings" }));
-  fireEvent.change(screen.getByLabelText("Optional public research query"), {
+  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
+  fireEvent.click(screen.getByRole("switch", { name: "Web search" }));
+  fireEvent.change(screen.getByLabelText("Public search query"), {
     target: { value: "  exact public question  " },
   });
   fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
@@ -540,6 +543,7 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   fireEvent.click(screen.getByLabelText(/Share these exact public URLs/));
   for (const text of ["Read this page", "Read it again"]) {
     if (text === "Read it again") {
+      fireEvent.click(screen.getByRole("switch", { name: "Web search" }));
       fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
         target: { value: "https://example.com/other" },
       });
@@ -554,10 +558,13 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   }
   expect(turns).toHaveLength(2);
   expect(turns[0]).toMatchObject({
+    webSearchEnabled: true,
     publicResearchQuery: "  exact public question  ",
     publicPages: { urls: ["https://example.com/public"], disclosure: true },
   });
   expect(turns[1]).not.toHaveProperty("publicPages");
+  expect(turns[1]).toMatchObject({ webSearchEnabled: false });
+  expect(turns[1]).not.toHaveProperty("publicResearchQuery");
   for (const turn of turns)
     expect(turn).toMatchObject({
       context: {
@@ -575,5 +582,6 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   }
   fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
   expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
+  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
   queries.clear();
 });

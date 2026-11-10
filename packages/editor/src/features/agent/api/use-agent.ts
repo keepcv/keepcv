@@ -44,6 +44,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
   const [disclosed, setDisclosed] = useState(false);
   const [grant, setGrant] = useState(false);
   const [publicQuery, setPublicQuery] = useState("");
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [publicUrls, setPublicUrls] = useState("");
   const [urlDisclosure, setUrlDisclosure] = useState(false);
   const [sourcePath, setSourcePath] = useState<string | null>(null);
@@ -225,7 +226,10 @@ export function useAgentController(api: ApiClient, enabled = true) {
                 : {}),
             },
             disclosure: true,
-            ...(publicQuery ? { publicResearchQuery: publicQuery } : {}),
+            webSearchEnabled: webSearchEnabled && capabilities.data?.webSearchAvailable === true,
+            ...(webSearchEnabled && capabilities.data?.webSearchAvailable === true && publicQuery
+              ? { publicResearchQuery: publicQuery }
+              : {}),
             ...(publicUrls.trim() && urlDisclosure
               ? {
                   publicPages: {
@@ -421,6 +425,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setId: (value: string | null) => {
       setId(value);
       setPublicQuery("");
+      setWebSearchEnabled(false);
       setPublicUrls("");
       setUrlDisclosure(false);
       setSourcePath(null);
@@ -438,6 +443,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       setGrant(false);
       setDisclosed(false);
       setPublicQuery("");
+      setWebSearchEnabled(false);
       setPublicUrls("");
       setUrlDisclosure(false);
     },
@@ -463,6 +469,8 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setPublicUrls,
     urlDisclosure,
     setUrlDisclosure,
+    webSearchEnabled,
+    setWebSearchEnabled,
     publicQuery,
     setPublicQuery,
     grant,

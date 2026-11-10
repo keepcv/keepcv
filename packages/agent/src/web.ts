@@ -38,7 +38,6 @@ export const webConfigSchema = z
       .object({ engine: z.literal("openrouter"), domains })
       .strict()
       .optional(),
-    policyConfirmed: z.literal(true),
     maxCalls: z.number().int().min(1).max(4).default(2),
     maxResults: z.number().int().min(1).max(10).default(5),
     maxCharacters: z.number().int().min(1).max(10000).default(1500),

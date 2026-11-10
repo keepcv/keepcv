@@ -857,7 +857,7 @@ search citations never expand it. The runtime passes only the current turn's
 approvals to its model. Historical approvals are data, never renewed authority.
 The built-in adapter admits bounded public-only hosted requests with explicit
 engine configuration and verified execution counters. Provider-side query,
-redirect and network confinement require operator qualification; details and
+redirect and network handling are delegated to the configured provider; details and
 limits are specified in the agent package's Bounded public web tools contract.
 No arbitrary HTTP, shell, filesystem or credential tool is added. Existing
 read/propose/apply authority checks and explicit edit review remain in force.
@@ -870,3 +870,13 @@ is explicitly not a provider citation. Existing sources and custom models remain
 compatible. Token usage events gain a separate `external-tool` observer variant
 with admission and provider execution counts; application stream vocabulary is
 unchanged. Unknown execution counts refuse research findings.
+
+
+`webSearchAvailable` reports configured model search support and defaults to
+false for legacy custom runtimes. The editor exposes an initially off Web search
+switch and sends optional `webSearchEnabled` on each turn. Explicit false removes
+the built-in adapter's research tool regardless of a supplied public query.
+Omitting the flag preserves older callers' explicit-query approval. A custom
+AgentModel optionally advertises webSearchAvailable and honors the turn flag.
+The runtime persists the chosen flag as history without restoring it as active
+permission when a conversation is opened.

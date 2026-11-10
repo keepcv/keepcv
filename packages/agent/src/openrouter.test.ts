@@ -527,7 +527,6 @@ function webModel(events: AgentUsageEvent[] = []) {
       routes: [webRoute],
       research: webRoute,
       web: {
-        policyConfirmed: true,
         maxCalls: 1,
         search: { engine: "parallel", mode: "turbo", domains: ["example.com"] },
         fetch: { engine: "openrouter", domains: ["example.com"] },
@@ -686,3 +685,22 @@ it("drops late external findings after cancellation and never calls subsequent p
   expect(source).not.toHaveBeenCalled();
   expect(calls).toBe(2);
 });
+
+it.each([false, true])(
+  "offers web search only when the current turn enables it (%s)",
+  async (webSearchEnabled) => {
+    let body = "";
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      body = await new Request(input, init).text();
+      return streamReply({ content: "Acknowledge the selected search setting." });
+    });
+    const model = webModel();
+    expect(model.webSearchAvailable).toBe(true);
+    await model.generate({
+      ...modelRequest(),
+      webSearchEnabled,
+      publicResearchQuery: "Approved public query",
+    });
+    expect(body.includes('"name":"research"')).toBe(webSearchEnabled);
+  },
+);

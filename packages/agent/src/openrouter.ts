@@ -454,7 +454,10 @@ export function createOpenRouterModel(
     }
   }
 
+  const webSearchAvailable =
+    config.research !== undefined && (config.web === undefined || config.web.search !== undefined);
   return {
+    webSearchAvailable,
     async generate(request): Promise<ModelReply> {
       let completion: AgentCompletion = "failed";
       let produced = false;
@@ -673,8 +676,8 @@ export function createOpenRouterModel(
                       return "Navigation offered to the user.";
                     }),
                 }),
-                ...(config.research === undefined ||
-                (config.web !== undefined && config.web.search === undefined)
+                ...(!webSearchAvailable ||
+                !(request.webSearchEnabled ?? request.publicResearchQuery !== undefined)
                   ? {}
                   : {
                       research: tool({

@@ -18,6 +18,7 @@ export interface AgentEvent {
 export interface AgentRuntime {
   capabilities: {
     available: boolean;
+    webSearchAvailable?: boolean;
     disclosure: string;
     maxFileBytes: number;
   } & Partial<AgentLimits>;

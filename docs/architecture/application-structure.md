@@ -1650,3 +1650,11 @@ consent. Editing the URL list clears consent. The public query is sent without
 trimming or inference. Page approval is independent of search results, attachments
 and task edit grants. Requested-page provenance stays visible in source labels;
 interrupted replies keep already observed sources and tool activity.
+
+
+The composer shows Web search directly as an accessible on/off switch. It starts
+off, resets on conversation changes and reveals the public-query field when on.
+The switch is disabled while generating and when capabilities do not advertise
+search support. Switching it off omits the query and sends an explicit disabled
+flag; an adapter then omits the search tool from that turn. Configured server
+engines remain authoritative; a browser switch cannot enable an absent service.

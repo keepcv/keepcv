@@ -26,6 +26,7 @@ it.each([
     const store = openLocalStore();
     const queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     const model: AgentModel = {
+      webSearchAvailable: true,
       generate: vi.fn(() => Promise.reject(new Error("Provider unavailable"))),
     };
     let generationAllowed = false;
@@ -101,6 +102,15 @@ it.each([
             "40",
           ),
         );
+      }
+      if (config.assistant) {
+        const search = screen.getByRole("switch", { name: "Web search" });
+        expect(search).toBeEnabled();
+        expect(search).not.toBeChecked();
+        fireEvent.click(search);
+        expect(screen.getByLabelText("Public search query")).toBeInTheDocument();
+        fireEvent.click(search);
+        expect(screen.queryByLabelText("Public search query")).not.toBeInTheDocument();
       }
       if (!config.assistant) {
         fireEvent.click(screen.getByRole("link", { name: "Conversations" }));

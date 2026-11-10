@@ -236,6 +236,9 @@ export function agentRoutes(options: {
       c.json(
         {
           available: options.agent?.capabilities.available ?? false,
+          webSearchAvailable:
+            (options.agent?.capabilities.available ?? false) &&
+            (options.agent?.capabilities.webSearchAvailable ?? false),
           disclosure:
             options.agent?.capabilities.disclosure ??
             "The assistant is not configured. All ordinary editing and export remain available.",

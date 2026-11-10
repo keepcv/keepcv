@@ -35,6 +35,7 @@ export interface ModelRequest {
   attachments: AgentAttachment[];
   context: string;
   publicResearchQuery: string | undefined;
+  webSearchEnabled?: AgentTurn["webSearchEnabled"];
   publicPages?: AgentTurn["publicPages"];
   source?: (source: AgentSource) => Promise<void>;
   signal: AbortSignal;
@@ -50,6 +51,7 @@ export interface ModelReply {
   navigation: string | null;
 }
 export interface AgentModel {
+  webSearchAvailable?: boolean;
   generate(request: ModelRequest): Promise<ModelReply>;
 }
 
@@ -147,7 +149,12 @@ export function createAgent(options: {
   const keyOf = (owner: Uuid, conversation: Uuid) => `${owner}:${conversation}`;
   const stamp = () => new Date().toISOString() as Timestamp;
   const unit = options.unitOfWork;
-  const capabilities = { available: true, disclosure: options.disclosure, ...limits };
+  const capabilities = {
+    available: true,
+    webSearchAvailable: options.model.webSearchAvailable ?? false,
+    disclosure: options.disclosure,
+    ...limits,
+  };
   let closed: string | null = null;
 
   function prune() {
@@ -374,6 +381,9 @@ export function createAgent(options: {
               ? {}
               : { publicResearchQuery: input.publicResearchQuery }),
             ...(input.publicPages === undefined ? {} : { publicPages: input.publicPages }),
+            ...(input.webSearchEnabled === undefined
+              ? {}
+              : { webSearchEnabled: input.webSearchEnabled }),
             attachmentIds: input.attachmentIds,
             sources: [],
             createdAt: stamp(),
@@ -441,6 +451,7 @@ export function createAgent(options: {
               attachments,
               context: input.context.path,
               publicResearchQuery: input.publicResearchQuery,
+              webSearchEnabled: input.webSearchEnabled,
               publicPages: input.publicPages,
               source: async (value) => {
                 await check({ ...context, phase: "generate" });
