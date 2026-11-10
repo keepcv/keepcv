@@ -1,5 +1,13 @@
 # @keepcv/render
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [c3c0ef1]
+  - @keepcv/schema@0.5.0
+  - @keepcv/templates@0.2.3
+
 ## 0.2.2
 
 ### Patch Changes

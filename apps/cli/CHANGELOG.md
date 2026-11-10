@@ -1,5 +1,26 @@
 # @keepcv/cli
 
+## 0.2.2
+
+### Patch Changes
+
+- c3c0ef1: Add separately approved public page reads and explicit bounded external search
+  and fetch engines. Require reported tool execution, observe external calls
+  separately from tokens, and retain requested-page provenance on interrupted
+  conversations. Document provider-side confinement limits and deployment
+  limitations. Add a composer Web search toggle, capability availability and a
+  per-turn switch that removes the search tool when disabled. Ordinary editing
+  and export remain independent.
+- Updated dependencies [c3c0ef1]
+  - @keepcv/agent@0.4.0
+  - @keepcv/schema@0.5.0
+  - @keepcv/api@0.6.0
+  - @keepcv/core@0.6.0
+  - @keepcv/ats-lint@0.1.7
+  - @keepcv/db@0.4.2
+  - @keepcv/interop@0.1.9
+  - @keepcv/render@0.2.3
+
 ## 0.2.1
 
 ### Patch Changes

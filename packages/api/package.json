@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/api",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "The KeepCV HTTP boundary: Hono routes, Zod validation, problem+json errors and a typed client.",
   "keywords": [
     "keepcv",
