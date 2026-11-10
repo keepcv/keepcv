@@ -180,7 +180,7 @@ it("opens chat first, reviews an exact change and refreshes the ordinary editor"
   expect(screen.getByRole("link", { name: "/profile" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remove page context" }));
   expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
-  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
+  expect(screen.queryByRole("button", { name: "Disable web search" })).not.toBeInTheDocument();
 });
 
 it("keeps download errors visible in disabled history and copies existing AI responses", async () => {
@@ -531,24 +531,23 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   expect(turns).toHaveLength(0);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.click(screen.getByRole("button", { name: "Conversation settings" }));
-  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
-  fireEvent.click(screen.getByRole("switch", { name: "Web search" }));
-  fireEvent.change(screen.getByLabelText("Public search query"), {
-    target: { value: "  exact public question  " },
-  });
-  fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
-    target: { value: "https://example.com/public" },
-  });
-  fireEvent.click(screen.getByLabelText(/Share these exact public URLs/));
+  fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
+  expect(screen.getByRole("menuitem", { name: "Attach files" })).toHaveFocus();
+  fireEvent.keyDown(document.activeElement ?? document, { key: "End" });
+  expect(screen.getByRole("menuitem", { name: "Recover unsent input" })).toHaveFocus();
+  fireEvent.keyDown(document.activeElement ?? document, { key: "Escape" });
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add files and tools" })).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
+  const web = screen.getByRole("menuitemcheckbox", { name: "Web search" });
+  expect(web).toHaveAttribute("aria-checked", "true");
+  fireEvent.keyDown(web, { key: "Escape" });
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Public search query")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/Approved public page/)).not.toBeInTheDocument();
   for (const text of ["Read this page", "Read it again"]) {
-    if (text === "Read it again") {
-      fireEvent.click(screen.getByRole("switch", { name: "Web search" }));
-      fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
-        target: { value: "https://example.com/other" },
-      });
-      expect(screen.getByLabelText(/Share these exact public URLs/)).not.toBeChecked();
-    }
+    if (text === "Read it again")
+      fireEvent.click(screen.getByRole("button", { name: "Disable web search" }));
     fireEvent.change(screen.getByLabelText("What would you like to do?"), {
       target: { value: text },
     });
@@ -557,14 +556,10 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
     await screen.findByText("Saved");
   }
   expect(turns).toHaveLength(2);
-  expect(turns[0]).toMatchObject({
-    webSearchEnabled: true,
-    publicResearchQuery: "  exact public question  ",
-    publicPages: { urls: ["https://example.com/public"], disclosure: true },
-  });
-  expect(turns[1]).not.toHaveProperty("publicPages");
+  expect(turns[0]).toMatchObject({ webSearchEnabled: true });
+  expect(turns[0]).not.toHaveProperty("publicResearchQuery");
+  expect(turns[0]).not.toHaveProperty("publicPages");
   expect(turns[1]).toMatchObject({ webSearchEnabled: false });
-  expect(turns[1]).not.toHaveProperty("publicResearchQuery");
   for (const turn of turns)
     expect(turn).toMatchObject({
       context: {
@@ -573,8 +568,10 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
       },
     });
   if (source === "record edit") {
-    fireEvent.click(screen.getByRole("button", { name: "Review before saving" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Conversation settings" }));
     fireEvent.click(screen.getByRole("button", { name: "Allow task edits" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     await screen.findByRole("button", { name: "Task edits on" });
     expect(grants).toContainEqual({
       grant: { resources: ["records", record.id], expiresInSeconds: 600, writes: 5 },
@@ -582,6 +579,11 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   }
   fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
   expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
-  expect(screen.getByRole("switch", { name: "Web search" })).not.toBeChecked();
+  expect(screen.queryByRole("button", { name: "Disable web search" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
+  fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Web search" }));
+  fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
+  expect(screen.getByRole("button", { name: "Disable web search" })).toBeInTheDocument();
   queries.clear();
 });

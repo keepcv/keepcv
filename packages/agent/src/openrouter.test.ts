@@ -254,7 +254,7 @@ it("keeps hosted research on the exact public query and preserves citations", as
                 id: "call_search",
                 type: "function",
                 function: {
-                  name: "research",
+                  name: "web_search",
                   arguments: JSON.stringify({ query: "Public resume question" }),
                 },
               },
@@ -592,7 +592,7 @@ it("pins external engines, bounds calls and retains requested URL provenance wit
   });
   expect(reply.sources).toEqual([
     {
-      title: "Requested page (provider supplied no citation)",
+      title: "example.com",
       url: "https://example.com/public",
       provenance: "requested-url",
       tool: "web_fetch",
@@ -602,7 +602,7 @@ it("pins external engines, bounds calls and retains requested URL provenance wit
   expect(bodies[1]).not.toContain("Private career note");
   expect(bodies[1]).toContain('"engine":"openrouter"');
   expect(bodies[1]).toContain('"max_uses":1');
-  expect(bodies[1]).toContain('"max_content_tokens":2000');
+  expect(bodies[1]).toContain('"max_content_tokens":12000');
   expect(events).toContainEqual(
     expect.objectContaining({ event: "external-tool", tool: "web_fetch", executed: 1 }),
   );
@@ -616,7 +616,7 @@ it.each([0, 2, undefined])(
     vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
       const body = await new Request(input, init).text();
       bodies.push(body);
-      if (bodies.length === 1) return webTool("research", { query: "approved" });
+      if (bodies.length === 1) return webTool("web_search", { query: "approved" });
       if (bodies.length === 2)
         return publicReply(executed, [
           { type: "url_citation", url_citation: { url: "https://example.com/public" } },
@@ -625,23 +625,44 @@ it.each([0, 2, undefined])(
     });
     const reply = await webModel().generate({ ...modelRequest(), publicResearchQuery: "approved" });
     expect(reply.sources).toEqual([]);
-    expect(bodies[2]).toContain("did not verify exactly one executed web tool");
+    expect(bodies[2]).toContain("did not verify execution within the web tool limit");
     expect(bodies).toHaveLength(3);
   },
 );
-it.each([
-  ["research", { query: "inferred from private facts" }],
-  ["web_fetch", { url: "https://example.com/search-result" }],
-  ["web_fetch", { url: "https://127.0.0.1/private" }],
-])("refuses unapproved external scope for %s before dispatch", async (name, args) => {
-  let calls = 0;
-  vi.stubGlobal("fetch", () =>
-    Promise.resolve(
-      ++calls === 1 ? webTool(name, args) : streamReply({ content: "Ask for approval." }),
-    ),
-  );
-  await webModel().generate({ ...modelRequest(), publicResearchQuery: "approved" });
-  expect(calls).toBe(2);
+it("chooses queries and follows search links without per-query or page approval", async () => {
+  const bodies: string[] = [];
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    const body = await new Request(input, init).text();
+    bodies.push(body);
+    if (bodies.length === 1) return webTool("web_search", { query: "Agent chosen question" });
+    if (bodies.length === 2)
+      return publicReply(1, [
+        { type: "url_citation", url_citation: { url: "https://other.example.org/result" } },
+      ]);
+    if (bodies.length === 3)
+      return webTool("web_fetch", { url: "http://other.example.org/result#details" });
+    if (bodies.length === 4) return publicReply(1);
+    return streamReply({ content: "Research complete." });
+  });
+  const model = createOpenRouterModel(agentConfigSchema.parse({ routes: [webRoute], web: {} }), {
+    OPENROUTER_API_KEY: "synthetic",
+  });
+  const answer = await model.generate({ ...modelRequest(), webSearchEnabled: true });
+  expect(bodies).toHaveLength(5);
+  expect(bodies[1]).toContain("Agent chosen question");
+  expect(bodies[3]).toContain("http://other.example.org/result#details");
+  expect(bodies[1]).not.toContain("allowed_domains");
+  expect(answer.sources).toHaveLength(2);
+});
+it("does not expose page fetching when web access is off", async () => {
+  let body = "";
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    body = await new Request(input, init).text();
+    return streamReply({ content: "Web is off." });
+  });
+  await webModel().generate({ ...modelRequest(), webSearchEnabled: false });
+  expect(body).not.toContain('"name":"web_search"');
+  expect(body).not.toContain('"name":"web_fetch"');
 });
 
 it("does not redispatch external calls when the per-turn envelope is exhausted", async () => {
@@ -701,6 +722,36 @@ it.each([false, true])(
       webSearchEnabled,
       publicResearchQuery: "Approved public query",
     });
-    expect(body.includes('"name":"research"')).toBe(webSearchEnabled);
+    expect(body.includes('"name":"web_search"')).toBe(webSearchEnabled);
   },
 );
+
+it("retains long page findings when only executed usage is reported", async () => {
+  const bodies: string[] = [];
+  const events: AgentUsageEvent[] = [];
+  const finding = `${"Useful public source material. ".repeat(250)}END_SOURCE`;
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    bodies.push(await new Request(input, init).text());
+    if (bodies.length === 1) return webTool("web_fetch", { url: "https://example.com/page" });
+    if (bodies.length === 2)
+      return Response.json({
+        usage: { server_tool_use_details: { tool_calls_executed: 1 } },
+        choices: [{ finish_reason: "stop", message: { content: finding } }],
+      });
+    return streamReply({ content: "Page reviewed." });
+  });
+  const answer = await webModel(events).generate({ ...modelRequest(), webSearchEnabled: true });
+  expect(bodies[2]).toContain("END_SOURCE");
+  expect(answer.sources[0]).toMatchObject({
+    url: "https://example.com/page",
+    provenance: "requested-url",
+  });
+  expect(events).toContainEqual(
+    expect.objectContaining({
+      event: "external-tool",
+      executed: 1,
+      requested: null,
+      outcome: "complete",
+    }),
+  );
+});

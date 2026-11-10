@@ -104,13 +104,13 @@ it.each([
         );
       }
       if (config.assistant) {
-        const search = screen.getByRole("switch", { name: "Web search" });
+        fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
+        const search = screen.getByRole("menuitemcheckbox", { name: "Web search" });
         expect(search).toBeEnabled();
-        expect(search).not.toBeChecked();
-        fireEvent.click(search);
-        expect(screen.getByLabelText("Public search query")).toBeInTheDocument();
-        fireEvent.click(search);
+        expect(search).toHaveAttribute("aria-checked", "true");
+        fireEvent.keyDown(search, { key: "Escape" });
         expect(screen.queryByLabelText("Public search query")).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Disable web search" }));
       }
       if (!config.assistant) {
         fireEvent.click(screen.getByRole("link", { name: "Conversations" }));

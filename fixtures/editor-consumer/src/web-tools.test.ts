@@ -30,7 +30,7 @@ it.each(["disabled", "search", "fetch"])(
                 id: "public",
                 type: "function",
                 function: {
-                  name: mode === "search" ? "research" : "web_fetch",
+                  name: mode === "search" ? "web_search" : "web_fetch",
                   arguments: JSON.stringify(
                     mode === "search"
                       ? { query: "Public question" }
@@ -80,9 +80,8 @@ it.each(["disabled", "search", "fetch"])(
       messages: [{ role: "user", content: "Synthetic private career note" }],
       attachments: [],
       context: "/profile",
-      publicResearchQuery: "Public question",
-      publicPages: { urls: ["https://example.com/public"], disclosure: true },
-      webSearchEnabled: mode === "search",
+      publicResearchQuery: undefined,
+      webSearchEnabled: mode !== "disabled",
       signal: new AbortController().signal,
       text: () => Promise.resolve(),
       read: () => Promise.resolve([]),
@@ -91,7 +90,7 @@ it.each(["disabled", "search", "fetch"])(
     };
     const reply = await model.generate(request);
     expect(model.webSearchAvailable).toBe(true);
-    expect(bodies[0]?.includes('"name":"research"')).toBe(mode === "search");
+    expect(bodies[0]?.includes('"name":"web_search"')).toBe(mode !== "disabled");
     if (mode === "disabled") expect(bodies).toHaveLength(1);
     else {
       expect(bodies).toHaveLength(3);

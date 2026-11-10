@@ -1,5 +1,12 @@
 # @keepcv/web
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [af3b8e3]
+  - @keepcv/editor@0.9.0
+
 ## 0.0.12
 
 ### Patch Changes

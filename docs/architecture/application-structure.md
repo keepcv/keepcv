@@ -1503,9 +1503,10 @@ Profile labels and placeholders carry familiar field guidance without repeating
 it below every input. Template collection, type and search share one toolbar;
 cards identify template type without repeating the selected collection.
 
-Chat starts with the message and explicit data-sharing consent. Attachments,
-research, model-service details, task permissions and recovery expand on request.
-Selected files and active permissions open their controls. Unavailable chat shows
+Chat starts with the message and first-use data-sharing consent. Attachments,
+web access, model-service details, task permissions and recovery expand on
+request. Selected files and active permissions stay visible without opening
+settings. Unavailable chat shows
 one notice and a store link, with history and recovery still reachable. Completed
 proposals collapse without discarding their exact operations or receipt. Ask KeepCV
 routes to the Assistant workspace with source-page context.
@@ -1605,9 +1606,10 @@ omitted on conversation routes; store search remains reachable with its keyboard
 shortcut. Mobile keeps the application header and opens history in a bounded
 dialog. Ask KeepCV uses the same full-page transcript and composer as Assistant.
 
-Consent stays visible beside the composer. File selection, current review/task
-authority and settings are compact controls; model disclosure, exact public
-research input, file limits and explicit unsent-input recovery expand in settings.
+Consent is visible until acknowledged and remains changeable in settings. File
+selection, web access and settings use the plus menu; active web/task permissions
+appear as compact chips. Model disclosure, task settings and file limits are
+collapsed into a settings dialog.
 Pending proposals show human-readable field values first, with identifiers,
 ordering keys and the full current/operation payload available in exact review.
 Completed decisions collapse to a short status and retain their receipts.
@@ -1645,16 +1647,19 @@ No time estimate, confidence score, simulated reasoning, feedback telemetry or
 automatic retry is invented by the UI.
 
 
-Composer settings separately expose exact public page URLs and URL disclosure
-consent. Editing the URL list clears consent. The public query is sent without
-trimming or inference. Page approval is independent of search results, attachments
-and task edit grants. Requested-page provenance stays visible in source labels;
-interrupted replies keep already observed sources and tool activity.
+The composer keeps one message field and a compact action row. Its plus menu
+contains file attachment, Web search, conversation settings and unsent-input
+recovery. An enabled Web search appears as a removable chip; no query or URL
+approval fields appear. Turning it on permits agent-chosen queries and page
+reads for the turn. Web access defaults on when configured and the choice lasts
+for the connected editor session, including new threads. It is unavailable when
+capabilities do not advertise web support. Shared Menu keyboard navigation,
+Escape, outside focus/click dismissal and focus return apply to these controls.
 
-
-The composer shows Web search directly as an accessible on/off switch. It starts
-off, resets on conversation changes and reveals the public-query field when on.
-The switch is disabled while generating and when capabilities do not advertise
-search support. Switching it off omits the query and sends an explicit disabled
-flag; an adapter then omits the search tool from that turn. Configured server
-engines remain authoritative; a browser switch cannot enable an absent service.
+Conversation settings use a separate dialog for sharing recipients and consent,
+current-resource task edits and collapsed file limits. First-use model sharing
+acknowledgment remains visible until accepted, then lives in settings for the
+current connected editor session. Ask KeepCV does not ask for that acknowledgment
+again. This acknowledgment creates no edit grant. Active task permission remains
+visible as a chip and review rules are unchanged. Menus/dialogs do not expand the
+composer or crowd its mobile action row. Attachments remain visible when selected.

@@ -34,7 +34,7 @@ export interface ModelRequest {
   messages: { role: "user" | "assistant"; content: string }[];
   attachments: AgentAttachment[];
   context: string;
-  publicResearchQuery: string | undefined;
+  publicResearchQuery?: string | undefined;
   webSearchEnabled?: AgentTurn["webSearchEnabled"];
   publicPages?: AgentTurn["publicPages"];
   source?: (source: AgentSource) => Promise<void>;
@@ -455,7 +455,7 @@ export function createAgent(options: {
               publicPages: input.publicPages,
               source: async (value) => {
                 await check({ ...context, phase: "generate" });
-                if (sources.length >= 40) throw new AgentRefusalError("Source limit reached.");
+                if (sources.length >= 128) throw new AgentRefusalError("Source limit reached.");
                 sources.push(agentSourceSchema.parse(value));
               },
               signal: controller.signal,

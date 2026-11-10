@@ -6,12 +6,9 @@ export function publicUrl(value: string, domains?: readonly string[]): boolean {
     const url = new URL(value);
     const host = url.hostname;
     return (
-      url.protocol === "https:" &&
+      ["http:", "https:"].includes(url.protocol) &&
       !url.username &&
       !url.password &&
-      !url.port &&
-      !url.hash &&
-      value.startsWith(`https://${host}/`) &&
       isIP(host) === 0 &&
       !host.includes(":") &&
       /^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?)+$/.test(host) &&
@@ -25,25 +22,37 @@ export function publicUrl(value: string, domains?: readonly string[]): boolean {
 }
 
 const domains = z
-  .array(z.string().refine((host) => publicUrl(`https://${host}/`)))
+  .array(
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine(
+        (host) => publicUrl(`https://${host}/`) && new URL(`https://${host}/`).hostname === host,
+      ),
+  )
   .min(1)
   .max(20);
 export const webConfigSchema = z
   .object({
     search: z
-      .object({ engine: z.literal("parallel"), mode: z.literal("turbo"), domains })
+      .object({
+        engine: z.literal("parallel"),
+        mode: z.literal("turbo"),
+        domains: domains.optional(),
+      })
       .strict()
-      .optional(),
+      .default({ engine: "parallel", mode: "turbo" }),
     fetch: z
-      .object({ engine: z.literal("openrouter"), domains })
+      .object({ engine: z.literal("openrouter"), domains: domains.optional() })
       .strict()
-      .optional(),
-    maxCalls: z.number().int().min(1).max(4).default(2),
+      .default({ engine: "openrouter" }),
+    maxCalls: z.number().int().min(1).max(32).default(8),
     maxResults: z.number().int().min(1).max(10).default(5),
-    maxCharacters: z.number().int().min(1).max(10000).default(1500),
-    maxContentTokens: z.number().int().min(1).max(10000).default(2000),
-    maxResponseBytes: z.number().int().min(1024).max(262144).default(65536),
-    deadlineMs: z.number().int().min(1000).max(30000).default(15000),
+    maxCharacters: z.number().int().min(1).max(100000).default(4000),
+    maxContentTokens: z.number().int().min(1).max(100000).default(12000),
+    maxResponseBytes: z.number().int().min(1024).max(2097152).default(262144),
+    deadlineMs: z.number().int().min(1000).max(30000).default(30000),
   })
   .strict();
 
@@ -67,7 +76,7 @@ export async function boundedJson(response: Response, maxBytes: number): Promise
 }
 
 export const serverToolUsageSchema = z.object({
-  tool_calls_requested: z.number().int().nonnegative(),
+  tool_calls_requested: z.number().int().nonnegative().optional(),
   tool_calls_executed: z.number().int().nonnegative(),
   web_search_requests: z.number().int().nonnegative().optional(),
 });

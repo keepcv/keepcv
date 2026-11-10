@@ -849,34 +849,28 @@ bounded-lease predicate; invalid caller configuration cannot create a live task
 whose lease another runtime would treat as out of bounds.
 
 
-### Public query and page scopes
+### Agent-directed web access
 
-Turns optionally accept `publicPages: { urls, disclosure: true }`, separately
-from exact `publicResearchQuery`. The page list has at most four bounded URLs;
-search citations never expand it. The runtime passes only the current turn's
-approvals to its model. Historical approvals are data, never renewed authority.
-The built-in adapter admits bounded public-only hosted requests with explicit
-engine configuration and verified execution counters. Provider-side query,
-redirect and network handling are delegated to the configured provider; details and
-limits are specified in the agent package's Bounded public web tools contract.
-No arbitrary HTTP, shell, filesystem or credential tool is added. Existing
-read/propose/apply authority checks and explicit edit review remain in force.
+The current turn's webSearchEnabled flag controls both search and page reading.
+When enabled, the assistant may choose/refine queries and follow result URLs
+without exact-query or per-page approvals. Explicit false removes both tools.
+Legacy publicResearchQuery/publicPages fields remain accepted and retained in
+history; when the flag is omitted they preserve older callers' web opt-in. They
+no longer restrict generated queries/URLs. Historical messages never opt in a
+new turn. Engine settings, optional domain filters and credentials are server
+configuration. webSearchAvailable defaults to false for legacy custom runtimes.
+Custom models advertise support and honor the turn flag.
 
-`ModelRequest.source` optionally records an observed source as soon as it is
-available. The runtime validates and retains at most forty such records for
-interrupted history. `AgentSource` optionally describes provenance (`citation`
-or `requested-url`) and web tool (`web_search` or `web_fetch`). A requested URL
-is explicitly not a provider citation. Existing sources and custom models remain
-compatible. Token usage events gain a separate `external-tool` observer variant
-with admission and provider execution counts; application stream vocabulary is
-unchanged. Unknown execution counts refuse research findings.
+The built-in adapter preserves current owner/session checks and cancellation
+before and after external calls. It verifies reported execution, observes web
+usage separately from tokens, bounds calls/context/bytes/deadlines and retains
+source provenance. The agent package documents its execution envelope and the
+provider boundary. No shell, filesystem, credential or arbitrary HTTP tool is
+added. Existing read/propose/apply checks and review remain in force.
 
-
-`webSearchAvailable` reports configured model search support and defaults to
-false for legacy custom runtimes. The editor exposes an initially off Web search
-switch and sends optional `webSearchEnabled` on each turn. Explicit false removes
-the built-in adapter's research tool regardless of a supplied public query.
-Omitting the flag preserves older callers' explicit-query approval. A custom
-AgentModel optionally advertises webSearchAvailable and honors the turn flag.
-The runtime persists the chosen flag as history without restoring it as active
-permission when a conversation is opened.
+ModelRequest.source records validated observations for interrupted history, up
+to 128 per turn. AgentSource retains optional citation/requested-url provenance
+and web_search/web_fetch tool names. Requested URLs are not provider citations.
+Search without annotations may return findings without invented source links.
+Application stream events and native archive v3 are unchanged. Legacy optional
+approval fields remain readable in stored messages and archives.

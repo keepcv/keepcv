@@ -31,8 +31,8 @@ Models and providers cannot be chosen through conversation requests.
 Without external web configuration, an optional research route uses native
 search. Enabling that route requires nativeSearchPolicyConfirmed: true after the operator verifies a locked native-only
 OpenRouter workspace search policy and tests an unsupported route is refused.
-A request's native engine alone is not a no-fallback guarantee. Research runs
-only for the exact public query the user supplies in the research control.
+A request's native engine alone is not a no-fallback guarantee. With web access
+enabled, the agent chooses queries for this route.
 
 Image and native-PDF support are separate route capabilities. Qualify the actual
 model/endpoint and its data policy before enabling a flag. PDF parsing is pinned
@@ -226,100 +226,63 @@ defaulting to 90000. Invalid configuration is refused at startup so a live task
 cannot issue an out-of-bound lease that another runtime would ignore.
 
 
-## Bounded public web tools
+## Web search and page reads
 
-Optional `web` configuration on `AgentConfig` extends the research route. It
-selects Parallel `turbo` search and OpenRouter fetch explicitly; no `auto`,
-provider fallback or alternate engine is requested. Omit `web` to retain the
-legacy native-only research configuration; that configuration still requires
-its locked native-only workspace policy. Omit `research` to disable web tools.
+Enable public web tools on the server with `web: {}`. By default the adapter
+uses the first configured inference route, Parallel turbo search and OpenRouter
+fetch. An explicit research route selects a separate approved model/provider.
+Credentials and engine settings stay on the server; no alternate engine/provider
+is used after refusal. Existing native research configuration remains supported.
 
 ```json
 {
   "routes": [{ "model": "qualified/model", "providers": ["approved"] }],
-  "research": { "model": "qualified/public-model", "providers": ["approved"] },
-  "web": {
-    "search": { "engine": "parallel", "mode": "turbo", "domains": ["example.com"] },
-    "fetch": { "engine": "openrouter", "domains": ["example.com"] },
-    "maxCalls": 2,
-    "maxResults": 5,
-    "maxCharacters": 1500,
-    "maxContentTokens": 2000,
-    "maxResponseBytes": 65536,
-    "deadlineMs": 15000
-  }
+  "web": {}
 }
 ```
 
-Keep credentials and this configuration server-side. Locked workspace settings
-must agree with the explicitly selected engines. Neither schema nor core
-contains credentials, provider choices or deployment policy.
+Configured web access starts on, with the user choice retained across threads
+in the connected editor session. The composer plus menu controls Web search. The assistant chooses
+queries and URLs, refines searches and follows result links without exact-query
+or per-page approval. The active chip turns it off. `webSearchEnabled: false`
+removes both tools. Historical publicResearchQuery/publicPages fields remain
+accepted for older callers; omitting the flag retains their web opt-in. They no
+longer constrain generated queries or pages. Current-turn permission never comes
+from imported conversation history. Custom models may advertise
+webSearchAvailable and must honor the turn flag.
 
-The composer exposes a Web search switch, off initially and reset when changing
-conversations. Enabling it reveals a public-query field. Capabilities report
-`webSearchAvailable`; the switch is disabled when search is unavailable. Each
-turn sends `webSearchEnabled`. An explicit false removes the research tool from
-the model's tool list, even if a public query is present. Older callers that omit
-the flag retain search approval through their explicit public query. Custom
-models can advertise `webSearchAvailable` and should honor the turn flag.
+Search/fetch domains may be supplied as optional server filters. With no filter,
+public HTTP/HTTPS pages are available. Public URL checks reject credentials,
+local/internal hostnames and IP literals. Engine-side DNS and redirects are
+handled by the selected service. KeepCV never directly downloads page URLs.
 
-The turn's `publicResearchQuery` is compared byte-for-byte with the research tool
-argument. It is never derived from messages, career records, Evidence or files.
-`publicPages: { urls: [...], disclosure: true }` separately consents to disclosing
-up to four exact URLs. Search results authorize no fetch. A fetch tool argument
-must match one approved URL exactly. Isolated hosted requests contain only the
-approved query or URL and fixed instructions; private conversation context,
-attachments and resource reads never enter that hosted request.
+The default shared call allowance is eight hosted requests per turn (configurable
+up to 32). Each hosts at most one server-tool execution; there are no retries or
+engine failovers. Search defaults to five results and 4000 excerpt characters per
+result; fetched context defaults to approximately 12000 tokens. Provider bodies
+are bounded to 256 KiB by default and calls have a thirty-second deadline. Search
+excerpt/context limits may be raised to 100000 characters/tokens and response
+bytes to 2 MiB. Returned findings are no longer cut at the search excerpt size.
+Overall task deadlines and the model tool-step limit still apply. Consumers can
+reserve the configured envelope before generate; usage observation does not
+perform admission or release a reservation.
 
-Local URL validation requires canonical HTTPS, exact configured hostnames, no
-credentials, explicit ports, fragments, IP literals, localhost or local/internal
-suffixes. Numeric, alternate IPv4, IPv6, percent-encoded authority and hostname
-suffix tricks are refused. KeepCV never downloads the supplied URL. Inference
-HTTP redirects are refused. DNS resolution, page redirects, DNS rebinding,
-private-address blocking and internal server-tool arguments happen inside the
-selected service: local validation cannot verify or constrain those operations.
-The provider documentation promises domain filtering and truncation for these
-engines; it does not specify their redirect or private-address security contract.
-Internal query reformulation, redirects and resolved addresses are delegated to
-the configured service. KeepCV checks the inputs it sends and does not claim
-visibility into those service internals. These provider limitations do not gate
-the Web search switch or availability of the configured tools.
+External-tool observer events retain call identity, engine, observed execution
+and requested counts (unknown values remain null), separately from model tokens.
+A reported execution within the server-tool limit is required; a model's claim
+alone is insufficient. Citation annotations become sources. When fetch supplies
+none, the requested URL is retained with requested-url provenance, never an
+invented citation. A search without annotations can return findings without
+inventing source links. Sources and activity survive interrupted turns and native
+recovery. Source retention is bounded to 128 observed records per turn.
 
-The full external admission envelope is `maxCalls` hosted requests per turn,
-with at most one requested server-tool execution per hosted request, zero
-retries and no failover after a tool starts. A consumer can reserve the entire
-configured envelope before calling `generate`; usage observation does not
-perform admission or release a reservation. Search requests bound per-call and
-total results and excerpt characters; fetch requests bound approximate context
-tokens. Responses are read with a streaming byte ceiling, findings supplied to
-the main model have a character ceiling, and each hosted request has a deadline.
-Ceilings are four calls, ten results, 10000 characters, 10000 content tokens,
-256 KiB and thirty seconds; defaults are in the example. Cancellation cannot
-retract a provider request already admitted or its charges.
-
-An `external-tool` usage event identifies `callId`, optional `runId`, actual
-web tool, selected engine, admitted calls, observed requested/executed counts
-(or null) and outcome, separately from model token usage. Exactly one requested
-and one executed call in `usage.server_tool_use_details` are required before
-findings are accepted. Unknown, zero and excess counts refuse findings. Missing
-token counts remain unknown. These counters prove reported execution, not the
-provider's internal destination, query or fetched content. Observers are best
-effort and carry no private arguments/results. Consumer accounting should retain
-the reservation when usage is missing or a process crashes.
-
-Search sources come from returned citations. Fetch without annotations retains
-the approved requested URL with `provenance: "requested-url"`; that is a record
-of the request, not an invented citation or proof of the final redirect target.
-Sources observed before a later interruption and actual tool names/purposes
-remain in saved history and native recovery. No new application event type or
-database migration is needed. The optional native-v3 fields are additive; older
-readers may discard them, so upgrade all readers before transferring histories.
-
-Fetched text remains untrusted model input. It cannot create tools, consent,
-scopes or edit authority. Topic/factual instructions are advisory; exact typed
-operations and current owner/session authorization still guard every read,
-proposal and application. Normal editing, history, originals and export do not
-require any web service or assistant capability.
+The general sharing acknowledgment covers model processing for the current
+connected editor session. Web access additionally permits the assistant to send
+its chosen queries and page URLs to web services. Private Evidence has no model
+read tool. Retrieved content is untrusted data and cannot grant edit authority.
+Current owner/session checks continue before and after external work and before
+reads, proposals and application. Normal editing and export are independent.
+Native archive v3 and the application stream event vocabulary are unchanged.
 
 Provider references: [search](https://openrouter.ai/docs/guides/features/server-tools/web-search)
 and [fetch](https://openrouter.ai/docs/guides/features/server-tools/web-fetch).
