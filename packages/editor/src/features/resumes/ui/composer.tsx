@@ -576,7 +576,7 @@ export function Composer({
       <ContentGuide />
 
       {detail.sections.length === 0 ? (
-        <Empty title="Add your first section">
+        <Empty title="Add your first section" spot="compose">
           Start with Experience or Education below. Add records to the section, then choose their
           points.
         </Empty>

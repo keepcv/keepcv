@@ -725,6 +725,10 @@ provider credentials. /v1/agent serves capabilities, owned conversations, turns,
 attachments, proposal decisions, cancellation and bounded task grants. All routes
 are authenticated and declared with shared Zod schemas. Turns stream application
 events; reconnect reads persisted state and never repeats inference automatically.
+An event has type text, status, error, done or tool and a text payload. A tool
+event's text encodes a validated name/summary pair. These record an invocation,
+not its success, and remain in the reply's optional toolCalls history field.
+They contain no raw arguments, tool results or provider credentials.
 Provider, model, credential, base URL and engine overrides are not accepted.
 
 Original attachments upload through a bounded authenticated endpoint and enter

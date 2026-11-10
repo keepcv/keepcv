@@ -1,4 +1,4 @@
-import { type GlyphName, Icon, Kbd, Spot } from "@keepcv/editor/ui";
+import { type GlyphName, Icon, Kbd, Logo, Spot, type SpotName } from "@keepcv/editor/ui";
 import type { ReactNode } from "react";
 
 function Command({ children }: { children: string }) {
@@ -12,18 +12,24 @@ function Command({ children }: { children: string }) {
 
 function Feature({
   icon,
+  spot,
   title,
   children,
 }: {
   icon: GlyphName;
+  spot?: SpotName;
   title: string;
   children: ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-      <span className="grid size-8 place-items-center rounded-lg bg-brand-soft text-brand-text">
-        <Icon name={icon} size="md" />
-      </span>
+      {spot === undefined ? (
+        <span className="grid size-8 place-items-center rounded-lg bg-brand-soft text-brand-text">
+          <Icon name={icon} size="md" />
+        </span>
+      ) : (
+        <Spot name={spot} className="w-32" />
+      )}
       <h3 className="mt-3 text-sm font-semibold text-text">{title}</h3>
       <p className="mt-1 text-sm leading-relaxed text-text-muted">{children}</p>
     </div>
@@ -50,12 +56,10 @@ export function Landing() {
     <main className="min-h-screen bg-canvas text-text">
       <div className="backdrop-grid border-b border-line">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-text-muted shadow-card">
-            <span className="surface-gradient-brand grid size-4 place-items-center rounded text-on-brand">
-              <Icon name="resume" size="xs" />
-            </span>
-            KeepCV - a career store that compiles into resumes
-          </span>
+          <Logo label="KeepCV" className="h-10" />
+          <p className="mt-3 text-xs font-medium text-text-muted">
+            A career store that compiles into resumes
+          </p>
 
           <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
             Your career history is not <span className="text-gradient-brand">a resume file</span>.
@@ -113,7 +117,7 @@ export function Landing() {
           <Feature icon="variants" title="Wording with a history">
             Editing appends. A resume pins the exact revision it was sent with.
           </Feature>
-          <Feature icon="resume" title="A resume is a selection">
+          <Feature icon="resume" spot="compose" title="A resume is a selection">
             Choose, order and toggle. Taking something off never touches the store.
           </Feature>
           <Feature icon="match" title="Read the posting">
@@ -126,7 +130,7 @@ export function Landing() {
           <Feature icon="budget" title="A length budget">
             The browser lays it out, the app counts the pages and names what sits past your limit.
           </Feature>
-          <Feature icon="history" title="Versions and snapshots">
+          <Feature icon="history" spot="snapshot" title="Versions and snapshots">
             Captured automatically; star one to keep it. An old one can be sent again as it was.
           </Feature>
           <Feature icon="download" title="Leaves in your format">

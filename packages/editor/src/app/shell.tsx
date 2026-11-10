@@ -46,6 +46,7 @@ export function Shell({
   onSignOut?: (() => void) | undefined;
 }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
+  const conversationPage = path === "/" || path === "/assistant" || path === "/conversations";
   const [palette, setPalette] = useState(false);
   // Keyed by the path it was opened on rather than closed by an effect watching
   // one: reaching a destination is what closes it, and that is a derivation.
@@ -124,7 +125,12 @@ export function Shell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="z-20 shrink-0 border-b border-line bg-surface">
+        <header
+          className={cn(
+            "z-20 shrink-0 border-b border-line bg-surface",
+            conversationPage && "lg:hidden",
+          )}
+        >
           <div className="flex h-14 w-full items-center gap-3 px-4 lg:px-6">
             <Button
               tone="ghost"
@@ -146,7 +152,12 @@ export function Shell({
           </div>
         </header>
 
-        <main className="min-h-0 w-full flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+        <main
+          className={cn(
+            "min-h-0 w-full flex-1",
+            conversationPage ? "overflow-hidden" : "overflow-y-auto px-4 py-6 lg:px-6",
+          )}
+        >
           <Outlet />
         </main>
       </div>

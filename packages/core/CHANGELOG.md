@@ -1,5 +1,20 @@
 # @keepcv/core
 
+## 0.5.0
+
+### Minor Changes
+
+- Show assistant tool names and their purpose directly in the chat during execution and in saved replies. Preserve this optional activity in conversation history and native archives, including interrupted replies. Existing messages and custom model adapters remain compatible.
+
+  Clarify that adding a Point creates its phrasing set, so the model does not propose creating the same set twice.
+  Identify attached text files as source material so replies can attribute their contents correctly.
+  Separate narration across tool steps into paragraphs in both live and saved messages.
+
+### Patch Changes
+
+- Updated dependencies
+  - @keepcv/schema@0.4.0
+
 ## 0.4.0
 
 ### Minor Changes

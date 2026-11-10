@@ -501,6 +501,11 @@ export const agentActionSchema = z.object({
   before: z.string(),
   receipt: z.string().nullable(),
 });
+export const agentToolCallSchema = z.object({
+  name: z.string().min(1).max(80),
+  summary: z.string().min(1).max(300),
+});
+export type AgentToolCall = z.infer<typeof agentToolCallSchema>;
 export const agentMessageSchema = z.object({
   id: uuidSchema,
   role: z.enum(["user", "assistant"]),
@@ -511,6 +516,7 @@ export const agentMessageSchema = z.object({
   createdAt: timestampSchema,
   state: z.enum(["complete", "interrupted"]),
   navigation: z.string().nullable(),
+  toolCalls: z.array(agentToolCallSchema).max(128).optional(),
 });
 export const agentRunSchema = z.object({
   id: uuidSchema,

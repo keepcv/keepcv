@@ -1,4 +1,5 @@
 import {
+  type AgentEvent,
   type AgentRuntime,
   ConcurrencyConflictError,
   newUuid,
@@ -31,7 +32,7 @@ beforeEach(async () => {
     disclosure: "Synthetic provider",
   });
 });
-const turn = async (id = newUuid()) =>
+const turn = async (id = newUuid(), emit: (event: AgentEvent) => Promise<void> = async () => {}) =>
   await runAsOwner(
     owner,
     async () =>
@@ -45,10 +46,30 @@ const turn = async (id = newUuid()) =>
           context: { path: "/profile" },
           disclosure: true,
         },
-        async () => {},
+        emit,
         new AbortController().signal,
       ),
   );
+
+it("streams tool calls and retains them when the model is interrupted", async () => {
+  const events: AgentEvent[] = [];
+  generate.mockImplementation(async (request) => {
+    await request.tool?.("read_store", "Read profile");
+    throw new Error("Synthetic interruption");
+  });
+  await turn(newUuid(), (event) => {
+    events.push(event);
+    return Promise.resolve();
+  });
+  expect(events.find((event) => event.type === "tool")?.text).toBe(
+    JSON.stringify({ name: "read_store", summary: "Read profile" }),
+  );
+  const saved = await run(async (r) => await r.agent.get(conversationId));
+  expect(saved.messages.at(-1)).toMatchObject({
+    state: "interrupted",
+    toolCalls: [{ name: "read_store", summary: "Read profile" }],
+  });
+});
 
 it("reviews edits and returns the same receipt without applying twice", async () => {
   const profile = await run(async (r) => await r.profile.get());

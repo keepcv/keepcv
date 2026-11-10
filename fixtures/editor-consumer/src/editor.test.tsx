@@ -3,6 +3,7 @@ import { createApi, createClient, sessionTokenAuth } from "@keepcv/api";
 import { NotFoundError, newUuid } from "@keepcv/core";
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import { type DataPagePresentation, Editor } from "@keepcv/editor";
+import { Logo, Spot } from "@keepcv/editor/ui";
 import { exportDocumentSchema, pointSchema, type Store } from "@keepcv/schema";
 import { QueryClient } from "@tanstack/react-query";
 import { createRootRoute, createRouter } from "@tanstack/react-router";
@@ -20,6 +21,18 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.clear();
+});
+
+it("delivers the shared brand and snapshot art through the installed UI entry", () => {
+  render(
+    <>
+      <Logo label="KeepCV" />
+      <Spot name="snapshot" />
+    </>,
+  );
+
+  expect(screen.getAllByRole("img")).toHaveLength(1);
+  expect(screen.getByRole("img", { name: "KeepCV" })).toBeInTheDocument();
 });
 
 it("uses installed entry points for keyboard navigation, writes, cache and sign-out", async () => {

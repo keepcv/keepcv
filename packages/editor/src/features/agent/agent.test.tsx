@@ -3,10 +3,10 @@ import { newUuid } from "@keepcv/core";
 import { agentConversationSchema } from "@keepcv/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { buildRouter } from "../../app/router.js";
-import { emptyStore } from "../../store.harness.js";
+import { addRecord, emptyStore } from "../../store.harness.js";
 import { jsonOf } from "../../store-server.harness.js";
 
 afterEach(() => {
@@ -128,7 +128,7 @@ it("opens chat first, reviews an exact change and refreshes the ordinary editor"
     </QueryClientProvider>,
   );
   expect(
-    await screen.findByRole("heading", { name: "Your career, in conversation" }),
+    await screen.findByRole("heading", { name: "What are we working on?" }),
   ).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("What would you like to do?"), {
     target: { value: "Set my name to Ada" },
@@ -170,6 +170,16 @@ it("opens chat first, reviews an exact change and refreshes the ordinary editor"
   fireEvent.click(screen.getByRole("link", { name: "Profile" }));
   expect(await screen.findByLabelText("Name")).toHaveValue("Ada");
   expect(screen.getByRole("button", { name: "Ask KeepCV" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Ask KeepCV" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/assistant"));
+  expect(screen.queryByRole("dialog", { name: "Ask KeepCV" })).not.toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "What are we working on?" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Applied once")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "/profile" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Remove page context" }));
+  expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
 });
 
 it("keeps download errors visible in disabled history and copies existing AI responses", async () => {
@@ -255,9 +265,7 @@ it("keeps download errors visible in disabled history and copies existing AI res
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  fireEvent.change(await screen.findByRole("combobox", { name: "Conversation" }), {
-    target: { value: id },
-  });
+  fireEvent.click(await screen.findByRole("button", { name: "Saved discussion" }));
   expect(await screen.findByText("Saved response")).toBeInTheDocument();
   const transcript = screen.getByRole("region", { name: "Conversation transcript" });
   Object.defineProperties(transcript, {
@@ -279,60 +287,155 @@ it("keeps download errors visible in disabled history and copies existing AI res
   queries.clear();
 });
 
-it("shows the lease refusal from Stop without claiming that a foreign task stopped", async () => {
+it.each([false, true])(
+  "distinguishes acknowledged Stop from lease refusal (acknowledged=%s)",
+  async (acknowledged) => {
+    const store = emptyStore();
+    const id = newUuid();
+    const chat = agentConversationSchema.parse({
+      id,
+      title: "Running",
+      createdAt: store.profile.createdAt,
+      updatedAt: store.profile.updatedAt,
+      archivedAt: null,
+      messages: [],
+      actions: [],
+      run: null,
+    });
+    let closeStream = () => {};
+    let turns = 0;
+    const detail =
+      "No local task was confirmed stopped. Its running lease remains; wait for lease expiry or stop it in the process executing the task. Local task access was cleared.";
+    vi.stubGlobal("fetch", (url: string | URL | Request, init?: RequestInit) => {
+      const request = new Request(url, init);
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/store") return Promise.resolve(jsonOf(store));
+      if (path.endsWith("capabilities"))
+        return Promise.resolve(jsonOf({ available: true, disclosure: "Synthetic" }));
+      if (path === "/v1/agent/conversations")
+        return Promise.resolve(
+          request.method === "POST" ? jsonOf(chat, 201) : jsonOf({ items: [] }),
+        );
+      if (path.endsWith("/attachments")) return Promise.resolve(jsonOf({ items: [] }));
+      if (path.endsWith("/cancel"))
+        return Promise.resolve(
+          acknowledged
+            ? jsonOf({ saved: true })
+            : jsonOf(
+                { type: "about:blank", title: "Conflict", status: 409, detail, instance: path },
+                409,
+              ),
+        );
+      if (path.endsWith("/turns")) {
+        turns++;
+        return Promise.resolve(
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    'event: status\ndata: {"type":"status","text":"Reading"}\n\n',
+                  ),
+                );
+                request.signal.addEventListener(
+                  "abort",
+                  () =>
+                    controller.error(
+                      new DOMException("BodyStreamBuffer was aborted", "AbortError"),
+                    ),
+                  { once: true },
+                );
+                closeStream = () => {
+                  if (!request.signal.aborted) controller.close();
+                };
+              },
+            }),
+            { headers: { "content-type": "text/event-stream" } },
+          ),
+        );
+      }
+      return Promise.resolve(jsonOf(chat));
+    });
+    window.history.replaceState(null, "", "/");
+    const queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const router = buildRouter({
+      queries,
+      api: createClient(window.location.origin),
+      signOut: undefined,
+    });
+    try {
+      render(
+        <QueryClientProvider client={queries}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
+      await waitFor(() =>
+        expect(queries.getQueryData(["agent", "capabilities"])).toMatchObject({ available: true }),
+      );
+      fireEvent.change(await screen.findByRole("textbox", { name: "What would you like to do?" }), {
+        target: { value: "Review" },
+      });
+      fireEvent.click(screen.getByRole("checkbox"));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reading"));
+      fireEvent.click(screen.getByRole("button", { name: "Stop task" }));
+      if (acknowledged) {
+        await waitFor(() =>
+          expect(screen.queryByRole("button", { name: "Stop task" })).not.toBeInTheDocument(),
+        );
+        expect(screen.getByRole("status")).toHaveTextContent("Stop requested");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      } else {
+        expect(await screen.findByRole("alert")).toHaveTextContent(detail);
+        expect(screen.getByRole("status")).not.toHaveTextContent("Stop requested");
+      }
+      expect(turns).toBe(1);
+    } finally {
+      closeStream();
+      cleanup();
+      queries.clear();
+    }
+  },
+);
+
+it("opens the legacy history URL in the unified workspace and finds archived conversations", async () => {
   const store = emptyStore();
-  const id = newUuid();
-  const chat = agentConversationSchema.parse({
-    id,
-    title: "Running",
-    createdAt: store.profile.createdAt,
-    updatedAt: store.profile.updatedAt,
-    archivedAt: null,
-    messages: [],
-    actions: [],
-    run: null,
-  });
-  let closeStream = () => {};
-  let turns = 0;
-  const detail =
-    "No local task was confirmed stopped. Its running lease remains; wait for lease expiry or stop it in the process executing the task. Local task access was cleared.";
+  const chats = ["Career review", "Archived application"].map((title, index) =>
+    agentConversationSchema.parse({
+      id: newUuid(),
+      title,
+      createdAt: store.profile.createdAt,
+      updatedAt: store.profile.updatedAt,
+      archivedAt: index === 0 ? null : store.profile.updatedAt,
+      messages: [
+        {
+          id: newUuid(),
+          role: "assistant",
+          text: title + " response",
+          attachmentIds: [],
+          sources: [],
+          state: "complete",
+          navigation: null,
+          createdAt: store.profile.createdAt,
+        },
+      ],
+      actions: [],
+      run: null,
+    }),
+  );
   vi.stubGlobal("fetch", (url: string | URL | Request, init?: RequestInit) => {
     const request = new Request(url, init);
     const path = new URL(request.url).pathname;
     if (path === "/v1/store") return Promise.resolve(jsonOf(store));
     if (path.endsWith("capabilities"))
       return Promise.resolve(jsonOf({ available: true, disclosure: "Synthetic" }));
-    if (path === "/v1/agent/conversations")
-      return Promise.resolve(request.method === "POST" ? jsonOf(chat, 201) : jsonOf({ items: [] }));
+    if (path === "/v1/agent/conversations") return Promise.resolve(jsonOf({ items: chats }));
     if (path.endsWith("/attachments")) return Promise.resolve(jsonOf({ items: [] }));
-    if (path.endsWith("/cancel"))
-      return Promise.resolve(
-        jsonOf(
-          { type: "about:blank", title: "Conflict", status: 409, detail, instance: path },
-          409,
-        ),
-      );
-    if (path.endsWith("/turns")) {
-      turns++;
-      return Promise.resolve(
-        new Response(
-          new ReadableStream<Uint8Array>({
-            start(controller) {
-              controller.enqueue(
-                new TextEncoder().encode(
-                  'event: status\ndata: {"type":"status","text":"Reading"}\n\n',
-                ),
-              );
-              closeStream = () => controller.close();
-            },
-          }),
-          { headers: { "content-type": "text/event-stream" } },
-        ),
-      );
-    }
-    return Promise.resolve(jsonOf(chat));
+    if (path.endsWith("/grant")) return Promise.resolve(jsonOf({ saved: true }));
+    return Promise.resolve(jsonOf(chats.find((chat) => path.endsWith(chat.id))));
   });
-  window.history.replaceState(null, "", "/");
+  window.history.replaceState(null, "", "/conversations");
   const queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const router = buildRouter({
     queries,
@@ -345,23 +448,113 @@ it("shows the lease refusal from Stop without claiming that a foreign task stopp
         <RouterProvider router={router} />
       </QueryClientProvider>,
     );
-    await waitFor(() =>
-      expect(queries.getQueryData(["agent", "capabilities"])).toMatchObject({ available: true }),
-    );
-    fireEvent.change(await screen.findByRole("textbox", { name: "What would you like to do?" }), {
-      target: { value: "Review" },
+    expect(await screen.findByRole("heading", { name: "Assistant" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/assistant");
+    expect(screen.queryByRole("link", { name: "Conversations" })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Store" })).queryByRole("button", {
+        name: "Career review",
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "History" }));
+    const history = within(screen.getByRole("dialog", { name: "Conversation history" }));
+    expect(await history.findByRole("button", { name: "Career review" })).toBeInTheDocument();
+    fireEvent.change(history.getByRole("textbox", { name: "Search conversations" }), {
+      target: { value: "application" },
     });
-    fireEvent.click(screen.getByRole("checkbox"));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reading"));
-    fireEvent.click(screen.getByRole("button", { name: "Stop task" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(detail);
-    expect(screen.getByRole("status")).not.toHaveTextContent("Stop requested");
-    expect(turns).toBe(1);
+    expect(history.getByText("No matching conversations.")).toBeInTheDocument();
+    fireEvent.click(history.getByRole("checkbox", { name: "Archived" }));
+    fireEvent.click(history.getByRole("button", { name: "Archived application" }));
+    expect(await screen.findByText("Archived application response")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Restore conversation" })).toBeInTheDocument();
   } finally {
-    closeStream();
     cleanup();
     queries.clear();
   }
+});
+
+it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", async (source) => {
+  const store = emptyStore();
+  const record = addRecord(store);
+  const path = source === "profile" ? "/profile" : `/records/${record.id}/edit`;
+  const chat = agentConversationSchema.parse({
+    id: newUuid(),
+    title: "Context task",
+    createdAt: store.profile.createdAt,
+    updatedAt: store.profile.updatedAt,
+    archivedAt: null,
+    messages: [],
+    actions: [],
+    run: null,
+  });
+  const turns: unknown[] = [];
+  const grants: unknown[] = [];
+  vi.stubGlobal("fetch", async (url: string | URL | Request, init?: RequestInit) => {
+    const request = new Request(url, init);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/v1/store") return jsonOf(store);
+    if (pathname.endsWith("capabilities"))
+      return jsonOf({ available: true, disclosure: "Synthetic" });
+    if (pathname === "/v1/agent/conversations")
+      return request.method === "POST" ? jsonOf(chat, 201) : jsonOf({ items: [] });
+    if (pathname.endsWith("/attachments")) return jsonOf({ items: [] });
+    if (pathname.endsWith("/grant")) {
+      grants.push(await request.json());
+      return jsonOf(chat);
+    }
+    if (pathname.endsWith("/turns")) {
+      turns.push(await request.json());
+      return new Response('event: done\ndata: {"type":"done","text":"Saved"}\n\n', {
+        headers: { "content-type": "text/event-stream" },
+      });
+    }
+    return jsonOf(chat);
+  });
+  window.history.replaceState(null, "", path);
+  const queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const router = buildRouter({
+    queries,
+    api: createClient(window.location.origin),
+    signOut: undefined,
+  });
+  render(
+    <QueryClientProvider client={queries}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Ask KeepCV" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/assistant"));
+  expect(await screen.findByRole("link", { name: path })).toBeInTheDocument();
+  expect(turns).toHaveLength(0);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("checkbox"));
+  for (const text of ["Read this page", "Read it again"]) {
+    fireEvent.change(screen.getByLabelText("What would you like to do?"), {
+      target: { value: text },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("Saved");
+  }
+  expect(turns).toHaveLength(2);
+  for (const turn of turns)
+    expect(turn).toMatchObject({
+      context: {
+        path,
+        ...(source === "record edit" ? { resourceId: record.id } : {}),
+      },
+    });
+  if (source === "record edit") {
+    fireEvent.click(screen.getByRole("button", { name: "Review before saving" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow task edits" }));
+    await screen.findByRole("button", { name: "Task edits on" });
+    expect(grants).toContainEqual({
+      grant: { resources: ["records", record.id], expiresInSeconds: 600, writes: 5 },
+    });
+  }
+  fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
+  expect(screen.queryByText("Page context:")).not.toBeInTheDocument();
+  queries.clear();
 });

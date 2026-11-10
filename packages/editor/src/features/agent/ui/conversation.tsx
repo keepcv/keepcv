@@ -2,7 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../components/ui/button.js";
 import { useAgent } from "./context.js";
+import { MessageText } from "./message-text.js";
 import { Proposal } from "./proposal.js";
+import { ToolActivity } from "./tool-activity.js";
 
 function Conversation({ readOnly = false }: { readOnly?: boolean }) {
   const agent = useAgent();
@@ -18,10 +20,10 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
     }
   }
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
       {agent.uploaded.data?.length ? (
-        <details className="rounded-xl border border-line p-3">
-          <summary className="cursor-pointer text-sm">Saved attachments</summary>
+        <details className="rounded-xl border border-line-subtle px-3 py-2">
+          <summary className="cursor-pointer text-xs text-text-muted">Saved attachments</summary>
           <div className="mt-3 space-y-3">
             {agent.uploaded.data.map((file) => (
               <div key={file.id} className="flex flex-wrap items-center gap-2 text-xs">
@@ -78,8 +80,8 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
             key={message.id}
             className={
               message.role === "user"
-                ? "ml-6 space-y-2 rounded-xl bg-surface-sunken p-4 sm:ml-16"
-                : "space-y-2 py-2"
+                ? "ml-auto w-fit max-w-[90%] space-y-2 rounded-2xl bg-surface-sunken px-4 py-3"
+                : "min-w-0 space-y-3 py-2"
             }
           >
             <div className="flex items-center justify-between gap-3">
@@ -100,7 +102,12 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
                 </Button>
               ) : null}
             </div>
-            <p className="whitespace-pre-wrap break-words">{message.text}</p>
+            <ToolActivity calls={message.toolCalls ?? []} />
+            {message.role === "assistant" ? (
+              <MessageText text={message.text} />
+            ) : (
+              <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text}</p>
+            )}
             {message.attachmentIds.map((fileId) => (
               <span key={fileId} className="block text-xs text-text-muted">
                 Attachment:{" "}
@@ -122,21 +129,18 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
             /^\/(?:overview|profile|records|points|tags|sections|role-profiles|templates|resumes|data|import|search)(?:\/[a-zA-Z0-9-]+)?$/.test(
               message.navigation,
             ) ? (
-              <Link
-                className="text-sm text-brand underline"
-                to={message.navigation}
-                onClick={() => agent.setOpen(false)}
-              >
+              <Link className="text-sm text-brand underline" to={message.navigation}>
                 Open {message.navigation}
               </Link>
             ) : null}
           </article>
         ))}
       </div>
-      {agent.partial ? (
+      {agent.partial || agent.toolCalls.length > 0 ? (
         <article aria-label="Response in progress" aria-live="off" className="space-y-2 py-2">
           <p className="text-xs font-medium text-text-muted">KeepCV AI - responding</p>
-          <p className="whitespace-pre-wrap break-words">{agent.partial}</p>
+          <ToolActivity calls={agent.toolCalls} />
+          <MessageText text={agent.partial} />
         </article>
       ) : null}
       {data?.actions.map((action) => (
@@ -161,7 +165,7 @@ export function Transcript({ readOnly = false }: { readOnly?: boolean }) {
         aria-label="Conversation transcript"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard scroll target.
         tabIndex={0}
-        className="min-h-0 flex-1 overflow-y-auto pr-1"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
         onScroll={(event) => {
           const element = event.currentTarget;
           following.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;

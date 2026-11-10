@@ -104,8 +104,13 @@ For dark mode before first paint, copy the exported `@keepcv/editor/theme.js`
 asset to a same-origin URL and load it with a blocking `<script src="/theme.js">`
 in the HTML head. The editor follows the stored choice after mount.
 
-`@keepcv/editor/ui` exports the Icon, Spot, Button, TextField and Kbd primitives
-used by the local app's entry screens, plus the GlyphName type.
+`@keepcv/editor/ui` exports Logo, Icon, Spot, Button, TextField and Kbd, plus
+the GlyphName and SpotName types. The shared Index Drawer logo uses inline
+SVG and vector lettering. `<Logo />` is decorative inside a named link;
+`<Logo label="KeepCV" />` names a standalone logo. Use `mark` for the symbol
+alone, and `className` to size it. Its colors follow the compiled theme.
+Spot includes store, composition, versions and snapshot artwork; the starred
+`snapshot` art is distinct from automatic `versions`.
 
 `pnpm release:check` installs packed artifacts outside the workspace and builds,
 typechecks and tests `fixtures/editor-consumer`. It checks the emitted CSS and
@@ -125,7 +130,7 @@ templates belong to the connected user. See [the template guide](../../docs/TEMP
 ## Assistant presentation
 
 Existing consumers open the assistant at `/` and retain its navigation and
-contextual panel. To make Overview the home while keeping the assistant, pass
+Ask KeepCV shortcut. To make Overview the home while keeping the assistant, pass
 `home="overview"`. The assistant then lives at `/assistant`. To hide generation
 presentation, use:
 
@@ -135,10 +140,13 @@ presentation, use:
 
 `assistant={false}` sends `/` to `/overview` regardless of `home`; direct
 `/assistant` navigation opens `/conversations`. It hides the assistant navigation,
-contextual panel, composer, suggestions and task permission controls. Conversations
+Ask KeepCV shortcut, composer, suggestions and task permission controls. Conversations
 remains in navigation and at `/conversations`, with saved messages, exact proposal
 history, receipts, original attachment downloads and archive/restore. This route
-is available with either presentation setting. Set these options before mounting;
+is available with either presentation setting. With assistance enabled,
+`/conversations` redirects to `/assistant`: the unified workspace includes
+searchable History, with archive/restore and original
+downloads. There is one Assistant navigation entry. Set these options before mounting;
 unmount, clear the query cache and revoke server authority when changing identity.
 
 These options are presentation only. Enforce authorization on the server through

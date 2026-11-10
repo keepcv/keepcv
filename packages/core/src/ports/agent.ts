@@ -11,7 +11,7 @@ export class AgentRefusalError extends Error {
 }
 
 export interface AgentEvent {
-  type: "text" | "status" | "error" | "done";
+  type: "text" | "status" | "error" | "done" | "tool";
   text: string;
 }
 

@@ -1,5 +1,29 @@
 # @keepcv/editor
 
+## 0.7.0
+
+### Minor Changes
+
+- Adopt the Index Drawer identity across navigation, entry screens and the browser favicon. Add shared vector branding and matching store, selection and snapshot illustrations with light and dark theme support.
+- Unify assistant chat and conversation history in one workspace with searchable history and a compact composer. Keep the application sidebar focused on navigation, change reviews, attachments and explicit sharing controls accessible, route contextual requests to the assistant workspace and remove expected stream-abort errors after Stop.
+- Show assistant tool names and their purpose directly in the chat during execution and in saved replies. Preserve this optional activity in conversation history and native archives, including interrupted replies. Existing messages and custom model adapters remain compatible.
+
+  Clarify that adding a Point creates its phrasing set, so the model does not propose creating the same set twice.
+  Identify attached text files as source material so replies can attribute their contents correctly.
+  Separate narration across tool steps into paragraphs in both live and saved messages.
+
+### Patch Changes
+
+- Make Ask KeepCV open a fresh conversation on the Assistant page with removable source-page context, instead of reopening the selected conversation in a modal. Keep the source resource attached to subsequent requests and task permissions.
+- Updated dependencies
+  - @keepcv/schema@0.4.0
+  - @keepcv/core@0.5.0
+  - @keepcv/api@0.5.1
+  - @keepcv/ats-lint@0.1.6
+  - @keepcv/interop@0.1.8
+  - @keepcv/render@0.2.2
+  - @keepcv/templates@0.2.2
+
 ## 0.6.0
 
 ### Minor Changes

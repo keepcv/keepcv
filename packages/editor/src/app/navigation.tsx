@@ -1,7 +1,8 @@
 import { live, recordCounts } from "@keepcv/core";
 import type { Store } from "@keepcv/schema";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
+import { Logo } from "../components/brand/logo.js";
 import type { GlyphName } from "../components/icon/glyphs.js";
 import { Icon } from "../components/icon/icon.js";
 import { KIND_LABELS } from "../features/records/model/record-rows.js";
@@ -30,6 +31,7 @@ function NavLink({
   count,
   collapsed,
   indent,
+  current,
 }: {
   to: string;
   search?: Record<string, unknown>;
@@ -39,6 +41,7 @@ function NavLink({
   count?: ReactNode;
   collapsed?: boolean;
   indent?: boolean;
+  current?: boolean;
 }) {
   return (
     <Link
@@ -47,7 +50,8 @@ function NavLink({
       activeOptions={{ exact: exact === true, includeSearch: search !== undefined }}
       activeProps={{ className: ACTIVE }}
       title={collapsed === true ? label : undefined}
-      className={rowClass(collapsed === true, indent === true)}
+      aria-current={current ? "page" : undefined}
+      className={cn(rowClass(collapsed === true, indent === true), current && ACTIVE)}
     >
       {icon === undefined ? null : <Icon name={icon} size="sm" />}
       {collapsed === true ? null : (
@@ -76,9 +80,8 @@ function Group({
       {collapsed ? (
         <hr className="mx-2 my-1.5 border-line-subtle" />
       ) : (
-        <p className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-text-subtle">
+        <p className="flex items-center gap-2 px-3 pb-1 pt-4 text-xs font-medium text-text-subtle">
           {title}
-          <span className="h-px flex-1 bg-line-subtle" aria-hidden="true" />
         </p>
       )}
       {children}
@@ -148,24 +151,29 @@ export function Navigation({
   collapsed?: boolean;
   onSignOut?: (() => void) | undefined;
 }) {
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const conversationPage = path === "/" || path === "/assistant" || path === "/conversations";
   return (
     <nav className="flex flex-col gap-1 text-sm" aria-label="Store">
       {assistant ? (
         <NavLink
           to={home === "overview" ? "/assistant" : "/"}
           exact
-          icon="overview"
+          icon="conversation"
           label="Assistant"
+          current={conversationPage}
           collapsed={collapsed}
         />
       ) : null}
-      <NavLink
-        to="/conversations"
-        exact
-        icon="history"
-        label="Conversations"
-        collapsed={collapsed}
-      />
+      {assistant ? null : (
+        <NavLink
+          to="/conversations"
+          exact
+          icon="conversation"
+          label="Conversations"
+          collapsed={collapsed}
+        />
+      )}
       <NavLink to="/overview" exact icon="overview" label="Overview" collapsed={collapsed} />
 
       <Group title="Store" collapsed={collapsed}>
@@ -253,13 +261,8 @@ export function Navigation({
 
 export function Brand({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="KeepCV, go to overview">
-      <span className="surface-gradient-brand grid size-7 shrink-0 place-items-center rounded-lg text-on-brand shadow-card">
-        <Icon name="resume" size="sm" />
-      </span>
-      {collapsed ? null : (
-        <span className="text-base font-semibold tracking-tight text-text">KeepCV</span>
-      )}
+    <Link to="/" className="flex shrink-0 items-center" aria-label="KeepCV home">
+      <Logo mark={collapsed} />
     </Link>
   );
 }

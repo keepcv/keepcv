@@ -14,8 +14,10 @@ import {
   type AgentMessage,
   type AgentOperation,
   type AgentSource,
+  type AgentToolCall,
   agentLimitsSchema,
   agentOperationSchema,
+  agentToolCallSchema,
   type Store,
   type Timestamp,
   type Uuid,
@@ -33,6 +35,7 @@ export interface ModelRequest {
   publicResearchQuery: string | undefined;
   signal: AbortSignal;
   text: (text: string) => Promise<void>;
+  tool?: (name: string, summary: string) => Promise<void>;
   read: (collection: string, query: string) => Promise<unknown>;
   describe: (resource: string) => unknown;
   propose: (summary: string, operations: unknown[]) => Promise<string>;
@@ -338,6 +341,7 @@ export function createAgent(options: {
       const reviewExpires = Date.now() + REVIEW_WINDOW_MS;
       const context = { ownerId: owner, conversationId, scope, signal: controller.signal };
       let partial = "";
+      const toolCalls: AgentToolCall[] = [];
       let started = false;
       try {
         await check({ ...context, phase: "generate" });
@@ -436,6 +440,14 @@ export function createAgent(options: {
                 await check({ ...context, phase: "generate" });
                 partial += text;
                 await emit({ type: "text", text });
+              },
+              tool: async (name, summary) => {
+                await check({ ...context, phase: "generate" });
+                if (toolCalls.length >= 128)
+                  throw new AgentRefusalError("The task reached its tool activity limit.");
+                const call = agentToolCallSchema.parse({ name, summary });
+                toolCalls.push(call);
+                await emit({ type: "tool", text: JSON.stringify(call) });
               },
               read: async (collection, query) => {
                 await check({ ...context, phase: "read" });
@@ -572,6 +584,7 @@ export function createAgent(options: {
           role: "assistant",
           text: reply.text,
           sources: reply.sources,
+          toolCalls,
           navigation: reply.navigation,
           attachmentIds: [],
           createdAt: stamp(),
@@ -604,6 +617,7 @@ export function createAgent(options: {
               id: newUuid(),
               role: "assistant",
               text: partial || message,
+              toolCalls,
               sources: [],
               navigation: null,
               attachmentIds: [],
