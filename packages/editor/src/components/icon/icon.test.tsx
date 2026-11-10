@@ -45,11 +45,15 @@ describe("Spot", () => {
         <Spot name="permanent" />
         <Spot name="compose" />
         <Spot name="versions" />
+        <Spot name="snapshot" />
       </div>,
     );
 
     const spots = container.querySelectorAll("svg");
-    expect(spots).toHaveLength(5);
-    for (const spot of spots) expect(spot.childElementCount).toBeGreaterThan(0);
+    expect(spots).toHaveLength(6);
+    for (const spot of spots) {
+      expect(spot.childElementCount).toBeGreaterThan(0);
+      expect(spot).toHaveAttribute("aria-hidden", "true");
+    }
   });
 });

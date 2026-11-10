@@ -7,7 +7,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
-import { AgentHome, AgentPanel, AgentProvider } from "../features/agent/ui/agent.js";
+import { AgentHome, AgentProvider, AskKeepCV } from "../features/agent/ui/agent.js";
 import type { DataPagePresentation } from "../features/data/model/presentation.js";
 import { DataScreen } from "../features/data/ui/data-screen.js";
 import { ImportScreen } from "../features/import/ui/import-screen.js";
@@ -65,7 +65,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
       <RecoveryNamespaceContext.Provider value={recoveryNamespace}>
         <AgentProvider key={recoveryNamespace} api={api} enabled={assistant}>
           <Shell store={useStore(api)} onSignOut={signOut} assistant={assistant} home={home} />
-          {assistant ? <AgentPanel /> : null}
+          {assistant ? <AskKeepCV /> : null}
         </AgentProvider>
       </RecoveryNamespaceContext.Provider>
     );
@@ -114,6 +114,9 @@ const assistantRoute = createRoute({
 const conversationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/conversations",
+  beforeLoad: ({ context }) => {
+    if (context.assistant !== false) throw redirect({ to: "/assistant" });
+  },
   component: () => <AgentHome historyOnly />,
 });
 

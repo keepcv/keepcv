@@ -40,6 +40,35 @@ function streamReply(delta: unknown, finishReason = "stop", usage?: unknown) {
   );
 }
 
+it("identifies text attachments as file sources on a text-only route", async () => {
+  let sent = "";
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    sent = await new Request(input, init).text();
+    return streamReply({ content: "Juniper audit" });
+  });
+  const request = modelRequest();
+  request.attachments = [
+    agentAttachmentSchema.parse({
+      id: "01900000-0000-7000-8000-000000000001",
+      conversationId: "01900000-0000-7000-8000-000000000002",
+      name: "career-note.txt",
+      mediaType: "text/plain",
+      data: Buffer.from("Project: Juniper audit.").toString("base64"),
+      createdAt: "2026-10-31T00:00:00.000Z",
+      updatedAt: "2026-10-31T00:00:00.000Z",
+      archivedAt: null,
+    }),
+  ];
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({ routes: [{ model: "qualified/text", providers: ["approved"] }] }),
+    { OPENROUTER_API_KEY: "synthetic" },
+  );
+  expect((await model.generate(request)).text).toBe("Juniper audit");
+  expect(sent).toContain("career-note.txt");
+  expect(sent).toContain("untrusted source material");
+  expect(sent).toContain("Project: Juniper audit.");
+});
+
 it("fails over before output and preserves configured routing constraints", async () => {
   const logged = vi.spyOn(console, "error").mockImplementation(() => {});
   const models: string[] = [];
@@ -119,6 +148,45 @@ it("does not replay a model attempt after an application tool acknowledges a cha
   });
   expect(propose).toHaveBeenCalledTimes(1);
   expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("separates narration before and after a tool in streamed and saved text", async () => {
+  const fetcher = vi.fn<typeof fetch>();
+  fetcher.mockResolvedValueOnce(
+    streamReply(
+      {
+        content: "Reading your records.",
+        tool_calls: [
+          {
+            index: 0,
+            id: "call_read",
+            type: "function",
+            function: {
+              name: "read_store",
+              arguments: JSON.stringify({ collection: "records", query: "" }),
+            },
+          },
+        ],
+      },
+      "tool_calls",
+    ),
+  );
+  fetcher.mockResolvedValueOnce(streamReply({ content: "You have one record." }));
+  vi.stubGlobal("fetch", fetcher);
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({ routes: [{ model: "qualified/text", providers: ["approved"] }] }),
+    { OPENROUTER_API_KEY: "synthetic" },
+  );
+  let streamed = "";
+  const reply = await model.generate({
+    ...modelRequest(),
+    text: (text) => {
+      streamed += text;
+      return Promise.resolve();
+    },
+  });
+  expect(reply.text).toBe("Reading your records.\n\nYou have one record.");
+  expect(streamed).toBe(reply.text);
 });
 
 it("retains truncated text as a failure without replaying on another model", async () => {

@@ -78,7 +78,8 @@ export function Dialog({
         className={cn(
           "w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
           size === "md" && "max-w-lg",
-          size === "lg" && "max-w-3xl",
+          size === "lg" &&
+            "flex max-h-[calc(90dvh-2rem)] min-h-0 max-w-3xl flex-col overflow-hidden",
           size === "full" &&
             "flex h-[min(54rem,calc(100dvh-2rem))] min-h-0 max-w-5xl flex-col overflow-hidden",
         )}

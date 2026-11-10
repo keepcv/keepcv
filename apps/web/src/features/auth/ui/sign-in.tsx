@@ -1,5 +1,5 @@
 import type { AuthMode } from "@keepcv/api";
-import { Button, Icon, TextField } from "@keepcv/editor/ui";
+import { Button, Logo, TextField } from "@keepcv/editor/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { signIn } from "../../../lib/auth-mode.js";
 
@@ -7,9 +7,7 @@ function Card({ title, lead, children }: { title: string; lead: string; children
   return (
     <main className="backdrop-grid grid min-h-dvh place-items-center bg-canvas px-6 py-12 text-text">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-overlay">
-        <span className="surface-gradient-brand grid size-9 place-items-center rounded-xl text-on-brand shadow-card">
-          <Icon name="resume" size="md" />
-        </span>
+        <Logo label="KeepCV" className="h-8" />
         <h1 className="mt-4 text-xl font-semibold tracking-tight text-text">{title}</h1>
         <p className="mt-1 text-sm leading-relaxed text-text-muted">{lead}</p>
         <div className="mt-5">{children}</div>

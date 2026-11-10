@@ -2,10 +2,12 @@ import { newUuid } from "@keepcv/core";
 import {
   type AgentAction,
   type AgentConversation,
+  type AgentToolCall,
   agentAttachmentMetadataSchema,
   agentCapabilitiesSchema,
   agentConversationSchema,
   agentConversationSummarySchema,
+  agentToolCallSchema,
   uuidSchema,
 } from "@keepcv/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +21,7 @@ import { type PendingFile, retainFiles } from "../model/files.js";
 
 const capabilitiesSchema = agentCapabilitiesSchema;
 const eventSchema = z.object({
-  type: z.enum(["text", "status", "error", "done"]),
+  type: z.enum(["text", "status", "error", "done", "tool"]),
   text: z.string(),
 });
 const fileMetadataSchema = agentAttachmentMetadataSchema;
@@ -37,11 +39,13 @@ export function useAgentController(api: ApiClient, enabled = true) {
   const decision = useRef(false);
   const [status, setStatus] = useState("");
   const [partial, setPartial] = useState("");
+  const [toolCalls, setToolCalls] = useState<AgentToolCall[]>([]);
   const [error, setError] = useState("");
   const [disclosed, setDisclosed] = useState(false);
   const [grant, setGrant] = useState(false);
   const [publicQuery, setPublicQuery] = useState("");
-  const [open, setOpen] = useState(false);
+  const [sourcePath, setSourcePath] = useState<string | null>(null);
+  const contextPath = sourcePath ?? path;
   const currentText = useRef(text);
   currentText.current = text;
   const currentFiles = useRef(files);
@@ -49,16 +53,14 @@ export function useAgentController(api: ApiClient, enabled = true) {
   const request = useRef<AbortController | null>(null);
   const capabilities = useQuery({
     queryKey: ["agent", "capabilities"],
-    enabled:
-      path === "/conversations" || (enabled && (path === "/" || path === "/assistant" || open)),
+    enabled: path === "/conversations" || (enabled && (path === "/" || path === "/assistant")),
     retry: false,
     queryFn: async () =>
       capabilitiesSchema.parse(await unwrap(await api.v1.agent.capabilities.$get())),
   });
   const conversations = useQuery({
     queryKey: ["agent", "conversations"],
-    enabled:
-      path === "/conversations" || (enabled && (path === "/" || path === "/assistant" || open)),
+    enabled: path === "/conversations" || (enabled && (path === "/" || path === "/assistant")),
     retry: false,
     queryFn: async () =>
       z
@@ -85,7 +87,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
           ),
         ).items,
   });
-  const grantScope = id === null ? null : `${id}:${path}`;
+  const grantScope = id === null ? null : `${id}:${contextPath}`;
   useEffect(() => {
     setSelectedAttachments([]);
     setGrant(false);
@@ -188,6 +190,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setError("");
     setPartial("");
     setStatus("Saving your request");
+    setToolCalls([]);
     const submittedText = text;
     const submittedFiles = files;
     try {
@@ -214,12 +217,9 @@ export function useAgentController(api: ApiClient, enabled = true) {
               (id) => uuidSchema.parse(id),
             ),
             context: {
-              path,
-              ...(path
-                .split("/")
-                .at(-1)
-                ?.match(/^[a-f0-9-]{36}$/)
-                ? { resourceId: uuidSchema.parse(path.split("/").at(-1)) }
+              path: contextPath,
+              ...(contextPath.split("/")[2]?.match(/^[a-f0-9-]{36}$/)
+                ? { resourceId: uuidSchema.parse(contextPath.split("/")[2]) }
                 : {}),
             },
             disclosure: true,
@@ -258,7 +258,12 @@ export function useAgentController(api: ApiClient, enabled = true) {
               if (submittedFiles.length > 0 && currentFiles.current === submittedFiles)
                 changeFiles([]);
             }
-            if (event.type === "text") setPartial((text) => text + event.text);
+            if (event.type === "tool")
+              setToolCalls((calls) => [
+                ...calls,
+                agentToolCallSchema.parse(JSON.parse(event.text)),
+              ]);
+            else if (event.type === "text") setPartial((text) => text + event.text);
             else if (event.type === "error") setError(event.text);
             else setStatus(event.text);
           }
@@ -266,16 +271,18 @@ export function useAgentController(api: ApiClient, enabled = true) {
         }
       }
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "The request could not finish. Reopen the conversation to check saved changes.",
-      );
+      if (!request.current?.signal.aborted)
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "The request could not finish. Reopen the conversation to check saved changes.",
+        );
     } finally {
       setBusy(false);
       request.current = null;
       await refresh();
       setPartial("");
+      setToolCalls([]);
     }
   }
   async function decide(action: AgentAction, accept: boolean) {
@@ -323,8 +330,8 @@ export function useAgentController(api: ApiClient, enabled = true) {
     }
   }
   async function authorize() {
-    const resource = path.split("/")[1];
-    const target = path.split("/")[2];
+    const resource = contextPath.split("/")[1];
+    const target = contextPath.split("/")[2];
     if (
       id === null ||
       resource === undefined ||
@@ -403,9 +410,25 @@ export function useAgentController(api: ApiClient, enabled = true) {
     id,
     setId: (value: string | null) => {
       setId(value);
+      setSourcePath(null);
       setError("");
       setStatus("");
     },
+    startFromPage: () => {
+      setId(null);
+      setSourcePath(path);
+      setError("");
+      setStatus("");
+      setPartial("");
+      setToolCalls([]);
+      setSelectedAttachments([]);
+      setGrant(false);
+      setDisclosed(false);
+      setPublicQuery("");
+    },
+    sourcePath,
+    contextPath,
+    clearPageContext: () => setSourcePath(null),
     deciding,
     stopping,
     text,
@@ -415,6 +438,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
     busy,
     status,
     partial,
+    toolCalls,
     error,
     setError,
     setStatus,
@@ -424,8 +448,6 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setPublicQuery,
     grant,
     authorize,
-    open,
-    setOpen,
     capabilities,
     conversations,
     conversation,

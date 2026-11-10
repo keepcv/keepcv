@@ -23,6 +23,8 @@ function displayValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "Not set";
   const richText = richTextSchema.safeParse(value);
   if (richText.success) return projectPlainText(richText.data);
+  if (typeof value === "object" && "body" in value) return displayValue(value.body);
+  if (typeof value === "boolean") return value ? "Yes" : "No";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
@@ -30,6 +32,6 @@ export function changedValues(operation: AgentOperation): [string, string][] {
   const values =
     "patch" in operation ? operation.patch : "input" in operation ? operation.input : {};
   return Object.entries(values)
-    .filter(([key]) => key !== "id")
+    .filter(([key]) => key !== "id" && key !== "sortKey" && !key.endsWith("Id"))
     .map(([key, value]) => [words(key), displayValue(value)]);
 }

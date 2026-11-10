@@ -38,6 +38,12 @@ try {
     assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
     const html = await response.text();
     assert.match(html, /<div id="root">/);
+    const favicon = html.match(/<link[^>]+rel="icon"[^>]+href="([^"]+)"/);
+    assert(favicon, "The installed app is missing its favicon");
+    assert.match(favicon[1], /^\/assets\/.*\.svg$/);
+    const icon = await fetch(new URL(favicon[1], origin));
+    assert.equal(icon.headers.get("content-type"), "image/svg+xml");
+    assert.match(await icon.text(), /<svg/);
     for (const [, asset] of html.matchAll(/(?:src|href)="(\/assets\/[^" ]+)"/g)) {
       const loaded = await fetch(`${origin}${asset}`);
       assert.equal(loaded.status, 200, asset);

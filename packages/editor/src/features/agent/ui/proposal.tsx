@@ -1,5 +1,6 @@
 import type { AgentAction } from "@keepcv/schema";
 import { useState } from "react";
+import { Icon } from "../../../components/icon/icon.js";
 import { Button } from "../../../components/ui/button.js";
 import { changedValues, operationLabel } from "../model/presentation.js";
 import { useAgent } from "./context.js";
@@ -19,22 +20,34 @@ export function Proposal({
   const Heading = action.status === "pending" ? "p" : "summary";
   return (
     <Container
-      className="rounded-xl border border-line bg-surface p-4 space-y-3"
+      className="space-y-4 rounded-xl border border-line bg-surface p-4"
       aria-label="Proposed change"
     >
       <Heading className="cursor-pointer text-sm font-medium">
-        {action.summary}
-        {action.status !== "pending" ? ` - ${action.status}` : ""}
+        <span className="inline-flex items-center gap-2">
+          <Icon
+            name={
+              action.status === "pending"
+                ? "edit"
+                : action.status === "applied"
+                  ? "confirm"
+                  : "close"
+            }
+            size="sm"
+          />
+          {action.status === "pending"
+            ? `Review ${String(action.operations.length)} ${action.operations.length === 1 ? "change" : "changes"}`
+            : `Changes - ${action.status}`}
+        </span>
       </Heading>
       {action.status === "pending" ? (
         <div className="space-y-3">
-          <p className="text-xs font-medium text-text-muted">
-            Review needed - no changes saved yet
-          </p>
+          <p className="text-xs text-text-subtle">Review needed - no changes saved yet</p>
+          <p className="line-clamp-3 text-sm leading-6 text-text-muted">{action.summary}</p>
           {action.operations.map((operation, index) => (
             <div key={`${operation.type}-${String(index)}`} className="space-y-2">
               <p className="text-sm font-medium">{operationLabel(operation)}</p>
-              <dl className="max-h-48 space-y-1 overflow-auto text-sm">
+              <dl className="max-h-48 space-y-2 overflow-auto rounded-lg bg-canvas p-3 text-sm">
                 {changedValues(operation).map(([key, value]) => (
                   <div key={key} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
                     <dt className="text-text-muted first-letter:uppercase">{key}</dt>
@@ -55,6 +68,10 @@ export function Proposal({
         </pre>
         <p className="mt-3 text-sm">Current data</p>
         <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs">{action.before}</pre>
+      </details>
+      <details className="text-xs text-text-muted">
+        <summary className="cursor-pointer">Why this change</summary>
+        <p className="mt-2 text-sm leading-6">{action.summary}</p>
       </details>
       {action.status === "pending" && !readOnly && agent.canGenerate ? (
         <div className="flex flex-wrap gap-2">

@@ -1002,6 +1002,7 @@ packages/editor/src/
       model/            DTO -> view model selectors, local state machines
       ui/               components
       routes/           route definitions and loaders
+  components/brand/     the shared Index Drawer symbol and vector wordmark
   components/icon/      the glyph registry and the spot illustrations
   components/ui/        the primitives every screen is built from
   lib/                  api client, the store cache, formatting, date helpers
@@ -1138,6 +1139,20 @@ against the same tokens. They are not icons and lucide has no vocabulary for
 
 An icon is `aria-hidden` unless it is given a `label`, because an icon beside
 its own text is announced twice.
+
+**The Index Drawer is the application identity.** `components/brand/` owns the
+primary two-card symbol and vector wordmark. `Logo`, exported through
+`@keepcv/editor/ui`, renders the horizontal logo or the symbol alone with `mark`.
+The rail, mobile navigation, sign-in and landing page use that same component.
+A containing link supplies its accessible name; a standalone logo takes `label`.
+The web document bundles the separate optical 16px favicon through Vite, so its
+URL changes with its content. No external font or image service is required.
+
+Store and selection illustrations share the drawer's visual vocabulary through
+`Spot`. The `snapshot` illustration includes a star and is reserved for snapshot
+explanations; `versions` stays unstarred. Illustrations belong in existing empty
+and explanatory states, not repeated beside populated rows or screen headings.
+Branding stays in application chrome and never enters `ResumeDocument` or exports.
 
 ### 10.4 Three screen shapes, not one
 
@@ -1492,8 +1507,8 @@ Chat starts with the message and explicit data-sharing consent. Attachments,
 research, model-service details, task permissions and recovery expand on request.
 Selected files and active permissions open their controls. Unavailable chat shows
 one notice and a store link, with history and recovery still reachable. Completed
-proposals collapse without discarding their exact operations or receipt. The
-contextual assistant uses a bounded dialog and a quiet persistent trigger.
+proposals collapse without discarding their exact operations or receipt. Ask KeepCV
+routes to the Assistant workspace with source-page context.
 
 ### HTML template authoring and preview
 
@@ -1526,10 +1541,13 @@ By default the authenticated root opens chat; /overview retains the store overvi
 The exported Editor accepts assistant (default true) and home (default assistant).
 Choosing home=overview redirects / to /overview and keeps generation at /assistant.
 Setting assistant=false always redirects / to /overview, redirects /assistant to
-/conversations, and hides assistant navigation, the contextual panel, composer,
-suggestions and task controls. /conversations and its navigation remain available
-in both configurations for saved messages, exact proposals, receipts and original
-attachment downloads, including archived content. These are presentation options;
+/conversations, and hides assistant navigation, the Ask KeepCV shortcut, composer,
+suggestions and task controls. With assistance enabled, one Assistant navigation
+entry opens the conversation workspace; History searches all live or archived
+conversations without crowding the application rail. /conversations
+redirects to /assistant. With assistance disabled, Conversations remains in
+navigation and at /conversations for saved messages, exact proposals, receipts
+and original attachment downloads, including archived content. These are presentation options;
 consumer authorization is enforced server-side. Options are chosen before mount. One
 controller in the editor shell owns the conversation across page navigation.
 Page context is a validated path/resource hint, not authority. Chat reads current
@@ -1567,7 +1585,12 @@ composer controls have a bounded scroll area. New output follows the latest mess
 until the user scrolls back; Jump to latest resumes following without moving focus.
 The composer preserves Enter for new lines and uses Ctrl/Cmd+Enter to send,
 including composition-input protection. Its visible permission label distinguishes
-review from temporary task edits. The contextual panel names the current page.
+review from temporary task edits. Ask KeepCV starts a fresh conversation at
+/assistant with the originating path
+attached visibly above the composer. It never opens the selected thread in a
+modal. Context persists for subsequent turns and task grants, and can be removed.
+Selecting history or starting a normal new conversation clears this context.
+Unsent composer input is retained; clicking the shortcut never sends it.
 Pending suggestions show readable operations and proposed field values before the
 exact raw payload/current-data disclosure. Saving a decision disables competing
 decisions and sends once; receipts remain authoritative. Request changes focuses
@@ -1575,6 +1598,41 @@ a correction draft without overwriting existing input, changing the proposal or
 sending it. Messages can be copied; a failure gives a manual alternative. History
 can jump to the latest message or continue a selected conversation when generation
 is available. Assistant configuration still controls every generation entry.
+
+The workspace uses a centered reading column, a compact header and a rounded
+composer anchored below the transcript. The shell's desktop search header is
+omitted on conversation routes; store search remains reachable with its keyboard
+shortcut. Mobile keeps the application header and opens history in a bounded
+dialog. Ask KeepCV uses the same full-page transcript and composer as Assistant.
+
+Consent stays visible beside the composer. File selection, current review/task
+authority and settings are compact controls; model disclosure, exact public
+research input, file limits and explicit unsent-input recovery expand in settings.
+Pending proposals show human-readable field values first, with identifiers,
+ordering keys and the full current/operation payload available in exact review.
+Completed decisions collapse to a short status and retain their receipts.
+
+Assistant messages render a small text-only formatting subset: emphasis, inline
+and fenced code, simple lists and headings. React escapes every authored string;
+model-authored HTML, images and automatic links are not interpreted. Citations
+continue through the separate validated source links. A locally acknowledged Stop
+does not display the expected browser stream-abort exception; real refusal and
+provider errors remain visible. The workspace retains the established warm ink
+surfaces and violet identity accents described by the theme system above.
+
+Every built-in model tool execution emits a typed tool activity event before it
+runs. The chat shows its actual tool name and a short purpose directly in the
+reply, without a collapsed disclosure. These are call records, not assertions of
+success. Optional toolCalls on assistant messages retain the same ordered activity
+after completion, interruption, reload and native export. Older messages have no
+activity to reconstruct. The runtime validates each record and bounds a turn to
+128 calls. Custom models may report activity through ModelRequest.tool; existing
+adapters remain compatible. No raw arguments, results or credentials are logged.
+
+Tool rows keep the purpose and actual tool name visible together in a compact
+layout. Permission copy retains the sharing scope, configured recipients,
+resource-only task scope, five-write/ten-minute limits and mandatory review for
+archive, restore and merges.
 
 These choices apply Microsoft's evidence-based [HAX guidelines](https://www.microsoft.com/en-us/haxtoolkit/ai-guidelines/)
 for clear capabilities, correction and user control. [Fluent's agent guidance](https://fluent2.microsoft.design/responsible-AI)

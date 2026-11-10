@@ -102,11 +102,14 @@ it.each([
           ),
         );
       }
-      fireEvent.click(screen.getByRole("link", { name: "Conversations" }));
-      await screen.findByRole("heading", { name: "Conversations" });
-      fireEvent.change(await screen.findByRole("combobox", { name: "Conversation" }), {
-        target: { value: id },
-      });
+      if (!config.assistant) {
+        fireEvent.click(screen.getByRole("link", { name: "Conversations" }));
+        await screen.findByRole("heading", { name: "Conversations" });
+      } else {
+        expect(screen.queryByRole("link", { name: "Conversations" })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "History" }));
+      }
+      fireEvent.click(await screen.findByRole("button", { name: "Saved task" }));
       expect(await screen.findByText("Previously authored career note")).toBeInTheDocument();
       fireEvent.click(screen.getByText("Saved attachments"));
       const blobs: Blob[] = [];
@@ -124,7 +127,8 @@ it.each([
       fireEvent.click(await screen.findByRole("button", { name: "Download" }));
       await waitFor(() => expect(blobs).toHaveLength(1));
       expect(await blobs[0]?.text()).toBe("Original");
-      expect(screen.queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
+      if (config.assistant) expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+      else expect(screen.queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("link", { name: /^Profile/ }));
       fireEvent.change(await screen.findByLabelText("Name"), { target: { value: "Ada Consumer" } });
       fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
