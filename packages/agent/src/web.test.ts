@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 import { boundedJson, publicUrl, webConfigSchema } from "./web.js";
 
 it.each([
-  "http://example.com/",
   "https://localhost/",
   "https://api.localhost/",
   "https://169.254.169.254/latest/meta-data/",
@@ -18,10 +17,7 @@ it.each([
   "https://192.168.0.1/",
   "https://metadata.google.internal/",
   "https://example.com@localhost/",
-  "https://example.com:443/",
   "https://example.com./",
-  "https://%65xample.com/",
-  "https://example.com/#secret",
 
   "file:///etc/passwd",
 ])("refuses noncanonical or nonpublic URL %s", (url) => {
@@ -44,4 +40,31 @@ it("refuses automatic and unsupported engines", () => {
 });
 it("stops reading an oversized provider body", async () => {
   await expect(boundedJson(new Response("x".repeat(1025)), 1024)).rejects.toThrow("byte limit");
+});
+
+it("allows ordinary web URLs without domain configuration", () => {
+  for (const url of [
+    "https://example.com",
+    "http://example.org/page",
+    "https://example.com:8443/page#part",
+    "https://%65xample.com/",
+  ])
+    expect(publicUrl(url)).toBe(true);
+  expect(webConfigSchema.parse({})).toMatchObject({
+    search: { engine: "parallel", mode: "turbo" },
+    fetch: { engine: "openrouter" },
+    maxCalls: 8,
+  });
+});
+
+it("normalizes optional domain filters and requires bare hostnames", () => {
+  expect(
+    webConfigSchema.parse({
+      search: { engine: "parallel", mode: "turbo", domains: ["Example.COM"] },
+    }).search.domains,
+  ).toEqual(["example.com"]);
+  expect(
+    webConfigSchema.safeParse({ fetch: { engine: "openrouter", domains: ["example.com/page"] } })
+      .success,
+  ).toBe(false);
 });

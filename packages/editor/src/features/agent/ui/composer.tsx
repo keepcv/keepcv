@@ -2,21 +2,22 @@ import { newUuid } from "@keepcv/core";
 import { useRef, useState } from "react";
 import { Icon } from "../../../components/icon/icon.js";
 import { Button } from "../../../components/ui/button.js";
+import { Dialog } from "../../../components/ui/dialog.js";
+import { Menu, MenuItem } from "../../../components/ui/menu.js";
 import { readEdit } from "../../../lib/edit-recovery.js";
 import { recoverFiles } from "../model/files.js";
 import { useAgent } from "./context.js";
 
 function fileSize(bytes: number) {
-  if (bytes % (1024 * 1024) === 0) return String(bytes / (1024 * 1024)) + " MiB";
-  if (bytes % 1024 === 0) return String(bytes / 1024) + " KiB";
-  return String(bytes) + " bytes";
+  if (bytes % (1024 * 1024) === 0) return `${bytes / (1024 * 1024)} MiB`;
+  if (bytes % 1024 === 0) return `${bytes / 1024} KiB`;
+  return `${bytes} bytes`;
 }
 
 export function Composer() {
   const agent = useAgent();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [options, setOptions] = useState(false);
-  const expanded = options || agent.grant || Boolean(agent.publicQuery || agent.publicUrls);
+  const [settings, setSettings] = useState(false);
   const disabled =
     agent.busy ||
     agent.deciding !== null ||
@@ -24,7 +25,7 @@ export function Composer() {
     !agent.canGenerate ||
     !agent.disclosed ||
     (!agent.text.trim() && agent.files.length === 0 && agent.selectedAttachments.length === 0);
-
+  const webAvailable = agent.capabilities.data?.webSearchAvailable === true;
   function addFiles(files: File[]) {
     if (agent.files.length + files.length > (agent.capabilities.data?.maxAttachments ?? 5)) {
       agent.setError("Choose fewer files to fit the configured attachment limit.");
@@ -32,260 +33,225 @@ export function Composer() {
     }
     agent.changeFiles([...agent.files, ...files.map((file) => ({ id: newUuid(), file }))]);
   }
-
   return (
-    <form
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        addFiles(Array.from(event.dataTransfer.files));
-      }}
-      onSubmit={(event) => {
-        event.preventDefault();
-        void agent.send();
-      }}
-      className="max-h-[60dvh] shrink-0 overflow-y-auto rounded-2xl border border-line bg-surface-raised p-3 shadow-card transition-colors focus-within:border-line-strong"
-    >
-      {agent.files.length > 0 ? (
-        <div className="mb-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto">
-          {agent.files.map((file) => (
-            <span
-              key={file.id}
-              className="inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-2 py-1 text-xs text-text-muted"
-            >
-              <Icon name="evidence" size="xs" />
-              <span className="truncate">{file.file.name}</span>
-              <Button
-                tone="ghost"
-                size="sm"
-                icon="close"
-                label={"Remove " + file.file.name}
-                onClick={() => agent.changeFiles(agent.files.filter((row) => row.id !== file.id))}
-              />
-            </span>
-          ))}
-        </div>
-      ) : null}
-      <label htmlFor="agent-message" className="sr-only">
-        What would you like to do?
-      </label>
-      <textarea
-        id="agent-message"
-        value={agent.text}
-        onChange={(event) => agent.changeText(event.target.value)}
-        maxLength={agent.capabilities.data?.maxTextCharacters ?? 32000}
-        onKeyDown={(event) => {
-          if (
-            event.key === "Enter" &&
-            (event.ctrlKey || event.metaKey) &&
-            !event.nativeEvent.isComposing
-          ) {
-            event.preventDefault();
-            event.currentTarget.form?.requestSubmit();
-          }
+    <>
+      <form
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          addFiles(Array.from(event.dataTransfer.files));
         }}
-        aria-describedby="agent-composer-help"
-        rows={2}
-        className="block max-h-40 min-h-16 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 placeholder:text-text-subtle"
-        placeholder="Ask KeepCV, or add something to your career..."
-      />
-      <div className="flex items-center justify-between gap-2 pt-2">
-        <div className="flex min-w-0 items-center gap-1">
-          <Button
-            tone="ghost"
-            icon="evidence"
-            label="Attach files"
-            onClick={() => fileInput.current?.click()}
-          />
-          <input
-            ref={fileInput}
-            type="file"
-            multiple
-            aria-label="Choose attachments"
-            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.asc,.ascii,.md,.csv,.tsv,.json,.yaml,.yml,.log"
-            className="sr-only"
-            tabIndex={-1}
-            onChange={(event) => {
-              addFiles(Array.from(event.target.files ?? []));
-              event.target.value = "";
-            }}
-          />
-          <Button
-            tone="ghost"
-            size="sm"
-            icon={agent.grant ? "confirm" : "private"}
-            expanded={expanded}
-            onClick={() => setOptions(!expanded)}
-          >
-            {agent.grant ? "Task edits on" : "Review before saving"}
-          </Button>
-          <Button
-            tone="ghost"
-            size="sm"
-            icon="settings"
-            label="Conversation settings"
-            expanded={expanded}
-            onClick={() => setOptions(!expanded)}
-          />
-        </div>
-        {agent.busy ? (
-          <Button
-            tone="secondary"
-            icon="stop"
-            label="Stop task"
-            pending={agent.stopping}
-            onClick={() =>
-              void agent
-                .stop()
-                .catch((reason: unknown) =>
-                  agent.setError(
-                    reason instanceof Error
-                      ? reason.message
-                      : "Stop could not be acknowledged. Reopen the conversation to check its status.",
-                  ),
-                )
-            }
-          />
-        ) : (
-          <button
-            type="submit"
-            aria-label="Send"
-            title="Send (Ctrl/Cmd+Enter)"
-            disabled={disabled}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-text text-text-inverted transition-opacity hover:opacity-80 disabled:opacity-30"
-          >
-            <Icon name="moveUp" size="md" />
-          </button>
-        )}
-      </div>
-      <div className="mt-2 flex items-center gap-3 px-1 text-xs text-text-muted">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            role="switch"
-            aria-checked={agent.webSearchEnabled}
-            checked={agent.webSearchEnabled}
-            disabled={
-              agent.busy ||
-              !agent.canGenerate ||
-              agent.capabilities.data?.webSearchAvailable !== true
-            }
-            onChange={(event) => agent.setWebSearchEnabled(event.target.checked)}
-          />
-          Web search
-        </label>
-        <span>
-          {agent.capabilities.data?.webSearchAvailable !== true
-            ? "Unavailable"
-            : agent.webSearchEnabled
-              ? "On"
-              : "Off"}
-        </span>
-      </div>
-      {agent.webSearchEnabled ? (
-        <label className="mt-3 block px-1 text-xs text-text-muted">
-          <span className="font-medium text-text">Public search query</span>
-          <input
-            aria-label="Public search query"
-            value={agent.publicQuery}
-            maxLength={500}
-            onChange={(event) => agent.setPublicQuery(event.target.value)}
-            placeholder="Only this exact query may be sent to web search"
-            className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
-          />
-          <span className="mt-1 block">
-            Enter a public query to approve sharing it with the search service.
-          </span>
-        </label>
-      ) : null}
-      <div
-        id="agent-composer-help"
-        className="mt-2 flex items-start justify-between gap-3 border-t border-line-subtle px-1 pt-2 text-[0.6875rem] leading-4 text-text-subtle"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void agent.send();
+        }}
+        className="shrink-0 rounded-2xl border border-line bg-surface-raised p-3 shadow-card transition-colors focus-within:border-line-strong"
       >
-        <label className="flex min-w-0 items-start gap-2">
-          <input
-            type="checkbox"
-            checked={agent.disclosed}
-            onChange={(event) => agent.setDisclosed(event.target.checked)}
-            className="mt-0.5"
-          />
-          Share chat, selected files and relevant career data with model services.
-        </label>
-        <span className="hidden shrink-0 sm:block">Ctrl/Cmd+Enter</span>
-      </div>
-      {expanded ? (
-        <section
-          aria-label="Conversation settings"
-          className="mt-3 max-h-[28dvh] space-y-4 overflow-y-auto border-t border-line-subtle px-1 pt-3 text-xs leading-5 text-text-muted"
-        >
-          <div>
-            <p className="font-medium text-text">Model services</p>
-            <p className="mt-1">{agent.capabilities.data?.disclosure}</p>
-          </div>
-          {agent.canGenerate &&
-          /^\/(records|points|resumes)\/[a-f0-9-]{36}/.test(agent.contextPath) ? (
-            <div className="space-y-2 rounded-lg border border-line-subtle p-3">
-              <p className="font-medium text-text">Task edit permission</p>
-              <p>Current resource only. Up to 5 edits for 10 minutes.</p>
-              <p>Archive, restore and merges still need review.</p>
-              <Button
-                size="sm"
-                icon={agent.grant ? "private" : "confirm"}
-                onClick={() => void agent.authorize()}
+        {agent.files.length > 0 ? (
+          <div className="mb-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto">
+            {agent.files.map((file) => (
+              <span
+                key={file.id}
+                className="inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-2 py-1 text-xs text-text-muted"
               >
-                {agent.grant ? "Revoke task edits" : "Allow task edits"}
-              </Button>
-            </div>
-          ) : null}
-          <div>
-            <p className="font-medium text-text">Attachments</p>
-            <p>
-              PDF, PNG, JPEG, WebP or UTF-8 text. Up to{" "}
-              {agent.capabilities.data?.maxAttachments ?? 5} files;{" "}
-              {fileSize(agent.capabilities.data?.maxFileBytes ?? 16777216)} per file,{" "}
-              {fileSize(agent.capabilities.data?.maxTextFileBytes ?? 1048576)} for text;{" "}
-              {fileSize(agent.capabilities.data?.maxTurnBytes ?? 33554432)} per turn.
-            </p>
+                <Icon name="evidence" size="xs" />
+                <span className="truncate">{file.file.name}</span>
+                <Button
+                  tone="ghost"
+                  size="sm"
+                  icon="close"
+                  label={`Remove ${file.file.name}`}
+                  onClick={() => agent.changeFiles(agent.files.filter((row) => row.id !== file.id))}
+                />
+              </span>
+            ))}
           </div>
-          <label className="block">
-            <span className="font-medium text-text">
-              Approved public page URLs (one per line, up to four)
-            </span>
-            <textarea
-              value={agent.publicUrls}
-              maxLength={8192}
-              onChange={(event) => {
-                agent.setPublicUrls(event.target.value);
-                agent.setUrlDisclosure(false);
-              }}
-              className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
+        ) : null}
+        <label htmlFor="agent-message" className="sr-only">
+          What would you like to do?
+        </label>
+        <textarea
+          id="agent-message"
+          value={agent.text}
+          onChange={(event) => agent.changeText(event.target.value)}
+          maxLength={agent.capabilities.data?.maxTextCharacters ?? 32000}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              (event.ctrlKey || event.metaKey) &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+          rows={2}
+          className="block max-h-40 min-h-16 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 placeholder:text-text-subtle"
+          placeholder="Ask KeepCV, or add something to your career..."
+        />
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          aria-label="Choose attachments"
+          accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.asc,.ascii,.md,.csv,.tsv,.json,.yaml,.yml,.log"
+          className="sr-only"
+          tabIndex={-1}
+          onChange={(event) => {
+            addFiles(Array.from(event.target.files ?? []));
+            event.target.value = "";
+          }}
+        />
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Menu label="Add files and tools" icon="add" placement="top-start">
+              <MenuItem
+                icon="evidence"
+                onClick={() => fileInput.current?.click()}
+                disabled={agent.busy}
+              >
+                Attach files
+              </MenuItem>
+              <MenuItem
+                icon="search"
+                checked={webAvailable && agent.webSearchEnabled}
+                disabled={agent.busy || !agent.canGenerate || !webAvailable}
+                onClick={() => agent.setWebSearchEnabled(!agent.webSearchEnabled)}
+              >
+                Web search{!webAvailable ? " (unavailable)" : ""}
+              </MenuItem>
+              <div className="my-1 border-t border-line-subtle" />
+              <MenuItem icon="settings" onClick={() => setSettings(true)}>
+                Conversation settings
+              </MenuItem>
+              <MenuItem
+                icon="restore"
+                onClick={() => {
+                  const saved = readEdit(agent.recoveryKey);
+                  if (typeof saved === "string") agent.changeText(saved);
+                  void recoverFiles(agent.recoveryKey)
+                    .then(agent.changeFiles)
+                    .catch(() => agent.setError("Browser attachment recovery is unavailable."));
+                }}
+              >
+                Recover unsent input
+              </MenuItem>
+            </Menu>
+            {webAvailable && agent.webSearchEnabled ? (
+              <button
+                type="button"
+                aria-label="Disable web search"
+                disabled={agent.busy}
+                onClick={() => agent.setWebSearchEnabled(false)}
+                className="inline-flex h-7 items-center gap-1.5 rounded-full bg-brand-soft px-2.5 text-xs font-medium text-brand-text disabled:opacity-50"
+              >
+                <Icon name="search" size="xs" />
+                Web search
+                <Icon name="close" size="xs" />
+              </button>
+            ) : null}
+            {agent.grant ? (
+              <Button size="sm" tone="ghost" icon="confirm" onClick={() => setSettings(true)}>
+                Task edits on
+              </Button>
+            ) : null}
+          </div>
+          {agent.busy ? (
+            <Button
+              tone="secondary"
+              icon="stop"
+              label="Stop task"
+              pending={agent.stopping}
+              onClick={() =>
+                void agent
+                  .stop()
+                  .catch((reason: unknown) =>
+                    agent.setError(
+                      reason instanceof Error
+                        ? reason.message
+                        : "Stop could not be acknowledged. Reopen the conversation to check its status.",
+                    ),
+                  )
+              }
             />
-          </label>
-          <label className="flex gap-2">
+          ) : (
+            <button
+              type="submit"
+              aria-label="Send"
+              title="Send (Ctrl/Cmd+Enter)"
+              disabled={disabled}
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-text text-text-inverted transition-opacity hover:opacity-80 disabled:opacity-30"
+            >
+              <Icon name="moveUp" size="md" />
+            </button>
+          )}
+        </div>
+        {!agent.disclosed ? (
+          <label className="mt-2 flex items-start gap-2 border-t border-line-subtle px-1 pt-2 text-[0.6875rem] leading-4 text-text-subtle">
             <input
               type="checkbox"
-              checked={agent.urlDisclosure}
-              onChange={(event) => agent.setUrlDisclosure(event.target.checked)}
+              checked={agent.disclosed}
+              onChange={(event) => agent.setDisclosed(event.target.checked)}
+              className="mt-0.5"
             />
-            Share these exact public URLs with the configured model and fetch service. Search
-            results do not approve page reads.
+            Share chat, selected files and relevant career data with configured services.
           </label>
-          <Button
-            size="sm"
-            tone="ghost"
-            icon="restore"
-            onClick={() => {
-              const saved = readEdit(agent.recoveryKey);
-              if (typeof saved === "string") agent.changeText(saved);
-              void recoverFiles(agent.recoveryKey)
-                .then(agent.changeFiles)
-                .catch(() => agent.setError("Browser attachment recovery is unavailable."));
-            }}
-          >
-            Recover unsent input
-          </Button>
-        </section>
+        ) : null}
+      </form>
+      {settings ? (
+        <Dialog title="Conversation settings" onClose={() => setSettings(false)}>
+          <div className="max-h-[65dvh] space-y-5 overflow-y-auto p-4 text-sm text-text-muted">
+            <section className="space-y-2">
+              <h3 className="font-medium text-text">Sharing</h3>
+              <p>{agent.capabilities.data?.disclosure}</p>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={agent.disclosed}
+                  onChange={(event) => agent.setDisclosed(event.target.checked)}
+                />
+                Share chat, selected files and relevant career data with configured services.
+              </label>
+              <p className="text-xs">
+                When Web search is on, the assistant can choose queries and read pages. Queries and
+                page URLs are shared with the configured web services.
+              </p>
+            </section>
+            <section className="space-y-2">
+              <h3 className="font-medium text-text">Changes</h3>
+              <p>
+                {agent.grant
+                  ? "Task edits are enabled for the current resource."
+                  : "Review suggested changes before they are saved."}{" "}
+                Archive, restore and merges always need review.
+              </p>
+              {agent.canGenerate &&
+              /^\/(records|points|resumes)\/[a-f0-9-]{36}/.test(agent.contextPath) ? (
+                <>
+                  <p className="text-xs">Current resource only. Up to 5 edits for 10 minutes.</p>
+                  <Button
+                    size="sm"
+                    icon={agent.grant ? "private" : "confirm"}
+                    onClick={() => void agent.authorize()}
+                  >
+                    {agent.grant ? "Revoke task edits" : "Allow task edits"}
+                  </Button>
+                </>
+              ) : null}
+            </section>
+            <details className="border-t border-line-subtle pt-3">
+              <summary className="cursor-pointer font-medium text-text">File limits</summary>
+              <p className="mt-2 text-xs">
+                PDF, PNG, JPEG, WebP or UTF-8 text. Up to{" "}
+                {agent.capabilities.data?.maxAttachments ?? 5} files;{" "}
+                {fileSize(agent.capabilities.data?.maxFileBytes ?? 16777216)} per file,{" "}
+                {fileSize(agent.capabilities.data?.maxTextFileBytes ?? 1048576)} for text;{" "}
+                {fileSize(agent.capabilities.data?.maxTurnBytes ?? 33554432)} per turn.
+              </p>
+            </details>
+          </div>
+        </Dialog>
       ) : null}
-    </form>
+    </>
   );
 }
