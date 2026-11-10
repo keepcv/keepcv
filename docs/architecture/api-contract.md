@@ -793,7 +793,7 @@ remain governed by the existing locked atomic application transaction.
 
 The built-in adapter's optional usage observer receives bounded call and run
 completion events. Calls cover conversation tool steps, retries/failover, document
-analysis and native research. Each started step reports once, including failed or
+analysis and hosted research. Each started step reports once, including failed or
 interrupted calls when counts exist. Only safe nonnegative provider token counts
 are reported; absent counts are null with unknown source, never synthesized zero.
 Run completion does not assert that every provider count was returned. Metadata

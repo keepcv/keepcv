@@ -5,7 +5,7 @@ and an injected AgentModel; provider SDKs stay behind model adapters. The API
 accepts the resulting AgentRuntime through createApi({ agent, ... }).
 
 The built-in OpenRouter adapter supports bounded streaming tool use, ordered
-qualified endpoints, native hosted research and multimodal input. Custom models
+qualified endpoints, public web tools and multimodal input. Custom models
 implement AgentModel.generate using ModelRequest's read/describe/propose callbacks.
 No adapter receives a database driver, owner lifecycle or permanent-erasure tool.
 
@@ -28,8 +28,8 @@ ordinary editing and export. Credentials are resolved at startup and never sent
 to the browser. Routes accept optional apiKeyEnv for separately configured keys.
 Models and providers cannot be chosen through conversation requests.
 
-An optional research route has the same shape. Enabling it also requires
-nativeSearchPolicyConfirmed: true after the operator verifies a locked native-only
+Without external web configuration, an optional research route uses native
+search. Enabling that route requires nativeSearchPolicyConfirmed: true after the operator verifies a locked native-only
 OpenRouter workspace search policy and tests an unsupported route is refused.
 A request's native engine alone is not a no-fallback guarantee. Research runs
 only for the exact public query the user supplies in the research control.
