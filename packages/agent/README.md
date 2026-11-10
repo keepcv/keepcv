@@ -224,3 +224,99 @@ coordination belongs to the consumer.
 Direct deadlineMs configuration must be an integer between 1 and 180000 ms,
 defaulting to 90000. Invalid configuration is refused at startup so a live task
 cannot issue an out-of-bound lease that another runtime would ignore.
+
+
+## Bounded public web tools
+
+Optional `web` configuration on `AgentConfig` extends the research route. It
+selects Parallel `turbo` search and OpenRouter fetch explicitly; no `auto`,
+provider fallback or alternate engine is requested. Omit `web` to retain the
+legacy native-only research configuration; that configuration still requires
+its locked native-only workspace policy. Omit `research` to disable web tools.
+
+```json
+{
+  "routes": [{ "model": "qualified/model", "providers": ["approved"] }],
+  "research": { "model": "qualified/public-model", "providers": ["approved"] },
+  "web": {
+    "policyConfirmed": true,
+    "search": { "engine": "parallel", "mode": "turbo", "domains": ["example.com"] },
+    "fetch": { "engine": "openrouter", "domains": ["example.com"] },
+    "maxCalls": 2,
+    "maxResults": 5,
+    "maxCharacters": 1500,
+    "maxContentTokens": 2000,
+    "maxResponseBytes": 65536,
+    "deadlineMs": 15000
+  }
+}
+```
+
+`policyConfirmed` is an operator attestation, not automatic qualification. Enable
+it only after verifying the selected workspace, provider endpoint and engine
+meet the deployment's destination, retention, redirect and private-network
+requirements. Locked workspace settings must agree with the explicit engines.
+Keep credentials and this configuration server-side. Neither schema nor core
+contains a credential, provider choice or deployment policy.
+
+The turn's `publicResearchQuery` is compared byte-for-byte with the research tool
+argument. It is never derived from messages, career records, Evidence or files.
+`publicPages: { urls: [...], disclosure: true }` separately consents to disclosing
+up to four exact URLs. Search results authorize no fetch. A fetch tool argument
+must match one approved URL exactly. Isolated hosted requests contain only the
+approved query or URL and fixed instructions; private conversation context,
+attachments and resource reads never enter that hosted request.
+
+Local URL validation requires canonical HTTPS, exact configured hostnames, no
+credentials, explicit ports, fragments, IP literals, localhost or local/internal
+suffixes. Numeric, alternate IPv4, IPv6, percent-encoded authority and hostname
+suffix tricks are refused. KeepCV never downloads the supplied URL. Inference
+HTTP redirects are refused. DNS resolution, page redirects, DNS rebinding,
+private-address blocking and internal server-tool arguments happen inside the
+selected service: local validation cannot verify or constrain those operations.
+The provider documentation promises domain filtering and truncation for these
+engines; it does not specify their redirect or private-address security contract.
+It also does not promise that the model uses the supplied query/URL without
+reformulation or additional same-domain page access. Therefore this adapter does
+not establish exact engine-side query/path confinement. If those are hard
+requirements, leave these tools disabled until the operator has independently
+qualified them; a successful probe or model assertion is insufficient evidence.
+
+The full external admission envelope is `maxCalls` hosted requests per turn,
+with at most one requested server-tool execution per hosted request, zero
+retries and no failover after a tool starts. A consumer can reserve the entire
+configured envelope before calling `generate`; usage observation does not
+perform admission or release a reservation. Search requests bound per-call and
+total results and excerpt characters; fetch requests bound approximate context
+tokens. Responses are read with a streaming byte ceiling, findings supplied to
+the main model have a character ceiling, and each hosted request has a deadline.
+Ceilings are four calls, ten results, 10000 characters, 10000 content tokens,
+256 KiB and thirty seconds; defaults are in the example. Cancellation cannot
+retract a provider request already admitted or its charges.
+
+An `external-tool` usage event identifies `callId`, optional `runId`, actual
+web tool, selected engine, admitted calls, observed requested/executed counts
+(or null) and outcome, separately from model token usage. Exactly one requested
+and one executed call in `usage.server_tool_use_details` are required before
+findings are accepted. Unknown, zero and excess counts refuse findings. Missing
+token counts remain unknown. These counters prove reported execution, not the
+provider's internal destination, query or fetched content. Observers are best
+effort and carry no private arguments/results. Consumer accounting should retain
+the reservation when usage is missing or a process crashes.
+
+Search sources come from returned citations. Fetch without annotations retains
+the approved requested URL with `provenance: "requested-url"`; that is a record
+of the request, not an invented citation or proof of the final redirect target.
+Sources observed before a later interruption and actual tool names/purposes
+remain in saved history and native recovery. No new application event type or
+database migration is needed. The optional native-v3 fields are additive; older
+readers may discard them, so upgrade all readers before transferring histories.
+
+Fetched text remains untrusted model input. It cannot create tools, consent,
+scopes or edit authority. Topic/factual instructions are advisory; exact typed
+operations and current owner/session authorization still guard every read,
+proposal and application. Normal editing, history, originals and export do not
+require any web service or assistant capability.
+
+Provider references: [search](https://openrouter.ai/docs/guides/features/server-tools/web-search)
+and [fetch](https://openrouter.ai/docs/guides/features/server-tools/web-fetch).

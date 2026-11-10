@@ -530,7 +530,21 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   expect(turns).toHaveLength(0);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: "Conversation settings" }));
+  fireEvent.change(screen.getByLabelText("Optional public research query"), {
+    target: { value: "  exact public question  " },
+  });
+  fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
+    target: { value: "https://example.com/public" },
+  });
+  fireEvent.click(screen.getByLabelText(/Share these exact public URLs/));
   for (const text of ["Read this page", "Read it again"]) {
+    if (text === "Read it again") {
+      fireEvent.change(screen.getByLabelText(/Approved public page URLs/), {
+        target: { value: "https://example.com/other" },
+      });
+      expect(screen.getByLabelText(/Share these exact public URLs/)).not.toBeChecked();
+    }
     fireEvent.change(screen.getByLabelText("What would you like to do?"), {
       target: { value: text },
     });
@@ -539,6 +553,11 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
     await screen.findByText("Saved");
   }
   expect(turns).toHaveLength(2);
+  expect(turns[0]).toMatchObject({
+    publicResearchQuery: "  exact public question  ",
+    publicPages: { urls: ["https://example.com/public"], disclosure: true },
+  });
+  expect(turns[1]).not.toHaveProperty("publicPages");
   for (const turn of turns)
     expect(turn).toMatchObject({
       context: {

@@ -847,3 +847,26 @@ Direct createAgent deadlineMs is validated at startup as an integer from 1 to
 180000 ms (default 90000). This keeps every newly issued lease within the shared
 bounded-lease predicate; invalid caller configuration cannot create a live task
 whose lease another runtime would treat as out of bounds.
+
+
+### Public query and page scopes
+
+Turns optionally accept `publicPages: { urls, disclosure: true }`, separately
+from exact `publicResearchQuery`. The page list has at most four bounded URLs;
+search citations never expand it. The runtime passes only the current turn's
+approvals to its model. Historical approvals are data, never renewed authority.
+The built-in adapter admits bounded public-only hosted requests with explicit
+engine configuration and verified execution counters. Provider-side query,
+redirect and network confinement require operator qualification; details and
+limits are specified in the agent package's Bounded public web tools contract.
+No arbitrary HTTP, shell, filesystem or credential tool is added. Existing
+read/propose/apply authority checks and explicit edit review remain in force.
+
+`ModelRequest.source` optionally records an observed source as soon as it is
+available. The runtime validates and retains at most forty such records for
+interrupted history. `AgentSource` optionally describes provenance (`citation`
+or `requested-url`) and web tool (`web_search` or `web_fetch`). A requested URL
+is explicitly not a provider citation. Existing sources and custom models remain
+compatible. Token usage events gain a separate `external-tool` observer variant
+with admission and provider execution counts; application stream vocabulary is
+unchanged. Unknown execution counts refuse research findings.

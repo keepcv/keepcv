@@ -1643,3 +1643,10 @@ supports distinguishable participants, interruption recovery and document access
 its customer-service findings are applied selectively to this data-editing agent.
 No time estimate, confidence score, simulated reasoning, feedback telemetry or
 automatic retry is invented by the UI.
+
+
+Composer settings separately expose exact public page URLs and URL disclosure
+consent. Editing the URL list clears consent. The public query is sent without
+trimming or inference. Page approval is independent of search results, attachments
+and task edit grants. Requested-page provenance stays visible in source labels;
+interrupted replies keep already observed sources and tool activity.

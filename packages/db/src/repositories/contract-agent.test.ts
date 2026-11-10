@@ -29,7 +29,16 @@ eachDriver(({ run, otherOwner }) => {
       role: "user",
       text: "My notes",
       attachmentIds: [],
-      sources: [],
+      publicPages: { urls: ["https://example.com/public"], disclosure: true },
+      sources: [
+        {
+          title: "Requested public page",
+          url: "https://example.com/public",
+          provenance: "requested-url",
+          tool: "web_fetch",
+        },
+      ],
+      toolCalls: [{ name: "web_fetch", summary: "Read an approved public page" }],
       createdAt: chat.createdAt,
       state: "complete",
       navigation: null,

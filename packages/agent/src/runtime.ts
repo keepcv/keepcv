@@ -15,8 +15,10 @@ import {
   type AgentOperation,
   type AgentSource,
   type AgentToolCall,
+  type AgentTurn,
   agentLimitsSchema,
   agentOperationSchema,
+  agentSourceSchema,
   agentToolCallSchema,
   type Store,
   type Timestamp,
@@ -33,6 +35,8 @@ export interface ModelRequest {
   attachments: AgentAttachment[];
   context: string;
   publicResearchQuery: string | undefined;
+  publicPages?: AgentTurn["publicPages"];
+  source?: (source: AgentSource) => Promise<void>;
   signal: AbortSignal;
   text: (text: string) => Promise<void>;
   tool?: (name: string, summary: string) => Promise<void>;
@@ -342,6 +346,7 @@ export function createAgent(options: {
       const context = { ownerId: owner, conversationId, scope, signal: controller.signal };
       let partial = "";
       const toolCalls: AgentToolCall[] = [];
+      const sources: AgentSource[] = [];
       let started = false;
       try {
         await check({ ...context, phase: "generate" });
@@ -368,6 +373,7 @@ export function createAgent(options: {
             ...(input.publicResearchQuery === undefined
               ? {}
               : { publicResearchQuery: input.publicResearchQuery }),
+            ...(input.publicPages === undefined ? {} : { publicPages: input.publicPages }),
             attachmentIds: input.attachmentIds,
             sources: [],
             createdAt: stamp(),
@@ -435,6 +441,12 @@ export function createAgent(options: {
               attachments,
               context: input.context.path,
               publicResearchQuery: input.publicResearchQuery,
+              publicPages: input.publicPages,
+              source: async (value) => {
+                await check({ ...context, phase: "generate" });
+                if (sources.length >= 40) throw new AgentRefusalError("Source limit reached.");
+                sources.push(agentSourceSchema.parse(value));
+              },
               signal: controller.signal,
               text: async (text) => {
                 await check({ ...context, phase: "generate" });
@@ -618,7 +630,7 @@ export function createAgent(options: {
               role: "assistant",
               text: partial || message,
               toolCalls,
-              sources: [],
+              sources,
               navigation: null,
               attachmentIds: [],
               createdAt: stamp(),

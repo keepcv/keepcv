@@ -282,6 +282,30 @@
                       "type": "string",
                       "maxLength": 500
                     },
+                    "publicPages": {
+                      "type": "object",
+                      "properties": {
+                        "urls": {
+                          "minItems": 1,
+                          "maxItems": 4,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "format": "uri"
+                          }
+                        },
+                        "disclosure": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "urls",
+                        "disclosure"
+                      ],
+                      "additionalProperties": false
+                    },
                     "attachmentIds": {
                       "type": "array",
                       "items": {
@@ -309,6 +333,20 @@
                           },
                           "location": {
                             "type": "string"
+                          },
+                          "provenance": {
+                            "type": "string",
+                            "enum": [
+                              "citation",
+                              "requested-url"
+                            ]
+                          },
+                          "tool": {
+                            "type": "string",
+                            "enum": [
+                              "web_search",
+                              "web_fetch"
+                            ]
                           }
                         },
                         "required": [

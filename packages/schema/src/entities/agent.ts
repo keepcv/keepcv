@@ -486,11 +486,19 @@ export const agentContextSchema = z
     resourceId: uuidSchema.optional(),
   })
   .strict();
+export const agentPublicPagesSchema = z
+  .object({
+    urls: z.array(z.url().max(2048)).min(1).max(4),
+    disclosure: z.literal(true),
+  })
+  .strict();
 export const agentSourceSchema = z.object({
   title: z.string(),
   url: z.url().optional(),
   attachmentId: uuidSchema.optional(),
   location: z.string().optional(),
+  provenance: z.enum(["citation", "requested-url"]).optional(),
+  tool: z.enum(["web_search", "web_fetch"]).optional(),
 });
 export const agentActionSchema = z.object({
   id: uuidSchema,
@@ -511,6 +519,7 @@ export const agentMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   text: z.string(),
   publicResearchQuery: z.string().max(500).optional(),
+  publicPages: agentPublicPagesSchema.optional(),
   attachmentIds: z.array(uuidSchema),
   sources: z.array(agentSourceSchema),
   createdAt: timestampSchema,
@@ -543,7 +552,8 @@ export const agentAttachmentSchema = z.object({
 });
 export const agentTurnSchema = z
   .object({
-    publicResearchQuery: z.string().trim().min(1).max(500).optional(),
+    publicResearchQuery: z.string().min(1).max(500).optional(),
+    publicPages: agentPublicPagesSchema.optional(),
     id: uuidSchema,
     text: z.string().max(32000),
     attachmentIds: z.array(uuidSchema).max(5),

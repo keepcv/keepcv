@@ -1523,3 +1523,10 @@ runtime must use the consumer's current authorization state; it inherits no
 process-local authority or revocation history. This intentionally favors refusal
 over forgetting revocation. The consumer owns replacement and cross-process
 coordination; the runtime never rotates or resumes itself.
+
+
+Conversation messages optionally retain public page approval and source
+provenance/tool fields in the existing typed JSON aggregate. These are additive
+native-v3 fields, with no table, migration or active permission in an archive.
+The same source records persist on interrupted messages. Old readers can drop
+unknown optional fields; all readers must be upgraded to retain the metadata.

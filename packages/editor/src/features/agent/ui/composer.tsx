@@ -16,7 +16,7 @@ export function Composer() {
   const agent = useAgent();
   const fileInput = useRef<HTMLInputElement>(null);
   const [options, setOptions] = useState(false);
-  const expanded = options || agent.grant || Boolean(agent.publicQuery);
+  const expanded = options || agent.grant || Boolean(agent.publicQuery || agent.publicUrls);
   const disabled =
     agent.busy ||
     agent.deciding !== null ||
@@ -216,6 +216,29 @@ export function Composer() {
               placeholder="Only this exact query may be sent to web search"
               className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
             />
+          </label>
+          <label className="block">
+            <span className="font-medium text-text">
+              Approved public page URLs (one per line, up to four)
+            </span>
+            <textarea
+              value={agent.publicUrls}
+              maxLength={8192}
+              onChange={(event) => {
+                agent.setPublicUrls(event.target.value);
+                agent.setUrlDisclosure(false);
+              }}
+              className="mt-1 block w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs"
+            />
+          </label>
+          <label className="flex gap-2">
+            <input
+              type="checkbox"
+              checked={agent.urlDisclosure}
+              onChange={(event) => agent.setUrlDisclosure(event.target.checked)}
+            />
+            Share these exact public URLs with the configured model and fetch service. Search
+            results do not approve page reads.
           </label>
           <Button
             size="sm"
