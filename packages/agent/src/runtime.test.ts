@@ -238,8 +238,9 @@ it.each([
     new AgentProviderError(code, "Synthetic refusal", false, code === "rate-limit" ? 120000 : 0),
   );
   const events: AgentEvent[] = [];
-  await turn(newUuid(), async (event) => {
+  await turn(newUuid(), (event) => {
     events.push(event);
+    return Promise.resolve();
   });
   const failure = events.find((event) => event.type === "error");
   expect(failure?.problem?.status).toBe(status);
@@ -252,8 +253,9 @@ it("retains concurrency status for streamed recovery", async () => {
     new ConcurrencyConflictError("profile", profile.id, profile.updatedAt),
   );
   const events: AgentEvent[] = [];
-  await turn(newUuid(), async (event) => {
+  await turn(newUuid(), (event) => {
     events.push(event);
+    return Promise.resolve();
   });
   expect(events.find((event) => event.type === "error")?.problem?.status).toBe(409);
 });
