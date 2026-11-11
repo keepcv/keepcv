@@ -29,7 +29,8 @@
     "./files": {
       "types": "./dist/files/index.d.ts",
       "import": "./dist/files/index.js"
-    }
+    },
+    "./pdf.worker.mjs": "./dist/pdf.worker.mjs"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -44,7 +45,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/copy-pdf-worker.mjs",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },

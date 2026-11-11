@@ -49,6 +49,10 @@ export async function checkEditorAssets(installed) {
     files.some((file) => file.includes("read-docx.worker") && file.endsWith(".js")),
     "The installed consumer lost the DOCX worker",
   );
+  assert(
+    files.some((file) => file.startsWith("pdf.worker-") && file.endsWith(".mjs")),
+    "The installed consumer lost the version-aligned PDF worker",
+  );
   const styles = files.filter((file) => file.endsWith(".css"));
   assert(styles.length > 0, "The installed consumer lost the stylesheet");
   const css = (await Promise.all(styles.map((file) => readFile(join(assets, file), "utf8")))).join(

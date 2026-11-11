@@ -24,7 +24,8 @@
       "import": "./dist/ui.js"
     },
     "./style.css": "./dist/style.css",
-    "./theme.js": "./dist/theme.js"
+    "./theme.js": "./dist/theme.js",
+    "./favicon.svg": "./dist/favicon.svg"
   },
   "files": [
     "dist",

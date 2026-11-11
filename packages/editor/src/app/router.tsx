@@ -35,6 +35,7 @@ import { TemplateList } from "../features/templates/ui/template-list.js";
 import type { ApiClient } from "../lib/api.js";
 import { ARCHIVED_FILTERS } from "../lib/archived.js";
 import { RecoveryNamespaceContext } from "../lib/edit-recovery.js";
+import { useHost } from "../lib/host.js";
 import { prefetchStore, useStore } from "../lib/store-cache.js";
 import { Shell } from "./shell.js";
 import { Failure, Skeleton } from "./states.js";
@@ -61,10 +62,16 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
       assistant = true,
       home = "assistant",
     } = rootRoute.useRouteContext();
+    const host = useHost();
     return (
       <RecoveryNamespaceContext.Provider value={recoveryNamespace}>
         <AgentProvider key={recoveryNamespace} api={api} enabled={assistant}>
-          <Shell store={useStore(api)} onSignOut={signOut} assistant={assistant} home={home} />
+          <Shell
+            store={useStore(api)}
+            onSignOut={host.signOut ?? signOut}
+            assistant={assistant}
+            home={home}
+          />
           {assistant ? <AskKeepCV /> : null}
         </AgentProvider>
       </RecoveryNamespaceContext.Provider>
@@ -134,7 +141,13 @@ const dataRoute = createRoute({
   path: "/data",
   component: function DataPage() {
     const { api, dataPage } = dataRoute.useRouteContext();
-    return <DataScreen store={useStore(api)} client={api} presentation={dataPage} />;
+    return (
+      <DataScreen
+        store={useStore(api)}
+        client={api}
+        presentation={useHost().dataPage ?? dataPage}
+      />
+    );
   },
 });
 

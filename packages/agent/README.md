@@ -286,3 +286,16 @@ Native archive v3 and the application stream event vocabulary are unchanged.
 
 Provider references: [search](https://openrouter.ai/docs/guides/features/server-tools/web-search)
 and [fetch](https://openrouter.ai/docs/guides/features/server-tools/web-fetch).
+
+Generation formats are separate from stored attachment support. AgentModel may
+advertise `generationMediaTypes`; omitted metadata permits only `text/plain`.
+The OpenRouter adapter derives text/image/PDF support from configured routes.
+Pass `generationMediaTypes` to createAgent to narrow its qualified set; createApi
+can narrow it again. Neither input can add model support. Mixed inputs still
+require a route that supports every selected file. Originals/history/export
+remain available when a format or all generation is disabled.
+
+Stream error events may include a safe Problem and server Retry-After value.
+They retain the existing error name/text vocabulary and never expose raw SDK
+errors. Legacy text-only events remain supported; historical run errors retain
+text without reconstructing missing metadata.

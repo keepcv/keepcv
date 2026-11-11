@@ -1,5 +1,6 @@
 import type { ReactiveResume, RenderCvFile } from "@keepcv/interop";
 import { fromJsonResume, fromLines, fromReactiveResume, fromRenderCv } from "@keepcv/interop";
+import pdfWorkerUrl from "@keepcv/interop/pdf.worker.mjs?url&no-inline";
 import type { Intake } from "@keepcv/schema";
 import { intakeSchema, templateFileSchema } from "@keepcv/schema";
 
@@ -96,7 +97,7 @@ export async function readFile(file: File, signal?: AbortSignal): Promise<Intake
   if (startsWith(magic, PDF)) {
     const { pdfLines } = await import("@keepcv/interop/files");
     return intakeSchema.parse(
-      fromLines(await pdfLines(new Uint8Array(await file.arrayBuffer())), "pdf"),
+      fromLines(await pdfLines(new Uint8Array(await file.arrayBuffer()), pdfWorkerUrl), "pdf"),
     );
   }
   const body = await file.text();

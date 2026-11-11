@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { Icon } from "../components/icon/icon.js";
 import { Spot, type SpotName } from "../components/icon/spot.js";
 import { Button } from "../components/ui/button.js";
-import { isProblem } from "../lib/api.js";
+import { failureOf, isProblem } from "../lib/api.js";
+import { HostActions, useHost } from "../lib/host.js";
 
 export function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
@@ -38,10 +39,11 @@ export function Empty({
 }
 
 export function Failure({ error, retry }: { error: unknown; retry?: () => void }) {
+  const host = useHost();
+  const failure = failureOf(error);
   const problem = isProblem(error) ? error.problem : undefined;
   const title = problem?.title ?? "Something went wrong";
-  const detail =
-    problem?.detail ?? (error instanceof Error ? error.message : "No detail came back.");
+  const detail = failure.message;
 
   return (
     <div
@@ -58,6 +60,10 @@ export function Failure({ error, retry }: { error: unknown; retry?: () => void }
           Sign in again through the application that opened this editor, then reload this page.
         </p>
       ) : null}
+      {failure.retryAfter === undefined ? null : (
+        <p className="mt-2 text-sm">Server Retry-After: {failure.retryAfter}</p>
+      )}
+      <HostActions actions={host.recoveryActions?.(failure) ?? []} />
       {retry === undefined ? null : (
         <Button className="mt-4" icon="refresh" onClick={retry}>
           Try again

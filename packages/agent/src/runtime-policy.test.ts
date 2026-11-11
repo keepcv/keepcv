@@ -297,3 +297,15 @@ it("retains observed sources and tool activity when a turn is interrupted", asyn
     toolCalls: [{ name: "web_fetch" }],
   });
 });
+
+it("narrows qualified model formats and defaults legacy custom models to text only", () => {
+  expect(runtime.capabilities.generationMediaTypes).toEqual(["text/plain"]);
+  runtime.close();
+  runtime = createAgent({
+    unitOfWork: store.unitOfWork,
+    model: { generate, generationMediaTypes: ["text/plain", "image/png"] },
+    generationMediaTypes: ["text/plain", "application/pdf"],
+    disclosure: "Synthetic",
+  });
+  expect(runtime.capabilities.generationMediaTypes).toEqual(["text/plain"]);
+});

@@ -451,6 +451,13 @@ export function createOpenRouterModel(
 
   const webSearchAvailable = researchRoute !== undefined;
   return {
+    generationMediaTypes: [
+      "text/plain" as const,
+      ...(config.routes.some((route) => route.images)
+        ? ["image/png" as const, "image/jpeg" as const, "image/webp" as const]
+        : []),
+      ...(config.routes.some((route) => route.pdf) ? ["application/pdf" as const] : []),
+    ],
     webSearchAvailable,
     async generate(request): Promise<ModelReply> {
       let completion: AgentCompletion = "failed";

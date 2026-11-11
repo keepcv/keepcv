@@ -5,7 +5,12 @@ import { Button } from "../../../components/ui/button.js";
 import { Dialog } from "../../../components/ui/dialog.js";
 import { Menu, MenuItem } from "../../../components/ui/menu.js";
 import { readEdit } from "../../../lib/edit-recovery.js";
-import { recoverFiles } from "../model/files.js";
+import {
+  generationAccept,
+  generationFormats,
+  generationMediaType,
+  recoverFiles,
+} from "../model/files.js";
 import { useAgent } from "./context.js";
 
 function fileSize(bytes: number) {
@@ -23,10 +28,20 @@ export function Composer() {
     agent.deciding !== null ||
     agent.conversation.data?.archivedAt != null ||
     !agent.canGenerate ||
-    !agent.disclosed ||
     (!agent.text.trim() && agent.files.length === 0 && agent.selectedAttachments.length === 0);
   const webAvailable = agent.capabilities.data?.webSearchAvailable === true;
+  const mediaTypes = agent.capabilities.data?.generationMediaTypes ?? ["text/plain"];
   function addFiles(files: File[]) {
+    if (
+      files.some(
+        (file) => !mediaTypes.includes(generationMediaType(file) as (typeof mediaTypes)[number]),
+      )
+    ) {
+      agent.setError(
+        "This file format is unavailable for generation. Your existing selections are retained.",
+      );
+      return;
+    }
     if (agent.files.length + files.length > (agent.capabilities.data?.maxAttachments ?? 5)) {
       agent.setError("Choose fewer files to fit the configured attachment limit.");
       return;
@@ -94,7 +109,7 @@ export function Composer() {
           type="file"
           multiple
           aria-label="Choose attachments"
-          accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.asc,.ascii,.md,.csv,.tsv,.json,.yaml,.yml,.log"
+          accept={generationAccept(mediaTypes)}
           className="sr-only"
           tabIndex={-1}
           onChange={(event) => {
@@ -102,7 +117,7 @@ export function Composer() {
             event.target.value = "";
           }}
         />
-        <div className="flex items-center justify-between gap-2 pt-2">
+        <div className="sticky bottom-0 flex items-center justify-between gap-2 bg-surface-raised pt-2">
           <div className="flex min-w-0 items-center gap-1.5">
             <Menu label="Add files and tools" icon="add" placement="top-start">
               <MenuItem
@@ -162,17 +177,7 @@ export function Composer() {
               icon="stop"
               label="Stop task"
               pending={agent.stopping}
-              onClick={() =>
-                void agent
-                  .stop()
-                  .catch((reason: unknown) =>
-                    agent.setError(
-                      reason instanceof Error
-                        ? reason.message
-                        : "Stop could not be acknowledged. Reopen the conversation to check its status.",
-                    ),
-                  )
-              }
+              onClick={() => void agent.stop().catch((reason: unknown) => agent.setError(reason))}
             />
           ) : (
             <button
@@ -186,18 +191,58 @@ export function Composer() {
             </button>
           )}
         </div>
-        {!agent.disclosed ? (
-          <label className="mt-2 flex items-start gap-2 border-t border-line-subtle px-1 pt-2 text-[0.6875rem] leading-4 text-text-subtle">
-            <input
-              type="checkbox"
-              checked={agent.disclosed}
-              onChange={(event) => agent.setDisclosed(event.target.checked)}
-              className="mt-0.5"
-            />
-            Share chat, selected files and relevant career data with configured services.
-          </label>
-        ) : null}
       </form>
+      {agent.consent ? (
+        <Dialog
+          title="Share with the assistant"
+          returnFocus={() => document.getElementById("agent-message")}
+          describedBy="agent-sharing-scope"
+          onClose={agent.closeConsent}
+        >
+          <div className="max-h-[60dvh] space-y-4 overflow-y-auto p-4 text-sm text-text-muted">
+            <div id="agent-sharing-scope" className="space-y-3">
+              <p>{agent.capabilities.data?.disclosure}</p>
+              <p>
+                Your message, conversation history, selected files and relevant career data read by
+                the assistant are sent to the configured services. Stored private Evidence and
+                drafts are excluded.
+              </p>
+              <p>Supported file inputs: {generationFormats(mediaTypes)}.</p>
+              <p>
+                {agent.files.length + agent.selectedAttachments.length} selected files or originals
+                will be included. Sharing does not grant permission to edit your data.
+              </p>
+              <p>
+                {webAvailable && agent.webSearchEnabled
+                  ? "Web search is on. The assistant chooses search queries and page URLs that may reflect conversation information and shares them with the configured web services."
+                  : "Web search is off. No web search or page fetch tools will be available for this request."}
+              </p>
+            </div>
+            {webAvailable ? (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={agent.webSearchEnabled}
+                  onChange={(event) => agent.setWebSearchEnabled(event.target.checked)}
+                />
+                Use Web search
+              </label>
+            ) : null}
+            <p>
+              Allow sharing for this connected editor session. You can revoke future sharing in
+              Conversation settings. Data already sent cannot be retracted.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button tone="secondary" onClick={agent.closeConsent}>
+                Not now
+              </Button>
+              <Button disabled={disabled} onClick={() => void agent.allowAndSend()}>
+                Allow and send
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      ) : null}
       {settings ? (
         <Dialog title="Conversation settings" onClose={() => setSettings(false)}>
           <div className="max-h-[65dvh] space-y-5 overflow-y-auto p-4 text-sm text-text-muted">
@@ -212,6 +257,21 @@ export function Composer() {
                 />
                 Share chat, selected files and relevant career data with configured services.
               </label>
+              <p className="text-xs">
+                Revoking sharing blocks future sends. It cannot retract data already sent.
+              </p>
+              {agent.busy ? (
+                <div className="space-y-2">
+                  <p>The current task continues until stopped separately.</p>
+                  <Button
+                    onClick={() =>
+                      void agent.stop().catch((error: unknown) => agent.setError(error))
+                    }
+                  >
+                    Stop task
+                  </Button>
+                </div>
+              ) : null}
               <p className="text-xs">
                 When Web search is on, the assistant can choose queries and read pages. Queries and
                 page URLs are shared with the configured web services.
@@ -242,8 +302,8 @@ export function Composer() {
             <details className="border-t border-line-subtle pt-3">
               <summary className="cursor-pointer font-medium text-text">File limits</summary>
               <p className="mt-2 text-xs">
-                PDF, PNG, JPEG, WebP or UTF-8 text. Up to{" "}
-                {agent.capabilities.data?.maxAttachments ?? 5} files;{" "}
+                Generation formats: {generationFormats(mediaTypes)}. Text aliases such as Markdown
+                are UTF-8 text. Up to {agent.capabilities.data?.maxAttachments ?? 5} files;{" "}
                 {fileSize(agent.capabilities.data?.maxFileBytes ?? 16777216)} per file,{" "}
                 {fileSize(agent.capabilities.data?.maxTextFileBytes ?? 1048576)} for text;{" "}
                 {fileSize(agent.capabilities.data?.maxTurnBytes ?? 33554432)} per turn.

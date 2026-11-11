@@ -134,10 +134,11 @@ it("bounds pending admissions and requires a fresh authorized review after idle 
   });
   expect(await turn()).not.toContainEqual(expect.objectContaining({ type: "error" }));
   suggest(await change("Overflow"));
-  expect(await turn()).toContainEqual({
-    type: "error",
-    text: "Too many proposals awaiting review. Decide a proposal or wait for its review window to expire, then request fresh review.",
-  });
+  const errorEvent = (await turn()).find((event) => event.type === "error");
+  expect(errorEvent?.text).toBe(
+    "Too many proposals awaiting review. Decide a proposal or wait for its review window to expire, then request fresh review.",
+  );
+  expect(errorEvent?.problem?.status).toBe(503);
   const pending = (await run((r) => r.agent.get(conversation))).actions[0];
   if (pending === undefined) throw new Error("No proposal");
   now += 30 * 60 * 1000;
@@ -301,7 +302,9 @@ it("never forgets a revoked scope during cleanup and retires rather than evictin
       "origin",
     ),
   ).toThrowError(AgentRefusalError);
-  expect(await turn()).toContainEqual({ type: "error", text: "Task authority was revoked." });
+  const errorEvent = (await turn()).find((event) => event.type === "error");
+  expect(errorEvent?.text).toBe("Task authority was revoked.");
+  expect(errorEvent?.problem?.status).toBe(403);
   expect(generate).not.toHaveBeenCalled();
   for (let index = 1; index < 128; index++) runtime.revoke(owner, `scope-${index}`);
   runtime.revoke(owner, "origin");
@@ -360,10 +363,11 @@ it("leaves a recreated runtime's running lease intact and recovers only after ex
   runtime = freshRuntime();
   expect(runtime.cancel(owner, conversation)).toBe(false);
   expect(await run((r) => r.agent.get(conversation))).toEqual(before);
-  expect(await turn()).toContainEqual({
-    type: "error",
-    text: "This conversation has a running lease. Stop it in the process executing the task or wait for lease expiry.",
-  });
+  const errorEvent = (await turn()).find((event) => event.type === "error");
+  expect(errorEvent?.text).toBe(
+    "This conversation has a running lease. Stop it in the process executing the task or wait for lease expiry.",
+  );
+  expect(errorEvent?.problem?.status).toBe(409);
   expect(generate).not.toHaveBeenCalled();
   now += 60000;
   expect(runtime.cancel(owner, conversation)).toBe(false);

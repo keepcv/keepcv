@@ -33,7 +33,13 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
                       type="checkbox"
                       aria-label={`Include ${file.name}`}
                       disabled={
-                        readOnly || !agent.canGenerate || agent.busy || file.archivedAt !== null
+                        readOnly ||
+                        !agent.canGenerate ||
+                        agent.busy ||
+                        file.archivedAt !== null ||
+                        !(agent.capabilities.data?.generationMediaTypes ?? ["text/plain"]).includes(
+                          file.mediaType,
+                        )
                       }
                       checked={agent.selectedAttachments.includes(file.id)}
                       onChange={(event) =>
@@ -47,6 +53,11 @@ function Conversation({ readOnly = false }: { readOnly?: boolean }) {
                   ) : null}{" "}
                   {!readOnly && agent.canGenerate ? "Include " : ""}
                   {file.name}
+                  {!(agent.capabilities.data?.generationMediaTypes ?? ["text/plain"]).includes(
+                    file.mediaType,
+                  )
+                    ? " (unavailable for generation)"
+                    : ""}
                 </span>
                 <Button
                   size="sm"

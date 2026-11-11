@@ -600,6 +600,7 @@ export const agentLimitsSchema = z.object({
 });
 export type AgentLimits = z.infer<typeof agentLimitsSchema>;
 export const agentCapabilitiesSchema = agentLimitsSchema.extend({
+  generationMediaTypes: z.array(agentAttachmentSchema.shape.mediaType).default(["text/plain"]),
   webSearchAvailable: z.boolean().default(false),
   available: z.boolean(),
   historyAvailable: z.boolean().default(true),

@@ -1,5 +1,11 @@
 import type { AgentRuntime, UnitOfWork } from "@keepcv/core";
-import { type AgentLimits, PROBLEM_TYPES, type Problem, type Uuid } from "@keepcv/schema";
+import {
+  type AgentAttachment,
+  type AgentLimits,
+  PROBLEM_TYPES,
+  type Problem,
+  type Uuid,
+} from "@keepcv/schema";
 import type { TemplateType } from "@keepcv/templates";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Authenticate } from "./auth.js";
@@ -27,6 +33,7 @@ export const OPENAPI_PATH = "/v1/openapi.json";
 export interface ApiOptions {
   agent?: AgentRuntime;
   agentLimits?: Partial<AgentLimits>;
+  generationMediaTypes?: readonly AgentAttachment["mediaType"][];
   agentScope?: (request: Request, ownerId: Uuid) => Promise<string | undefined>;
   unitOfWork: UnitOfWork;
   templateTypes?: readonly TemplateType[];

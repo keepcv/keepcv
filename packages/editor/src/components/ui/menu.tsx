@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -71,6 +72,33 @@ export function Menu({
 }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return;
+    }
+    const anchor = wrapper.current?.querySelector("button")?.getBoundingClientRect();
+    const menu = panel.current?.getBoundingClientRect();
+    if (!anchor || !menu) return;
+    setPosition({
+      left: Math.max(
+        8,
+        Math.min(
+          placement === "top-start" ? anchor.left : anchor.right - menu.width,
+          innerWidth - menu.width - 8,
+        ),
+      ),
+      top: Math.max(
+        8,
+        Math.min(
+          placement === "top-start" ? anchor.top - menu.height - 8 : anchor.bottom + 4,
+          innerHeight - menu.height - 8,
+        ),
+      ),
+    });
+  }, [open, placement]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -109,10 +137,17 @@ export function Menu({
     const onFocus = (event: FocusEvent) => {
       if (event.target instanceof Node && !wrapper.current?.contains(event.target)) setOpen(false);
     };
+    const onMove = (event: Event) => {
+      if (!(event.target instanceof Node) || !panel.current?.contains(event.target)) setOpen(false);
+    };
+    window.addEventListener("resize", onMove);
+    document.addEventListener("scroll", onMove, true);
     document.addEventListener("focusin", onFocus);
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.removeEventListener("resize", onMove);
+      document.removeEventListener("scroll", onMove, true);
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
@@ -134,12 +169,15 @@ export function Menu({
       {open ? (
         <CloseContext.Provider value={close}>
           <div
+            ref={panel}
             role="menu"
             aria-label={label}
-            className={cn(
-              "absolute z-30 min-w-56 overflow-hidden rounded-xl border border-line bg-surface-raised py-1.5 shadow-overlay",
-              placement === "top-start" ? "bottom-full left-0 mb-2" : "right-0 mt-1",
-            )}
+            style={{
+              left: position?.left,
+              top: position?.top,
+              visibility: position === null ? "hidden" : undefined,
+            }}
+            className="fixed z-30 w-56 max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-xl border border-line bg-surface-raised py-1.5 shadow-overlay"
           >
             {children}
           </div>

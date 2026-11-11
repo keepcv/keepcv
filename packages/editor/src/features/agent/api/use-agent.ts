@@ -8,21 +8,24 @@ import {
   agentConversationSchema,
   agentConversationSummarySchema,
   agentToolCallSchema,
+  problemSchema,
   uuidSchema,
 } from "@keepcv/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { type ApiClient, unwrap } from "../../../lib/api.js";
+import { type ApiClient, ProblemError, unwrap } from "../../../lib/api.js";
 import { keepEdit, useRecoveryKey } from "../../../lib/edit-recovery.js";
 import { STORE_KEY } from "../../../lib/store-cache.js";
-import { type PendingFile, retainFiles } from "../model/files.js";
+import { generationMediaType, type PendingFile, retainFiles } from "../model/files.js";
 
 const capabilitiesSchema = agentCapabilitiesSchema;
 const eventSchema = z.object({
   type: z.enum(["text", "status", "error", "done", "tool"]),
   text: z.string(),
+  problem: problemSchema.optional(),
+  retryAfter: z.string().optional(),
 });
 const fileMetadataSchema = agentAttachmentMetadataSchema;
 export function useAgentController(api: ApiClient, enabled = true) {
@@ -40,10 +43,22 @@ export function useAgentController(api: ApiClient, enabled = true) {
   const [status, setStatus] = useState("");
   const [partial, setPartial] = useState("");
   const [toolCalls, setToolCalls] = useState<AgentToolCall[]>([]);
-  const [error, setError] = useState("");
-  const [disclosed, setDisclosed] = useState(false);
+  const [failure, setError] = useState<unknown>("");
+  const error =
+    typeof failure === "string"
+      ? failure
+      : failure instanceof Error
+        ? failure.message
+        : "The request could not finish.";
+  const [acceptedScope, setAcceptedScope] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
+  const pendingConsent = useRef<{ draft: string; scope: string } | null>(null);
+  const checking = useRef(false);
+  const intentVersion = useRef(0);
+  const sending = useRef(false);
+  const mounted = useRef(true);
   const [grant, setGrant] = useState(false);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
+  const [webSearchEnabled, changeWebSearchEnabled] = useState(true);
   const [sourcePath, setSourcePath] = useState<string | null>(null);
   const contextPath = sourcePath ?? path;
   const currentText = useRef(text);
@@ -60,6 +75,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
   });
   const conversations = useQuery({
     queryKey: ["agent", "conversations"],
+    notifyOnChangeProps: ["data", "error", "isPending", "isError"],
     enabled: path === "/conversations" || (enabled && (path === "/" || path === "/assistant")),
     retry: false,
     queryFn: async () =>
@@ -87,6 +103,45 @@ export function useAgentController(api: ApiClient, enabled = true) {
           ),
         ).items,
   });
+  const scopeOf = (data: z.infer<typeof capabilitiesSchema> | undefined, web = webSearchEnabled) =>
+    JSON.stringify([
+      recoveryKey,
+      data?.disclosure,
+      data?.generationMediaTypes,
+      data?.webSearchAvailable,
+      web,
+    ]);
+  const sharingScope = scopeOf(capabilities.data);
+  const disclosed = acceptedScope === sharingScope;
+  useEffect(
+    () => setAcceptedScope((previous) => (previous === sharingScope ? previous : null)),
+    [sharingScope],
+  );
+  const draftIdentity = JSON.stringify([
+    id,
+    text,
+    files.map(({ id }) => id),
+    selectedAttachments,
+    contextPath,
+    enabled,
+    conversation.data?.archivedAt,
+  ]);
+  const latest = useRef({ draftIdentity, sharingScope });
+  latest.current = { draftIdentity, sharingScope };
+  function setWebSearchEnabled(value: boolean) {
+    changeWebSearchEnabled(value);
+    if (pendingConsent.current !== null)
+      pendingConsent.current.scope = scopeOf(capabilities.data, value);
+  }
+  function setDisclosed(value: boolean) {
+    setAcceptedScope(value ? sharingScope : null);
+  }
+  function closeConsent() {
+    intentVersion.current++;
+    pendingConsent.current = null;
+    setConsent(false);
+    document.getElementById("agent-message")?.focus();
+  }
   const grantScope = id === null ? null : `${id}:${contextPath}`;
   useEffect(() => {
     setSelectedAttachments([]);
@@ -112,12 +167,14 @@ export function useAgentController(api: ApiClient, enabled = true) {
           );
     };
   }, [api, id, grantScope, enabled, capabilities.data?.available]);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      pendingConsent.current = null;
       request.current?.abort();
-    },
-    [],
-  );
+    };
+  }, []);
 
   function changeText(value: string) {
     setText(value);
@@ -146,31 +203,48 @@ export function useAgentController(api: ApiClient, enabled = true) {
       queries.invalidateQueries({ queryKey: STORE_KEY }),
     ]);
   }
-  async function ensureConversation() {
+  async function ensureConversation(signal: AbortSignal) {
     if (id !== null) return id;
     const created = agentConversationSchema.parse(
       await unwrap(
-        await api.v1.agent.conversations.$post({
-          json: { id: newUuid(), title: text.trim().slice(0, 80) || "New conversation" },
-        }),
+        await api.v1.agent.conversations.$post(
+          {
+            json: { id: newUuid(), title: text.trim().slice(0, 80) || "New conversation" },
+          },
+          { init: { signal } },
+        ),
       ),
     );
+    signal.throwIfAborted();
     setId(created.id);
     return created.id;
   }
-  async function send() {
+  async function submit(affirmed: boolean, limits: z.infer<typeof capabilitiesSchema>) {
     if (
+      !mounted.current ||
+      sending.current ||
       busy ||
       decision.current ||
       !enabled ||
-      capabilities.data?.available !== true ||
+      limits.available !== true ||
       conversation.data?.archivedAt != null ||
-      (!text.trim() && files.length === 0 && selectedAttachments.length === 0) ||
-      !disclosed
+      (!text.trim() && files.length === 0 && selectedAttachments.length === 0)
     )
       return;
-    const limits = capabilitiesSchema.parse(capabilities.data);
+    const scope = scopeOf(limits);
     const selected = uploaded.data?.filter((file) => selectedAttachments.includes(file.id)) ?? [];
+    if (
+      files.some(
+        ({ file }) =>
+          !limits.generationMediaTypes.includes(
+            generationMediaType(file) as (typeof limits.generationMediaTypes)[number],
+          ),
+      ) ||
+      selected.some((file) => !limits.generationMediaTypes.includes(file.mediaType))
+    ) {
+      setError("A selected file format is unavailable for generation. Your input is retained.");
+      return;
+    }
     const sizes = [
       ...files.map((file) => file.file.size),
       ...selected.map((file) => file.sizeBytes ?? 0),
@@ -179,6 +253,14 @@ export function useAgentController(api: ApiClient, enabled = true) {
       text.length > limits.maxTextCharacters ||
       files.length + selectedAttachments.length > limits.maxAttachments ||
       sizes.some((size) => size > limits.maxFileBytes) ||
+      files.some(
+        ({ file }) =>
+          generationMediaType(file) === "text/plain" && file.size > limits.maxTextFileBytes,
+      ) ||
+      selected.some(
+        (file) =>
+          file.mediaType === "text/plain" && (file.sizeBytes ?? 0) > limits.maxTextFileBytes,
+      ) ||
       sizes.reduce((sum, bytes) => sum + bytes, 0) > limits.maxTurnBytes
     ) {
       setError(
@@ -186,6 +268,23 @@ export function useAgentController(api: ApiClient, enabled = true) {
       );
       return;
     }
+    if (affirmed && pendingConsent.current?.draft !== latest.current.draftIdentity)
+      return closeConsent();
+    if (
+      (!affirmed && acceptedScope !== scope) ||
+      (affirmed && pendingConsent.current?.scope !== scope)
+    ) {
+      setAcceptedScope(null);
+      pendingConsent.current = { draft: draftIdentity, scope };
+      setConsent(true);
+      return;
+    }
+    if (affirmed) {
+      pendingConsent.current = null;
+      setConsent(false);
+      setAcceptedScope(scope);
+    }
+    sending.current = true;
     setBusy(true);
     setError("");
     setPartial("");
@@ -193,20 +292,30 @@ export function useAgentController(api: ApiClient, enabled = true) {
     setToolCalls([]);
     const submittedText = text;
     const submittedFiles = files;
+    const submittedScope = scope;
+    const controller = new AbortController();
+    request.current = controller;
     try {
-      const conversationId = await ensureConversation();
+      const conversationId = await ensureConversation(controller.signal);
+      controller.signal.throwIfAborted();
       for (const pending of submittedFiles) {
         fileMetadataSchema.parse(
           await unwrap(
-            await api.v1.agent.conversations[":id"].attachments[":fileId"].$post({
-              param: { id: conversationId, fileId: pending.id },
-              form: { file: pending.file },
-            }),
+            await api.v1.agent.conversations[":id"].attachments[":fileId"].$post(
+              {
+                param: { id: conversationId, fileId: pending.id },
+                form: { file: pending.file },
+              },
+              { init: { signal: controller.signal } },
+            ),
           ),
         );
       }
-      const controller = new AbortController();
-      request.current = controller;
+      controller.signal.throwIfAborted();
+      if (!mounted.current || latest.current.sharingScope !== submittedScope)
+        throw new Error(
+          "The sharing scope changed. Review the current disclosure before sending again.",
+        );
       const response = await api.v1.agent.conversations[":id"].turns.$post(
         {
           param: { id: conversationId },
@@ -230,6 +339,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       );
       if (!response.ok) await unwrap(response);
       let acknowledged = false;
+      let terminal = false;
       const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
         response.body?.getReader();
       if (reader === undefined) throw new Error("The assistant returned no response stream.");
@@ -248,6 +358,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
           const data = packet.split("\n").find((line) => line.startsWith("data: "));
           if (data !== undefined) {
             const event = eventSchema.parse(JSON.parse(data.slice(6)));
+            if (event.type === "done" || event.type === "error") terminal = true;
             if (!acknowledged && event.type === "status") {
               acknowledged = true;
               void queries.invalidateQueries({
@@ -264,25 +375,56 @@ export function useAgentController(api: ApiClient, enabled = true) {
                 agentToolCallSchema.parse(JSON.parse(event.text)),
               ]);
             else if (event.type === "text") setPartial((text) => text + event.text);
-            else if (event.type === "error") setError(event.text);
+            else if (event.type === "error")
+              setError(
+                event.problem === undefined
+                  ? event.text
+                  : new ProblemError(event.problem, event.retryAfter),
+              );
             else setStatus(event.text);
           }
           end = buffer.indexOf("\n\n");
         }
       }
-    } catch (reason) {
-      if (!request.current?.signal.aborted)
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "The request could not finish. Reopen the conversation to check saved changes.",
+      if (!terminal)
+        throw new Error(
+          "The assistant response was interrupted. Reopen the conversation to check saved changes before sending again.",
         );
+    } catch (reason) {
+      if (!request.current?.signal.aborted) setError(reason);
     } finally {
+      sending.current = false;
       setBusy(false);
       request.current = null;
       await refresh();
       setPartial("");
       setToolCalls([]);
+    }
+  }
+  async function send(affirmed = false) {
+    if (
+      checking.current ||
+      sending.current ||
+      busy ||
+      decision.current ||
+      !enabled ||
+      capabilities.data?.available !== true ||
+      conversation.data?.archivedAt != null ||
+      (!text.trim() && files.length === 0 && selectedAttachments.length === 0)
+    )
+      return;
+    const version = intentVersion.current;
+    checking.current = true;
+    try {
+      const fresh = await capabilities.refetch({ throwOnError: true });
+      if (!mounted.current || version !== intentVersion.current) return;
+      if (draftIdentity !== latest.current.draftIdentity) return closeConsent();
+      if (fresh.data?.available !== true) return closeConsent();
+      await submit(affirmed, fresh.data);
+    } catch (reason) {
+      if (mounted.current) setError(reason);
+    } finally {
+      checking.current = false;
     }
   }
   async function decide(action: AgentAction, accept: boolean) {
@@ -307,11 +449,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       );
       await refresh();
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "The proposal was not applied. Refresh and review the current data.",
-      );
+      setError(reason);
     } finally {
       decision.current = false;
       setDeciding(null);
@@ -356,7 +494,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       );
       setGrant(!grant);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Permission could not be updated.");
+      setError(reason);
     }
   }
   async function downloadFile(fileId: string, name: string) {
@@ -373,7 +511,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The file could not be downloaded.");
+      setError(reason);
     }
   }
   async function archiveFile(fileId: string, expectedUpdatedAt: string, archived: boolean) {
@@ -388,7 +526,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       setSelectedAttachments((values) => values.filter((value) => value !== fileId));
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The file could not be updated.");
+      setError(reason);
     }
   }
   async function archive(value: AgentConversation) {
@@ -401,7 +539,7 @@ export function useAgentController(api: ApiClient, enabled = true) {
       );
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The conversation could not be updated.");
+      setError(reason);
     }
   }
   return {
@@ -438,10 +576,14 @@ export function useAgentController(api: ApiClient, enabled = true) {
     partial,
     toolCalls,
     error,
+    failure,
     setError,
     setStatus,
     disclosed,
     setDisclosed,
+    consent,
+    closeConsent,
+    allowAndSend: () => send(true),
     webSearchEnabled,
     setWebSearchEnabled,
     grant,

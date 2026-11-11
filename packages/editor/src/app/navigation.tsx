@@ -7,6 +7,7 @@ import type { GlyphName } from "../components/icon/glyphs.js";
 import { Icon } from "../components/icon/icon.js";
 import { KIND_LABELS } from "../features/records/model/record-rows.js";
 import { cn } from "../lib/cn.js";
+import { HostActions, useHost } from "../lib/host.js";
 
 // The whole marker lives here rather than being coloured in from a transparent
 // one in `rowClass`: the router appends this instead of merging it, so both
@@ -144,12 +145,14 @@ export function Navigation({
   onSignOut,
   assistant = true,
   home = "assistant",
+  onHostSelect,
 }: {
   store: Store;
   assistant?: boolean;
   home?: "assistant" | "overview";
   collapsed?: boolean;
   onSignOut?: (() => void) | undefined;
+  onHostSelect?: () => void;
 }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
   const conversationPage = path === "/" || path === "/assistant" || path === "/conversations";
@@ -243,6 +246,11 @@ export function Navigation({
       <Group title="System" collapsed={collapsed}>
         <NavLink to="/import" icon="upload" label="Import resume" collapsed={collapsed} />
         <NavLink to="/data" icon="data" label="Your data" collapsed={collapsed} />
+        <HostActions
+          actions={useHost().hostActions ?? []}
+          collapsed={collapsed}
+          onSelect={onHostSelect}
+        />
         {onSignOut === undefined ? null : (
           <button
             type="button"

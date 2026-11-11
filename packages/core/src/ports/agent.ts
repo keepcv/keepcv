@@ -1,4 +1,12 @@
-import type { AgentConversation, AgentGrant, AgentLimits, AgentTurn, Uuid } from "@keepcv/schema";
+import type {
+  AgentAttachment,
+  AgentConversation,
+  AgentGrant,
+  AgentLimits,
+  AgentTurn,
+  Problem,
+  Uuid,
+} from "@keepcv/schema";
 import type { CancellationSignal } from "./repositories.js";
 
 export class AgentRefusalError extends Error {
@@ -13,11 +21,14 @@ export class AgentRefusalError extends Error {
 export interface AgentEvent {
   type: "text" | "status" | "error" | "done" | "tool";
   text: string;
+  problem?: Problem;
+  retryAfter?: string;
 }
 
 export interface AgentRuntime {
   capabilities: {
     available: boolean;
+    generationMediaTypes?: readonly AgentAttachment["mediaType"][];
     webSearchAvailable?: boolean;
     disclosure: string;
     maxFileBytes: number;

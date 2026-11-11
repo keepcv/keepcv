@@ -185,7 +185,7 @@ describes the standalone launcher. A consumer with another storage location
 supplies its own guidance and can omit terminal instructions from both the DOM
 and the accessibility tree. This input changes presentation only; native backup
 and restore retain their API behavior and non-empty-store refusal. The caller
-keeps this input stable alongside the client and cache. No authentication or
+can update this guidance while keeping connection inputs stable. No authentication or
 deployment vocabulary belongs in this input.
 
 Four kinds of state, four owners. Putting any of them in the wrong place is a
@@ -1606,10 +1606,14 @@ omitted on conversation routes; store search remains reachable with its keyboard
 shortcut. Mobile keeps the application header and opens history in a bounded
 dialog. Ask KeepCV uses the same full-page transcript and composer as Assistant.
 
-Consent is visible until acknowledged and remains changeable in settings. File
+A valid send refreshes server capabilities. An unacknowledged scope opens the
+sharing Dialog before any conversation creation,
+upload or generation. Explicit acceptance submits the unchanged intended draft
+once; cancellation retains input and returns focus to the composer. Consent
+remains changeable in settings. File
 selection, web access and settings use the plus menu; active web/task permissions
-appear as compact chips. Model disclosure, task settings and file limits are
-collapsed into a settings dialog.
+appear as compact chips. Model disclosure appears at first send and in settings. Task settings and file
+limits remain in the settings dialog.
 Pending proposals show human-readable field values first, with identifiers,
 ordering keys and the full current/operation payload available in exact review.
 Completed decisions collapse to a short status and retain their receipts.
@@ -1657,9 +1661,29 @@ capabilities do not advertise web support. Shared Menu keyboard navigation,
 Escape, outside focus/click dismissal and focus return apply to these controls.
 
 Conversation settings use a separate dialog for sharing recipients and consent,
-current-resource task edits and collapsed file limits. First-use model sharing
-acknowledgment remains visible until accepted, then lives in settings for the
-current connected editor session. Ask KeepCV does not ask for that acknowledgment
+current-resource task edits and collapsed file limits. First-send acknowledgment
+binds to the current server disclosure, effective web choice and generation formats
+for the connected editor session. Scope changes require acknowledgment again;
+remount starts fresh. Revocation blocks future sends and explains separate Stop
+for active work. It creates no durable server receipt. Ask KeepCV does not ask for that acknowledgment
 again. This acknowledgment creates no edit grant. Active task permission remains
 visible as a chip and review rules are unchanged. Menus/dialogs do not expand the
 composer or crowd its mobile action row. Attachments remain visible when selected.
+
+### Host composition
+
+Editor sizing defaults to viewport; container fills a finite parent with
+min-height zero. Loading/error states, scrolling and composer controls share
+that bound. Host presentation lives outside the router so updates cannot replace
+its cache or unsent input. Connection inputs still define owner lifecycle.
+
+Optional hostActions use one labeled link/callback model in System navigation,
+including collapsed and mobile states. HTTP(S) host links use browser navigation,
+not internal routes. Optional recoveryActions receive safe message, Problem and
+server Retry-After context across root, save and assistant failures. They render
+explicit actions and never authorize or automatically replay operations. Omitted
+ports preserve standalone behavior. No accounting, auth engine or registry is added.
+
+Capabilities describe effective generation formats. Selection hints and local
+checks follow them; detected stored types and current server policy decide
+admission. Unavailable generation types never remove originals or resume export.

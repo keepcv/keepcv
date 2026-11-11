@@ -123,3 +123,18 @@ A skill level is translated between two named four-rung scales - `Beginner`,
 
 Writing RenderCV or Reactive Resume. Reading them is; a format nobody asked to
 export to is loss with nothing on the other side of it.
+
+Browser PDF reading needs a worker URL. The package exports `pdf.worker.mjs`
+from the exact installed PDF.js version. With Vite:
+
+```ts
+import workerUrl from "@keepcv/interop/pdf.worker.mjs?url";
+import { pdfLines } from "@keepcv/interop/files";
+const lines = await pdfLines(bytes, workerUrl);
+```
+
+The editor configures this automatically. Direct callers may omit the second
+argument when they already configure PDF.js in their environment (including
+Node). Serve the module worker with JavaScript MIME type and same-origin
+`worker-src 'self'`/`script-src 'self'`; no CDN or remote fallback is used.
+Keep package assets intact so parser and worker versions stay aligned.

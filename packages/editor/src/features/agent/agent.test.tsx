@@ -133,12 +133,12 @@ it("opens chat first, reviews an exact change and refreshes the ordinary editor"
   fireEvent.change(screen.getByLabelText("What would you like to do?"), {
     target: { value: "Set my name to Ada" },
   });
-  expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-  fireEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
   fireEvent.keyDown(screen.getByLabelText("What would you like to do?"), {
     key: "Enter",
     ctrlKey: true,
   });
+  fireEvent.click(await screen.findByRole("button", { name: "Allow and send" }));
   const accept = await screen.findByRole("button", { name: "Accept" });
   await waitFor(() => expect(accept).toBeEnabled());
   expect(store.profile.fullName).toBeNull();
@@ -376,9 +376,9 @@ it.each([false, true])(
       fireEvent.change(await screen.findByRole("textbox", { name: "What would you like to do?" }), {
         target: { value: "Review" },
       });
-      fireEvent.click(screen.getByRole("checkbox"));
       await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
       fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Allow and send" }));
       await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reading"));
       fireEvent.click(screen.getByRole("button", { name: "Stop task" }));
       if (acknowledged) {
@@ -530,7 +530,6 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
   expect(await screen.findByRole("link", { name: path })).toBeInTheDocument();
   expect(turns).toHaveLength(0);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: "Add files and tools" }));
   expect(screen.getByRole("menuitem", { name: "Attach files" })).toHaveFocus();
   fireEvent.keyDown(document.activeElement ?? document, { key: "End" });
@@ -553,6 +552,7 @@ it.each(["profile", "record edit"])("sends Ask KeepCV source context from %s", a
     });
     await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Allow and send" }));
     await screen.findByText("Saved");
   }
   expect(turns).toHaveLength(2);
