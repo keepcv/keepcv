@@ -61,7 +61,8 @@ Use `script-src 'self'; worker-src 'self'` with the application's existing
 same-origin connection/image/style/frame policy. No CDN or broader worker policy
 is needed. PDF.js parser and worker are pinned together; copying a worker from
 another installed version is unsupported. The package build checks both worker
-assets, compiled CSS and favicon export. The favicon follows system light/dark
+assets, compiled CSS and favicon export. The installed launcher smoke test fetches
+every worker over HTTP and checks JavaScript MIME, nosniff and exact bytes. The favicon follows system light/dark
 preference; the separate theme script handles stored editor theme before paint.
 
 No migration or native archive version change is introduced. Error stream events

@@ -14,6 +14,7 @@ beforeAll(async () => {
   await mkdir(join(root, "assets"), { recursive: true });
   await writeFile(join(root, "index.html"), "<!doctype html><title>KeepCV</title>");
   await writeFile(join(root, "assets", "index-abc123.js"), "console.log(1)");
+  await writeFile(join(root, "assets", "pdf.worker-abc123.mjs"), "export {};");
   await writeFile(join(root, "theme.js"), "document.documentElement.classList.add('dark')");
   await writeFile(join(outside, "secrets.txt"), "the launch token");
   serve = serveWebApp(root);
@@ -33,6 +34,13 @@ describe("the web app handler", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(await response.text()).toBe("console.log(1)");
+  });
+
+  it("serves module workers with an executable JavaScript media type", async () => {
+    const response = await get("/assets/pdf.worker-abc123.mjs");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
+    expect(await response.text()).toBe("export {};");
   });
 
   it("caches hashed assets forever and unversioned entry files never", async () => {
