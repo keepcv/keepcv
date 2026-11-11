@@ -1,5 +1,13 @@
 # @keepcv/cli
 
+## 0.2.5
+
+### Patch Changes
+
+- 460943b: Serve .mjs module workers as JavaScript so PDF import works with the launcher's
+  nosniff policy. Validate the MIME type and bytes of every installed worker in
+  release smoke tests without broadening content security policy.
+
 ## 0.2.4
 
 ### Patch Changes
