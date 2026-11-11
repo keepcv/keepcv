@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { startServer } from "./node_modules/@keepcv/cli/dist/serve.js";
@@ -54,6 +54,22 @@ try {
   assert.equal(theme.status, 200);
   assert.match(theme.headers.get("content-type"), /javascript/);
   assert.equal(theme.headers.get("cache-control"), "no-store");
+  const assetRoot = join(process.cwd(), "node_modules", "@keepcv", "cli", "dist", "web", "assets");
+  const workers = (await readdir(assetRoot)).filter((name) => /worker.*\.(?:js|mjs)$/.test(name));
+  assert(
+    workers.some((name) => name.endsWith(".mjs")),
+    "The installed launcher lost its PDF module worker",
+  );
+  for (const worker of workers) {
+    const response = await fetch(`${origin}/assets/${worker}`);
+    assert.equal(response.status, 200, worker);
+    assert.match(response.headers.get("content-type"), /javascript/, worker);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(
+      (await response.arrayBuffer()).byteLength,
+      (await readFile(join(assetRoot, worker))).byteLength,
+    );
+  }
   assert.equal((await fetch(`${origin}/v1/store`)).status, 401);
   assert.equal((await fetch(`${origin}/v1/openapi.json`)).status, 200);
   const profile = await call("/v1/profile");
