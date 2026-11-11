@@ -664,16 +664,15 @@ export function createAgent(options: {
             }
             await r.agent.save(current);
           });
-        const status =
-          error instanceof AgentRefusalError
-            ? error.status
-            : error instanceof AgentProviderError
-              ? error.code === "rate-limit" || error.code === "busy"
-                ? 429
-                : error.code === "budget" || error.code === "configuration"
-                  ? 403
-                  : 503
-              : 503;
+        let status = 503;
+        if (error instanceof AgentRefusalError) status = error.status;
+        else if (error instanceof ConcurrencyConflictError) status = 409;
+        else if (error instanceof AgentProviderError) {
+          if (["rate-limit", "busy"].includes(error.code)) status = 429;
+          else if (["budget", "configuration", "policy"].includes(error.code)) status = 403;
+          else if (["input", "context", "capability"].includes(error.code)) status = 422;
+          else if (error.code === "credits") status = 402;
+        }
         await emit({
           type: "error",
           text: message,
