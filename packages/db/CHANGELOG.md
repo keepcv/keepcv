@@ -1,5 +1,13 @@
 # @keepcv/db
 
+## 0.4.3
+
+### Patch Changes
+
+- Updated dependencies [68202c1]
+  - @keepcv/core@0.7.0
+  - @keepcv/schema@0.6.0
+
 ## 0.4.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @keepcv/ats-lint
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [68202c1]
+  - @keepcv/schema@0.6.0
+
 ## 0.1.7
 
 ### Patch Changes
