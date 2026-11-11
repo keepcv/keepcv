@@ -51,6 +51,7 @@ export interface ModelReply {
   navigation: string | null;
 }
 export interface AgentModel {
+  generationMediaTypes?: readonly AgentAttachment["mediaType"][];
   webSearchAvailable?: boolean;
   generate(request: ModelRequest): Promise<ModelReply>;
 }
@@ -127,6 +128,7 @@ export function createAgent(options: {
   disclosure: string;
   deadlineMs?: number;
   limits?: Partial<AgentLimits>;
+  generationMediaTypes?: readonly AgentAttachment["mediaType"][];
   authorize?: (context: AgentAuthorization) => Promise<void>;
 }): AgentRuntime & { revoke(ownerId: Uuid, scope: string): void } {
   const limits = agentLimitsSchema.parse(options.limits ?? {});
@@ -151,6 +153,10 @@ export function createAgent(options: {
   const unit = options.unitOfWork;
   const capabilities = {
     available: true,
+    generationMediaTypes: (options.model.generationMediaTypes ?? ["text/plain" as const]).filter(
+      (media) =>
+        options.generationMediaTypes === undefined || options.generationMediaTypes.includes(media),
+    ),
     webSearchAvailable: options.model.webSearchAvailable ?? false,
     disclosure: options.disclosure,
     ...limits,
@@ -416,6 +422,11 @@ export function createAgent(options: {
             return file;
           });
         });
+        if (attachments.some((file) => !capabilities.generationMediaTypes.includes(file.mediaType)))
+          throw new AgentRefusalError(
+            "A selected attachment format is unavailable for generation.",
+            422,
+          );
         if (
           attachments.some(
             (file) =>
@@ -653,7 +664,29 @@ export function createAgent(options: {
             }
             await r.agent.save(current);
           });
-        await emit({ type: "error", text: message });
+        let status = 503;
+        if (error instanceof AgentRefusalError) status = error.status;
+        else if (error instanceof ConcurrencyConflictError) status = 409;
+        else if (error instanceof AgentProviderError) {
+          if (["rate-limit", "busy"].includes(error.code)) status = 429;
+          else if (["budget", "configuration", "policy"].includes(error.code)) status = 403;
+          else if (["input", "context", "capability"].includes(error.code)) status = 422;
+          else if (error.code === "credits") status = 402;
+        }
+        await emit({
+          type: "error",
+          text: message,
+          problem: {
+            type: "about:blank",
+            title: "Assistant request failed",
+            status,
+            detail: message,
+            instance: "/v1/agent",
+          },
+          ...(error instanceof AgentProviderError && error.retryAfterMs > 0
+            ? { retryAfter: String(Math.ceil(error.retryAfterMs / 1000)) }
+            : {}),
+        });
       } finally {
         clearTimeout(timer);
         signal.removeEventListener("abort", abort);

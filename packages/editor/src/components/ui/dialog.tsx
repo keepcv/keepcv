@@ -8,18 +8,22 @@ const FOCUSABLE =
 export function Dialog({
   title,
   describedBy,
+  returnFocus,
   size = "md",
   onClose,
   children,
 }: {
   title: string;
   describedBy?: string;
+  returnFocus?: () => HTMLElement | null;
   size?: "md" | "lg" | "full";
   onClose: () => void;
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const labelId = useId();
+  const focusReturn = useRef(returnFocus);
+  focusReturn.current = returnFocus;
 
   useEffect(() => {
     const held = document.activeElement;
@@ -28,7 +32,8 @@ export function Dialog({
       panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     }
     return () => {
-      if (held instanceof HTMLElement) held.focus();
+      const target = focusReturn.current?.() ?? held;
+      if (target instanceof HTMLElement) target.focus();
     };
   }, []);
 
@@ -76,7 +81,7 @@ export function Dialog({
         aria-describedby={describedBy}
         onKeyDown={onKeyDown}
         className={cn(
-          "w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
+          "max-h-[calc(100dvh-2rem)] overflow-y-auto w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
           size === "md" && "max-w-lg",
           size === "lg" &&
             "flex max-h-[calc(90dvh-2rem)] min-h-0 max-w-3xl flex-col overflow-hidden",

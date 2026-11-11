@@ -1,5 +1,27 @@
 # @keepcv/editor
 
+## 0.10.0
+
+### Minor Changes
+
+- 68202c1: Ask for sharing consent on the first send without losing the intended draft.
+  Bind acknowledgment to the connected session and current processing scope.
+  Support finite host containers, labeled host destinations/actions and structured
+  failure recovery with server Retry-After. Advertise and enforce effective
+  attachment-generation formats separately from stored originals. Export a shared
+  SVG favicon and exercise installed hosted consumers.
+
+### Patch Changes
+
+- Updated dependencies [68202c1]
+  - @keepcv/interop@0.2.0
+  - @keepcv/api@0.7.0
+  - @keepcv/core@0.7.0
+  - @keepcv/schema@0.6.0
+  - @keepcv/ats-lint@0.1.8
+  - @keepcv/render@0.2.4
+  - @keepcv/templates@0.2.4
+
 ## 0.9.0
 
 ### Minor Changes

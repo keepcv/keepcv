@@ -166,8 +166,9 @@ interface TextItem {
   fontName?: string;
 }
 
-export async function pdfLines(data: Uint8Array): Promise<DocumentLine[]> {
-  const { getDocument } = await pdfjs();
+export async function pdfLines(data: Uint8Array, workerSrc?: string): Promise<DocumentLine[]> {
+  const { getDocument, GlobalWorkerOptions } = await pdfjs();
+  if (workerSrc !== undefined) GlobalWorkerOptions.workerSrc = workerSrc;
 
   let document: Awaited<ReturnType<typeof getDocument>["promise"]>;
   try {

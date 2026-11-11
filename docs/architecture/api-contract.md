@@ -725,7 +725,9 @@ provider credentials. /v1/agent serves capabilities, owned conversations, turns,
 attachments, proposal decisions, cancellation and bounded task grants. All routes
 are authenticated and declared with shared Zod schemas. Turns stream application
 events; reconnect reads persisted state and never repeats inference automatically.
-An event has type text, status, error, done or tool and a text payload. A tool
+An event has type text, status, error, done or tool and a text payload. Error
+events may additionally carry a safe Problem and Retry-After value; older text-only
+events remain valid. No event name or native archive vocabulary changes. A tool
 event's text encodes a validated name/summary pair. These record an invocation,
 not its success, and remain in the reply's optional toolCalls history field.
 They contain no raw arguments, tool results or provider credentials.
@@ -874,3 +876,19 @@ and web_search/web_fetch tool names. Requested URLs are not provider citations.
 Search without annotations may return findings without invented source links.
 Application stream events and native archive v3 are unchanged. Legacy optional
 approval fields remain readable in stored messages and archives.
+
+### Effective generation formats
+
+Capabilities include generationMediaTypes, a subset of the stored attachment
+media vocabulary. The built-in model derives support from configured routes;
+createAgent and createApi optionally narrow that set with generationMediaTypes.
+No policy can add an unqualified format. Unavailable generation advertises an
+empty set. Legacy/custom adapters with no metadata default to text/plain only.
+API preflight and the built-in runtime check selected detected media types before
+model processing. Storage, owned original downloads and native archives retain
+all existing formats. No provider configuration or credentials enter capabilities.
+
+The turn disclosure assertion remains literal true, with false/missing values
+refused. It is not a durable consent receipt. First-send UI acceptance is scoped
+to the connected editor and advertised processing scope; server authentication,
+owner/session authorization and cancellation remain independently authoritative.

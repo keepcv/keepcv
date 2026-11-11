@@ -18,7 +18,8 @@ export default defineConfig({
       cssFileName: "style",
     },
     rollupOptions: {
-      external: (id) => external.some((name) => id === name || id.startsWith(`${name}/`)),
+      external: (id) =>
+        !id.includes("?url") && external.some((name) => id === name || id.startsWith(`${name}/`)),
     },
   },
   test: { environment: "jsdom", setupFiles: ["./src/test-setup.ts"], testTimeout: 10_000 },

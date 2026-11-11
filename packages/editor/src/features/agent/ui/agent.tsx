@@ -15,53 +15,57 @@ export { AgentProvider } from "./context.js";
 function Welcome({ available }: { available: boolean }) {
   const agent = useAgent();
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-8 text-center">
-      <Logo mark className="mb-6 h-12" />
-      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What are we working on?</h2>
-      <p className="mt-3 max-w-md text-sm leading-6 text-text-muted">
-        Find the right Points, shape a resume, or capture something new.
-      </p>
-      {available ? (
-        <div className="mt-8 grid w-full gap-2 text-left sm:grid-cols-3">
-          {[
-            {
-              icon: "record" as const,
-              label: "Review my career",
-              prompt: "Review my career records",
-            },
-            {
-              icon: "resume" as const,
-              label: "Shape a resume",
-              prompt: "Choose Points for my resume",
-            },
-            {
-              icon: "point" as const,
-              label: "Capture a new Point",
-              prompt: "Help me record a recent project",
-            },
-          ].map((suggestion) => (
-            <button
-              key={suggestion.label}
-              type="button"
-              onClick={() => {
-                agent.changeText(suggestion.prompt);
-                document.getElementById("agent-message")?.focus();
-              }}
-              className="flex items-center gap-3 rounded-xl border border-line-subtle px-4 py-3 text-sm text-text-muted transition-colors hover:border-line hover:bg-surface hover:text-text sm:flex-col sm:items-start sm:gap-4"
-            >
-              <Icon name={suggestion.icon} size="md" className="text-text-subtle" />
-              {suggestion.label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-6 max-w-md space-y-3 text-sm text-text-muted">
-          <p>{agent.capabilities.data?.disclosure ?? "Connecting to the assistant..."}</p>
-          <Link to="/overview" className="font-medium text-text underline underline-offset-4">
-            Open your store
-          </Link>
-        </div>
-      )}
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center px-5 py-8 text-center">
+        <Logo mark className="mb-6 h-12" />
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          What are we working on?
+        </h2>
+        <p className="mt-3 max-w-md text-sm leading-6 text-text-muted">
+          Find the right Points, shape a resume, or capture something new.
+        </p>
+        {available ? (
+          <div className="mt-8 grid w-full gap-2 text-left sm:grid-cols-3">
+            {[
+              {
+                icon: "record" as const,
+                label: "Review my career",
+                prompt: "Review my career records",
+              },
+              {
+                icon: "resume" as const,
+                label: "Shape a resume",
+                prompt: "Choose Points for my resume",
+              },
+              {
+                icon: "point" as const,
+                label: "Capture a new Point",
+                prompt: "Help me record a recent project",
+              },
+            ].map((suggestion) => (
+              <button
+                key={suggestion.label}
+                type="button"
+                onClick={() => {
+                  agent.changeText(suggestion.prompt);
+                  document.getElementById("agent-message")?.focus();
+                }}
+                className="flex items-center gap-3 rounded-xl border border-line-subtle px-4 py-3 text-sm text-text-muted transition-colors hover:border-line hover:bg-surface hover:text-text sm:flex-col sm:items-start sm:gap-4"
+              >
+                <Icon name={suggestion.icon} size="md" className="text-text-subtle" />
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-6 max-w-md space-y-3 text-sm text-text-muted">
+            <p>{agent.capabilities.data?.disclosure ?? "Connecting to the assistant..."}</p>
+            <Link to="/overview" className="font-medium text-text underline underline-offset-4">
+              Open your store
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -126,7 +130,7 @@ export function AgentHome({ historyOnly = false }: { historyOnly?: boolean }) {
         <Transcript key={agent.id} readOnly={!available} />
       )}
 
-      <div className="mx-auto w-full max-w-3xl shrink-0 space-y-2 px-4 pb-4 pt-2 sm:px-6 sm:pb-5">
+      <div className="mx-auto max-h-[70%] overflow-y-auto w-full max-w-3xl shrink-0 space-y-2 px-4 pb-4 pt-2 sm:px-6 sm:pb-5">
         {agent.sourcePath ? (
           <div className="flex min-w-0 items-center gap-2 text-xs text-text-muted">
             <span className="shrink-0">Page context:</span>
@@ -180,7 +184,7 @@ export function AskKeepCV() {
   if (!agent.enabled || ["/", "/assistant", "/conversations"].includes(agent.path)) return null;
   return (
     <Button
-      className="fixed bottom-4 right-4 z-30 shadow-card"
+      className="absolute bottom-4 right-4 z-30 shadow-card"
       size="sm"
       tone="secondary"
       icon="conversation"

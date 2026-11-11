@@ -755,3 +755,22 @@ it("retains long page findings when only executed usage is reported", async () =
     }),
   );
 });
+
+it.each([
+  { images: false, pdf: false },
+  { images: true, pdf: false },
+  { images: false, pdf: true },
+  { images: true, pdf: true },
+])("advertises only configured generation formats: %j", (flags) => {
+  const model = createOpenRouterModel(
+    agentConfigSchema.parse({
+      routes: [{ model: "synthetic/model", providers: ["synthetic"], ...flags }],
+    }),
+    { OPENROUTER_API_KEY: "synthetic" },
+  );
+  expect(model.generationMediaTypes).toEqual([
+    "text/plain",
+    ...(flags.images ? ["image/png", "image/jpeg", "image/webp"] : []),
+    ...(flags.pdf ? ["application/pdf"] : []),
+  ]);
+});

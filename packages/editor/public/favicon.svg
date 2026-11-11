@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>KeepCV</title>
+  <style>:root{color:#5b21b6}@media(prefers-color-scheme:dark){:root{color:#c4b5fd}}</style>
+  <g fill="currentColor"><path d="M15 8h14l5 5v11H12V11a3 3 0 0 1 3-3Z"/><path d="M38 16h11a3 3 0 0 1 3 3v5H38Z"/><path fill-rule="evenodd" d="M8 28h48v23a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5Zm16 11v5h16v-5Z"/></g>
+</svg>

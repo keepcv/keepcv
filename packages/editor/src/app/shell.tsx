@@ -87,7 +87,7 @@ export function Shell({
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-canvas text-text">
+    <div className="flex h-full min-h-0 overflow-hidden bg-canvas text-text">
       <aside
         className={cn(
           "hidden shrink-0 flex-col gap-4 border-r border-line bg-surface px-3 py-4 lg:flex",
@@ -191,7 +191,13 @@ export function Shell({
               />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <Navigation assistant={assistant} home={home} store={store} onSignOut={onSignOut} />
+              <Navigation
+                assistant={assistant}
+                home={home}
+                store={store}
+                onSignOut={onSignOut}
+                onHostSelect={() => setOpenedAt(null)}
+              />
             </div>
             <ThemeToggle choice={choice} choose={choose} />
           </div>

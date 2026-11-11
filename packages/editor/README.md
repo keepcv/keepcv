@@ -28,7 +28,7 @@ export function App() {
 
 The caller supplies authentication through the typed client and decides what
 signing out does. Omit `signOut` to hide the control. Mount only after signing
-in. Keep the client, query cache and callback stable while mounted. Unmount and
+in. Keep the client and query cache stable while mounted. Unmount and
 clear the cache before changing owners; use a fresh QueryClient for each owner.
 The editor uses `['store']` and the documented history keys in that cache.
 
@@ -69,7 +69,7 @@ separates recovery; it is not an authorization boundary for same-origin code.
 
 `dataPage` configures the explanatory text on Your data. Omit it for the
 standalone launcher's guidance. For an API with another storage location,
-provide all four fields, keeping the object stable while mounted:
+provide all four fields:
 
 ```tsx
 import type { DataPagePresentation } from "@keepcv/editor";
@@ -96,7 +96,9 @@ route tree are outside this entry's contract.
 
 Import the compiled `style.css`; no Tailwind build or source scanning is
 required. It includes the semantic tokens and a document-wide reset. Icons use
-SVG and system fonts. The bundled DOCX worker is in `dist/assets` and remains
+SVG and system fonts. The PDF import worker comes from the version-aligned public
+`@keepcv/interop/pdf.worker.mjs` entry and is configured automatically. Consumers
+no longer need direct PDF.js imports or workerSrc boot code. The bundled DOCX worker is in `dist/assets` and remains
 relative to the module; preserve it when copying package files. A bundler such
 as Vite copies it into the consumer output.
 
@@ -165,3 +167,75 @@ confirm a local controller for an unexpired running lease, its 409 expiry guidan
 stays visible. The editor does not clear that lease or retry inference. Review
 admission can expire or reach capacity; the server's fresh-task/review guidance
 stays visible and existing conversation/receipt/file history remains accessible.
+
+## Host composition and sharing
+
+The default fills the viewport. Pass `sizing="container"` to fill a parent with
+finite height; use `min-height: 0` on flex/grid ancestors. The host owns notices
+and account chrome above that parent. Loading and failures use the same bounds.
+The editor owns origin-root browser history in either mode.
+
+```tsx
+import type { HostAction } from "@keepcv/editor";
+
+const hostActions: HostAction[] = [
+  { id: "account", label: "Account settings", href: "/account" },
+  { id: "help", label: "Help", onSelect: openHelp },
+];
+
+<div style={{ height: "70dvh", minHeight: 0 }}>
+  <Editor api={api} queries={queries} sizing="container"
+    recoveryNamespace={connectedStoreKey} hostActions={hostActions}
+    recoveryActions={(failure) => failure.problem?.status === 401
+      ? [{ id: "sign-in", label: "Sign in again", href: "/sign-in" }]
+      : [{ id: "support", label: "Contact support", href: "/help" }]} />
+</div>;
+```
+
+Host actions appear in System navigation, including the collapsed rail and
+mobile sheet. Use unique stable ids and explicit labels. Links use ordinary
+browser navigation to HTTP(S) destinations; callbacks receive no career data.
+They do not enter the editor's internal route tree. Recovery actions receive
+`EditorFailure`: message, optional typed `problem`, and optional `retryAfter`
+containing the server's exact header value (seconds or HTTP date). Unknown and
+legacy stream failures retain a message without invented status. Recovery
+callbacks should be pure; actions are explicit and never replay requests.
+
+Host presentation, actions and guidance can change while mounted without
+recreating the router, replacing the cache or clearing composer input. Keep the
+client, cache and recovery namespace stable for a connected owner. Replacing
+one starts a fresh connected UI; hosts must still unmount, clear the old cache
+and revoke server authority when changing owners or authenticated sessions.
+
+Each valid send refreshes server capabilities before admission. A first Send or
+Ctrl/Cmd+Enter opens a sharing dialog showing the current
+server disclosure, shared input types and effective web choice. Not now/Escape
+preserves all unsent input and makes no creation/upload/turn request. Allow and
+send acknowledges and submits once. A changed pending draft requires a new send
+intent. The acknowledgment lasts only for the connected editor lifetime; new
+conversations retain it, remount/reload resets it. Changed service disclosure,
+web scope or generation formats invalidates it. This is browser acknowledgment,
+not a versioned server consent receipt or an edit grant.
+
+Settings retains sharing control. Revocation blocks future sends; the active
+task continues until the separate Stop action is acknowledged. Neither action
+retracts provider data or undoes saved edits. Ordinary editing, history,
+downloads and free export never require AI sharing.
+
+Capabilities supply effective `generationMediaTypes` independently of stored
+file formats. The chooser, drop validation, sharing dialog and file settings
+follow that set. Markdown/JSON/CSV and other supported text aliases are UTF-8
+`text/plain`, not separate parsers. Older servers/custom adapters without format
+metadata default to text-only generation. Advertise qualified image/PDF types
+explicitly to retain those inputs; saved originals remain downloadable.
+
+Import `@keepcv/editor/favicon.svg?url` in a Vite consumer, or copy the exported
+asset to a same-origin URL and use `<link rel="icon" href="/favicon.svg">`.
+The SVG follows system light/dark preference and is MIT licensed with the package.
+It needs no React serialization or source imports. The theme script remains a
+separate pre-paint asset for the editor's stored theme preference.
+
+The installed browser needs same-origin JavaScript module workers permitted by
+`worker-src 'self'` and `script-src 'self'`. Serve `.js` and `.mjs` as JavaScript.
+Vite copies PDF/DOCX workers relative to emitted assets, including a host-selected asset base. No CDN fallback, source maps or remote worker is needed.
+This concerns import, independently of assistant PDF-generation capability.

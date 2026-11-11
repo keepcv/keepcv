@@ -56,3 +56,39 @@ export async function retainFiles(key: string, files: PendingFile[]): Promise<vo
     db.close();
   }
 }
+
+export function generationMediaType(file: File): string {
+  if (/\.(?:txt|asc|ascii|md|csv|tsv|json|yaml|yml|log)$/i.test(file.name)) return "text/plain";
+  return (
+    file.type ||
+    (/\.pdf$/i.test(file.name)
+      ? "application/pdf"
+      : /\.png$/i.test(file.name)
+        ? "image/png"
+        : /\.jpe?g$/i.test(file.name)
+          ? "image/jpeg"
+          : /\.webp$/i.test(file.name)
+            ? "image/webp"
+            : "")
+  );
+}
+export function generationAccept(types: readonly string[]): string {
+  return types
+    .flatMap((type) =>
+      type === "text/plain"
+        ? [type, ".txt", ".asc", ".ascii", ".md", ".csv", ".tsv", ".json", ".yaml", ".yml", ".log"]
+        : [type],
+    )
+    .join(",");
+}
+
+export function generationFormats(types: readonly string[]): string {
+  const labels: Record<string, string> = {
+    "text/plain": "UTF-8 text",
+    "image/png": "PNG",
+    "image/jpeg": "JPEG",
+    "image/webp": "WebP",
+    "application/pdf": "PDF",
+  };
+  return types.map((type) => labels[type] ?? type).join(", ") || "none";
+}

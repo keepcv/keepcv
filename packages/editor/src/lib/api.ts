@@ -1,5 +1,6 @@
 import type { ApiClient } from "@keepcv/api";
 import { type Problem, problemSchema } from "@keepcv/schema";
+import type { EditorFailure } from "./host.js";
 
 export type { ApiClient };
 
@@ -7,10 +8,12 @@ export type { ApiClient };
 export class ProblemError extends Error {
   override readonly name = "ProblemError";
   readonly problem: Problem;
+  readonly retryAfter: string | undefined;
 
-  constructor(problem: Problem) {
+  constructor(problem: Problem, retryAfter?: string) {
     super(problem.detail);
     this.problem = problem;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -28,13 +31,34 @@ export async function unwrap(response: Response): Promise<unknown> {
 
   const body: unknown = await response.json().catch(() => undefined);
   const parsed = problemSchema.safeParse(body);
-  if (parsed.success) throw new ProblemError(parsed.data);
+  if (parsed.success)
+    throw new ProblemError(parsed.data, response.headers.get("retry-after") ?? undefined);
 
-  throw new ProblemError({
-    type: "about:blank",
-    title: "The store answered in a way this build does not understand",
-    status: Math.min(Math.max(response.status, 400), 599),
-    detail: `${String(response.status)} with a body that is not a problem document.`,
-    instance: new URL(response.url).pathname,
-  });
+  throw new ProblemError(
+    {
+      type: "about:blank",
+      title: "The store answered in a way this build does not understand",
+      status: Math.min(Math.max(response.status, 400), 599),
+      detail: `${String(response.status)} with a body that is not a problem document.`,
+      instance: response.url ? new URL(response.url).pathname : "",
+    },
+    response.headers.get("retry-after") ?? undefined,
+  );
+}
+
+export function failureOf(error: unknown): EditorFailure {
+  if (isProblem(error))
+    return {
+      message: error.message,
+      problem: error.problem,
+      ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }),
+    };
+  return {
+    message:
+      typeof error === "string"
+        ? error
+        : error instanceof Error
+          ? error.message
+          : "The request could not finish.",
+  };
 }

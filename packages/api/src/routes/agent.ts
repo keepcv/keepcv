@@ -7,6 +7,7 @@ import {
   NotFoundError,
 } from "@keepcv/core";
 import {
+  type AgentAttachment,
   type AgentLimits,
   agentAttachmentMetadataSchema,
   agentCapabilitiesSchema,
@@ -193,6 +194,7 @@ export function agentRoutes(options: {
   unitOfWork: UnitOfWork;
   agent?: AgentRuntime;
   agentLimits?: Partial<AgentLimits>;
+  generationMediaTypes?: readonly AgentAttachment["mediaType"][];
   agentScope?: (request: Request, ownerId: Uuid) => Promise<string | undefined>;
   runAsOwner: <T>(ownerId: Uuid, work: () => Promise<T>) => Promise<T>;
 }) {
@@ -206,6 +208,14 @@ export function agentRoutes(options: {
       ]),
     ),
   );
+  const mediaTypes = () =>
+    options.agent?.capabilities.available
+      ? (options.agent.capabilities.generationMediaTypes ?? ["text/plain" as const]).filter(
+          (media) =>
+            options.generationMediaTypes === undefined ||
+            options.generationMediaTypes.includes(media),
+        )
+      : [];
   const scopeFor = async (request: Request, owner: Uuid) =>
     await options.agentScope?.(request, owner);
   const runtime = () => {
@@ -236,6 +246,7 @@ export function agentRoutes(options: {
       c.json(
         {
           available: options.agent?.capabilities.available ?? false,
+          generationMediaTypes: mediaTypes(),
           webSearchAvailable:
             (options.agent?.capabilities.available ?? false) &&
             (options.agent?.capabilities.webSearchAvailable ?? false),
@@ -291,6 +302,11 @@ export function agentRoutes(options: {
         const selected = input.attachmentIds.map((fileId) => {
           const file = files.find((row) => row.id === fileId && row.archivedAt === null);
           if (file === undefined) throw new NotFoundError("attachment", fileId);
+          if (!mediaTypes().includes(file.mediaType))
+            throw new AgentRefusalError(
+              "A selected attachment format is unavailable for generation.",
+              422,
+            );
           const bytes = Buffer.byteLength(file.data, "base64");
           if (
             bytes > limits.maxFileBytes ||

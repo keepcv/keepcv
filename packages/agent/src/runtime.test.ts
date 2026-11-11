@@ -8,6 +8,7 @@ import {
 import { openLocalStore, runAsOwner } from "@keepcv/db";
 import type { Uuid } from "@keepcv/schema";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { AgentProviderError } from "./openrouter.js";
 import { type AgentModel, createAgent, readableStore } from "./runtime.js";
 
 const store = openLocalStore();
@@ -225,4 +226,36 @@ it("rejects tools outside the application resource vocabulary", async () => {
   });
   await turn();
   expect((await run(async (r) => await r.agent.get(conversationId))).actions).toEqual([]);
+});
+
+it.each([
+  ["rate-limit", 429],
+  ["capability", 422],
+  ["policy", 403],
+  ["credits", 402],
+] as const)("retains safe %s status for streamed recovery", async (code, status) => {
+  generate.mockRejectedValue(
+    new AgentProviderError(code, "Synthetic refusal", false, code === "rate-limit" ? 120000 : 0),
+  );
+  const events: AgentEvent[] = [];
+  await turn(newUuid(), (event) => {
+    events.push(event);
+    return Promise.resolve();
+  });
+  const failure = events.find((event) => event.type === "error");
+  expect(failure?.problem?.status).toBe(status);
+  expect(failure?.problem?.detail).toBe("Synthetic refusal");
+  expect(failure?.retryAfter).toBe(code === "rate-limit" ? "120" : undefined);
+});
+it("retains concurrency status for streamed recovery", async () => {
+  const profile = await run((r) => r.profile.get());
+  generate.mockRejectedValue(
+    new ConcurrencyConflictError("profile", profile.id, profile.updatedAt),
+  );
+  const events: AgentEvent[] = [];
+  await turn(newUuid(), (event) => {
+    events.push(event);
+    return Promise.resolve();
+  });
+  expect(events.find((event) => event.type === "error")?.problem?.status).toBe(409);
 });
