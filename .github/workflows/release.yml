@@ -45,7 +45,7 @@ jobs:
         run: node release-artifacts.mjs preflight
 
   publish:
-    needs: [validate, verify]
+    needs: [validate, verify, container-verify]
     if: inputs.mode != 'verify'
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -76,8 +76,64 @@ jobs:
           fi
           node release-artifacts.mjs publish
 
+  container-verify:
+    needs: [validate, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-${{ github.sha }}
+          path: release
+      - name: Check package bytes before building the image
+        working-directory: release
+        run: node release-artifacts.mjs verify
+      - name: Build from verified tarballs and test the image
+        run: |
+          docker build --build-context packages=./release -t keepcv:release .
+          node scripts/container-smoke.mjs keepcv:release
+          docker save keepcv:release -o keepcv-image.tar
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: container-${{ github.sha }}
+          path: keepcv-image.tar
+          if-no-files-found: error
+          retention-days: 14
+
+  container-publish:
+    needs: [validate, publish, container-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: container-${{ github.sha }}
+      - name: Publish the tested image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.release-version }}
+        run: |
+          docker load -i keepcv-image.tar
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+          docker tag keepcv:release "ghcr.io/keepcv/keepcv:$RELEASE_VERSION"
+          docker tag keepcv:release ghcr.io/keepcv/keepcv:latest
+          docker push "ghcr.io/keepcv/keepcv:$RELEASE_VERSION"
+          docker push ghcr.io/keepcv/keepcv:latest
+          docker logout ghcr.io
+
   announce:
-    needs: [validate, publish]
+    needs: [validate, publish, container-publish]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

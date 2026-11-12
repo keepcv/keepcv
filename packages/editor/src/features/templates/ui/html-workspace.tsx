@@ -210,7 +210,7 @@ export function HtmlWorkspace({
             >
               Remove file
             </Button>
-            <label className="cursor-pointer rounded border border-line px-2 py-1 text-xs text-text-muted">
+            <label className="relative cursor-pointer rounded border border-line px-2 py-1 text-xs text-text-muted focus-within:outline-2 focus-within:outline-focus">
               Add asset
               <input
                 className="sr-only"

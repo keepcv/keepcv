@@ -250,3 +250,39 @@ tag. This keeps first-release timing deliberate without adding an automatic
 version-PR bot or another credential. The maintained Changesets CLI still owns
 version calculation and changelogs; the publish job uses npm's supported tarball
 and OIDC interfaces for the already-tested artifacts.
+
+## Container publication
+
+The release workflow also builds a Linux amd64 image from the exact verified
+package tarballs using a BuildKit named context. It checks non-root execution,
+web assets, refused anonymous API access, password sign-in, persistent restart
+and graceful shutdown. The tested image is uploaded as an immutable workflow
+artifact. npm publication waits for this validation. A separate job loads that
+image and pushes `ghcr.io/keepcv/keepcv:<version>` and `:latest`; GitHub release
+announcement waits for both publications. Verify mode builds/tests the image
+without publishing. PR CI also builds and exercises the source Dockerfile.
+
+Before the first publication:
+
+1. Merge the implementation with a CLI changeset and prepare package versions
+   through the existing review process. Do not republish 0.2.5 with new bytes.
+2. The workflow already grants `packages: write` to the `container-publish` job.
+   Keep the repository's default token permissions restricted and retain the
+   `npm` environment protection. No manual token or GHCR PAT is needed.
+3. If a `keepcv` container package already exists in the organization, connect it
+   to this repository and grant this repository Actions write access.
+4. Synchronize the reviewed release branch and dispatch Release in `verify`
+   mode. Inspect the container smoke logs and downloaded image artifact.
+5. Dispatch the trusted or bootstrap release mode as described above and approve
+   the protected publication jobs. The container job publishes the tested image.
+6. In the organization's package settings, make the container package public
+   after its first push. New GHCR packages default to private. Confirm an
+   anonymous `docker pull ghcr.io/keepcv/keepcv:<version>` succeeds.
+7. Follow the Compose first-launch instructions in [Docker setup](DOCKER.md).
+   Confirm the published version and password login before announcing availability.
+
+If npm succeeds and the image push fails, rerun the failed job with its retained
+artifact after correcting package permissions. If the 14-day artifacts expired,
+rerun validation on the same prepared release commit. Existing npm-byte guards
+still apply. Version tags identify a release; `latest` advances on publication.
+Use version/digest pins for deployments that should not advance automatically.

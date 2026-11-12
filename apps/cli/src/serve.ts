@@ -2,7 +2,12 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
-import { agentConfigSchema, createAgent, createOpenRouterModel } from "@keepcv/agent";
+import {
+  type AgentConfig,
+  agentConfigSchema,
+  createAgent,
+  createOpenRouterModel,
+} from "@keepcv/agent";
 import { type AuthMode, createApi } from "@keepcv/api";
 import { runAsOwner } from "@keepcv/db";
 import { type AuthSetting, launcherAuth } from "./auth.js";
@@ -39,6 +44,8 @@ export async function startServer(options: {
   port: number;
   dataDir: string;
   agentConfig?: string | undefined;
+  agentSettings?: AgentConfig | undefined;
+  openRouterApiKey?: string | undefined;
   host?: string;
   auth?: AuthSetting;
   origin?: string | undefined;
@@ -59,11 +66,11 @@ export async function startServer(options: {
   if (!isLoopback(host) && origin === undefined) {
     throw new Error("Binding off loopback needs --origin: the URL used to reach this store.");
   }
-  const configured =
-    options.agentConfig === undefined
-      ? undefined
-      : agentConfigSchema.parse(JSON.parse(await readFile(options.agentConfig, "utf8")));
-  const model = configured === undefined ? undefined : createOpenRouterModel(configured);
+  const { configured, model } = await configuredModel(
+    options.agentConfig,
+    options.agentSettings,
+    options.openRouterApiKey,
+  );
   const { store, ownerId } = await openStore(options.dataDir);
 
   const providers = [
@@ -190,4 +197,22 @@ export async function startServer(options: {
       await store.close();
     },
   };
+}
+
+async function configuredModel(
+  path: string | undefined,
+  settings: AgentConfig | undefined,
+  key: string | undefined,
+) {
+  const configured =
+    path === undefined
+      ? settings
+      : agentConfigSchema.parse(JSON.parse(await readFile(path, "utf8")));
+  const environment = { ...process.env };
+  if (!environment["OPENROUTER_API_KEY"] && key !== undefined) {
+    environment["OPENROUTER_API_KEY"] = key;
+  }
+  const model =
+    configured === undefined ? undefined : createOpenRouterModel(configured, environment);
+  return { configured, model };
 }

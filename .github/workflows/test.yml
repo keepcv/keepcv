@@ -160,10 +160,24 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  container:
+    name: Container startup and persistence
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and test the image
+        run: |
+          docker build -t keepcv:test .
+          node scripts/container-smoke.mjs keepcv:test
+
   test:
     name: Lint, typecheck and test
     if: always()
-    needs: [checks, databases, applications]
+    needs: [checks, databases, applications, container]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -171,9 +185,10 @@ jobs:
     steps:
       - name: Require every validation job to pass
         env:
-          RESULTS: ${{ join(needs.*.result, ',') }}
+          RESULTS: ${{ needs.checks.result }},${{ needs.databases.result }},${{ needs.applications.result }}
+          CONTAINER_RESULT: ${{ needs.container.result }}
         run: |
-          if [ "$RESULTS" != 'success,success,success' ]; then
+          if [ "$RESULTS" != 'success,success,success' ] || { [ "$CONTAINER_RESULT" != skipped ] && [ "$CONTAINER_RESULT" != success ]; }; then
             echo "Validation jobs did not all succeed: $RESULTS" >&2
             exit 1
           fi

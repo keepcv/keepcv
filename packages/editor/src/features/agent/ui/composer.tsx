@@ -60,7 +60,7 @@ export function Composer() {
           event.preventDefault();
           void agent.send();
         }}
-        className="shrink-0 rounded-2xl border border-line bg-surface-raised p-3 shadow-card transition-colors focus-within:border-line-strong"
+        className="relative shrink-0 rounded-2xl border border-line bg-surface-raised p-3 shadow-card transition-colors focus-within:border-line-strong"
       >
         {agent.files.length > 0 ? (
           <div className="mb-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto">

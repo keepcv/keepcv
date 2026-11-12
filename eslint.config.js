@@ -13,6 +13,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
+      ".keepcv-*/**",
       "**/dist/**",
       "**/node_modules/**",
       "**/.turbo/**",

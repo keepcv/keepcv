@@ -4,11 +4,49 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SESSION_COOKIE, SESSION_TOKEN_HEADER } from "@keepcv/api";
 import { profileSchema } from "@keepcv/schema";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readAuth, writePassword } from "./auth.js";
 import { startServer } from "./serve.js";
 
 const BOOTS_A_REAL_STORE = 60_000;
+
+it(
+  "uses the saved OpenRouter key when optional environment forwarding is empty",
+  async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "keepcv-env-agent-"));
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    try {
+      const running = await startServer({
+        dataDir,
+        port: 0,
+        openRouterApiKey: "synthetic-key",
+        agentSettings: {
+          routes: [
+            {
+              model: "qualified/model",
+              providers: ["approved"],
+              images: false,
+              pdf: false,
+              apiKeyEnv: "OPENROUTER_API_KEY",
+            },
+          ],
+          nativeSearchPolicyConfirmed: false,
+          deadlineMs: 90000,
+        },
+      });
+      try {
+        expect(running.port).toBeGreaterThan(0);
+        expect(process.env["OPENROUTER_API_KEY"]).toBe("");
+      } finally {
+        await running.stop();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  },
+  BOOTS_A_REAL_STORE,
+);
 
 function tokenOf(running: { token: string | undefined }): string {
   if (running.token === undefined) throw new Error("token mode mints a token");

@@ -1,5 +1,15 @@
 # @keepcv/editor
 
+## 0.10.1
+
+### Patch Changes
+
+- Keep long import reviews inside the main content scroll area instead of creating
+  a second scrollbar and empty space below the application. Contain hidden form
+  controls in import, template and assistant screens, show focus on import choices
+  and template asset uploads, and prevent dialog scrolling from moving the page
+  behind it.
+
 ## 0.10.0
 
 ### Minor Changes

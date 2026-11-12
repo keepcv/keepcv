@@ -69,8 +69,8 @@ export function Dialog({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-950/50 p-4 backdrop-blur-sm",
-        size !== "full" && "pt-[10vh]",
+        "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-ink-950/50 p-4 backdrop-blur-sm",
+        size !== "full" && "pt-[10dvh]",
       )}
     >
       <div
@@ -81,8 +81,8 @@ export function Dialog({
         aria-describedby={describedBy}
         onKeyDown={onKeyDown}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] overflow-y-auto w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
-          size === "md" && "max-w-lg",
+          "relative overflow-y-auto overscroll-contain w-full rounded-xl border border-line bg-surface-raised shadow-overlay",
+          size === "md" && "max-h-[calc(90dvh-2rem)] max-w-lg",
           size === "lg" &&
             "flex max-h-[calc(90dvh-2rem)] min-h-0 max-w-3xl flex-col overflow-hidden",
           size === "full" &&

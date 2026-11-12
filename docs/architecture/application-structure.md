@@ -1201,6 +1201,11 @@ width blank.
 
 The shell is `h-dvh` with `main` as the scroll container, which is what gives a
 workspace a definite height to fill.
+`main` also establishes the positioning context for its contents; visually hidden
+controls must stay inside their owning scroll area, rather than extending the
+outer editor's scrollable bounds. Hidden inputs belong to positioned labels or
+forms. Main content and dialogs contain scroll chaining. Dialog height accounts
+for its top inset so its controls remain inside the viewport.
 
 **A pane's own layout is a container query, not a viewport breakpoint.** The
 preview renders both full width on its own tab and in half a workspace; keyed to

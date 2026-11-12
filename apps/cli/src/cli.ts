@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { AUTH_MODES, type AuthMode, SESSION_TOKEN_HEADER } from "@keepcv/api";
 import { type AuthSetting, readAuth, writePassword } from "./auth.js";
+import { ENV_OPTIONS, environmentOptions, type LauncherConfig, readConfig } from "./config.js";
 import { backupStore, MIRROR_NAME, restoreStore } from "./mirror.js";
 import { readPiped, readSecret } from "./prompt.js";
 import {
@@ -21,13 +22,16 @@ import {
   type RunningServer,
   startServer,
 } from "./serve.js";
+import { setup } from "./setup.js";
 import { readStatus, statusReport } from "./status.js";
 
 const SHORTEST_PASSWORD = 8;
 
-const COMMANDS = ["serve", "status", "set-password", "render", "backup", "restore"];
+const COMMANDS = ["setup", "serve", "status", "set-password", "render", "backup", "restore"];
 
 const USAGE = `
+  keepcv setup [--data-dir <path>]  configure server, sign-in and optional AI chat
+
   keepcv serve [options]      run the store and its API on this machine
 
     --port <number>           default ${DEFAULT_PORT}
@@ -67,6 +71,12 @@ const USAGE = `
 
   keepcv --version            what is installed here
   keepcv --help               this
+
+  Environment (flags override environment, then saved settings, then defaults):
+${Object.entries(ENV_OPTIONS)
+  .map(([option, variable]) => `    ${variable.padEnd(23)} --${option}`)
+  .join("\n")}
+    Empty environment values are ignored. OPENROUTER_API_KEY supplies the AI key.
 
 `;
 
@@ -268,6 +278,7 @@ async function serveStore(
     "agent-config"?: string | undefined;
   },
   chosen: AuthSetting,
+  config: LauncherConfig,
 ): Promise<number> {
   const port = values.port === undefined ? DEFAULT_PORT : Number(values.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -282,6 +293,8 @@ async function serveStore(
     auth: chosen,
     origin: values.origin,
     agentConfig: values["agent-config"],
+    agentSettings: config.agent,
+    openRouterApiKey: config.openRouterApiKey,
   });
   process.stdout.write(banner(running, dataDir));
 
@@ -333,7 +346,8 @@ function messageOf(reason: unknown): string {
 }
 
 async function perform(command: string, args: Args): Promise<number> {
-  const { values, positionals } = args;
+  const { positionals } = args;
+  const values = { ...environmentOptions(), ...args.values };
   const dataDir = values["data-dir"] ?? DEFAULT_DATA_DIR;
 
   if (command === "status") return await status(dataDir);
@@ -341,13 +355,20 @@ async function perform(command: string, args: Args): Promise<number> {
   if (command === "backup") return await backup(dataDir, values.out);
   if (command === "restore") return await restore(dataDir, values.from);
   if (command === "set-password") return await setPassword(dataDir);
+  if (command === "setup") return await setup(dataDir);
 
-  const chosen = await chooseAuth(dataDir, values);
+  const config = await readConfig(dataDir);
+  const configured = {
+    ...config,
+    port: config.port === undefined ? undefined : String(config.port),
+    ...values,
+  };
+  const chosen = await chooseAuth(dataDir, configured);
   if ("refused" in chosen) {
     process.stderr.write(`\n  ${chosen.refused}\n\n`);
     return 1;
   }
-  return await serveStore(dataDir, values, chosen.setting);
+  return await serveStore(dataDir, configured, chosen.setting, config);
 }
 
 // Answers an exit code for every argument list there is. A stack trace is the
