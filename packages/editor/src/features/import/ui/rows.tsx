@@ -45,13 +45,13 @@ export function ChoiceRow({
         )}
       </div>
 
-      <fieldset className="inline-flex rounded-lg border border-line bg-surface-sunken p-0.5">
+      <fieldset className="relative inline-flex rounded-lg border border-line bg-surface-sunken p-0.5">
         <legend className="sr-only">{`What to do with ${title}`}</legend>
         {offered.map((action) => (
           <label
             key={action}
             className={cn(
-              "cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "relative cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-within:outline-2 focus-within:outline-focus",
               chosen === action ? "bg-surface text-text shadow-card" : "text-text-muted",
             )}
           >

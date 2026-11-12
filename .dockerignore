@@ -1,0 +1,14 @@
+.git
+.github
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/*.tgz
+.keepcv-*
+.env
+.env.*
+**/config.json
+docs/PRODUCT.md
+docs/adr
+coverage

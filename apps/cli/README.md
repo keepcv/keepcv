@@ -267,3 +267,83 @@ sessions sits beside it, and rotating it is what ending every session means.
 ## Licence
 
 MIT
+
+## Guided setup
+
+Run `keepcv setup` before `keepcv serve`. Both accept `--data-dir`; use the same
+directory for both. Setup asks whether to configure each section:
+
+- Server listen address and port.
+- Sign-in with a launch token, password or trusted proxy; public origin for
+  password/proxy, and trusted address/header/user for proxy sign-in.
+- Optional OpenRouter chat, exact model ID, approved provider slugs and API key.
+
+Skip a section to retain its current settings. Revisit AI setup and answer no to
+"Enable AI chat?" to disable it. Ctrl+C or declining the final save writes
+nothing. Piped/noninteractive setup refuses with an actionable message; `serve`
+never opens prompts. Setup makes no network calls and does not validate a key
+against the provider.
+
+Settings are saved atomically to `config.json` inside the data directory with
+private permissions (0600 on POSIX, restricted ACLs on Windows). A saved API key
+is plaintext in this protected file; leave the key blank to supply
+`OPENROUTER_API_KEY` through the environment instead. The environment overrides a
+saved key. Passwords are hashed separately in `auth.json`. Neither credentials
+nor launcher settings are part of native career-data exports. Back them up
+separately if needed and never commit them.
+
+`serve` reads saved settings on startup. Explicit flags override environment
+variables, which override saved settings, then built-in defaults. An explicit
+`--agent-config` or `KEEPCV_AGENT_CONFIG` replaces saved model routes. Advanced routes, native
+PDF/image capability and hosted web policies use the existing
+[agent configuration](../../packages/agent/README.md). The wizard starts with
+text-only chat and no web access. Restart after changing settings.
+
+## Environment variables
+
+All string options have an environment equivalent. They use the same validation
+and authentication restrictions as flags. Empty or whitespace-only `KEEPCV_*`
+values are ignored. Settings are resolved for each command at startup; restart a
+running server after changing its environment. `setup` uses the environment data
+directory but saves only wizard answers, not runtime environment overrides.
+
+| Environment variable | Option | Applies to |
+|---|---|---|
+| `KEEPCV_DATA_DIR` | `--data-dir` | Every command |
+| `KEEPCV_PORT` | `--port` | serve |
+| `KEEPCV_HOST` | `--host` | serve |
+| `KEEPCV_ORIGIN` | `--origin` | serve |
+| `KEEPCV_AUTH` | `--auth` | serve |
+| `KEEPCV_PROXY_HEADER` | `--proxy-header` | serve with proxy auth |
+| `KEEPCV_PROXY_FROM` | `--proxy-from` | serve with proxy auth |
+| `KEEPCV_PROXY_USER` | `--proxy-user` | serve with proxy auth |
+| `KEEPCV_AGENT_CONFIG` | `--agent-config` | serve; path to advanced JSON routes |
+| `KEEPCV_FORMAT` | `--format` | render |
+| `KEEPCV_OUT` | `--out` | render, backup |
+| `KEEPCV_FROM` | `--from` | restore |
+
+`OPENROUTER_API_KEY` remains the provider credential. A nonempty environment key
+wins over a saved key; an empty string permits the saved key. Custom routes can
+still name another credential variable through `apiKeyEnv`. Environment values
+are never written to configuration by `serve`. Passwords continue to be set
+through the masked prompt or stdin of `set-password`.
+
+For example, in PowerShell:
+
+```powershell
+$env:KEEPCV_PORT = "5000"
+$env:KEEPCV_DATA_DIR = "C:/keepcv-data"
+keepcv serve
+```
+
+Or in a POSIX shell:
+
+```sh
+KEEPCV_PORT=5000 KEEPCV_DATA_DIR=./career-data keepcv serve
+```
+
+Flags take priority, so `keepcv serve --port 6000` overrides either example.
+The launcher reads the process environment; it does not load a `.env` file
+implicitly. Docker Compose can supply one through its documented interpolation
+or `env_file` mechanisms. No environment variables replace commands, resume
+selection, `--help` or `--version`.

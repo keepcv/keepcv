@@ -154,7 +154,7 @@ export function Shell({
 
         <main
           className={cn(
-            "min-h-0 w-full flex-1",
+            "relative min-h-0 w-full flex-1 overscroll-contain",
             conversationPage ? "overflow-hidden" : "overflow-y-auto px-4 py-6 lg:px-6",
           )}
         >

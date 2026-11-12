@@ -1,6 +1,6 @@
 {
   "name": "@keepcv/cli",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Run KeepCV locally: a career data store that compiles into resumes.",
   "keywords": [
     "keepcv",
@@ -42,7 +42,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clack/prompts": "catalog:",
     "@hono/node-server": "catalog:",
+    "@keepcv/agent": "workspace:*",
     "@keepcv/api": "workspace:*",
     "@keepcv/ats-lint": "workspace:*",
     "@keepcv/core": "workspace:*",
@@ -50,7 +52,7 @@
     "@keepcv/interop": "workspace:*",
     "@keepcv/render": "workspace:*",
     "@keepcv/schema": "workspace:*",
-    "@keepcv/agent": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@keepcv/web": "workspace:*",

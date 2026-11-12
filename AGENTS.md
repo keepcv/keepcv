@@ -75,7 +75,7 @@ package is noise, and a sub-feature is either not started or complete.
 
 **What exists.** `packages/schema`, `core`, `db`, `api`, `templates`, `render`,
 `ats-lint`, `interop`, `agent` and `editor`; `apps/cli` is the `keepcv` launcher with `serve`,
-`render`, `status`, `backup`, `restore` and `set-password`; `apps/web` is the
+`setup`, `render`, `status`, `backup`, `restore` and `set-password`; `apps/web` is the
 browser app. `apps/web` is the one workspace project **not** in the
 `tsconfig.json` references: it emits no declarations for anything to reference,
 so it is a `noEmit` project that Vite builds and `tsc` only checks.

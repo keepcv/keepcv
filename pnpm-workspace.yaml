@@ -12,6 +12,7 @@ allowBuilds:
 # Packages reference these with "catalog:" instead of a literal range, so an
 # upgrade is a single-line change here and drift is impossible by construction.
 catalog:
+  "@clack/prompts": ^1.9.0
   ai: 7.0.159
   "@openrouter/ai-sdk-provider": 3.1.0
   file-type: ^21.0.0

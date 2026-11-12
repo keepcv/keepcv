@@ -1,0 +1,29 @@
+services:
+  keepcv:
+    image: ghcr.io/keepcv/keepcv:latest
+    ports:
+      - "127.0.0.1:${KEEPCV_PORT:-4319}:${KEEPCV_PORT:-4319}"
+    volumes:
+      - keepcv-data:/data
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "const socket=require('node:net').createConnection({host:'127.0.0.1',port:Number(process.env.KEEPCV_PORT||4319)},()=>{socket.end();process.exit(0)});socket.on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    environment:
+      KEEPCV_DATA_DIR: ${KEEPCV_DATA_DIR:-/data}
+      KEEPCV_HOST: ${KEEPCV_HOST:-0.0.0.0}
+      KEEPCV_PORT: ${KEEPCV_PORT:-4319}
+      KEEPCV_ORIGIN: ${KEEPCV_ORIGIN:-http://localhost:${KEEPCV_PORT:-4319}}
+      KEEPCV_AUTH: ${KEEPCV_AUTH:-password}
+      KEEPCV_PROXY_HEADER: ${KEEPCV_PROXY_HEADER:-}
+      KEEPCV_PROXY_FROM: ${KEEPCV_PROXY_FROM:-}
+      KEEPCV_PROXY_USER: ${KEEPCV_PROXY_USER:-}
+      KEEPCV_AGENT_CONFIG: ${KEEPCV_AGENT_CONFIG:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+volumes:
+  keepcv-data:

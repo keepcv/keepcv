@@ -84,3 +84,5 @@ to separate task instructions, reference and explanation without adding empty
 document categories. Diagrams follow Mermaid's
 [syntax](https://mermaid.js.org/intro/syntax-reference) and
 [accessibility guidance](https://mermaid.js.org/config/accessibility).
+
+- [Docker setup](DOCKER.md) - containers, persistent storage and upgrades.

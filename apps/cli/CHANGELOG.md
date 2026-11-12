@@ -1,5 +1,19 @@
 # @keepcv/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- Support KEEPCV\_\* environment variables for launcher options, with explicit flags
+  taking precedence over environment values and saved settings. Simplify Docker
+  startup to `serve` and configure Compose through environment variables instead
+  of a long command. Ignore empty environment settings and allow a saved
+  OpenRouter key when its environment variable is empty.
+- Add interactive setup for server, sign-in and optional OpenRouter chat settings.
+  Save private startup configuration with command-line and environment overrides.
+  Provide a persistent, non-root Docker image and integrate container verification
+  and publication with releases.
+
 ## 0.2.5
 
 ### Patch Changes

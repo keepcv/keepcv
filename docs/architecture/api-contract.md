@@ -892,3 +892,35 @@ The turn disclosure assertion remains literal true, with false/missing values
 refused. It is not a durable consent receipt. First-send UI acceptance is scoped
 to the connected editor and advertised processing scope; server authentication,
 owner/session authorization and cancellation remain independently authoritative.
+
+
+### Launcher setup and containers
+
+`keepcv setup --data-dir <path>` is an explicit TTY-only wizard. Server, sign-in
+and AI sections may be skipped, preserving existing settings. It collects all
+answers before final save; cancellation writes nothing. It never calls a model
+or verifies credentials remotely. `serve` stays noninteractive.
+
+`config.json` inside the data directory holds validated launcher settings and
+optional agent configuration and OpenRouter key. It uses the launcher's private,
+atomic file writer. Invalid files refuse startup without echoing their contents.
+String launcher options accept their documented `KEEPCV_*` environment variables.
+Precedence is explicit flags, environment, saved settings, then built-in defaults.
+Resolve the data directory before reading saved settings, for every command.
+Blank environment options are absent; selected values use existing validation.
+`--agent-config` or `KEEPCV_AGENT_CONFIG` replaces saved routes. A nonempty
+environment credential overrides a saved key; an empty key allows the saved key.
+The launcher does not implicitly read dotenv files or persist runtime overrides.
+Password hashes remain in `auth.json`. These operational files are outside native career-data exports.
+Setup offers text-only model routes; advanced capability and web qualification
+remain explicit agent configuration.
+
+The Docker image runs the same launcher as a non-root user, serves the packaged
+web assets, and persists operational files, store and mirror under `/data`.
+Its default command is `serve`; image environment defaults select `/data`,
+0.0.0.0:4319, password authentication and http://localhost:4319.
+Its network bind requires password or proxy authentication and a public origin.
+Compose publishes only on host loopback by default. Release verification builds
+an image from verified package tarballs and tests startup, authenticated access,
+restart and graceful stop before any publication. Publication loads the tested
+image artifact; it does not rebuild with registry credentials.
