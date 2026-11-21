@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS build
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS build
 ENV TURBO_TELEMETRY_DISABLED=1
 WORKDIR /src
 RUN corepack enable
@@ -10,13 +10,13 @@ RUN mkdir /packages && pnpm -r --filter './packages/**' --filter @keepcv/cli pac
 FROM scratch AS packages
 COPY --from=build /packages/ /
 
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS install
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS install
 WORKDIR /app
 COPY --from=packages / /packages/
 COPY scripts/container-install.mjs /container-install.mjs
 RUN node /container-install.mjs
 
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS runtime
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS runtime
 LABEL org.opencontainers.image.source="https://github.com/keepcv/keepcv"
 LABEL org.opencontainers.image.description="Career data store that compiles into resumes"
 LABEL org.opencontainers.image.licenses="MIT"
