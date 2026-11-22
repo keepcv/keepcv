@@ -12,6 +12,13 @@ allowBuilds:
 # Packages reference these with "catalog:" instead of a literal range, so an
 # upgrade is a single-line change here and drift is impossible by construction.
 catalog:
+  "@remotion/cli": 4.0.543
+  "@remotion/media": 4.0.543
+  remotion: 4.0.543
+  playwright: 1.65.1
+  "@resvg/resvg-js": 2.6.2
+  colorjs.io: 0.7.1
+  tsx: 4.23.15
   "@clack/prompts": ^1.9.0
   ai: 7.0.159
   "@openrouter/ai-sdk-provider": 3.1.0

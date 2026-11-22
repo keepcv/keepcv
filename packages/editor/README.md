@@ -239,3 +239,41 @@ The installed browser needs same-origin JavaScript module workers permitted by
 `worker-src 'self'` and `script-src 'self'`. Serve `.js` and `.mjs` as JavaScript.
 Vite copies PDF/DOCX workers relative to emitted assets, including a host-selected asset base. No CDN fallback, source maps or remote worker is needed.
 This concerns import, independently of assistant PDF-generation capability.
+
+### Standalone branding assets
+
+Run `pnpm assets:generate` at the repository root to regenerate
+`packages/editor/public/brand/` from Logo, Spot, the semantic glyph registry and
+the current CSS theme tokens. The editor build runs this command automatically.
+To add PNG widths (1-4096 pixels), run
+`pnpm --filter @keepcv/editor assets:generate 256 768`. Existing standard widths
+are always included. SVGs scale to any size; PNGs preserve the source aspect ratio.
+
+| Asset | Files | Default PNG widths |
+|---|---|---|
+| Horizontal logo | `logo-light`, `logo-dark` | 218, 436, 872 |
+| Drawer symbol | `mark-light`, `mark-dark` | 32, 64, 128, 256, 512, 1024 |
+| Every Spot name | `<name>-light`, `<name>-dark` | 160, 320, 640 |
+| Semantic glyphs | `icon-<GlyphName>.svg` | Vector by default; extra PNG widths through the command |
+| Optical favicon | `favicon.svg`, `favicon.ico`, `favicon-<width>.png` | 16, 32, 48 |
+| Opaque home-screen icon | `app.svg`, `app-<width>.png` | 180, 192, 512 |
+| Padded maskable icon | `maskable.svg`, `maskable-<width>.png` | 192, 512 |
+
+Logo, symbol and illustration files have transparent backgrounds. Light and dark
+variants contain resolved colors and need no stylesheet. Application icons have
+square opaque backgrounds; the maskable symbol fits the central safe circle.
+The favicon SVG follows system light/dark preference; raster favicons use light
+colors. `catalog.json` lists generated PNG filenames and their actual dimensions.
+
+All files are exported through `@keepcv/editor/assets/*`. For example:
+
+```ts
+import logo from "@keepcv/editor/assets/logo-light-436.png?url";
+import symbol from "@keepcv/editor/assets/mark-dark.svg?url";
+```
+
+Consumers may copy the files to their own asset URLs. The launcher web app links
+the favicon, the 180px Apple touch icon and `site.webmanifest`, which declares
+192px and 512px normal and maskable icons following the
+[web manifest icon contract](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons).
+The manifest supplies application identity; it adds no offline storage behavior.

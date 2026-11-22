@@ -75,6 +75,9 @@ jobs:
       - name: Test release guards
         run: pnpm test:release
 
+      - name: Check showcase timing and motion
+        run: pnpm test:promo
+
   databases:
     name: PostgreSQL and PGlite tests
     runs-on: ubuntu-latest

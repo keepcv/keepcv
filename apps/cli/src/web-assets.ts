@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import { basename, join, normalize, resolve, sep } from "node:path";
+import { join, normalize, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +13,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
@@ -34,10 +35,9 @@ async function fileAt(path: string): Promise<Response | undefined> {
       "content-type": contentType(path),
       "content-length": String(info.size),
       // Unversioned entry files must not keep references or behavior from an old build.
-      "cache-control":
-        path.endsWith(".html") || basename(path) === "theme.js"
-          ? "no-store"
-          : "public, max-age=31536000, immutable",
+      "cache-control": !path.includes(`${sep}assets${sep}`)
+        ? "no-store"
+        : "public, max-age=31536000, immutable",
     },
   });
 }

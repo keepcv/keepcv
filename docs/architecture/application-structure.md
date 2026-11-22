@@ -1145,8 +1145,18 @@ primary two-card symbol and vector wordmark. `Logo`, exported through
 `@keepcv/editor/ui`, renders the horizontal logo or the symbol alone with `mark`.
 The rail, mobile navigation, sign-in and landing page use that same component.
 A containing link supplies its accessible name; a standalone logo takes `label`.
-The web document bundles the separate optical 16px favicon through Vite, so its
-URL changes with its content. No external font or image service is required.
+The editor owns the separate optical 16px favicon source. Its asset-generation
+command renders Logo, Spot and the semantic glyphs into standalone SVG files,
+with standard PNG widths for logos and illustrations and optional extra widths.
+Colors are resolved from the existing CSS tokens into light and dark variants.
+The editor publishes these files through `@keepcv/editor/assets/*` and retains
+its `favicon.svg` export. Geometry remains in the components, not copied paths.
+
+The web app uses the generated favicon, ICO fallback and opaque 180px touch icon.
+A web manifest declares 192px and 512px normal and maskable application icons;
+the latter keep the symbol inside the central safe circle. Unversioned public
+files are served without caching; content-hashed Vite assets remain immutable.
+No external font or image service is required.
 
 Store and selection illustrations share the drawer's visual vocabulary through
 `Spot`. The `snapshot` illustration includes a star and is reserved for snapshot

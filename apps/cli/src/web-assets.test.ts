@@ -15,6 +15,10 @@ beforeAll(async () => {
   await writeFile(join(root, "index.html"), "<!doctype html><title>KeepCV</title>");
   await writeFile(join(root, "assets", "index-abc123.js"), "console.log(1)");
   await writeFile(join(root, "assets", "pdf.worker-abc123.mjs"), "export {};");
+  await writeFile(join(root, "site.webmanifest"), '{"name":"KeepCV"}');
+  await writeFile(join(root, "favicon.svg"), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  await mkdir(join(root, "brand"));
+  await writeFile(join(root, "brand", "app-180.png"), new Uint8Array([137, 80, 78, 71]));
   await writeFile(join(root, "theme.js"), "document.documentElement.classList.add('dark')");
   await writeFile(join(outside, "secrets.txt"), "the launch token");
   serve = serveWebApp(root);
@@ -49,6 +53,16 @@ describe("the web app handler", () => {
     );
     expect((await get("/")).headers.get("cache-control")).toBe("no-store");
     expect((await get("/theme.js")).headers.get("cache-control")).toBe("no-store");
+  });
+
+  it.each([
+    ["/site.webmanifest", "application/manifest+json"],
+    ["/favicon.svg", "image/svg+xml"],
+    ["/brand/app-180.png", "image/png"],
+  ])("serves unversioned branding %s with its type and without caching", async (path, type) => {
+    const response = await get(path);
+    expect(response.headers.get("content-type")).toBe(type);
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   // A single-page app resolves its own routes, so an unknown path is a route

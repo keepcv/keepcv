@@ -23,6 +23,14 @@ The badges above show current versions and generated download/star statistics
 without a workflow rewriting this file. Maintainers can follow the
 [release procedure](docs/RELEASING.md).
 
+## Watch the demo
+
+[![Watch the three-minute KeepCV walkthrough](videos/keepcv/showcase/poster.png)](videos/keepcv/showcase/keepcv-3min.mp4)
+
+[Watch the three-minute walkthrough](videos/keepcv/showcase/keepcv-3min.mp4)
+or [watch the 90-second overview](videos/keepcv/showcase/keepcv-90s.mp4).
+The Assistant walkthrough uses labeled demo responses in the real KeepCV UI.
+
 ## The idea
 
 A resume file has to be short; career history needs room to grow. Keeping both
