@@ -24,7 +24,7 @@ const STORE = {
   ),
 };
 
-const SPOTS = {
+export const SPOTS = {
   emptyStore: STORE,
   permanent: STORE,
   noResults: {

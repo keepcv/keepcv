@@ -53,6 +53,7 @@ silently checks it out as a text file containing the target path.
 | `pnpm typecheck` | `tsc` across every package, including tests |
 | `pnpm test` | Vitest across every package |
 | `pnpm check` | Typecheck, tests, both lint passes and release-script tests |
+| `pnpm assets:generate` | Regenerate standalone branding assets and standard image sizes |
 | `pnpm build` | Build packages and applications |
 | `pnpm changeset` | Record a change for the next release |
 | `pnpm release:check` | Build, pack and exercise an isolated install |

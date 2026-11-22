@@ -25,7 +25,8 @@
     },
     "./style.css": "./dist/style.css",
     "./theme.js": "./dist/theme.js",
-    "./favicon.svg": "./dist/favicon.svg"
+    "./favicon.svg": "./dist/favicon.svg",
+    "./assets/*": "./dist/brand/*"
   },
   "files": [
     "dist",
@@ -35,9 +36,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "build": "pnpm assets:generate && tsc -b && vite build",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json && tsc -p scripts/tsconfig.json",
+    "test": "vitest run",
+    "assets:generate": "tsx --tsconfig scripts/tsconfig.json scripts/brand-assets.tsx"
   },
   "dependencies": {
     "@keepcv/api": "workspace:*",
@@ -76,7 +78,11 @@
     "vitest": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@tanstack/react-query": "catalog:"
+    "@tanstack/react-query": "catalog:",
+    "@resvg/resvg-js": "catalog:",
+    "colorjs.io": "catalog:",
+    "tsx": "catalog:",
+    "@types/node": "catalog:"
   },
   "sideEffects": [
     "**/*.css"

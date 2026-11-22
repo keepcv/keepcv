@@ -1,5 +1,6 @@
 import { createClient } from "@keepcv/api";
 import { Editor, type HostAction } from "@keepcv/editor";
+import touchIcon from "@keepcv/editor/assets/app-180.png?url";
 import favicon from "@keepcv/editor/favicon.svg?url";
 import { QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -11,6 +12,10 @@ const link = document.createElement("link");
 link.rel = "icon";
 link.href = favicon;
 document.head.append(link);
+const touch = document.createElement("link");
+touch.rel = "apple-touch-icon";
+touch.href = touchIcon;
+document.head.append(touch);
 const account: HostAction = { id: "account", label: "Account settings", href: "/account.html" };
 function HostedEditor() {
   const [notice, setNotice] = useState(false);

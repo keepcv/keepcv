@@ -1,0 +1,312 @@
+[
+  {
+    "file": "logo-light-218.png",
+    "width": 218,
+    "height": 48
+  },
+  {
+    "file": "logo-light-436.png",
+    "width": 436,
+    "height": 96
+  },
+  {
+    "file": "logo-light-872.png",
+    "width": 872,
+    "height": 192
+  },
+  {
+    "file": "mark-light-32.png",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "file": "mark-light-64.png",
+    "width": 64,
+    "height": 64
+  },
+  {
+    "file": "mark-light-128.png",
+    "width": 128,
+    "height": 128
+  },
+  {
+    "file": "mark-light-256.png",
+    "width": 256,
+    "height": 256
+  },
+  {
+    "file": "mark-light-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "file": "mark-light-1024.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "emptyStore-light-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "emptyStore-light-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "emptyStore-light-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "permanent-light-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "permanent-light-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "permanent-light-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "noResults-light-160.png",
+    "width": 160,
+    "height": 120
+  },
+  {
+    "file": "noResults-light-320.png",
+    "width": 320,
+    "height": 240
+  },
+  {
+    "file": "noResults-light-640.png",
+    "width": 640,
+    "height": 480
+  },
+  {
+    "file": "compose-light-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "compose-light-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "compose-light-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "versions-light-160.png",
+    "width": 160,
+    "height": 120
+  },
+  {
+    "file": "versions-light-320.png",
+    "width": 320,
+    "height": 240
+  },
+  {
+    "file": "versions-light-640.png",
+    "width": 640,
+    "height": 480
+  },
+  {
+    "file": "snapshot-light-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "snapshot-light-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "snapshot-light-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "app-180.png",
+    "width": 180,
+    "height": 180
+  },
+  {
+    "file": "app-192.png",
+    "width": 192,
+    "height": 192
+  },
+  {
+    "file": "app-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "file": "maskable-192.png",
+    "width": 192,
+    "height": 192
+  },
+  {
+    "file": "maskable-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "file": "logo-dark-218.png",
+    "width": 218,
+    "height": 48
+  },
+  {
+    "file": "logo-dark-436.png",
+    "width": 436,
+    "height": 96
+  },
+  {
+    "file": "logo-dark-872.png",
+    "width": 872,
+    "height": 192
+  },
+  {
+    "file": "mark-dark-32.png",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "file": "mark-dark-64.png",
+    "width": 64,
+    "height": 64
+  },
+  {
+    "file": "mark-dark-128.png",
+    "width": 128,
+    "height": 128
+  },
+  {
+    "file": "mark-dark-256.png",
+    "width": 256,
+    "height": 256
+  },
+  {
+    "file": "mark-dark-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "file": "mark-dark-1024.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "emptyStore-dark-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "emptyStore-dark-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "emptyStore-dark-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "permanent-dark-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "permanent-dark-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "permanent-dark-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "noResults-dark-160.png",
+    "width": 160,
+    "height": 120
+  },
+  {
+    "file": "noResults-dark-320.png",
+    "width": 320,
+    "height": 240
+  },
+  {
+    "file": "noResults-dark-640.png",
+    "width": 640,
+    "height": 480
+  },
+  {
+    "file": "compose-dark-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "compose-dark-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "compose-dark-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "versions-dark-160.png",
+    "width": 160,
+    "height": 120
+  },
+  {
+    "file": "versions-dark-320.png",
+    "width": 320,
+    "height": 240
+  },
+  {
+    "file": "versions-dark-640.png",
+    "width": 640,
+    "height": 480
+  },
+  {
+    "file": "snapshot-dark-160.png",
+    "width": 160,
+    "height": 107
+  },
+  {
+    "file": "snapshot-dark-320.png",
+    "width": 320,
+    "height": 213
+  },
+  {
+    "file": "snapshot-dark-640.png",
+    "width": 640,
+    "height": 427
+  },
+  {
+    "file": "favicon-16.png",
+    "width": 16,
+    "height": 16
+  },
+  {
+    "file": "favicon-32.png",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "file": "favicon-48.png",
+    "width": 48,
+    "height": 48
+  }
+]

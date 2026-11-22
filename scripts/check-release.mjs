@@ -66,7 +66,12 @@ for (const { directory, manifest } of packages) {
     const path = paths.pop();
     if (typeof path === "string") {
       assert(
-        files.has(path.replace(/^\.\//, "")),
+        path.includes("*")
+          ? [...files].some((file) => {
+              const [prefix, suffix] = path.replace(/^\.\//, "").split("*");
+              return file.startsWith(prefix) && file.endsWith(suffix);
+            })
+          : files.has(path.replace(/^\.\//, "")),
         `${manifest.name} is missing entry point ${path}`,
       );
     } else if (path) {
@@ -77,6 +82,7 @@ for (const { directory, manifest } of packages) {
     assert(!path.endsWith(".map"), `${manifest.name} ships a source map: ${path}`);
     assert(!/\.(test|harness)\./.test(path), `${manifest.name} ships a test: ${path}`);
     assert(!path.startsWith("src/"), `${manifest.name} ships source: ${path}`);
+    assert(!/\.(mp4|webm)$/i.test(path), `${manifest.name} ships video: ${path}`);
   }
   for (const kind of ["dependencies", "optionalDependencies", "peerDependencies"]) {
     for (const [name, range] of Object.entries(published[kind] ?? {})) {
@@ -99,6 +105,12 @@ for (const { directory, manifest } of packages) {
     assert([...files].some((path) => path.startsWith("schema/") && path.endsWith(".json")));
   }
   if (manifest.name === "@keepcv/editor") {
+    const catalog = JSON.parse(await readFile(join(directory, "dist/brand/catalog.json"), "utf8"));
+    for (const entry of catalog) {
+      assert(files.has(`dist/brand/${entry.file}`), `Missing branding asset: ${entry.file}`);
+    }
+    assert(files.has("dist/brand/favicon.ico"));
+    assert(files.has("dist/site.webmanifest"));
     assert(files.has("dist/style.css"));
     assert(files.has("dist/theme.js"));
     assert(

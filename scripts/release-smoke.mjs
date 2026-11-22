@@ -40,7 +40,7 @@ try {
     assert.match(html, /<div id="root">/);
     const favicon = html.match(/<link[^>]+rel="icon"[^>]+href="([^"]+)"/);
     assert(favicon, "The installed app is missing its favicon");
-    assert.match(favicon[1], /^\/assets\/.*\.svg$/);
+    assert.equal(favicon[1], "/favicon.svg");
     const icon = await fetch(new URL(favicon[1], origin));
     assert.equal(icon.headers.get("content-type"), "image/svg+xml");
     assert.match(await icon.text(), /<svg/);
@@ -49,6 +49,16 @@ try {
       assert.equal(loaded.status, 200, asset);
       assert(!loaded.headers.get("content-type")?.includes("text/html"), asset);
     }
+  }
+  const manifestResponse = await fetch(`${origin}/site.webmanifest`);
+  assert.equal(manifestResponse.headers.get("content-type"), "application/manifest+json");
+  assert.equal(manifestResponse.headers.get("cache-control"), "no-store");
+  const manifest = await manifestResponse.json();
+  for (const entry of [...manifest.icons, { src: "brand/app-180.png", sizes: "180x180" }]) {
+    const response = await fetch(new URL(entry.src, origin));
+    assert.equal(response.headers.get("content-type"), "image/png");
+    const png = Buffer.from(await response.arrayBuffer());
+    assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, entry.sizes);
   }
   const theme = await fetch(`${origin}/theme.js`);
   assert.equal(theme.status, 200);
