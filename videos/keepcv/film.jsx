@@ -2,6 +2,7 @@ import { Audio, Video } from "@remotion/media";
 import {
   AbsoluteFill,
   Easing,
+  Freeze,
   Img,
   Interactive,
   interpolate,
@@ -15,7 +16,7 @@ import { HandoffObjects, SharedPanel, useObjectMotion, useShotHeading } from "./
 import { handoffTail } from "./handoffs.mjs";
 import { SOURCE_HEIGHT, SOURCE_WIDTH, stageAt } from "./motion.mjs";
 import { Opening } from "./opening.jsx";
-import { assistantScenes, scenes } from "./story.mjs";
+import { scenes } from "./story.mjs";
 import { timeline } from "./timeline.mjs";
 
 const ease = {
@@ -110,21 +111,32 @@ function Brand() {
     </AbsoluteFill>
   );
 }
+const recordedClips = {
+  assistantManage: 110,
+  assistantJob: 101,
+  assistantReview: 114,
+  assistantResult: 91,
+  journeyRecord: 123,
+  journeyTemplates: 308,
+  journeyApply: 97,
+  journeyExport: 137,
+};
+
 function Footage({ name }) {
   const [title, sub, chapter] = scenes[name];
   const stage = stageAt();
   const move = useObjectMotion();
   const heading = useShotHeading();
-  const assistant = Object.hasOwn(assistantScenes, name);
+  const frame = useCurrentFrame();
+  const hold = recordedClips[name];
+  const edited = hold !== undefined;
   const viewport = (
     <Video
       name={`${name} - real UI recording`}
-      src={staticFile(`clips/${name}.${assistant ? "mp4" : "webm"}`)}
-      trimBefore={assistant ? 0 : name === "export" ? 65 : 50}
+      src={staticFile(`clips/${name}.${edited ? "mp4" : "webm"}`)}
+      trimBefore={edited ? 0 : 50}
       muted
-      playbackRate={
-        name === "assistantResult" ? 0.9 : name === "compose" || name === "export" ? 1.6 : 1
-      }
+      playbackRate={name === "assistantResult" ? 0.9 : name === "compose" ? 1.25 : 1}
       style={{ width: SOURCE_WIDTH, height: SOURCE_HEIGHT, display: "block" }}
     />
   );
@@ -190,7 +202,11 @@ function Footage({ name }) {
           true,
         )}
       >
-        <div style={{ scale: stage.scale, transformOrigin: "top left" }}>{viewport}</div>
+        <div style={{ scale: stage.scale, transformOrigin: "top left" }}>
+          <Freeze frame={hold ?? 0} active={edited && frame > hold}>
+            {viewport}
+          </Freeze>
+        </div>
       </div>
     </AbsoluteFill>
   );

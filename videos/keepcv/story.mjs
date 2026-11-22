@@ -1,18 +1,38 @@
 export const scenes = {
   overview: [
-    "Your career, kept together.",
-    "One permanent store. Every resume starts here.",
-    "01 / CAPTURE",
+    "Start in your career store.",
+    "The overview shows what is already available to build with.",
+    "01 / START",
+  ],
+  journeyRecord: [
+    "Add context to a role.",
+    "An experience record keeps the work, dates and reusable Points together.",
+    "02 / CAPTURE",
+  ],
+  journeyTemplates: [
+    "Compare layouts with your own content.",
+    "Choose a template to preview the same tailored resume in a different layout.",
+    "05 / DESIGN",
+  ],
+  journeyApply: [
+    "Apply the layout you want.",
+    "Classic changes the page design while keeping the selected Points and skills.",
+    "05 / DESIGN",
+  ],
+  journeyExport: [
+    "Export the finished resume as PDF.",
+    "Use Export PDF from the Design view to keep the layout you just chose.",
+    "06 / EXPORT",
   ],
   import: [
     "Bring the work you've already done.",
     "Import PDF, DOCX, JSON Resume, Reactive Resume or RenderCV. Review before adding.",
-    "01 / CAPTURE",
+    "02 / CAPTURE",
   ],
   profile: [
     "Write your introduction once.",
     "Identity, contact details and a reusable professional summary.",
-    "01 / CAPTURE",
+    "02 / CAPTURE",
   ],
   records: [
     "Keep the whole story.",
@@ -50,8 +70,8 @@ export const scenes = {
     "02 / REUSE",
   ],
   compose: [
-    "Tailor a resume. Keep your history.",
-    "Hide or remove a selection here. Your career store keeps the original.",
+    "Choose what belongs in the draft.",
+    "Show or hide a Point and watch the paper preview update beside it.",
     "03 / COMPOSE",
   ],
   reorder: [
@@ -72,7 +92,7 @@ export const scenes = {
   builder: [
     "Make the template your own.",
     "Typography, color, spacing and layout. Save a reusable design.",
-    "04 / DESIGN",
+    "05 / DESIGN",
   ],
   html: [
     "Go further with HTML.",
@@ -80,9 +100,9 @@ export const scenes = {
     "04 / DESIGN",
   ],
   design: [
-    "See exactly how it fits.",
+    "Check the original draft's page fit.",
     "Live paper preview, fit controls, page budgeting and readability checks.",
-    "04 / DESIGN",
+    "05 / DESIGN",
   ],
   export: [
     "Take your resume with you.",
@@ -90,9 +110,9 @@ export const scenes = {
     "05 / KEEP",
   ],
   history: [
-    "Remember what you sent.",
+    "Compare versions of the original draft.",
     "Versions preserve wording. Star snapshots, compare changes and restore selections.",
-    "05 / KEEP",
+    "07 / HISTORY",
   ],
   backup: [
     "Your data stays yours.",
@@ -100,7 +120,6 @@ export const scenes = {
     "05 / KEEP",
   ],
 };
-export const longOrder = Object.keys(scenes);
 export const assistantScenes = {
   assistantManage: [
     "Update your career store with Assistant.",
@@ -122,17 +141,3 @@ export const assistantScenes = {
 for (const [name, copy] of Object.entries(assistantScenes)) {
   scenes[name] = [...copy, "ASSISTANT / DEMO RESPONSES"];
 }
-export const shortOrder = [
-  "overview",
-  "records",
-  "wording",
-  "evidence",
-  "search",
-  "compose",
-  "reorder",
-  "templates",
-  "design",
-  "export",
-  "history",
-  "backup",
-];
