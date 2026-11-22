@@ -1,5 +1,11 @@
 # @keepcv/editor
 
+## 0.10.2
+
+### Patch Changes
+
+- 4d87d9a: Publish standalone branding vectors and standard PNG sizes, with browser, touch and maskable application icons. Serve the application icon manifest and refresh unversioned assets after upgrades.
+
 ## 0.10.1
 
 ### Patch Changes
