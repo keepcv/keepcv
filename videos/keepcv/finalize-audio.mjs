@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { rename } from "node:fs/promises";
+import { cuts, directory } from "./output.mjs";
 import "./score.mjs";
 
 async function remux(master, audio, output) {
@@ -24,6 +25,8 @@ async function remux(master, audio, output) {
         "aac",
         "-ab",
         "192k",
+        "-movflags",
+        "+faststart",
         "-shortest",
         output,
       ],
@@ -34,17 +37,14 @@ async function remux(master, audio, output) {
     );
   });
 }
-for (const [name, cut] of [
-  ["keepcv-90s", "short"],
-  ["keepcv-3min", "long"],
-]) {
-  const master = `.keepcv-promo/deliverables/${name}-4k.mp4`;
-  const updated = `.keepcv-promo/deliverables/${name}-audio.mp4`;
+for (const { name, cut } of cuts) {
+  const master = `${directory}/${name}.mp4`;
+  const updated = `${directory}/${name}-audio.mp4`;
   await remux(master, `videos/keepcv/public/audio/mix-${cut}.wav`, updated);
   await rename(updated, master);
   await remux(
     master,
     `videos/keepcv/public/audio/effects-${cut}.wav`,
-    `.keepcv-promo/deliverables/${name}-4k-effects-only.mp4`,
+    `${directory}/${name}-effects-only.mp4`,
   );
 }

@@ -34,6 +34,7 @@ test("both cuts reserve exactly forty percent for application UI", () => {
     assert.deepEqual(
       assistant.map((shot) => shot.name ?? shot.topic),
       [
+        "assistantSetup",
         ...(cut === "long" ? ["assistantManage"] : []),
         "assistantJob",
         "assistantReview",
@@ -41,9 +42,15 @@ test("both cuts reserve exactly forty percent for application UI", () => {
         "assistantResult",
       ],
     );
-    assert(assistant[0].from < 360);
-    assert.equal(assistant.filter((shot) => shot.kind === "graphic").length, 1);
-    assert(shots.some((shot) => shot.topic === "recovery"));
+    const draft = shots.find((shot) => shot.name === "compose");
+    const chooser = shots.find((shot) => shot.name === "journeyTemplates");
+    const applied = shots.find((shot) => shot.name === "journeyApply");
+    const exported = shots.find((shot) => shot.name === "journeyExport");
+    assert(draft.from < assistant[0].from);
+    assert(assistant.at(-1).from < chooser.from);
+    assert(chooser.from < applied.from && applied.from < exported.from);
+    assert(chooser.frames >= 180);
+    assert.equal(assistant.filter((shot) => shot.kind === "graphic").length, 2);
     for (let i = 1; i < shots.length; i++)
       assert.equal(shots[i].from, shots[i - 1].from + shots[i - 1].frames);
   }

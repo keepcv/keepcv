@@ -29,7 +29,9 @@ without a workflow rewriting this file. Maintainers can follow the
 
 [Watch the three-minute walkthrough](videos/keepcv/showcase/keepcv-3min.mp4)
 or [watch the 90-second overview](videos/keepcv/showcase/keepcv-90s.mp4).
-The Assistant walkthrough uses labeled demo responses in the real KeepCV UI.
+Both follow a career record through resume selection, tailoring, template
+comparison and export at 1440p and 30 fps. The Assistant walkthrough uses
+labeled demo responses in the real KeepCV UI.
 
 ## The idea
 

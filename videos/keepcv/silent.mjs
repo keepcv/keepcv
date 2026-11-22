@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import "./finalize-audio.mjs";
+import { cuts, directory } from "./output.mjs";
 
-for (const name of ["keepcv-90s", "keepcv-3min"]) {
+for (const { name } of cuts) {
   await new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
@@ -10,13 +11,13 @@ for (const name of ["keepcv-90s", "keepcv-3min"]) {
         "ffmpeg",
         "-y",
         "-i",
-        `.keepcv-promo/deliverables/${name}-4k.mp4`,
+        `${directory}/${name}.mp4`,
         "-map",
         "0:v:0",
         "-vcodec",
         "copy",
         "-an",
-        `.keepcv-promo/deliverables/${name}-4k-silent.mp4`,
+        `${directory}/${name}-silent.mp4`,
       ],
       { stdio: "inherit" },
     );

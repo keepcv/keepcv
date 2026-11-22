@@ -1,4 +1,20 @@
 export const graphicCopy = {
+  route: [
+    "From career history to a finished resume.",
+    "Follow Alex Morgan as a career record becomes a Platform Engineer resume.",
+  ],
+  assistantSetup: [
+    "Tailor the draft to a role.",
+    "Give Assistant the public posting. Review its choices against your saved work.",
+  ],
+  layout: [
+    "Same selection. Different layout.",
+    "Compare typography, spacing and hierarchy on the resume you just tailored.",
+  ],
+  finish: [
+    "One resume is ready to send.",
+    "The full career store stays ready for the next application.",
+  ],
   intake: [
     "Start with the files you have.",
     "Import, inspect and select what enters your career store.",

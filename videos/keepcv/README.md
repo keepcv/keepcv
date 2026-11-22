@@ -1,21 +1,25 @@
 # KeepCV promotional videos
 
-The approved [three-minute walkthrough](showcase/keepcv-3min.mp4) and
+The [three-minute walkthrough](showcase/keepcv-3min.mp4) and
 [90-second overview](showcase/keepcv-90s.mp4) live in `showcase/` for
 repository visitors.
 
-Two 3840x2160, 30 fps exports combine actual application recordings and custom graphics:
+Two 2560x1440, 30 fps exports combine actual application recordings and custom graphics:
 
-- `KeepCV90`: 90 seconds, focused on storing, reusing, composing and exporting.
-- `KeepCV180`: three minutes, adding import, profile, record details, vocabulary,
-  role profiles, job targeting and visual/HTML builders.
+- `KeepCV90` follows a career record into a draft, uses Assistant to tailor it
+  to a job, compares Classic, Compact and Editorial, then applies Classic and
+  uses Export PDF to preserve the design.
+- `KeepCV180` follows the same workflow and adds import, alternate phrasing,
+  evidence, filters, role profiles, reordering, job targeting, the Studio
+  template, design adjustments and version history.
 
-Both use fictional demo data. The real Assistant UI follows the store overview,
-at about 9.6 seconds and 11.5 seconds respectively. Captures show the job URL
-composer, Web search state, proposal and approval, and resulting resume editor.
-The longer cut also shows accepting a tag and Point on an existing record.
-The "Demo responses" label identifies the local fixture and sample posting.
-An animated match summary connects the approval to the real editor.
+Both use fictional demo data. After building a draft, the real Assistant UI
+shows a job URL, Web search and a proposal for a tailored resume using the saved
+work. The flow continues through approval and the resulting resume editor.
+The longer cut also shows accepting a tag and Point on
+an existing record. The "Demo responses" label identifies the scripted responses
+and sample posting. The template chooser previews the same tailored content in
+each layout before returning to the editor with Classic applied.
 
 `timeline.mjs` allocates exactly 40% UI-led screen time and 60% custom-graphics
 screen time: 36/54 seconds in the short cut and 72/108 in the longer cut.
@@ -30,10 +34,21 @@ pnpm exec playwright install chromium
 node videos/keepcv/server.mjs
 ```
 
-Leave that demo server running. In a second terminal:
+Leave that demo server running. In a second terminal, capture the baseline footage:
 
 ```sh
 pnpm promo:capture
+```
+
+Rendering both cuts also requires separately recorded `assistantJob.mp4`,
+`assistantReview.mp4`, `assistantResult.mp4`, `assistantManage.mp4`,
+`journeyRecord.mp4`, `journeyTemplates.mp4`, `journeyApply.mp4` and
+`journeyExport.mp4` in `public/clips/`. The Assistant recordings use a local
+fixture adapter with the real proposal and approval endpoints. The journey
+recordings use Alex's record and tailored resume in the same demo store.
+These source recordings are 2400x1350.
+
+```sh
 node videos/keepcv/score.mjs
 pnpm promo:studio
 ```
@@ -44,14 +59,10 @@ Studio is at <http://localhost:4321>. To export both MP4 files:
 pnpm promo:render
 ```
 
-New MP4 files use the `-4k` suffix, with matching silent copies and SRT captions
-in `.keepcv-promo/deliverables/`. Earlier 1080p exports are retained. Generated footage, audio,
+New MP4 files use the `-2k` suffix, with matching silent and effects-only copies
+and SRT captions in `.keepcv-promo/deliverables/`. Generated footage, audio,
 branding copies and capture coordinates live in the ignored `public/` directory.
 Capture creates before/after screenshots and page text in `.keepcv-promo/qa/`.
-The Assistant shots use separately captured `assistantJob.mp4`,
-`assistantReview.mp4`, `assistantResult.mp4` and `assistantManage.mp4` in
-`public/clips/`. They were recorded at 2400x1350 with a local fixture adapter
-running the actual proposal and approval endpoints against the demo store.
 One-time capture utilities are kept in the ignored `.keepcv-promo/` folder.
 Set `PROMO_RESUME=1` to retain completed shots while retrying a failed capture.
 Start a new demo server for a fresh store; stop it with Ctrl+C when finished.
@@ -63,9 +74,9 @@ Remotion; they are presentation effects, not claimed application behavior.
 
 ## Story and motion
 
-The order follows content prerequisites: capture -> reusable wording and
-vocabulary -> composition -> design -> export, history and backup. Import is
-introduced early because it is an alternative way to fill the store.
+Both cuts follow one resume from the profile and career store through selection,
+Assistant tailoring, design and export. Import appears alongside profile and
+career records in the extended cut, with version history after export.
 
 `story.mjs` owns feature copy. `timeline.mjs` owns ordering and durations. `film.jsx` owns the
 frame-based motion. Each shot keeps its recording and caption on one clock.
@@ -73,27 +84,21 @@ The scenes are generated from that table; edit the table to change scene content
 and ordering. Studio exposes both compositions and individual shot sequences.
 
 The logo and name are visible from frame zero against a purple background.
-Opening and closing graphics take three seconds each. Most UI demonstrations take
-3 seconds in the short cut and 3.6 seconds in the longer cut. Composition and
-export interactions play at 1.6x to include hide/show and download within those
-shots. The Assistant takes a few separate shots to follow the prompt, review
-and result. Full recordings fit inside the 16:9 stage while interactions play.
+Both open with four seconds of KeepCV branding and end with the finished
+resume and a branded closing. The Assistant has separate shots for the prompt,
+review and result. Review, applying a template and export leave time to see the
+outcome after the action. Full recordings fit inside the 16:9 stage.
 The panels, documents and windows share one continuous layout across cuts.
 The primary object travels from its outgoing bounds into the incoming layout
 over 24 frames. Secondary objects gather and unfold on staggered paths. A
 persistent purple stage anchors the movement and the headings stay readable
 above the moving objects. The full app viewport settles before each demo.
 
-`graphics.jsx` and `patterns.jsx` add card stacks, grid unfolding, import review,
-profile assembly, context tabs, filtering, search typing, role emphasis bars,
-selection transfers, cursor-led sorting, metric counters, design morphs, source
-reveals, page compression, a format fan, a version timeline, archive assembly
-and the labeled AI match summary. The short cut has 13 custom feature chapters.
-The longer cut has 21. Each adds a specific action or explanation.
-These chapters keep an action or comparison moving through their duration.
-The composition uses a 1920x1080 logical stage and Remotion's `--scale=2` output
-for 4K rasterization of text and vector graphics. The UI captures are scaled
-into that output from 1600x900 and 2400x1350 sources.
+`graphics.jsx`, `patterns.jsx` and `journey.jsx` animate the career-to-resume
+steps, alternate wording, selection transfers, cursor-led sorting, role
+emphasis bars, a labeled Assistant match summary, template comparisons and
+version history. Remotion scales the 1920x1080 logical stage to 2560x1440 at
+30 fps, with UI recordings from 1600x900 and 2400x1350 sources.
 
 The soundtrack is an original deterministic electronic-pop instrumental generated
 by `score.mjs`, with a repeating melodic synth hook, warm bass, layered claps,
@@ -113,8 +118,8 @@ background music. The composition's `music` prop disables the complete music and
 effects mix in Studio. Generated mixes are `public/audio/mix-short.wav` and
 `mix-long.wav`; cue sheets are in `.keepcv-promo/qa/audio-cues-*.json`.
 
-`pnpm test:promo` checks viewport bounds, exact runtime, continuous shot boundaries
-and the 40/60 timing allocation in both cuts.
+`pnpm test:promo` checks viewport bounds, exact runtime, continuous shot boundaries,
+the 40/60 timing allocation and the resume-building order in both cuts.
 
 ## Research applied
 

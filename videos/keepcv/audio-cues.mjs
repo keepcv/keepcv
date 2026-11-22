@@ -22,6 +22,37 @@ const graphicActions = {
   search: [35, 90, 135],
   recovery: [15, 55, 95, 130],
   assistantResume: [24, 44, 63],
+  route: [25, 53, 67],
+  assistantSetup: [25, 53, 69],
+  layout: [25, 41, 57],
+  finish: [25, 53, 89],
+};
+const chapterMoves = new Set(["route", "selection", "assistantSetup", "layout", "finish"]);
+const recordedActions = {
+  compose: [
+    [1.4, "click"],
+    [3.14, "click"],
+  ],
+  assistantJob: [
+    [0.17, "key"],
+    [1.7, "click"],
+  ],
+  assistantReview: [[2.35, "confirm"]],
+  assistantManage: [[2.2, "confirm"]],
+  assistantResult: [[0.65, "pop"]],
+  reorder: [[2.6, "pop"]],
+  journeyRecord: [[0.63, "click"]],
+  journeyTemplates: [
+    [1.5, "click"],
+    [3.9, "click"],
+    [6.27, "click"],
+    [8.67, "click"],
+  ],
+  journeyApply: [
+    [1.14, "click"],
+    [1.9, "confirm"],
+  ],
+  journeyExport: [[1.53, "click"]],
 };
 function graphicCues(shot) {
   const cues = [];
@@ -34,30 +65,20 @@ function graphicCues(shot) {
   return cues;
 }
 function uiCues(shot) {
-  const cues = [];
-  const start = shot.from / 30;
-  const add = (at, type, strength = 1) => cues.push({ at, type, strength });
-  if (shot.name === "compose") {
-    add(start + 0.9, "click", 0.7);
-    add(start + (4.7 - 50 / 30) / 1.6, "click", 0.7);
-  }
-  if (shot.name === "export") add(start + (6.6 - 65 / 30) / 1.6, "confirm", 0.8);
-  if (shot.name === "assistantJob") {
-    add(start + 0.17, "key", 0.6);
-    add(start + 1.7, "click", 0.6);
-  }
-  if (shot.name === "assistantReview") add(start + 2.35, "confirm", 0.8);
-  if (shot.name === "assistantManage") add(start + 2.43, "confirm", 0.8);
-  if (shot.name === "assistantResult") add(start + 0.65, "pop", 0.55);
-  if (shot.name === "reorder") add(start + 2.6, "pop", 0.7);
-  if (shot.name === "search")
-    for (let i = 0; i < 10; i++) add(start + 0.65 + i * 0.14, "key", 0.45);
-  return cues;
+  return (recordedActions[shot.name] ?? [])
+    .filter(([seconds]) => seconds * 30 < shot.frames)
+    .map(([seconds, type]) => ({
+      at: shot.from / 30 + seconds,
+      type,
+      strength: type === "confirm" ? 1 : 1.25,
+    }));
 }
 export function audioCues(cut) {
   return timeline(cut)
     .flatMap((shot) => [
-      ...(shot.from > 0 ? [{ at: shot.from / 30 - 0.15, type: "swish", strength: 0.5 }] : []),
+      ...(chapterMoves.has(shot.topic)
+        ? [{ at: shot.from / 30 - 0.15, type: "swish", strength: 0.45 }]
+        : []),
       ...(shot.kind === "graphic" ? graphicCues(shot) : uiCues(shot)),
     ])
     .sort((a, b) => a.at - b.at);

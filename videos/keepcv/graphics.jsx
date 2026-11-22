@@ -2,6 +2,7 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { AssistantResume } from "./assistant.jsx";
 import { graphicCopy } from "./graphics-copy.mjs";
 import { MotionObject, useObjectMotion, useShotHeading } from "./handoff.jsx";
+import { Journey } from "./journey.jsx";
 import { easeBetween } from "./motion.mjs";
 import { ExtraGraphic } from "./patterns.jsx";
 
@@ -597,6 +598,10 @@ export function GraphicScene({ topic, frames }) {
     portable: Portable,
     history: History,
     assistantResume: AssistantResume,
+    route: Journey,
+    assistantSetup: Journey,
+    layout: Journey,
+    finish: Journey,
   }[topic];
   const Content = content;
   return (
