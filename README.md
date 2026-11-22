@@ -25,13 +25,14 @@ without a workflow rewriting this file. Maintainers can follow the
 
 ## Watch the demo
 
-[![Watch the three-minute KeepCV walkthrough](videos/keepcv/showcase/poster.png)](videos/keepcv/showcase/keepcv-3min.mp4)
+https://github.com/user-attachments/assets/b9c96c26-7ff0-4292-93f7-db9c7320e47c
 
-[Watch the three-minute walkthrough](videos/keepcv/showcase/keepcv-3min.mp4)
-or [watch the 90-second overview](videos/keepcv/showcase/keepcv-90s.mp4).
+The repository also has the original 1440p, 30 fps MP4s for the
+[three-minute walkthrough](videos/keepcv/showcase/keepcv-3min.mp4) and the
+[90-second overview](videos/keepcv/showcase/keepcv-90s.mp4).
 Both follow a career record through resume selection, tailoring, template
-comparison and export at 1440p and 30 fps. The Assistant walkthrough uses
-labeled demo responses in the real KeepCV UI.
+comparison and export. The Assistant walkthrough uses labeled demo responses
+in the real KeepCV UI.
 
 ## The idea
 
